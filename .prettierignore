@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+.yarn
+yarn.lock
+package-lock.json
+*.tsbuildinfo
+app/src-tauri/target
+app/src-tauri/gen

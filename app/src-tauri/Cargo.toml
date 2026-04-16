@@ -1,0 +1,46 @@
+[package]
+name = "recrest"
+version = "0.1.0"
+description = "Recrest — A lightweight developer dashboard"
+authors = ["SoftVentures"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "recrest_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.1", features = [] }
+tauri-plugin-opener = "2.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1.40", features = ["rt-multi-thread", "macros", "sync", "time", "fs"] }
+git2 = { version = "0.19", default-features = false, features = ["vendored-libgit2"] }
+notify = "7.0"
+notify-debouncer-full = "0.4"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+keyring = { version = "3.5", features = ["apple-native", "windows-native", "linux-native"] }
+url = "2.5"
+dirs = "5.0"
+anyhow = "1.0"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+walkdir = "2.5"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

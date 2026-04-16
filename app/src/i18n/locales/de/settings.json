@@ -1,0 +1,34 @@
+{
+  "title": "Einstellungen",
+  "sections": {
+    "general": "Allgemein",
+    "providers": "Provider",
+    "sources": "Scan-Quellen",
+    "ide": "IDE"
+  },
+  "fields": {
+    "theme": "Design",
+    "language": "Sprache",
+    "polling_interval": "Polling-Intervall (Minuten)",
+    "default_ide": "Standard-IDE"
+  },
+  "theme": {
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "Systemstandard"
+  },
+  "ide": {
+    "auto_detect": "Automatisch erkennen"
+  },
+  "sources": {
+    "empty": "Keine Scan-Pfade konfiguriert.",
+    "placeholder": "/pfad/zu/repos"
+  },
+  "providers": {
+    "connect": "Verbinden",
+    "disconnect": "Trennen",
+    "status_connected": "Verbunden",
+    "status_disconnected": "Nicht verbunden",
+    "token_placeholder": "Personal Access Token"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "title": "Repositories",
+  "summary": {
+    "total": "Total",
+    "dirty": "With changes",
+    "behind": "Behind remote",
+    "ahead": "Ahead of remote",
+    "open_prs": "Open PRs"
+  },
+  "columns": {
+    "name": "Repository",
+    "branch": "Branch",
+    "status": "Status",
+    "pull_requests": "PRs",
+    "ci": "CI",
+    "last_commit": "Last commit"
+  },
+  "status": {
+    "clean": "Clean",
+    "dirty": "Uncommitted changes",
+    "conflicted": "Conflicts"
+  },
+  "detail": {
+    "branch": "Branch",
+    "changes": "Changes",
+    "clean": "clean",
+    "files": "{{count}} file",
+    "files_other": "{{count}} files",
+    "last_commit": "Last commit",
+    "open_prs": "Open pull requests"
+  },
+  "pr_count_one": "{{count}} PR",
+  "pr_count_other": "{{count}} PRs",
+  "empty": "No repositories found. Add scan paths in settings."
+}

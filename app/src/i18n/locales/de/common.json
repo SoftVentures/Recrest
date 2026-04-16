@@ -1,0 +1,41 @@
+{
+  "app": {
+    "name": "Recrest",
+    "tagline": "Leichtgewichtiges Developer Dashboard"
+  },
+  "nav": {
+    "repos": "Repositories",
+    "prs": "Pull Requests",
+    "settings": "Einstellungen",
+    "pipelines": "CI-Pipelines",
+    "pipelines_coming_soon": "Demnächst",
+    "groups": "Gruppen",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen"
+  },
+  "breadcrumb": {
+    "repos": "Repositories",
+    "repos_selected": "Repositories › {{name}}",
+    "prs": "Pull Requests",
+    "settings": "Einstellungen"
+  },
+  "actions": {
+    "refresh": "Aktualisieren",
+    "add": "Hinzufügen",
+    "add_repo": "Repo hinzufügen",
+    "remove": "Entfernen",
+    "search": "Suchen",
+    "open_in_ide": "In IDE öffnen",
+    "open_terminal": "Terminal öffnen",
+    "open_platform": "Auf Plattform öffnen",
+    "open_remote": "Remote öffnen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen"
+  },
+  "states": {
+    "loading": "Lädt …",
+    "empty": "Hier ist noch nichts",
+    "error": "Etwas ist schiefgelaufen"
+  }
+}

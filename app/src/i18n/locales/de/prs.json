@@ -1,0 +1,24 @@
+{
+  "title": "Pull Requests",
+  "columns": {
+    "title": "Titel",
+    "author": "Autor",
+    "age": "Alter",
+    "ci": "CI",
+    "diff": "Änderungen"
+  },
+  "state": {
+    "open": "Offen",
+    "draft": "Entwurf",
+    "merged": "Gemerged",
+    "closed": "Geschlossen"
+  },
+  "ci": {
+    "pending": "Ausstehend",
+    "running": "Läuft",
+    "success": "Erfolgreich",
+    "failure": "Fehlgeschlagen",
+    "none": "Keine Checks"
+  },
+  "empty": "Keine offenen Pull Requests."
+}

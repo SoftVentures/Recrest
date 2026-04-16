@@ -1,0 +1,34 @@
+{
+  "title": "Settings",
+  "sections": {
+    "general": "General",
+    "providers": "Providers",
+    "sources": "Scan sources",
+    "ide": "IDE"
+  },
+  "fields": {
+    "theme": "Theme",
+    "language": "Language",
+    "polling_interval": "Polling interval (minutes)",
+    "default_ide": "Default IDE"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Follow system"
+  },
+  "ide": {
+    "auto_detect": "Auto-detect"
+  },
+  "sources": {
+    "empty": "No scan paths configured.",
+    "placeholder": "/path/to/repos"
+  },
+  "providers": {
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "status_connected": "Connected",
+    "status_disconnected": "Not connected",
+    "token_placeholder": "Personal Access Token"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "title": "Repositories",
+  "summary": {
+    "total": "Gesamt",
+    "dirty": "Mit Änderungen",
+    "behind": "Hinter Remote",
+    "ahead": "Vor Remote",
+    "open_prs": "Offene PRs"
+  },
+  "columns": {
+    "name": "Repository",
+    "branch": "Branch",
+    "status": "Status",
+    "pull_requests": "PRs",
+    "ci": "CI",
+    "last_commit": "Letzter Commit"
+  },
+  "status": {
+    "clean": "Sauber",
+    "dirty": "Uncommittete Änderungen",
+    "conflicted": "Konflikte"
+  },
+  "detail": {
+    "branch": "Branch",
+    "changes": "Änderungen",
+    "clean": "sauber",
+    "files": "{{count}} Datei",
+    "files_other": "{{count}} Dateien",
+    "last_commit": "Letzter Commit",
+    "open_prs": "Offene Pull Requests"
+  },
+  "pr_count_one": "{{count}} PR",
+  "pr_count_other": "{{count}} PRs",
+  "empty": "Keine Repositories gefunden. Scan-Pfade in den Einstellungen hinzufügen."
+}

@@ -1,0 +1,41 @@
+{
+  "app": {
+    "name": "Recrest",
+    "tagline": "Lightweight developer dashboard"
+  },
+  "nav": {
+    "repos": "Repositories",
+    "prs": "Pull Requests",
+    "settings": "Settings",
+    "pipelines": "CI Pipelines",
+    "pipelines_coming_soon": "Coming soon",
+    "groups": "Groups",
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "breadcrumb": {
+    "repos": "Repositories",
+    "repos_selected": "Repositories › {{name}}",
+    "prs": "Pull Requests",
+    "settings": "Settings"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "add": "Add",
+    "add_repo": "Add repo",
+    "remove": "Remove",
+    "search": "Search",
+    "open_in_ide": "Open in IDE",
+    "open_terminal": "Open terminal",
+    "open_platform": "Open on platform",
+    "open_remote": "Open remote",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "states": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet",
+    "error": "Something went wrong"
+  }
+}
