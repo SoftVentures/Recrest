@@ -1,0 +1,12 @@
+{
+  "extends": ["development"],
+  "hints": {
+    "no-inline-styles": "off",
+    "axe/forms": [
+      "default",
+      {
+        "label": "off",
+      },
+    ],
+  },
+}

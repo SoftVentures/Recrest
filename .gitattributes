@@ -1,0 +1,20 @@
+# Einheitliche Zeilenenden
+* text=auto eol=lf
+
+# Git soll keine diff-Versuche bei Binärdateien machen
+*.png binary
+*.jpg binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ico binary
+*.ttf binary
+*.pdf binary
+*.zip binary
+
+# Nur Textdateien in Diffs anzeigen
+*.md text diff=markdown
+*.json text
+*.yml text
+*.ts text
+*.tsx text

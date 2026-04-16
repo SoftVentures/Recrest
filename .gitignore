@@ -125,6 +125,11 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+# keys and certificates (shared/certificates has its own .gitignore)
+keys/
+client/certificates/
+server/keys/
+
 # yarn v3
 .pnp.*
 .yarn/*
@@ -137,3 +142,27 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Storybook
+*storybook.log
+storybook-static
+
+# build
+build/
+
+# Playwright screenshots
+.screenshots/
+
+# Playwright auth state
+tests/.auth/
+.playwright-mcp
+
+# temp
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Superpowers
+.superpowers
+docs/superpowers
