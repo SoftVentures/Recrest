@@ -2,6 +2,12 @@ import { useEffect } from "react";
 
 import { useTranslation } from "react-i18next";
 
+import {
+  DesktopSettings,
+  DiagnosticsSettings,
+  NotificationSettings,
+  UpdatesSettings,
+} from "@/components/settings/DesktopSettings";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { ProviderAuth } from "@/components/settings/ProviderAuth";
 import { RepoSources } from "@/components/settings/RepoSources";
@@ -26,8 +32,12 @@ export function SettingsView() {
       <div className="flex-1 overflow-y-auto p-5">
         <div className="mx-auto flex max-w-2xl flex-col gap-8">
           <GeneralSettings />
+          <DesktopSettings />
+          <NotificationSettings />
+          <UpdatesSettings />
           <RepoSources />
           <ProviderAuth />
+          <DiagnosticsSettings />
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ export default defineConfig({
   globalSetup: "./src/setup/global.setup.ts",
   globalTeardown: "./src/setup/global.teardown.ts",
   use: {
-    baseURL: "http://localhost:1420",
+    baseURL: "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

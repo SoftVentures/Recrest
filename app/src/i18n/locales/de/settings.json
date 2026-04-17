@@ -2,14 +2,19 @@
   "title": "Einstellungen",
   "sections": {
     "general": "Allgemein",
+    "desktop": "Desktop",
+    "notifications": "Benachrichtigungen",
+    "updates": "Updates",
     "providers": "Provider",
     "sources": "Scan-Quellen",
-    "ide": "IDE"
+    "ide": "IDE",
+    "diagnostics": "Diagnose"
   },
   "fields": {
     "theme": "Design",
     "language": "Sprache",
     "polling_interval": "Polling-Intervall (Minuten)",
+    "polling_interval_hint": "Wie oft Recrest bei deinen Git-Hosts nach neuen Pull Requests fragt. Kleinere Werte aktualisieren schneller, brauchen aber mehr Bandbreite und können an Rate-Limits der Provider stoßen.",
     "default_ide": "Standard-IDE"
   },
   "theme": {
@@ -21,14 +26,64 @@
     "auto_detect": "Automatisch erkennen"
   },
   "sources": {
-    "empty": "Keine Scan-Pfade konfiguriert.",
-    "placeholder": "/pfad/zu/repos"
+    "description": "Ordner, die Recrest rekursiv nach Git-Repositories durchsucht.",
+    "empty": "Noch keine Scan-Pfade",
+    "empty_desc": "Füge mindestens einen Ordner hinzu, damit Recrest deine Repositories findet.",
+    "placeholder": "/pfad/zu/repos",
+    "added": "Scan-Pfad hinzugefügt.",
+    "removed": "Scan-Pfad entfernt.",
+    "confirm_remove_title": "Scan-Pfad entfernen?",
+    "confirm_remove_desc": "Repositories unter {{path}} verschwinden aus dem Dashboard. Der Ordner bleibt auf der Platte."
   },
   "providers": {
+    "description": "Verbinde ein Personal Access Token, um Pull Requests zu laden.",
     "connect": "Verbinden",
     "disconnect": "Trennen",
     "status_connected": "Verbunden",
     "status_disconnected": "Nicht verbunden",
-    "token_placeholder": "Personal Access Token"
+    "token_placeholder": "Personal Access Token",
+    "token_hint": "Ein Personal Access Token ist ein langer String, den dein Git-Host statt Passwort ausstellt. Recrest braucht einen mit Leserechten auf Pull Requests — z. B. Scope `repo` bei GitHub, `read_api` bei GitLab oder ein App-Passwort mit Pull Requests: Read bei Bitbucket. Verschlüsselt im OS-Keychain, nie im Klartext gespeichert.",
+    "connected": "Mit {{name}} verbunden.",
+    "disconnected": "Von {{name}} getrennt.",
+    "confirm_disconnect_title": "{{name}} trennen?",
+    "confirm_disconnect_desc": "Der Token wird aus dem System-Keychain entfernt. Du kannst jederzeit wieder verbinden."
+  },
+  "desktop": {
+    "web_disabled": "Diese Einstellungen greifen nur in der Desktop-App.",
+    "auto_start": "Mit System starten",
+    "auto_start_desc": "Recrest beim Login automatisch ausführen.",
+    "start_minimized": "Minimiert starten",
+    "start_minimized_desc": "Still in den Systemtray starten statt ins Vordergrund.",
+    "close_to_tray": "In Tray schließen",
+    "close_to_tray_desc": "Recrest beim Schließen im Tray weiterlaufen lassen.",
+    "close_to_tray_hint": "Der System-Tray ist der kleine Icon-Bereich neben deiner Uhr. Aktiviert, versteckt der Schließen-Button Recrest dort statt zu beenden — Klick auf das Tray-Icon holt's zurück. Zum echten Beenden das Quit im Tray-Menü verwenden."
+  },
+  "notifications": {
+    "enabled": "Desktop-Benachrichtigungen",
+    "enabled_desc": "Recrest darf native Benachrichtigungen senden.",
+    "new_pr": "Neue Pull Requests",
+    "ci_failed": "Fehlgeschlagene CI-Prüfungen",
+    "merge_ready": "Bereit zum Mergen"
+  },
+  "updates": {
+    "mode": "Update-Modus",
+    "mode_hint": "Automatisch: Updates werden im Hintergrund geladen und installiert, die App startet sich selbst neu. Hinweisen: Recrest meldet verfügbare Updates, die Entscheidung bleibt bei dir. Aus: keine Update-Checks.",
+    "mode_auto": "Automatisch",
+    "mode_manual": "Hinweisen",
+    "mode_off": "Aus",
+    "check_now": "Jetzt prüfen",
+    "checking": "Prüfe…",
+    "available": "Update v{{version}} verfügbar.",
+    "up_to_date": "Du bist auf dem neuesten Stand."
+  },
+  "diagnostics": {
+    "crash_reporting": "Crash-Reports",
+    "crash_reporting_desc": "Anonymisierte Absturzberichte senden, um Fehler zu beheben.",
+    "crash_reporting_hint": "Wird nur bei Abstürzen ausgelöst. Gesendet werden Fehler, Stack-Trace, OS/Architektur und App-Version. Keine Repo-Inhalte, Pfade, Tokens oder Git-Daten.",
+    "os": "Betriebssystem",
+    "git": "Git",
+    "git_installed": "installiert",
+    "git_not_installed": "nicht installiert",
+    "git_hint": "Recrest bringt libgit2 selbst mit, deshalb funktioniert das Lesen des Repo-Status ohnehin. Ein System-Git wird nur für künftige Fetch/Pull-Aktionen gebraucht."
   }
 }

@@ -1,0 +1,62 @@
+{
+  "welcome": {
+    "title": "Welcome to Recrest",
+    "tagline": "A lightweight developer dashboard for your local repos and pull requests.",
+    "body": "Let's set things up in a minute — a few preferences, then pick the folders where your code lives, and you're ready.",
+    "cta": "Get started",
+    "back": "Back"
+  },
+  "basics": {
+    "title": "Basic preferences",
+    "body": "Pick how Recrest should look and behave. You can change all of this later in Settings.",
+    "theme": "Theme",
+    "theme_desc": "Follow your system or pick a fixed appearance.",
+    "language": "Language",
+    "language_desc": "Used for the interface.",
+    "auto_start": "Start with system",
+    "auto_start_desc": "Launch Recrest automatically when you log in.",
+    "close_to_tray": "Close to tray",
+    "close_to_tray_desc": "Keep running in the system tray when the window closes.",
+    "notifications": "Desktop notifications",
+    "notifications_desc": "Notify me about new pull requests and CI results.",
+    "next": "Continue"
+  },
+  "pickFolder": {
+    "title": "Where are your repositories?",
+    "body": "Add one or more folders. Recrest will scan them recursively for git repositories.",
+    "browse": "Browse…",
+    "browse_placeholder": "/path/to/repos",
+    "add": "Add folder",
+    "list_empty": "No folders added yet.",
+    "next": "Continue",
+    "back": "Back",
+    "at_least_one": "Add at least one folder to continue."
+  },
+  "connectProvider": {
+    "title": "Connect a Git host",
+    "body": "Optional — connect GitHub, GitLab, or Bitbucket to see your open pull requests here. You can skip and add this later in Settings.",
+    "local_note": "Your local git status, branches and uncommitted changes are shown regardless. This only adds pull-request visibility.",
+    "token_placeholder": "Personal Access Token",
+    "connect": "Connect",
+    "skip": "Skip",
+    "skip_and_continue": "Continue without connecting",
+    "next": "Continue",
+    "back": "Back",
+    "connected": "{{name}} connected.",
+    "failed": "Could not connect. Check the token and try again."
+  },
+  "scan": {
+    "title": "Scanning your folders",
+    "scanning": "Looking for repositories…",
+    "summary_one": "Found {{count}} repository in {{pathCount}} folder.",
+    "summary_other": "Found {{count}} repositories in {{pathCount}} folders.",
+    "empty": "No repositories found. You can add more folders later in Settings.",
+    "back": "Back",
+    "next": "Continue"
+  },
+  "done": {
+    "title": "You're all set",
+    "body": "Recrest is ready. Browse your repositories and pull requests from the sidebar.",
+    "cta": "Open dashboard"
+  }
+}

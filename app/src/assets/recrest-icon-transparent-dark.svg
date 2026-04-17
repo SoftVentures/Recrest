@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
+  <title>Recrest</title>
+  <desc>Recrest icon — transparent background, dark chevrons</desc>
+  <g transform="translate(288, 352)" fill="none" stroke="#0F1115" stroke-linecap="round" stroke-linejoin="round" stroke-width="52">
+    <path d="M0 200 L224 0 L448 200"/>
+    <path d="M0 320 L224 120 L448 320" opacity="0.5"/>
+  </g>
+</svg>

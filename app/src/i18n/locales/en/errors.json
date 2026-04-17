@@ -1,0 +1,12 @@
+{
+  "unknown": "Something went wrong.",
+  "not_found": "Not found.",
+  "bad_request": "Invalid input.",
+  "unauthorized": "Not authorised. Check your credentials.",
+  "io": "File system error.",
+  "git": "Git error.",
+  "serialize": "Data format error.",
+  "http": "Network error. Check your connection.",
+  "keyring": "Could not access the system keychain.",
+  "internal": "Internal error."
+}

@@ -2,14 +2,19 @@
   "title": "Settings",
   "sections": {
     "general": "General",
+    "desktop": "Desktop",
+    "notifications": "Notifications",
+    "updates": "Updates",
     "providers": "Providers",
     "sources": "Scan sources",
-    "ide": "IDE"
+    "ide": "IDE",
+    "diagnostics": "Diagnostics"
   },
   "fields": {
     "theme": "Theme",
     "language": "Language",
     "polling_interval": "Polling interval (minutes)",
+    "polling_interval_hint": "How often Recrest asks your git hosts for new pull requests. Lower values update faster but use more bandwidth and can hit provider rate limits.",
     "default_ide": "Default IDE"
   },
   "theme": {
@@ -21,14 +26,64 @@
     "auto_detect": "Auto-detect"
   },
   "sources": {
-    "empty": "No scan paths configured.",
-    "placeholder": "/path/to/repos"
+    "description": "Folders Recrest scans recursively for git repositories.",
+    "empty": "No scan paths yet",
+    "empty_desc": "Add at least one folder so Recrest can discover your repositories.",
+    "placeholder": "/path/to/repos",
+    "added": "Scan path added.",
+    "removed": "Scan path removed.",
+    "confirm_remove_title": "Remove scan path?",
+    "confirm_remove_desc": "Repositories under {{path}} will disappear from the dashboard. The folder itself stays on disk."
   },
   "providers": {
+    "description": "Connect a Personal Access Token to list pull requests.",
     "connect": "Connect",
     "disconnect": "Disconnect",
     "status_connected": "Connected",
     "status_disconnected": "Not connected",
-    "token_placeholder": "Personal Access Token"
+    "token_placeholder": "Personal Access Token",
+    "token_hint": "A Personal Access Token is a long string issued by your git host instead of your password. Recrest needs one with read access to pull requests — e.g. the `repo` scope on GitHub, `read_api` on GitLab, or an app password with Pull Requests: Read on Bitbucket. Stored encrypted in your OS keychain, never in plain text.",
+    "connected": "Connected to {{name}}.",
+    "disconnected": "Disconnected from {{name}}.",
+    "confirm_disconnect_title": "Disconnect {{name}}?",
+    "confirm_disconnect_desc": "The token will be removed from the system keychain. You can reconnect any time."
+  },
+  "desktop": {
+    "web_disabled": "These settings only apply when running the desktop app.",
+    "auto_start": "Start with system",
+    "auto_start_desc": "Launch Recrest when you log in.",
+    "start_minimized": "Start minimized",
+    "start_minimized_desc": "Open silently to the system tray instead of a foreground window.",
+    "close_to_tray": "Close to tray",
+    "close_to_tray_desc": "Keep Recrest running in the tray when you close the window.",
+    "close_to_tray_hint": "The system tray is the small icon area next to your clock. With this enabled, pressing the window close button hides Recrest there instead of quitting — click the tray icon to bring it back. Use Quit from the tray menu to actually exit."
+  },
+  "notifications": {
+    "enabled": "Desktop notifications",
+    "enabled_desc": "Allow Recrest to send native notifications.",
+    "new_pr": "New pull requests",
+    "ci_failed": "CI failures",
+    "merge_ready": "Ready to merge"
+  },
+  "updates": {
+    "mode": "Update mode",
+    "mode_hint": "Automatic: download and install updates in the background, relaunch the app when ready. Notify me: tell me when one is available and let me decide. Off: never check.",
+    "mode_auto": "Automatic",
+    "mode_manual": "Notify me",
+    "mode_off": "Off",
+    "check_now": "Check now",
+    "checking": "Checking…",
+    "available": "Update v{{version}} available.",
+    "up_to_date": "You're on the latest version."
+  },
+  "diagnostics": {
+    "crash_reporting": "Crash reporting",
+    "crash_reporting_desc": "Send anonymised crash reports to help us fix bugs.",
+    "crash_reporting_hint": "Only triggered when Recrest crashes. Reports include the error, stack trace, OS/architecture and app version. No repo contents, paths, tokens or git data are sent.",
+    "os": "Operating system",
+    "git": "Git",
+    "git_installed": "installed",
+    "git_not_installed": "not installed",
+    "git_hint": "Recrest ships its own libgit2, so reading repo status works regardless. A system-wide git is only needed for future fetch/pull actions."
   }
 }

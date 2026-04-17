@@ -5,6 +5,11 @@ import { BrowserRouter } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+
 import App from "@/App";
 import "@/i18n";
 import { store } from "@/store";

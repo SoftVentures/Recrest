@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 
+import { GitPullRequest } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import { useAppSelector } from "@/store/hooks";
 
 import { PrRow } from "./PrRow";
@@ -25,7 +27,13 @@ export function PrList() {
   }, [prsByRepo, repos]);
 
   if (rows.length === 0) {
-    return <div className="p-10 text-center text-sm text-muted-foreground">{t("empty")}</div>;
+    return (
+      <EmptyState
+        icon={GitPullRequest}
+        title={t("empty")}
+        description={t("empty_desc")}
+      />
+    );
   }
 
   return (

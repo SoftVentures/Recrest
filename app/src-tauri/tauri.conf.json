@@ -12,18 +12,35 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Recrest",
         "width": 1280,
         "height": 800,
         "minWidth": 960,
         "minHeight": 600,
+        "center": true,
         "resizable": true,
         "fullscreen": false,
-        "decorations": true
+        "decorations": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.github.com https://gitlab.com https://api.bitbucket.org https://updates.recrest.dev; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; media-src 'self'"
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["recrest"]
+      }
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://updates.recrest.dev/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "dialog": false,
+      "pubkey": ""
     }
   },
   "bundle": {
@@ -35,7 +52,35 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  },
-  "plugins": {}
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Lightweight developer dashboard",
+    "longDescription": "Recrest surfaces local git repositories, their working-tree status, open pull requests, and CI checks in one native desktop app.",
+    "copyright": "Copyright (c) 2026 SoftVentures",
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": true,
+        "languages": ["English", "German"],
+        "installerIcon": "icons/icon.ico"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "appPosition": { "x": 180, "y": 170 },
+        "applicationFolderPosition": { "x": 480, "y": 170 },
+        "windowSize": { "width": 660, "height": 400 }
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
+        "section": "devel"
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
+    "createUpdaterArtifacts": true
+  }
 }

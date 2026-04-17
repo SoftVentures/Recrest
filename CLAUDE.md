@@ -10,8 +10,8 @@ Recrest is a native desktop developer dashboard built with Tauri v2. It surfaces
 
 Everything is driven from the root via yarn workspaces. Never `cd` into a sub-package for routine tasks — use `yarn workspace <name> <script>`.
 
-- `yarn dev` — builds `@recrest/shared`, then launches the full Tauri desktop shell (requires Rust toolchain).
-- `yarn dev:web` — same but runs only the Vite dev server on `http://localhost:1420`. Use this when you don't have Rust installed or are iterating on pure UI; Tauri IPC calls no-op gracefully via `isTauri()` in `app/src/lib/tauri.ts`.
+- `yarn dev` — builds `@recrest/shared`, then launches the full Tauri desktop shell (requires Rust toolchain). Vite binds port **1420** in this mode.
+- `yarn dev:web` — same but runs only the Vite dev server on `http://localhost:3000`. Use this when you don't have Rust installed, are iterating on pure UI, or want to run in parallel with `yarn dev` (ports don't clash). Tauri IPC calls no-op gracefully via `isTauri()` in `app/src/lib/tauri/index.ts`.
 - `yarn build` — production Tauri build.
 - `yarn test:ts` — typecheck all three workspaces (`tsc --noEmit` in shared/tests, `tsc -b` in app). This is the fast feedback loop.
 - `yarn typecheck` — alias for the same thing.
@@ -22,7 +22,7 @@ Everything is driven from the root via yarn workspaces. Never `cd` into a sub-pa
 
 Run a single vitest file: `yarn workspace @recrest/app test src/store/slices/uiSlice.test.ts`.
 
-Port 1420 is shared intentionally — Vite binds it, Tauri's webview and Playwright both navigate to it. `strictPort: true` prevents Vite from silently falling back to another port and breaking the Tauri shell.
+Port selection depends on mode: Tauri binds **1420** (hard-coded in `tauri.conf.json` `devUrl`), pure-web dev binds **3000**. The switch happens in `app/vite.config.ts` via `TAURI_ENV_PLATFORM` (which Tauri's CLI always sets). Playwright targets `http://localhost:3000` since E2E runs against `yarn dev:web`. `strictPort: true` on both sides — silent port fallback would let Tauri load a blank page or let tests pass against the wrong server.
 
 ## Architecture
 

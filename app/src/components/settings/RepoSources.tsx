@@ -1,8 +1,24 @@
 import { useState } from "react";
 
-import { Plus, Trash2 } from "lucide-react";
+import { FolderPlus, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { SettingsSection } from "@/components/settings/shared";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { scanForRepos } from "@/store/slices/reposSlice";
 import { saveSettings } from "@/store/slices/settingsSlice";
@@ -12,62 +28,113 @@ export function RepoSources() {
   const dispatch = useAppDispatch();
   const scanPaths = useAppSelector((s) => s.settings.scanPaths);
   const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const addPath = async () => {
     const trimmed = draft.trim();
     if (!trimmed) return;
     const next = Array.from(new Set([...scanPaths, trimmed]));
-    await dispatch(saveSettings({ scanPaths: next })).unwrap();
-    setDraft("");
-    void dispatch(scanForRepos(next));
+    setAdding(true);
+    try {
+      await dispatch(saveSettings({ scanPaths: next })).unwrap();
+      setDraft("");
+      void dispatch(scanForRepos(next));
+      toast.success(t("sources.added"));
+    } catch {
+      toast.error(t("internal", { ns: "errors" }));
+    } finally {
+      setAdding(false);
+    }
   };
 
   const removePath = async (path: string) => {
     const next = scanPaths.filter((p) => p !== path);
-    await dispatch(saveSettings({ scanPaths: next })).unwrap();
-    void dispatch(scanForRepos(next));
+    try {
+      await dispatch(saveSettings({ scanPaths: next })).unwrap();
+      void dispatch(scanForRepos(next));
+      toast.success(t("sources.removed"));
+    } catch {
+      toast.error(t("internal", { ns: "errors" }));
+    }
   };
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold">{t("sections.sources")}</h2>
-      <div className="flex gap-2">
-        <input
-          type="text"
+    <SettingsSection
+      title={t("sections.sources")}
+      description={t("sources.description")}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void addPath();
+            }
+          }}
           placeholder={t("sources.placeholder")}
-          className="h-8 flex-1 rounded-md border border-border bg-background px-2 text-sm"
+          className="flex-1"
         />
-        <button
-          type="button"
+        <Button
           onClick={() => void addPath()}
           disabled={!draft.trim()}
-          className="flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          loading={adding}
         >
-          <Plus className="h-3.5 w-3.5" aria-hidden />
+          <Plus aria-hidden />
           {t("actions.add", { ns: "common" })}
-        </button>
+        </Button>
       </div>
+
       {scanPaths.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t("sources.empty")}</p>
+        <EmptyState
+          icon={FolderPlus}
+          title={t("sources.empty")}
+          description={t("sources.empty_desc")}
+        />
       ) : (
         <ul className="divide-y divide-border rounded-md border border-border">
           {scanPaths.map((path) => (
-            <li key={path} className="flex items-center gap-2 p-2 text-sm">
-              <span className="flex-1 truncate font-mono text-xs">{path}</span>
-              <button
-                type="button"
-                onClick={() => void removePath(path)}
-                aria-label={t("actions.remove", { ns: "common" })}
-                className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+            <li key={path} className="flex items-center gap-2 px-3 py-2 text-sm">
+              <span
+                className="flex-1 truncate font-mono text-xs text-muted-foreground"
+                title={path}
               >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-              </button>
+                {path}
+              </span>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("actions.remove", { ns: "common" })}
+                  >
+                    <Trash2 aria-hidden />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {t("sources.confirm_remove_title")}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("sources.confirm_remove_desc", { path })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>
+                      {t("actions.cancel", { ns: "common" })}
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void removePath(path)}>
+                      {t("actions.remove", { ns: "common" })}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </SettingsSection>
   );
 }

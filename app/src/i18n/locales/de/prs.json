@@ -20,5 +20,6 @@
     "failure": "Fehlgeschlagen",
     "none": "Keine Checks"
   },
-  "empty": "Keine offenen Pull Requests."
+  "empty": "Keine offenen Pull Requests",
+  "empty_desc": "Verbinde einen Provider in den Einstellungen, dann erscheinen hier die Pull Requests deiner Repositories."
 }

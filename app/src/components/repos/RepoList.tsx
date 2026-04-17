@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 
+import { FolderSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { Repository } from "@recrest/shared";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import { useAppSelector } from "@/store/hooks";
 
 import { RepoRow } from "./RepoRow";
@@ -27,19 +29,25 @@ export function RepoList({ repos }: RepoListProps) {
   );
 
   if (sorted.length === 0) {
-    return <div className="p-10 text-center text-sm text-muted-foreground">{t("empty")}</div>;
+    return (
+      <EmptyState
+        icon={FolderSearch}
+        title={t("empty")}
+        description={t("empty_desc")}
+      />
+    );
   }
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+      <div className="hidden items-center gap-3 border-b border-border px-4 py-2 text-[11px] uppercase tracking-wide text-muted-foreground md:flex">
         <span className="w-2" />
         <span className="flex-1">{t("columns.name")}</span>
-        <span className="hidden w-40 md:block">{t("columns.branch")}</span>
-        <span className="hidden w-20 text-right md:block">{t("columns.status")}</span>
-        <span className="hidden w-14 text-right md:block">{t("columns.pull_requests")}</span>
-        <span className="hidden w-28 text-right md:block">{t("columns.last_commit")}</span>
-        <span className="hidden w-[108px] md:block" />
+        <span className="w-40">{t("columns.branch")}</span>
+        <span className="w-20 text-right">{t("columns.status")}</span>
+        <span className="w-14 text-right">{t("columns.pull_requests")}</span>
+        <span className="hidden w-28 text-right lg:block">{t("columns.last_commit")}</span>
+        <span className="w-[108px]" />
       </div>
 
       {sorted.map((repo) => (

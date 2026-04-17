@@ -2,6 +2,8 @@ import { configureStore } from "@reduxjs/toolkit";
 
 import { POLLING_INTERVAL_DEFAULT_MS } from "@recrest/shared";
 
+import type { SettingsState } from "@/store/slices/settingsSlice";
+
 import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
 import { providersReducer } from "@/store/slices/providersSlice";
 import { prsReducer } from "@/store/slices/prsSlice";
@@ -33,9 +35,20 @@ export const store = configureStore({
           theme: persisted.theme ?? "system",
           locale: "en",
           scanPaths: [],
+          autoStart: false,
+          autoUpdate: "manual",
+          startMinimized: false,
+          closeToTray: true,
+          notifications: {
+            enabled: false,
+            newPr: true,
+            ciFailed: true,
+            mergeReady: true,
+          },
+          crashReporting: false,
           loading: false,
           error: null,
-        },
+        } satisfies SettingsState,
       }
     : undefined,
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistenceMiddleware),

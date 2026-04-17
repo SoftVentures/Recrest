@@ -63,7 +63,7 @@ async fn handle_events(
     let mut touched: HashMap<String, PathBuf> = HashMap::new();
     let map = watched.lock().await;
     for event in events {
-        for path in event.paths {
+        for path in &event.paths {
             for (git_dir, id) in map.iter() {
                 if path.starts_with(git_dir) {
                     if let Some(parent) = git_dir.parent() {

@@ -50,7 +50,7 @@ yarn dev            # launches the full Tauri desktop shell
 For UI-only iteration without Rust:
 
 ```bash
-yarn dev:web        # Vite dev server at http://localhost:1420
+yarn dev:web        # Vite dev server at http://localhost:3000
 ```
 
 IPC calls no-op gracefully when running outside the Tauri runtime, so the app renders and routes work in a plain browser.

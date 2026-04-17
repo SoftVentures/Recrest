@@ -28,8 +28,29 @@
     "prettier": "^3.3.3",
     "typescript": "^5.6.3"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SoftVentures/Recrest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SoftVentures/Recrest/issues"
+  },
+  "homepage": "https://github.com/SoftVentures/Recrest#readme",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
   "engines": {
-    "node": ">=22.20.0"
+    "node": "v22.20.0",
+    "yarn": "1.22.22"
   },
   "packageManager": "yarn@1.22.22"
 }

@@ -1,5 +1,10 @@
 pub mod error;
+pub mod git_info;
 pub mod ide;
 pub mod providers;
 pub mod repos;
 pub mod settings;
+pub mod system;
+pub mod terminal;
+pub mod tray;
+pub mod window;

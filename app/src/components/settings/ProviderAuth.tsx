@@ -4,14 +4,33 @@ import { useTranslation } from "react-i18next";
 
 import { PROVIDER_IDS, PROVIDER_NAMES, type ProviderId } from "@recrest/shared";
 
+import { SettingsSection } from "@/components/settings/shared";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/info-hint";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearProviderToken, setProviderToken } from "@/store/slices/providersSlice";
 
 export function ProviderAuth() {
   const { t } = useTranslation("settings");
   return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold">{t("sections.providers")}</h2>
+    <SettingsSection
+      title={t("sections.providers")}
+      description={t("providers.description")}
+    >
       <ul className="divide-y divide-border rounded-md border border-border">
         {PROVIDER_IDS.map((id) => (
           <li key={id} className="p-3">
@@ -19,7 +38,7 @@ export function ProviderAuth() {
           </li>
         ))}
       </ul>
-    </section>
+    </SettingsSection>
   );
 }
 
@@ -38,50 +57,100 @@ function ProviderRow({ providerId }: { providerId: ProviderId }) {
     try {
       await dispatch(setProviderToken({ providerId, token: token.trim() })).unwrap();
       setToken("");
+      toast.success(t("providers.connected", { name: PROVIDER_NAMES[providerId] }));
+    } catch {
+      toast.error(t("unauthorized", { ns: "errors" }));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDisconnect = async () => {
-    await dispatch(clearProviderToken(providerId)).unwrap();
+    try {
+      await dispatch(clearProviderToken(providerId)).unwrap();
+      toast.success(t("providers.disconnected", { name: PROVIDER_NAMES[providerId] }));
+    } catch {
+      toast.error(t("internal", { ns: "errors" }));
+    }
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium">{PROVIDER_NAMES[providerId]}</div>
-        <div className="text-xs text-muted-foreground">
-          {connected
-            ? `${t("providers.status_connected")} ${connection?.username ? `· ${connection.username}` : ""}`
-            : t("providers.status_disconnected")}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">{PROVIDER_NAMES[providerId]}</span>
+          {connected ? (
+            <Badge variant="success" size="sm">
+              {t("providers.status_connected")}
+            </Badge>
+          ) : (
+            <Badge variant="muted" size="sm">
+              {t("providers.status_disconnected")}
+            </Badge>
+          )}
         </div>
+        {connected && connection?.username && (
+          <div className="truncate text-xs text-muted-foreground">
+            {connection.username}
+          </div>
+        )}
       </div>
       {connected ? (
-        <button
-          type="button"
-          onClick={() => void handleDisconnect()}
-          className="h-8 rounded-md border border-border px-3 text-xs hover:bg-accent"
-        >
-          {t("providers.disconnect")}
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              {t("providers.disconnect")}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("providers.confirm_disconnect_title", {
+                  name: PROVIDER_NAMES[providerId],
+                })}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("providers.confirm_disconnect_desc")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t("actions.cancel", { ns: "common" })}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleDisconnect()}>
+                {t("providers.disconnect")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : (
-        <div className="flex items-center gap-2">
-          <input
-            type="password"
-            placeholder={t("providers.token_placeholder")}
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="h-8 w-56 rounded-md border border-border bg-background px-2 text-xs"
-          />
-          <button
-            type="button"
-            disabled={submitting || !token.trim()}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-56">
+            <Input
+              type="password"
+              placeholder={t("providers.token_placeholder")}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleConnect();
+                }
+              }}
+              className="w-full pr-8"
+              autoComplete="off"
+            />
+            <span className="absolute inset-y-0 right-2 flex items-center">
+              <InfoHint side="left">{t("providers.token_hint")}</InfoHint>
+            </span>
+          </div>
+          <Button
+            disabled={!token.trim()}
+            loading={submitting}
             onClick={() => void handleConnect()}
-            className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {t("providers.connect")}
-          </button>
+          </Button>
         </div>
       )}
     </div>

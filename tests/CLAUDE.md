@@ -15,7 +15,7 @@ From the repo root:
 - `yarn workspace @recrest/tests test:e2e src/e2e/<name>.spec.ts` — run a single spec.
 - `yarn workspace @recrest/tests test:ts` — `tsc --noEmit` (this workspace never emits).
 
-Before running E2E: `yarn dev:web` in another terminal so the Vite server is live on port 1420. Playwright's `baseURL` is `http://localhost:1420` — **the same port Vite and Tauri use**, intentionally (see root `CLAUDE.md`).
+Before running E2E: `yarn dev:web` in another terminal so the Vite server is live on port **3000**. Playwright's `baseURL` is `http://localhost:3000`. Tauri's desktop shell uses a different port (1420) so `yarn dev` and `yarn dev:web` can run side-by-side without clashing — see root `CLAUDE.md`.
 
 ## How this workspace differs from the others
 

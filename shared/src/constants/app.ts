@@ -7,3 +7,12 @@ export const URLS = {
   issues: "https://github.com/softventures/recrest/issues",
   docs: "https://github.com/softventures/recrest#readme",
 } as const;
+
+export const MIN_WINDOW_WIDTH = 960;
+export const MIN_WINDOW_HEIGHT = 600;
+export const DEFAULT_WINDOW_WIDTH = 1280;
+export const DEFAULT_WINDOW_HEIGHT = 800;
+export const WINDOW_STATE_DEBOUNCE_MS = 500;
+export const UPDATER_INITIAL_DELAY_MS = 10_000;
+export const UPDATER_INTERVAL_MS = 4 * 60 * 60 * 1000;
+export const TITLEBAR_HEIGHT_PX = 40;

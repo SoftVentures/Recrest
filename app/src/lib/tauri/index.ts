@@ -22,12 +22,46 @@ export async function invoke<T>(command: string, args?: Record<string, unknown>)
   return tauriInvoke<T>(command, args);
 }
 
+/**
+ * Swallows `tauri-ipc-unavailable` and any command-side failure, returning
+ * `null`. Use for fire-and-forget calls (tray badge, window state persist)
+ * where a failure should not propagate to UI code.
+ */
+export async function safeInvoke<T>(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<T | null> {
+  if (!isTauri()) return null;
+  try {
+    return await tauriInvoke<T>(command, args);
+  } catch (err) {
+    console.warn(`[tauri] invoke '${command}' failed:`, err);
+    return null;
+  }
+}
+
 export async function listen<T>(event: string, handler: EventCallback<T>): Promise<UnlistenFn> {
   if (!isTauri()) {
-    // Return a no-op unsubscribe so effects can still clean up cleanly.
     return () => {};
   }
   return tauriListen<T>(event, handler);
+}
+
+/**
+ * Like `listen`, but never throws — returns a no-op unsubscribe if the
+ * subscription itself fails (e.g. plugin not registered).
+ */
+export async function safeListen<T>(
+  event: string,
+  handler: EventCallback<T>,
+): Promise<UnlistenFn> {
+  if (!isTauri()) return () => {};
+  try {
+    return await tauriListen<T>(event, handler);
+  } catch (err) {
+    console.warn(`[tauri] listen '${event}' failed:`, err);
+    return () => {};
+  }
 }
 
 /**

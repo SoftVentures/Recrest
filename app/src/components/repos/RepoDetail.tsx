@@ -1,9 +1,13 @@
-import { ExternalLink, FolderOpen } from "lucide-react";
+import { ExternalLink, FolderOpen, Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { type Repository, formatBranchName, formatRelativeTime } from "@recrest/shared";
 
+import { ChangedFilesList } from "@/components/repos/ChangedFilesList";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { invoke, openExternal } from "@/lib/tauri";
+import { toast } from "@/lib/toast";
 import { useAppSelector } from "@/store/hooks";
 
 interface RepoDetailProps {
@@ -15,31 +19,43 @@ export function RepoDetail({ repo }: RepoDetailProps) {
   const prs = useAppSelector((s) => s.prs.items[repo.id] ?? []);
   const changed = repo.status.staged + repo.status.unstaged + repo.status.untracked;
 
+  const runCommand = async (cmd: string) => {
+    try {
+      await invoke(cmd, { repoId: repo.id });
+    } catch {
+      toast.error(t("internal", { ns: "errors" }));
+    }
+  };
+
   return (
-    <section className="flex flex-col gap-4 border-l border-border bg-card p-5">
+    <section className="flex flex-col gap-5 bg-card p-5">
       <header>
         <h2 className="text-lg font-semibold">{repo.name}</h2>
-        <p className="truncate text-xs text-muted-foreground">{repo.path}</p>
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              void invoke("open_in_ide", { repoId: repo.id });
-            }}
-            className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-sm text-primary-foreground hover:opacity-90"
-          >
-            <FolderOpen className="h-3.5 w-3.5" aria-hidden />
+        <p className="truncate text-xs text-muted-foreground" title={repo.path}>
+          {repo.path}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => void runCommand("open_in_ide")}>
+            <FolderOpen aria-hidden />
             {t("actions.open_in_ide", { ns: "common" })}
-          </button>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void runCommand("open_terminal")}
+          >
+            <Terminal aria-hidden />
+            {t("actions.open_terminal", { ns: "common" })}
+          </Button>
           {repo.remoteUrl && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => void openExternal(repo.remoteUrl!)}
-              className="flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-sm hover:bg-accent"
             >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              <ExternalLink aria-hidden />
               {t("actions.open_remote", { ns: "common" })}
-            </button>
+            </Button>
           )}
         </div>
       </header>
@@ -53,29 +69,46 @@ export function RepoDetail({ repo }: RepoDetailProps) {
         <StatCard
           label={t("detail.last_commit")}
           value={
-            repo.status.lastCommit ? formatRelativeTime(repo.status.lastCommit.timestamp) : "—"
+            repo.status.lastCommit
+              ? formatRelativeTime(repo.status.lastCommit.timestamp)
+              : "—"
           }
         />
       </div>
 
       <div>
+        <h3 className="mb-2 text-sm font-semibold">{t("detail.changes_title")}</h3>
+        <ChangedFilesList
+          files={repo.status.changedFiles}
+          truncated={repo.status.changedFilesTruncated}
+        />
+      </div>
+
+      <div>
         <h3 className="mb-2 text-sm font-semibold">{t("detail.open_prs")}</h3>
-        {prs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("empty", { ns: "prs" })}</p>
+        {prs.filter((p) => p.state === "open").length === 0 ? (
+          <EmptyState
+            title={t("empty", { ns: "prs" })}
+            description={t("detail.open_prs_empty_desc")}
+            className="py-6"
+          />
         ) : (
           <ul className="space-y-2">
             {prs
               .filter((p) => p.state === "open")
               .map((pr) => (
-                <li
-                  key={pr.id}
-                  className="flex items-center gap-3 rounded-md border border-border p-2 text-sm"
-                >
-                  <span className="flex-1 truncate">{pr.title}</span>
-                  <span className="text-xs text-muted-foreground">{pr.author}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(pr.createdAt)}
-                  </span>
+                <li key={pr.id}>
+                  <button
+                    type="button"
+                    onClick={() => void openExternal(pr.url)}
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-border p-2 text-left text-sm transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="flex-1 truncate">{pr.title}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{pr.author}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatRelativeTime(pr.createdAt)}
+                    </span>
+                  </button>
                 </li>
               ))}
           </ul>
@@ -94,7 +127,9 @@ function StatCard({ label, value }: StatCardProps) {
   return (
     <div className="rounded-md border border-border p-3">
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-sm font-medium">{value}</div>
+      <div className="mt-1 truncate text-sm font-medium" title={value}>
+        {value}
+      </div>
     </div>
   );
 }

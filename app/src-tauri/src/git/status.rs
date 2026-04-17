@@ -1,8 +1,12 @@
 use std::path::Path;
 
 use chrono::{DateTime, TimeZone, Utc};
-use git2::{Repository, StatusOptions};
+use git2::{Repository, Status, StatusOptions};
 use serde::Serialize;
+
+/// Cap the `changed_files` list so a mega-dirty working tree never sends
+/// a 10k-entry payload across IPC — the UI only needs a useful preview.
+const MAX_CHANGED_FILES: usize = 100;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,6 +22,8 @@ pub struct RepoStatusDto {
     pub dirty: bool,
     pub last_commit: Option<CommitInfo>,
     pub remote_url: Option<String>,
+    pub changed_files: Vec<ChangedFile>,
+    pub changed_files_truncated: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -27,6 +33,28 @@ pub struct CommitInfo {
     pub summary: String,
     pub author: String,
     pub timestamp: DateTime<Utc>,
+}
+
+/// One entry in the working-tree change list. `status` is the primary marker
+/// shown to the user; when a file is both staged *and* has unstaged edits,
+/// libgit2 reports both bits — we pick "staged" as primary since that's the
+/// more committal state, and the UI can decorate with "+ unstaged edits".
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangedFile {
+    pub path: String,
+    pub status: ChangedFileStatus,
+    /// Rarely both: file is staged *and* has further unstaged modifications.
+    pub has_unstaged_changes: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangedFileStatus {
+    Staged,
+    Unstaged,
+    Untracked,
+    Conflicted,
 }
 
 impl RepoStatusDto {
@@ -43,6 +71,8 @@ impl RepoStatusDto {
             dirty: false,
             last_commit: None,
             remote_url: None,
+            changed_files: Vec::new(),
+            changed_files_truncated: false,
         }
     }
 }
@@ -65,22 +95,66 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
     let mut unstaged = 0usize;
     let mut untracked = 0usize;
     let mut conflicted = 0usize;
+    let mut changed_files: Vec<ChangedFile> = Vec::new();
+    let mut truncated = false;
 
     for entry in statuses.iter() {
         let s = entry.status();
-        if s.is_conflicted() {
+        let path = entry.path().unwrap_or("").to_string();
+
+        // Counts (kept identical to previous semantics).
+        let is_conflict = s.is_conflicted();
+        let is_staged = s.is_index_new()
+            || s.is_index_modified()
+            || s.is_index_deleted()
+            || s.is_index_renamed();
+        let is_unstaged = s.is_wt_modified()
+            || s.is_wt_deleted()
+            || s.is_wt_renamed()
+            || s.is_wt_typechange();
+        let is_untracked = s.is_wt_new();
+
+        if is_conflict {
             conflicted += 1;
+        } else {
+            if is_untracked {
+                untracked += 1;
+            }
+            if is_staged {
+                staged += 1;
+            }
+            if is_unstaged {
+                unstaged += 1;
+            }
+        }
+
+        // Build a user-facing entry if anything about this path matters.
+        if path.is_empty() || !touches_worktree(s) {
             continue;
         }
-        if s.is_wt_new() {
-            untracked += 1;
+
+        if changed_files.len() >= MAX_CHANGED_FILES {
+            truncated = true;
+            continue;
         }
-        if s.is_index_new() || s.is_index_modified() || s.is_index_deleted() || s.is_index_renamed() {
-            staged += 1;
-        }
-        if s.is_wt_modified() || s.is_wt_deleted() || s.is_wt_renamed() || s.is_wt_typechange() {
-            unstaged += 1;
-        }
+
+        let (primary, also_unstaged) = if is_conflict {
+            (ChangedFileStatus::Conflicted, false)
+        } else if is_staged {
+            (ChangedFileStatus::Staged, is_unstaged)
+        } else if is_unstaged {
+            (ChangedFileStatus::Unstaged, false)
+        } else if is_untracked {
+            (ChangedFileStatus::Untracked, false)
+        } else {
+            continue;
+        };
+
+        changed_files.push(ChangedFile {
+            path,
+            status: primary,
+            has_unstaged_changes: also_unstaged,
+        });
     }
 
     let (ahead, behind) = ahead_behind(&repo).unwrap_or((0, 0));
@@ -119,7 +193,23 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
         dirty,
         last_commit,
         remote_url,
+        changed_files,
+        changed_files_truncated: truncated,
     })
+}
+
+fn touches_worktree(s: Status) -> bool {
+    s.is_conflicted()
+        || s.is_index_new()
+        || s.is_index_modified()
+        || s.is_index_deleted()
+        || s.is_index_renamed()
+        || s.is_index_typechange()
+        || s.is_wt_new()
+        || s.is_wt_modified()
+        || s.is_wt_deleted()
+        || s.is_wt_renamed()
+        || s.is_wt_typechange()
 }
 
 fn current_branch(repo: &Repository) -> Option<String> {

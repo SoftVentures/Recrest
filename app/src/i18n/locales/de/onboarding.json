@@ -1,0 +1,62 @@
+{
+  "welcome": {
+    "title": "Willkommen bei Recrest",
+    "tagline": "Ein schlankes Developer-Dashboard für deine lokalen Repos und Pull Requests.",
+    "body": "Kurze Einrichtung — ein paar Einstellungen, dann wählst du die Ordner mit deinem Code aus, fertig.",
+    "cta": "Loslegen",
+    "back": "Zurück"
+  },
+  "basics": {
+    "title": "Grundeinstellungen",
+    "body": "Wähle, wie Recrest aussehen und sich verhalten soll. Alles lässt sich später in den Einstellungen anpassen.",
+    "theme": "Design",
+    "theme_desc": "Folge dem System oder wähle ein festes Erscheinungsbild.",
+    "language": "Sprache",
+    "language_desc": "Für die Oberfläche.",
+    "auto_start": "Mit System starten",
+    "auto_start_desc": "Recrest beim Login automatisch starten.",
+    "close_to_tray": "In Tray schließen",
+    "close_to_tray_desc": "Beim Schließen im System-Tray weiterlaufen lassen.",
+    "notifications": "Desktop-Benachrichtigungen",
+    "notifications_desc": "Über neue Pull Requests und CI-Ergebnisse informieren.",
+    "next": "Weiter"
+  },
+  "pickFolder": {
+    "title": "Wo liegen deine Repositories?",
+    "body": "Füge einen oder mehrere Ordner hinzu. Recrest durchsucht sie rekursiv nach Git-Repositories.",
+    "browse": "Durchsuchen…",
+    "browse_placeholder": "/pfad/zu/repos",
+    "add": "Ordner hinzufügen",
+    "list_empty": "Noch keine Ordner.",
+    "next": "Weiter",
+    "back": "Zurück",
+    "at_least_one": "Mindestens einen Ordner hinzufügen."
+  },
+  "connectProvider": {
+    "title": "Git-Host verbinden",
+    "body": "Optional — verbinde GitHub, GitLab oder Bitbucket, um offene Pull Requests hier zu sehen. Du kannst das auch später in den Einstellungen tun.",
+    "local_note": "Dein lokaler Git-Status, Branches und uncommittete Änderungen werden so oder so angezeigt. Dies ergänzt nur die Sicht auf Pull Requests.",
+    "token_placeholder": "Personal Access Token",
+    "connect": "Verbinden",
+    "skip": "Überspringen",
+    "skip_and_continue": "Ohne Verbindung fortfahren",
+    "next": "Weiter",
+    "back": "Zurück",
+    "connected": "{{name}} verbunden.",
+    "failed": "Verbindung fehlgeschlagen. Token prüfen und erneut versuchen."
+  },
+  "scan": {
+    "title": "Durchsuche deine Ordner",
+    "scanning": "Suche Repositories…",
+    "summary_one": "{{count}} Repository in {{pathCount}} Ordner gefunden.",
+    "summary_other": "{{count}} Repositories in {{pathCount}} Ordnern gefunden.",
+    "empty": "Keine Repositories gefunden. Du kannst später weitere Ordner in den Einstellungen hinzufügen.",
+    "back": "Zurück",
+    "next": "Weiter"
+  },
+  "done": {
+    "title": "Alles bereit",
+    "body": "Recrest ist einsatzbereit. Schau dir deine Repositories und Pull Requests in der Seitenleiste an.",
+    "cta": "Dashboard öffnen"
+  }
+}

@@ -27,9 +27,21 @@
     "files": "{{count}} file",
     "files_other": "{{count}} files",
     "last_commit": "Last commit",
-    "open_prs": "Open pull requests"
+    "open_prs": "Open pull requests",
+    "open_prs_empty_desc": "Connect a provider in Settings to see pull requests here.",
+    "changes_title": "Working tree",
+    "working_tree_clean": "Working tree clean.",
+    "changes_truncated": "More files changed — showing the first entries.",
+    "also_unstaged": "Also has unstaged modifications",
+    "marker": {
+      "staged": "Staged for commit",
+      "unstaged": "Modified in working tree",
+      "untracked": "Untracked",
+      "conflicted": "Merge conflict"
+    }
   },
   "pr_count_one": "{{count}} PR",
   "pr_count_other": "{{count}} PRs",
-  "empty": "No repositories found. Add scan paths in settings."
+  "empty": "No repositories yet",
+  "empty_desc": "Add one or more scan paths in Settings to discover your local git repositories."
 }

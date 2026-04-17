@@ -27,9 +27,21 @@
     "files": "{{count}} Datei",
     "files_other": "{{count}} Dateien",
     "last_commit": "Letzter Commit",
-    "open_prs": "Offene Pull Requests"
+    "open_prs": "Offene Pull Requests",
+    "open_prs_empty_desc": "Verbinde einen Provider in den Einstellungen, um hier Pull Requests zu sehen.",
+    "changes_title": "Arbeitsverzeichnis",
+    "working_tree_clean": "Arbeitsverzeichnis sauber.",
+    "changes_truncated": "Weitere Dateien geändert — erste Einträge werden angezeigt.",
+    "also_unstaged": "Hat zusätzlich ungestagte Änderungen",
+    "marker": {
+      "staged": "Zum Commit vorgemerkt",
+      "unstaged": "Im Arbeitsverzeichnis geändert",
+      "untracked": "Nicht versioniert",
+      "conflicted": "Merge-Konflikt"
+    }
   },
   "pr_count_one": "{{count}} PR",
   "pr_count_other": "{{count}} PRs",
-  "empty": "Keine Repositories gefunden. Scan-Pfade in den Einstellungen hinzufügen."
+  "empty": "Noch keine Repositories",
+  "empty_desc": "Füge einen oder mehrere Scan-Pfade in den Einstellungen hinzu, damit Recrest deine lokalen Git-Repositories findet."
 }

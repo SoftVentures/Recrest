@@ -47,13 +47,23 @@ pub async fn scan_repos(
     config.settings_mut().scan_paths = paths;
 
     let mut out = Vec::with_capacity(discovered.len());
+    let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
     for repo_path in discovered {
         let record = config.upsert_scanned_repo(&repo_path)?;
         let status = status::read_status(&record.path)?;
+        new_records.push((record.id.clone(), record.path.clone()));
         out.push(RepoDto::from_record(&record, status));
     }
 
     config.save(&app)?;
+    drop(config);
+
+    // Subscribe the filesystem watcher to every scanned repo (best-effort).
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        for (id, path) in new_records {
+            let _ = watcher.watch_repo(&id, &path).await;
+        }
+    }
     Ok(out)
 }
 
@@ -95,7 +105,13 @@ pub async fn add_repo(
     record.group_id = group_id.clone();
     config.settings_mut().repos.insert(record.id.clone(), record.clone());
     config.save(&app)?;
+    drop(config);
     let status = status::read_status(&record.path)?;
+
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        let _ = watcher.watch_repo(&record.id, &record.path).await;
+    }
+
     Ok(RepoDto::from_record(&record, status))
 }
 
@@ -106,8 +122,18 @@ pub async fn remove_repo(
     repo_id: String,
 ) -> Result<(), CommandError> {
     let mut config = state.config.lock().await;
+    let removed_path = config
+        .settings()
+        .repos
+        .get(&repo_id)
+        .map(|r| r.path.clone());
     config.settings_mut().repos.remove(&repo_id);
     config.save(&app)?;
+    drop(config);
+
+    if let (Some(path), Some(watcher)) = (removed_path, state.watcher.lock().await.as_mut()) {
+        let _ = watcher.unwatch_repo(&path).await;
+    }
     Ok(())
 }
 
@@ -119,15 +145,34 @@ pub async fn open_in_ide(
     ide: Option<String>,
 ) -> Result<(), CommandError> {
     let config = state.config.lock().await;
-    let record = config
+    let record_path = config
         .settings()
         .repos
         .get(&repo_id)
-        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
+        .path
+        .clone();
     let default_ide = config.settings().default_ide.clone();
     drop(config);
 
     let selected = ide.or(default_ide);
-    crate::commands::ide::open_repo(&app, &record.path, selected.as_deref())?;
+    crate::commands::ide::open_repo(&app, &record_path, selected.as_deref())?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn open_terminal(
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<(), CommandError> {
+    let config = state.config.lock().await;
+    let record_path = config
+        .settings()
+        .repos
+        .get(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
+        .path
+        .clone();
+    drop(config);
+    crate::commands::terminal::open_at(&record_path)
 }

@@ -3,9 +3,13 @@ import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { SearchOverlay } from "@/components/search/SearchOverlay";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useDevice } from "@/hooks/useDevice";
 import { useSearchHotkey } from "@/hooks/useSearch";
+import { useTauri } from "@/hooks/useTauri";
 import { useThemeEffect } from "@/hooks/useTheme";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setLocale } from "@/store/slices/settingsSlice";
@@ -13,6 +17,7 @@ import { setSidebarCollapsed } from "@/store/slices/uiSlice";
 
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
+import { Titlebar } from "./Titlebar";
 
 interface AppShellProps {
   children: ReactNode;
@@ -23,18 +28,26 @@ export function AppShell({ children }: AppShellProps) {
   useSearchHotkey();
   useLocaleSync();
   useResponsiveSidebar();
+  useTauri();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-background">
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
+    <TooltipProvider delayDuration={250}>
+      <div className="flex h-screen w-screen flex-col overflow-hidden">
+        <Titlebar />
+        <div className="flex min-h-0 flex-1">
+          <Sidebar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Header />
+            <main className="flex-1 overflow-y-auto bg-background">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+          </div>
+        </div>
+        <SearchOverlay />
+        <OnboardingWizard />
+        <Toaster />
       </div>
-      <SearchOverlay />
-    </div>
+    </TooltipProvider>
   );
 }
 

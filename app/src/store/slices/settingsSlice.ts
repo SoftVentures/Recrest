@@ -15,6 +15,17 @@ const initialState: SettingsState = {
   theme: "system",
   locale: "en",
   scanPaths: [],
+  autoStart: false,
+  autoUpdate: "manual",
+  startMinimized: false,
+  closeToTray: true,
+  notifications: {
+    enabled: false,
+    newPr: true,
+    ciFailed: true,
+    mergeReady: true,
+  },
+  crashReporting: false,
   loading: false,
   error: null,
 };

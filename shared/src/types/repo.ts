@@ -25,6 +25,19 @@ export interface RepositoryStatus {
   dirty: boolean;
   lastCommit: CommitInfo | null;
   remoteUrl: string | null;
+  /** Per-file working-tree state, capped server-side (see `changedFilesTruncated`). */
+  changedFiles: ChangedFile[];
+  /** True when the Rust side skipped some entries because the list exceeded its cap. */
+  changedFilesTruncated: boolean;
+}
+
+export type ChangedFileStatus = "staged" | "unstaged" | "untracked" | "conflicted";
+
+export interface ChangedFile {
+  path: string;
+  status: ChangedFileStatus;
+  /** True when a file is both staged *and* has further unstaged edits. */
+  hasUnstagedChanges: boolean;
 }
 
 export interface CommitInfo {

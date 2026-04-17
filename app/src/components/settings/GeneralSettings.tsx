@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import { useTranslation } from "react-i18next";
 
 import {
@@ -10,7 +8,17 @@ import {
   type ThemeMode,
 } from "@recrest/shared";
 
+import { SettingsField, SettingsSection } from "@/components/settings/shared";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import i18n from "@/i18n";
+import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { saveSettings } from "@/store/slices/settingsSlice";
 
@@ -20,41 +28,56 @@ export function GeneralSettings() {
   const settings = useAppSelector((s) => s.settings);
 
   const update = async (patch: Record<string, unknown>) => {
-    await dispatch(saveSettings(patch)).unwrap();
+    try {
+      await dispatch(saveSettings(patch)).unwrap();
+    } catch {
+      toast.error(t("errors.internal", { ns: "errors" }));
+    }
   };
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-sm font-semibold">{t("sections.general")}</h2>
-      <Field label={t("fields.theme")}>
-        <select
+    <SettingsSection title={t("sections.general")}>
+      <SettingsField label={t("fields.theme")} htmlFor="theme-select">
+        <Select
           value={settings.theme}
-          onChange={(e) => void update({ theme: e.target.value as ThemeMode })}
-          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+          onValueChange={(value) => void update({ theme: value as ThemeMode })}
         >
-          <option value="system">{t("theme.system")}</option>
-          <option value="light">{t("theme.light")}</option>
-          <option value="dark">{t("theme.dark")}</option>
-        </select>
-      </Field>
+          <SelectTrigger id="theme-select" className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="system">{t("theme.system")}</SelectItem>
+            <SelectItem value="light">{t("theme.light")}</SelectItem>
+            <SelectItem value="dark">{t("theme.dark")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </SettingsField>
 
-      <Field label={t("fields.language")}>
-        <select
+      <SettingsField label={t("fields.language")} htmlFor="locale-select">
+        <Select
           value={settings.locale}
-          onChange={(e) => {
-            const locale = e.target.value;
-            void update({ locale });
-            void i18n.changeLanguage(locale);
+          onValueChange={(value) => {
+            void update({ locale: value });
+            void i18n.changeLanguage(value);
           }}
-          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
         >
-          <option value="en">English</option>
-          <option value="de">Deutsch</option>
-        </select>
-      </Field>
+          <SelectTrigger id="locale-select" className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en">English</SelectItem>
+            <SelectItem value="de">Deutsch</SelectItem>
+          </SelectContent>
+        </Select>
+      </SettingsField>
 
-      <Field label={t("fields.polling_interval")}>
-        <input
+      <SettingsField
+        label={t("fields.polling_interval")}
+        hint={t("fields.polling_interval_hint")}
+        htmlFor="polling-input"
+      >
+        <Input
+          id="polling-input"
           type="number"
           min={POLLING_INTERVAL_MIN_MS / 60_000}
           max={POLLING_INTERVAL_MAX_MS / 60_000}
@@ -69,38 +92,30 @@ export function GeneralSettings() {
             );
             void update({ pollingIntervalMs: clamped });
           }}
-          className="h-8 w-20 rounded-md border border-border bg-background px-2 text-sm"
+          className="w-24"
         />
-      </Field>
+      </SettingsField>
 
-      <Field label={t("fields.default_ide")}>
-        <select
-          value={settings.defaultIde ?? ""}
-          onChange={(e) => void update({ defaultIde: e.target.value || null })}
-          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+      <SettingsField label={t("fields.default_ide")} htmlFor="ide-select">
+        <Select
+          value={settings.defaultIde ?? "auto"}
+          onValueChange={(value) =>
+            void update({ defaultIde: value === "auto" ? null : value })
+          }
         >
-          <option value="">{t("ide.auto_detect")}</option>
-          {IDE_IDS.map((id) => (
-            <option key={id} value={id}>
-              {IDE_DEFINITIONS[id].name}
-            </option>
-          ))}
-        </select>
-      </Field>
-    </section>
-  );
-}
-
-interface FieldProps {
-  label: string;
-  children: ReactNode;
-}
-
-function Field({ label, children }: FieldProps) {
-  return (
-    <label className="flex items-center justify-between gap-4">
-      <span className="text-sm">{label}</span>
-      {children}
-    </label>
+          <SelectTrigger id="ide-select" className="w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">{t("ide.auto_detect")}</SelectItem>
+            {IDE_IDS.map((id) => (
+              <SelectItem key={id} value={id}>
+                {IDE_DEFINITIONS[id].name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingsField>
+    </SettingsSection>
   );
 }

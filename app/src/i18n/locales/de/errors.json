@@ -1,0 +1,12 @@
+{
+  "unknown": "Etwas ist schiefgelaufen.",
+  "not_found": "Nicht gefunden.",
+  "bad_request": "Ungültige Eingabe.",
+  "unauthorized": "Nicht autorisiert. Bitte Zugangsdaten prüfen.",
+  "io": "Dateisystem-Fehler.",
+  "git": "Git-Fehler.",
+  "serialize": "Datenformat-Fehler.",
+  "http": "Netzwerkfehler. Bitte Verbindung prüfen.",
+  "keyring": "Auf den System-Keychain konnte nicht zugegriffen werden.",
+  "internal": "Interner Fehler."
+}
