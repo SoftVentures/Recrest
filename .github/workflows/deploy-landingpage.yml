@@ -41,7 +41,7 @@ jobs:
           VITE_IMPRINT_EMAIL: ${{ secrets.VITE_IMPRINT_EMAIL }}
           VITE_IMPRINT_PHONE: ${{ secrets.VITE_IMPRINT_PHONE }}
           VITE_IMPRINT_RESPONSIBLE_PERSON: ${{ secrets.VITE_IMPRINT_RESPONSIBLE_PERSON }}
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: landingpage/dist
