@@ -94,7 +94,7 @@
     "storybook": "^10.3.5",
     "tailwindcss": "^4.0.0",
     "tw-animate-css": "^1.2.5",
-    "typescript": "^5.6.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.8.0",
     "vite": "^5.4.8",
     "vite-plugin-svgr": "^5.2.0",
