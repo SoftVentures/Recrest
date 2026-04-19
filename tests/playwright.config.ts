@@ -9,8 +9,8 @@ export default defineConfig({
   expect: { timeout: 7_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  retries: process.env.CI ? 2 : 1,
+  workers: process.env.CI ? 2 : 4,
   reporter: process.env.CI
     ? [["list"], ["html", { open: "never", outputFolder: "playwright-report" }], ["github"]]
     : [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
@@ -74,7 +74,7 @@ export default defineConfig({
     },
     {
       name: "app-firefox",
-      testMatch: /e2e[\\/]app[\\/](?!12-responsive|13-a11y).*\.spec\.ts$/,
+      testMatch: /e2e[\\/]app[\\/](?!13-a11y).*\.spec\.ts$/,
       use: {
         ...devices["Desktop Firefox"],
         viewport: { width: 1440, height: 900 },
@@ -83,7 +83,7 @@ export default defineConfig({
     },
     {
       name: "app-webkit",
-      testMatch: /e2e[\\/]app[\\/](?!12-responsive|13-a11y).*\.spec\.ts$/,
+      testMatch: /e2e[\\/]app[\\/](?!13-a11y).*\.spec\.ts$/,
       use: {
         ...devices["Desktop Safari"],
         viewport: { width: 1440, height: 900 },

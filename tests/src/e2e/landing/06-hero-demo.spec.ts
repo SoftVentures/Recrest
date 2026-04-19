@@ -59,9 +59,10 @@ test.describe("landing / hero demo", () => {
     if (!(await groups.count())) test.skip(true, "demo has no group headers");
     const firstGroupToggle = groups.first();
     const rowsBefore = await page.locator(".demo-trow").count();
+    await firstGroupToggle.scrollIntoViewIfNeeded();
     await firstGroupToggle.click();
-    await page.waitForTimeout(200);
-    const rowsAfter = await page.locator(".demo-trow").count();
-    expect(rowsAfter).toBeLessThan(rowsBefore);
+    await expect
+      .poll(async () => page.locator(".demo-trow").count(), { timeout: 3000 })
+      .toBeLessThan(rowsBefore);
   });
 });
