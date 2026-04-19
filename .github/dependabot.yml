@@ -6,21 +6,25 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     labels:
       - dependencies
     commit-message:
       prefix: "chore(deps)"
     groups:
-      minor-and-patch:
+      all:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
+      majors:
+        patterns: ["*"]
+        update-types: ["major"]
 
   - package-ecosystem: npm
     directory: "/app"
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     labels:
       - dependencies
     commit-message:
@@ -36,35 +40,53 @@ updates:
       testing:
         patterns: ["@testing-library/*", "vitest", "jsdom"]
       minor-and-patch:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
+      majors:
+        patterns: ["*"]
+        update-types: ["major"]
 
   - package-ecosystem: npm
     directory: "/shared"
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - dependencies
     commit-message:
       prefix: "chore(deps)"
     groups:
-      minor-and-patch:
-        update-types: ["minor", "patch"]
+      all:
+        patterns: ["*"]
 
   - package-ecosystem: npm
     directory: "/tests"
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - dependencies
     commit-message:
       prefix: "chore(deps)"
     groups:
-      minor-and-patch:
-        update-types: ["minor", "patch"]
+      all:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/landingpage"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 1
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      all:
+        patterns: ["*"]
 
   # Rust backend
   - package-ecosystem: cargo
@@ -72,14 +94,18 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     labels:
       - dependencies
     commit-message:
       prefix: "chore(deps)"
     groups:
       minor-and-patch:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
+      majors:
+        patterns: ["*"]
+        update-types: ["major"]
 
   # CI actions pinned via `uses:`
   - package-ecosystem: github-actions
@@ -87,8 +113,11 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - dependencies
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      all:
+        patterns: ["*"]

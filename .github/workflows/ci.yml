@@ -73,11 +73,7 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
       - name: Install Playwright browsers
-        run: yarn workspace @recrest/tests exec playwright install --with-deps chromium
-      - name: Start web dev server
-        run: |
-          yarn dev:web &
-          npx --yes wait-on@7 http://localhost:3000
+        run: yarn workspace @recrest/tests exec playwright install --with-deps chromium firefox webkit
       - run: yarn test:e2e
       - name: Upload Playwright report on failure
         if: failure()
