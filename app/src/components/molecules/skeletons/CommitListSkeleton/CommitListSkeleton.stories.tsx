@@ -10,3 +10,5 @@ const meta: Meta<typeof CommitListSkeleton> = {
 export default meta;
 
 export const Default: StoryObj<typeof CommitListSkeleton> = {};
+export const SingleRow: StoryObj<typeof CommitListSkeleton> = { args: { rows: 1 } };
+export const TenRows: StoryObj<typeof CommitListSkeleton> = { args: { rows: 10 } };

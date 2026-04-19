@@ -27,7 +27,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.github.com https://gitlab.com https://api.bitbucket.org https://updates.recrest.dev; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; media-src 'self'"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.github.com https://gitlab.com https://api.bitbucket.org; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; media-src 'self'"
     }
   },
   "plugins": {
@@ -35,14 +35,6 @@
       "desktop": {
         "schemes": ["recrest"]
       }
-    },
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://updates.recrest.dev/{{target}}/{{arch}}/{{current_version}}"
-      ],
-      "dialog": false,
-      "pubkey": ""
     }
   },
   "bundle": {
@@ -60,7 +52,7 @@
     "longDescription": "Recrest surfaces local git repositories, their working-tree status, open pull requests, and CI checks in one native desktop app.",
     "copyright": "Copyright (c) 2026 SoftVentures",
     "publisher": "SoftVentures",
-    "homepage": "https://github.com/softventures/recrest",
+    "homepage": "https://github.com/SoftVentures/Recrest",
     "windows": {
       "nsis": {
         "displayLanguageSelector": true,
@@ -85,6 +77,6 @@
         "bundleMediaFramework": true
       }
     },
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": false
   }
 }

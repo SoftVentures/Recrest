@@ -9,14 +9,37 @@ interface IconButtonProps extends ButtonProps {
   tooltipSide?: "top" | "bottom" | "left" | "right";
 }
 
+/** Tooltip text is reused as the accessible name when the caller hasn't
+ *  provided an explicit `aria-label`. Only strings can serve as names;
+ *  richer ReactNode tooltips still need an explicit `aria-label`. */
+function resolveAriaLabel(explicit: string | undefined, tooltip: ReactNode): string | undefined {
+  if (explicit) return explicit;
+  return typeof tooltip === "string" ? tooltip : undefined;
+}
+
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { tooltip, tooltipSide = "bottom", className, children, type = "button", ...rest },
+  {
+    tooltip,
+    tooltipSide = "bottom",
+    className,
+    children,
+    type = "button",
+    "aria-label": ariaLabel,
+    ...rest
+  },
   ref,
 ) {
+  const resolvedLabel = resolveAriaLabel(ariaLabel, tooltip);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button ref={ref} type={type} className={className ?? "icon-btn"} {...rest}>
+        <button
+          ref={ref}
+          type={type}
+          className={className ?? "icon-btn"}
+          aria-label={resolvedLabel}
+          {...rest}
+        >
           {children}
         </button>
       </TooltipTrigger>
@@ -33,13 +56,14 @@ interface IconLinkProps extends AnchorProps {
 }
 
 export const IconLink = forwardRef<HTMLAnchorElement, IconLinkProps>(function IconLink(
-  { tooltip, tooltipSide = "bottom", className, children, ...rest },
+  { tooltip, tooltipSide = "bottom", className, children, "aria-label": ariaLabel, ...rest },
   ref,
 ) {
+  const resolvedLabel = resolveAriaLabel(ariaLabel, tooltip);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <a ref={ref} className={className ?? "icon-btn"} {...rest}>
+        <a ref={ref} className={className ?? "icon-btn"} aria-label={resolvedLabel} {...rest}>
           {children}
         </a>
       </TooltipTrigger>

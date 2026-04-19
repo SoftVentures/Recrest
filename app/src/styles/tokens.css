@@ -17,8 +17,11 @@
   --ink-0: #0b0b0f;
   --ink-1: #22222a;
   --ink-2: #52525b;
-  --ink-3: #8a8a94;
-  --ink-4: #b8b8c0;
+  /* ink-3 + ink-4 tuned for WCAG AA (4.5:1) on `--surface` / `--surface-2`.
+   * ink-3 = muted body (≥5:1), ink-4 = deprecated-for-text / icon-only (≥4.5:1).
+   */
+  --ink-3: #64646d;
+  --ink-4: #747480;
 
   --accent: #f46a3d;
   --accent-weak: #ffe6db;
@@ -28,13 +31,13 @@
   --brand-ink: #0f1115;
   --brand-border: #ececee;
 
-  --blue: #2f66e6;
+  --blue: #1e52d4;
   --blue-weak: #e8f0ff;
-  --green: #16a34a;
+  --green: #138438;
   --green-weak: #e4f6ea;
-  --amber: #d97706;
+  --amber: #8f4700;
   --amber-weak: #fdf1dc;
-  --red: #dc2626;
+  --red: #c71515;
   --red-weak: #fbe9e9;
   --purple: #7c3aed;
   --purple-weak: #f0e9ff;
@@ -75,8 +78,9 @@
   --ink-0: #ffffff;
   --ink-1: #ecedf2;
   --ink-2: #a0a2b2;
-  --ink-3: #777a8e;
-  --ink-4: #585b6d;
+  /* ink-3 + ink-4 tuned for WCAG AA on dark `--canvas` / `--surface`. */
+  --ink-3: #a3a6b8;
+  --ink-4: #8b8ea2;
 
   --accent: #ff7f4f;
   --accent-weak: rgba(255, 127, 79, 0.18);

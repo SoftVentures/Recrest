@@ -1,0 +1,58 @@
+name: Deploy landingpage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "landingpage/**"
+      - "package.json"
+      - ".github/workflows/deploy-landingpage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - name: Build landingpage
+        run: yarn build:landingpage
+        env:
+          BASE_PATH: /Recrest/
+          VITE_IMPRINT_NAME: ${{ secrets.VITE_IMPRINT_NAME }}
+          VITE_IMPRINT_STREET: ${{ secrets.VITE_IMPRINT_STREET }}
+          VITE_IMPRINT_POSTAL_CODE: ${{ secrets.VITE_IMPRINT_POSTAL_CODE }}
+          VITE_IMPRINT_CITY: ${{ secrets.VITE_IMPRINT_CITY }}
+          VITE_IMPRINT_COUNTRY: ${{ secrets.VITE_IMPRINT_COUNTRY }}
+          VITE_IMPRINT_EMAIL: ${{ secrets.VITE_IMPRINT_EMAIL }}
+          VITE_IMPRINT_PHONE: ${{ secrets.VITE_IMPRINT_PHONE }}
+          VITE_IMPRINT_RESPONSIBLE_PERSON: ${{ secrets.VITE_IMPRINT_RESPONSIBLE_PERSON }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: landingpage/dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

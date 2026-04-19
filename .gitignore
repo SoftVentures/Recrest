@@ -150,18 +150,31 @@ storybook-static
 # build
 build/
 
-# Playwright screenshots
+# Playwright screenshots + reports
 .screenshots/
+tests/playwright-report/
+tests/test-results/
+tests/.findings.md
+
+# Playwright visual-regression baselines are platform-specific (`-win32`,
+# `-linux`, `-darwin` suffixes). Keeping them out of git avoids false
+# "snapshot missing" failures when a run happens on a different OS than the
+# committer; CI regenerates its own baselines in a dedicated job.
+tests/src/e2e/**/*-snapshots/
 
 # Playwright auth state
 tests/.auth/
 .playwright-mcp
+
+# Generierte Social-Preview (wird direkt in GitHub-Repo-Settings hochgeladen, nicht committet)
+landingpage/public/social/social-preview.png
 
 # temp
 .DS_Store
 
 # Claude Code local settings
 .claude/settings.local.json
+.design-bundle
 
 # Superpowers
 .superpowers

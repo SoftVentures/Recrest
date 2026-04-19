@@ -1,0 +1,155 @@
+# Triggered by the tag that release-please creates when its Release PR is merged.
+# Builds Tauri installers for Linux / Windows / macOS and uploads them as a draft
+# GitHub Release. Runs unsigned until TAURI_SIGNING_PRIVATE_KEY is populated —
+# signing secrets are passed through only when they exist.
+name: Release (Tauri)
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+          - platform: ubuntu-latest
+            args: ""
+          - platform: windows-latest
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./app/src-tauri -> target"
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libayatana-appindicator3-dev
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Build Tauri app (unsigned)
+        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Recrest ${{ github.ref_name }}"
+          releaseBody: |
+            Thanks for downloading Recrest!
+
+            ## Install
+
+            - **macOS:** open the `.dmg` and drag Recrest into Applications. On first launch, macOS Gatekeeper may block the app because it is not yet code-signed. Right-click the app and choose *Open*, or run `xattr -cr /Applications/Recrest.app` in Terminal.
+            - **Windows:** run the `.msi` installer. Windows SmartScreen will warn about an unknown publisher — click *More info* → *Run anyway*. The warning goes away once our reputation builds up (or we can afford a code-signing certificate).
+            - **Linux:** use the `.AppImage` (make executable: `chmod +x Recrest_*.AppImage`) or install the `.deb` / `.rpm`.
+
+            ## Verify the download
+
+            The `SHA256SUMS.txt` asset contains checksums for every installer on this release. Verify with:
+
+            ```bash
+            sha256sum -c SHA256SUMS.txt        # Linux
+            shasum -a 256 -c SHA256SUMS.txt    # macOS
+            Get-FileHash <file> -Algorithm SHA256  # Windows PowerShell
+            ```
+
+            ## Why the OS warnings?
+
+            Recrest is an open-source project without a paid code-signing certificate yet (Apple Developer ID: $99/year, Windows EV cert: $300+/year). The installers are built directly from this tag by GitHub Actions. See the [README](https://github.com/SoftVentures/Recrest#download--install) for the full story.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+          projectPath: ./app
+
+      - name: Build Tauri app (signed)
+        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Recrest ${{ github.ref_name }}"
+          releaseBody: "See the attached assets to download and install this version. All installers are signed."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+          projectPath: ./app
+
+  checksums:
+    name: Checksums
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p assets
+          gh release download "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --dir assets \
+            --pattern '*.dmg' \
+            --pattern '*.msi' \
+            --pattern '*.exe' \
+            --pattern '*.AppImage' \
+            --pattern '*.deb' \
+            --pattern '*.rpm' \
+            || true
+      - name: Compute SHA256SUMS
+        run: |
+          cd assets
+          if compgen -G "*" > /dev/null; then
+            sha256sum * > SHA256SUMS.txt
+            cat SHA256SUMS.txt
+          else
+            echo "no installer assets found — skipping checksum step"
+            exit 0
+          fi
+      - name: Upload checksums to release
+        if: hashFiles('assets/SHA256SUMS.txt') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            assets/SHA256SUMS.txt \
+            --repo "${{ github.repository }}" \
+            --clobber

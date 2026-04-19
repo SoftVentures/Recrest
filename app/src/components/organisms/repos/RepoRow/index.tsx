@@ -88,14 +88,17 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
 
   return (
     <div
-      role="button"
-      tabIndex={0}
       className={`a-row d-comfy${selected ? " selected" : ""}`}
       style={{ gridTemplateColumns: COL_TEMPLATE }}
-      onClick={() => onSelect(repo.id)}
-      onKeyDown={handleKey}
     >
-      <div className="a-c-name">
+      <div
+        role="button"
+        tabIndex={0}
+        className="a-c-name"
+        aria-label={`Select repo: ${repo.name}`}
+        onClick={() => onSelect(repo.id)}
+        onKeyDown={handleKey}
+      >
         <RepoAvatar repo={repo} size={28} radius={6} />
         <div className="a-name-stack">
           <div className="a-name-line">

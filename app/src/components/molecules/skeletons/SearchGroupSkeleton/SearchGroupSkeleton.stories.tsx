@@ -10,3 +10,5 @@ const meta: Meta<typeof SearchGroupSkeleton> = {
 export default meta;
 
 export const Default: StoryObj<typeof SearchGroupSkeleton> = {};
+export const SingleRow: StoryObj<typeof SearchGroupSkeleton> = { args: { rows: 1 } };
+export const ManyRows: StoryObj<typeof SearchGroupSkeleton> = { args: { rows: 6 } };

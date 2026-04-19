@@ -7,26 +7,43 @@
   "workspaces": [
     "app",
     "shared",
-    "tests"
+    "tests",
+    "landingpage"
   ],
   "scripts": {
     "dev": "yarn workspace @recrest/shared build && yarn workspace @recrest/app tauri:dev",
     "dev:web": "yarn workspace @recrest/shared build && yarn workspace @recrest/app dev",
+    "dev:landingpage": "yarn workspace @recrest/landingpage dev",
     "build": "yarn workspace @recrest/shared build && yarn workspace @recrest/app tauri:build",
+    "build:landingpage": "yarn workspace @recrest/landingpage build",
+    "preview:landingpage": "yarn workspace @recrest/landingpage preview",
     "predev": "yarn workspace @recrest/shared build",
     "postinstall": "yarn workspace @recrest/shared build",
-    "format": "yarn workspace @recrest/shared format && yarn workspace @recrest/app format && yarn workspace @recrest/tests format",
-    "format:check": "yarn workspace @recrest/shared format:check && yarn workspace @recrest/app format:check && yarn workspace @recrest/tests format:check",
-    "lint": "yarn workspace @recrest/shared lint && yarn workspace @recrest/app lint && yarn workspace @recrest/tests lint",
-    "test": "yarn workspace @recrest/shared test && yarn workspace @recrest/app test",
-    "test:ts": "yarn workspace @recrest/shared test:ts && yarn workspace @recrest/app test:ts && yarn workspace @recrest/tests test:ts",
+    "format": "yarn workspace @recrest/shared format && yarn workspace @recrest/app format && yarn workspace @recrest/tests format && yarn workspace @recrest/landingpage format",
+    "format:check": "yarn workspace @recrest/shared format:check && yarn workspace @recrest/app format:check && yarn workspace @recrest/tests format:check && yarn workspace @recrest/landingpage format:check",
+    "lint": "yarn workspace @recrest/shared lint && yarn workspace @recrest/app lint && yarn workspace @recrest/tests lint && yarn workspace @recrest/landingpage lint",
+    "test": "yarn workspace @recrest/shared test && yarn workspace @recrest/app test && yarn workspace @recrest/landingpage test",
+    "test:ts": "yarn workspace @recrest/shared test:ts && yarn workspace @recrest/app test:ts && yarn workspace @recrest/tests test:ts && yarn workspace @recrest/landingpage test:ts",
     "test:e2e": "yarn workspace @recrest/tests test:e2e",
-    "typecheck": "yarn workspace @recrest/shared typecheck && yarn workspace @recrest/app typecheck && yarn workspace @recrest/tests typecheck"
+    "typecheck": "yarn workspace @recrest/shared typecheck && yarn workspace @recrest/app typecheck && yarn workspace @recrest/tests typecheck && yarn workspace @recrest/landingpage typecheck",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,cjs,mjs,json,css,html,md,svg,yml,yaml}": "prettier --write",
+    "app/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
+    "shared/src/**/*.ts": "eslint --fix --max-warnings=0",
+    "tests/src/**/*.ts": "eslint --fix --max-warnings=0",
+    "landingpage/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
+    "app/src-tauri/**/*.rs": "rustfmt --edition 2021"
   },
   "repository": {
     "type": "git",

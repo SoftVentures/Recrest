@@ -46,6 +46,7 @@ export function SystemSettings() {
             <input
               className="a-set-input"
               type="number"
+              aria-label={t("fields.polling_interval")}
               min={POLLING_INTERVAL_MIN_MS / 60_000}
               max={POLLING_INTERVAL_MAX_MS / 60_000}
               step={1}
@@ -75,7 +76,11 @@ export function SystemSettings() {
                 void update({ defaultIde: value === "auto" ? null : value })
               }
             >
-              <SelectTrigger className="a-set-trigger" style={{ minWidth: 180 }}>
+              <SelectTrigger
+                className="a-set-trigger"
+                style={{ minWidth: 180 }}
+                aria-label={t("fields.default_ide")}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

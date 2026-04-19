@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400" role="img">
+  <title>Recrest — DMG installer background</title>
+  <desc>Export to dmg-background.png (660x400 @1x) and dmg-background@2x.png (1320x800 @2x). App icon lands at (180,170), Applications folder at (480,170) per tauri.conf.json.</desc>
+  <defs>
+    <radialGradient id="dmg-glow" cx="50%" cy="10%" r="85%">
+      <stop offset="0%" stop-color="#d97757" stop-opacity="0.16"/>
+      <stop offset="55%" stop-color="#d97757" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#d97757" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="660" height="400" fill="#0F1115"/>
+  <rect width="660" height="400" fill="url(#dmg-glow)"/>
+
+  <!-- Top wordmark -->
+  <g transform="translate(330, 56)" text-anchor="middle" font-family="Inter, -apple-system, 'SF Pro Text', system-ui, sans-serif">
+    <text font-size="22" font-weight="700" fill="#FFFFFF" letter-spacing="-0.4">Install Recrest</text>
+    <text y="26" font-size="13" font-weight="500" fill="#a4a4b2">Drag the app into your Applications folder</text>
+  </g>
+
+  <!-- Arrow between the two icon slots (icons overlay at 180,170 and 480,170 — 64x64) -->
+  <g transform="translate(280, 200)" stroke="#d97757" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M0 12 L88 12" stroke-width="2.4" opacity="0.8"/>
+    <path d="M78 3 L88 12 L78 21" stroke-width="2.4" opacity="0.9"/>
+    <!-- Soft dotted accent behind arrow -->
+    <path d="M0 12 L88 12" stroke-width="10" opacity="0.06"/>
+  </g>
+
+  <!-- Slot labels under icons (positions mirror 180+32=212 and 480+32=512 centers) -->
+  <g font-family="Inter, -apple-system, system-ui, sans-serif" font-size="11" font-weight="500" fill="#83839a" text-anchor="middle">
+    <text x="212" y="260">Recrest.app</text>
+    <text x="512" y="260">Applications</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="330" y="358" text-anchor="middle" font-family="Inter, 'SF Pro Text', system-ui, sans-serif" font-size="11" font-weight="500" fill="#747480" letter-spacing="0.4">github.com/SoftVentures/Recrest</text>
+</svg>

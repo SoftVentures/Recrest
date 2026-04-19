@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a new feature or enhancement.
+title: "[feat] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please check [existing issues and discussions](https://github.com/SoftVentures/Recrest/issues?q=is%3Aissue) first — the idea may already be tracked.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or pain are you trying to solve? Describe the situation before proposing the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What should the app do? Rough sketches, screenshots, or flows are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you look at, and why did you prefer the one above?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, references, related issues.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](../../blob/main/CODE_OF_CONDUCT.md).
+          required: true

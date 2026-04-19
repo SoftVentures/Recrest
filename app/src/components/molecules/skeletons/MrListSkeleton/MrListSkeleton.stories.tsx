@@ -10,3 +10,5 @@ const meta: Meta<typeof MrListSkeleton> = {
 export default meta;
 
 export const Default: StoryObj<typeof MrListSkeleton> = {};
+export const SingleRow: StoryObj<typeof MrListSkeleton> = { args: { rows: 1 } };
+export const TenRows: StoryObj<typeof MrListSkeleton> = { args: { rows: 10 } };

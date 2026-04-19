@@ -19,6 +19,7 @@ export function DesktopSettings() {
         <Switch
           checked={s.autoStart}
           disabled={disabled}
+          aria-label={t("desktop.auto_start")}
           onCheckedChange={(v) => {
             // Persist the pref AND tell the autostart plugin to actually
             // register/deregister the login item. Without the plugin side,
@@ -47,6 +48,7 @@ export function DesktopSettings() {
           checked={s.startMinimized}
           disabled={disabled}
           onCheckedChange={(v) => void save({ startMinimized: v })}
+          aria-label={t("desktop.start_minimized")}
         />
       </SettingsField>
 
@@ -59,6 +61,7 @@ export function DesktopSettings() {
           checked={s.closeToTray}
           disabled={disabled}
           onCheckedChange={(v) => void save({ closeToTray: v })}
+          aria-label={t("desktop.close_to_tray")}
         />
       </SettingsField>
     </SettingsSection>

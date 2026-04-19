@@ -30,8 +30,8 @@ describe("uiSlice", () => {
   });
 
   it("tracks the active view", () => {
-    const next = uiReducer(initial, setActiveView("prs"));
-    expect(next.activeView).toBe("prs");
+    const next = uiReducer(initial, setActiveView("merge-requests"));
+    expect(next.activeView).toBe("merge-requests");
   });
 
   it("updates the selected repo id", () => {

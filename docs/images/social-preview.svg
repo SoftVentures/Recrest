@@ -1,0 +1,376 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640" role="img">
+  <title>Recrest — native developer dashboard</title>
+  <desc>Social preview card with an accurate mini of the Recrest app UI</desc>
+
+  <defs>
+    <radialGradient id="bg-glow" cx="18%" cy="22%" r="85%">
+      <stop offset="0%" stop-color="#d97757" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#d97757" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#d97757" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="appShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="20" stdDeviation="32" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <linearGradient id="avatar-recrest" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d97757"/>
+      <stop offset="100%" stop-color="#a5502e"/>
+    </linearGradient>
+    <linearGradient id="avatar-stacks" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2f66e6"/>
+      <stop offset="100%" stop-color="#1e3fa6"/>
+    </linearGradient>
+    <linearGradient id="avatar-pulse" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="avatar-starlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#065f46"/>
+    </linearGradient>
+    <clipPath id="appClip">
+      <rect width="720" height="456" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="1280" height="640" fill="#0a0a0d"/>
+  <rect width="1280" height="640" fill="url(#bg-glow)"/>
+
+  <!-- ═══ Left brand column ═══ -->
+  <g font-family="Inter, -apple-system, 'Segoe UI', system-ui, sans-serif">
+    <!-- Logo mark -->
+    <g transform="translate(80, 150)">
+      <rect width="96" height="96" rx="22" fill="#FFFFFF"/>
+      <g transform="translate(24, 34)" fill="none" stroke="#0F1115" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
+        <path d="M0 20 L24 0 L48 20"/>
+        <path d="M0 32 L24 12 L48 32" opacity="0.5"/>
+      </g>
+    </g>
+
+    <!-- Wordmark -->
+    <text x="80" y="322" font-size="72" font-weight="700" fill="#FFFFFF" letter-spacing="-1.8">Recrest</text>
+
+    <!-- Tagline -->
+    <text x="80" y="366" font-size="20" font-weight="500" fill="#a4a4b2">All your local git repos.</text>
+    <text x="80" y="394" font-size="20" font-weight="500" fill="#a4a4b2">One native dashboard.</text>
+
+    <!-- Feature pills -->
+    <g transform="translate(80, 430)" font-size="13" font-weight="500" fill="#e2e4e9">
+      <g>
+        <rect width="92" height="30" rx="15" fill="#14141a" stroke="#1e1e28"/>
+        <text x="46" y="19" text-anchor="middle">Local-first</text>
+      </g>
+      <g transform="translate(100, 0)">
+        <rect width="102" height="30" rx="15" fill="#14141a" stroke="#1e1e28"/>
+        <text x="51" y="19" text-anchor="middle">Open source</text>
+      </g>
+      <g transform="translate(210, 0)">
+        <rect width="128" height="30" rx="15" fill="#14141a" stroke="#1e1e28"/>
+        <text x="64" y="19" text-anchor="middle">Cross-platform</text>
+      </g>
+    </g>
+
+    <!-- Footer URL -->
+    <text x="80" y="584" font-size="14" font-weight="500" fill="#747480" letter-spacing="0.4">github.com/SoftVentures/Recrest</text>
+  </g>
+
+  <!-- ═══ App window ═══ -->
+  <g transform="translate(488, 92)" filter="url(#appShadow)">
+    <rect width="720" height="456" rx="14" fill="#0f0f11"/>
+    <g clip-path="url(#appClip)">
+      <!-- Titlebar -->
+      <rect width="720" height="36" fill="#0a0a0d"/>
+      <line x1="0" y1="36" x2="720" y2="36" stroke="#1e1e28"/>
+      <g transform="translate(16, 10)">
+        <rect width="16" height="16" rx="4" fill="#FFFFFF"/>
+        <g transform="translate(4, 5.5)" fill="none" stroke="#0F1115" stroke-linecap="round" stroke-linejoin="round" stroke-width="1">
+          <path d="M0 3.5 L4 0 L8 3.5"/>
+          <path d="M0 6 L4 2.5 L8 6" opacity="0.5"/>
+        </g>
+      </g>
+      <text x="40" y="23" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e4e9">Recrest</text>
+      <!-- Windows controls -->
+      <g transform="translate(660, 13)" stroke="#a4a4b2" stroke-width="1" fill="none">
+        <line x1="0" y1="5" x2="10" y2="5"/>
+        <rect x="20" y="0" width="10" height="10"/>
+        <line x1="40" y1="0" x2="50" y2="10"/>
+        <line x1="50" y1="0" x2="40" y2="10"/>
+      </g>
+
+      <!-- Sidebar -->
+      <rect x="0" y="36" width="188" height="420" fill="#0a0a0d"/>
+      <line x1="188" y1="36" x2="188" y2="456" stroke="#1e1e28"/>
+
+      <text x="20" y="72" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e4e9">Recrest</text>
+
+      <!-- Nav items -->
+      <g font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500">
+        <!-- Dashboard -->
+        <g transform="translate(12, 96)">
+          <g transform="translate(10, 10)" fill="none" stroke="#a4a4b2" stroke-width="1.3" stroke-linejoin="round">
+            <rect x="0" y="0" width="4" height="5" rx="0.5"/>
+            <rect x="6" y="0" width="4" height="3" rx="0.5"/>
+            <rect x="6" y="5" width="4" height="5" rx="0.5"/>
+            <rect x="0" y="7" width="4" height="3" rx="0.5"/>
+          </g>
+          <text x="32" y="20" fill="#a4a4b2">Dashboard</text>
+        </g>
+        <!-- Repositories (active) -->
+        <g transform="translate(12, 130)">
+          <rect width="164" height="30" rx="6" fill="#202028"/>
+          <g transform="translate(10, 10)" fill="none" stroke="#FFFFFF" stroke-width="1.4">
+            <rect x="0" y="0" width="4" height="4"/>
+            <rect x="6" y="0" width="4" height="4"/>
+            <rect x="0" y="6" width="4" height="4"/>
+            <rect x="6" y="6" width="4" height="4"/>
+          </g>
+          <text x="32" y="20" fill="#FFFFFF">Repositories</text>
+          <g transform="translate(130, 7)">
+            <rect width="22" height="16" rx="8" fill="#0f0f11" stroke="#1e1e28"/>
+            <text x="11" y="12" text-anchor="middle" font-size="10" fill="#a4a4b2">8</text>
+          </g>
+        </g>
+        <!-- Changes -->
+        <g transform="translate(12, 164)">
+          <circle cx="19" cy="15" r="4" fill="#d97706"/>
+          <text x="32" y="20" fill="#a4a4b2">Changes</text>
+          <g transform="translate(130, 7)">
+            <rect width="22" height="16" rx="8" fill="#0f0f11" stroke="#1e1e28"/>
+            <text x="11" y="12" text-anchor="middle" font-size="10" fill="#a4a4b2">3</text>
+          </g>
+        </g>
+        <!-- Merge requests -->
+        <g transform="translate(12, 198)">
+          <g transform="translate(12, 10)" fill="none" stroke="#a4a4b2" stroke-width="1.4">
+            <circle cx="1" cy="1" r="1.6" fill="#a4a4b2"/>
+            <circle cx="1" cy="9" r="1.6" fill="#a4a4b2"/>
+            <circle cx="9" cy="9" r="1.6" fill="#a4a4b2"/>
+            <path d="M1 3 L1 7"/>
+            <path d="M9 7 a4 4 0 0 0 -4 -4"/>
+          </g>
+          <text x="32" y="20" fill="#a4a4b2">Merge requests</text>
+          <g transform="translate(130, 7)">
+            <rect width="22" height="16" rx="8" fill="#0f0f11" stroke="#1e1e28"/>
+            <text x="11" y="12" text-anchor="middle" font-size="10" fill="#a4a4b2">9</text>
+          </g>
+        </g>
+        <!-- Branches -->
+        <g transform="translate(12, 232)">
+          <g transform="translate(10, 9)" color="#a4a4b2">
+            <g fill="none" stroke="#a4a4b2" stroke-width="1.2" stroke-linecap="round"><circle cx="3" cy="3" r="1.4"/><circle cx="3" cy="9" r="1.4"/><circle cx="9" cy="3" r="1.4"/><path d="M3 4.4 L3 7.6"/><path d="M9 4.4 a4 4 0 0 1 -4 4"/></g>
+          </g>
+          <text x="32" y="20" fill="#a4a4b2">Branches</text>
+        </g>
+        <!-- Activity -->
+        <g transform="translate(12, 266)">
+          <g transform="translate(10, 10)" fill="none" stroke="#a4a4b2" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="0,8 3,4 6,6 10,1"/>
+          </g>
+          <text x="32" y="20" fill="#a4a4b2">Activity</text>
+        </g>
+        <!-- Settings (bottom) -->
+        <g transform="translate(12, 416)">
+          <circle cx="19" cy="15" r="4" fill="none" stroke="#a4a4b2" stroke-width="1.4"/>
+          <text x="32" y="20" fill="#a4a4b2">Settings</text>
+        </g>
+      </g>
+
+      <!-- ═════ Main panel ═════ -->
+      <!-- Title row -->
+      <g font-family="Inter, system-ui, sans-serif">
+        <text x="210" y="70" font-size="18" font-weight="700" fill="#FFFFFF">Repositories</text>
+        <text x="320" y="70" font-size="12" font-weight="500" fill="#747480">8 of 8</text>
+
+        <!-- Search -->
+        <g transform="translate(408, 52)">
+          <rect width="192" height="28" rx="6" fill="#14141a" stroke="#1e1e28"/>
+          <g transform="translate(10, 10)" fill="none" stroke="#747480" stroke-width="1.3">
+            <circle cx="5" cy="5" r="4"/>
+            <line x1="8" y1="8" x2="11" y2="11"/>
+          </g>
+          <text x="28" y="18" font-size="11" fill="#747480">Search repos, branches…</text>
+          <g transform="translate(158, 6)">
+            <rect width="28" height="16" rx="4" fill="#0a0a0d" stroke="#1e1e28"/>
+            <text x="14" y="12" text-anchor="middle" font-size="9" font-weight="600" fill="#a4a4b2">⌘K</text>
+          </g>
+        </g>
+
+        <!-- Primary button -->
+        <g transform="translate(612, 52)">
+          <rect width="96" height="28" rx="6" fill="#FFFFFF"/>
+          <text x="48" y="19" text-anchor="middle" font-size="12" font-weight="600" fill="#0a0a0d">+ Add repo</text>
+        </g>
+      </g>
+
+      <!-- Table header -->
+      <g font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="600" fill="#747480" letter-spacing="0.6">
+        <text x="210" y="110">REPOSITORY</text>
+        <text x="440" y="110">BRANCH</text>
+        <text x="552" y="110">STATUS</text>
+        <text x="620" y="110">ACTIVITY</text>
+      </g>
+      <line x1="200" y1="120" x2="708" y2="120" stroke="#1e1e28"/>
+
+      <!-- Group: OPEN-SOURCE -->
+      <g font-family="Inter, system-ui, sans-serif" transform="translate(210, 144)">
+        <polygon points="0,0 8,0 4,6" fill="#747480"/>
+        <text x="14" y="4" font-size="10" font-weight="600" fill="#a4a4b2" letter-spacing="0.5">OPEN-SOURCE</text>
+        <g transform="translate(110, -6)">
+          <rect width="18" height="14" rx="7" fill="#0a0a0d" stroke="#1e1e28"/>
+          <text x="9" y="10" text-anchor="middle" font-size="9" font-weight="600" fill="#747480">2</text>
+        </g>
+      </g>
+
+      <!-- Row: Recrest (active) -->
+      <g transform="translate(200, 160)" font-family="Inter, system-ui, sans-serif">
+        <rect width="508" height="46" rx="8" fill="#16161e" stroke="#d97757" stroke-opacity="0.85"/>
+        <rect x="12" y="9" width="28" height="28" rx="6" fill="url(#avatar-recrest)"/>
+        <text x="26" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">R</text>
+        <text x="50" y="20" font-size="13" font-weight="600" fill="#FFFFFF">Recrest</text>
+        <text x="50" y="34" font-size="10" fill="#83839a">~/dev/os/Recrest</text>
+        <!-- branch chip -->
+        <g transform="translate(240, 15)" color="#a4a4b2">
+          <rect width="64" height="18" rx="9" fill="#0f0f11" stroke="#1e1e28"/>
+          <g transform="translate(6, 3)"><g fill="none" stroke="#a4a4b2" stroke-width="1.2" stroke-linecap="round"><circle cx="3" cy="3" r="1.4"/><circle cx="3" cy="9" r="1.4"/><circle cx="9" cy="3" r="1.4"/><path d="M3 4.4 L3 7.6"/><path d="M9 4.4 a4 4 0 0 1 -4 4"/></g></g>
+          <text x="22" y="12" font-size="10" fill="#e2e4e9">main</text>
+        </g>
+        <!-- status -->
+        <text x="352" y="28" font-size="11" font-weight="500" fill="#16a34a">clean</text>
+        <!-- sparkline -->
+        <g transform="translate(410, 16)">
+          <rect x="0" y="12" width="3" height="6" rx="1" fill="#d97757" opacity="0.55"/>
+          <rect x="5" y="8" width="3" height="10" rx="1" fill="#d97757" opacity="0.6"/>
+          <rect x="10" y="10" width="3" height="8" rx="1" fill="#d97757" opacity="0.55"/>
+          <rect x="15" y="4" width="3" height="14" rx="1" fill="#d97757" opacity="0.75"/>
+          <rect x="20" y="7" width="3" height="11" rx="1" fill="#d97757" opacity="0.65"/>
+          <rect x="25" y="2" width="3" height="16" rx="1" fill="#d97757" opacity="0.85"/>
+          <rect x="30" y="6" width="3" height="12" rx="1" fill="#d97757" opacity="0.7"/>
+          <rect x="35" y="9" width="3" height="9" rx="1" fill="#d97757" opacity="0.6"/>
+          <rect x="40" y="4" width="3" height="14" rx="1" fill="#d97757" opacity="0.75"/>
+          <rect x="45" y="0" width="3" height="18" rx="1" fill="#d97757"/>
+        </g>
+        <!-- actions dots -->
+        <g transform="translate(468, 17)" color="#a4a4b2">
+          <g fill="#a4a4b2"><circle cx="3" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="27" cy="6" r="1.4"/></g>
+        </g>
+      </g>
+
+      <!-- Row: local-dev-stacks (dirty) -->
+      <g transform="translate(200, 212)" font-family="Inter, system-ui, sans-serif">
+        <rect width="508" height="46" rx="8" fill="#14141a" stroke="#1e1e28"/>
+        <rect x="12" y="9" width="28" height="28" rx="6" fill="url(#avatar-stacks)"/>
+        <text x="26" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">L</text>
+        <text x="50" y="20" font-size="13" font-weight="600" fill="#FFFFFF">local-dev-stacks</text>
+        <g transform="translate(160, 10)">
+          <rect width="44" height="14" rx="3" fill="rgba(217,119,6,0.18)"/>
+          <text x="22" y="10" text-anchor="middle" font-size="8" font-weight="700" fill="#d97706" letter-spacing="0.5">DIRTY</text>
+        </g>
+        <text x="50" y="34" font-size="10" fill="#83839a">~/dev/os/local-dev-stacks</text>
+        <g transform="translate(240, 15)" color="#a4a4b2">
+          <rect width="96" height="18" rx="9" fill="#0f0f11" stroke="#1e1e28"/>
+          <g transform="translate(6, 3)"><g fill="none" stroke="#a4a4b2" stroke-width="1.2" stroke-linecap="round"><circle cx="3" cy="3" r="1.4"/><circle cx="3" cy="9" r="1.4"/><circle cx="9" cy="3" r="1.4"/><path d="M3 4.4 L3 7.6"/><path d="M9 4.4 a4 4 0 0 1 -4 4"/></g></g>
+          <text x="22" y="12" font-size="10" fill="#e2e4e9">feat/compose-v2</text>
+        </g>
+        <!-- status diff -->
+        <text x="344" y="24" font-size="11" font-weight="600" fill="#16a34a">+42</text>
+        <text x="372" y="24" font-size="11" font-weight="600" fill="#dc2626">−8</text>
+        <text x="344" y="36" font-size="10" fill="#747480">3 files</text>
+        <!-- sparkline -->
+        <g transform="translate(410, 16)">
+          <rect x="0" y="14" width="3" height="4" rx="1" fill="#d97706" opacity="0.5"/>
+          <rect x="5" y="10" width="3" height="8" rx="1" fill="#d97706" opacity="0.6"/>
+          <rect x="10" y="6" width="3" height="12" rx="1" fill="#d97706" opacity="0.7"/>
+          <rect x="15" y="8" width="3" height="10" rx="1" fill="#d97706" opacity="0.65"/>
+          <rect x="20" y="3" width="3" height="15" rx="1" fill="#d97706" opacity="0.8"/>
+          <rect x="25" y="5" width="3" height="13" rx="1" fill="#d97706" opacity="0.7"/>
+          <rect x="30" y="1" width="3" height="17" rx="1" fill="#d97706" opacity="0.9"/>
+          <rect x="35" y="4" width="3" height="14" rx="1" fill="#d97706" opacity="0.8"/>
+          <rect x="40" y="0" width="3" height="18" rx="1" fill="#d97706"/>
+          <rect x="45" y="2" width="3" height="16" rx="1" fill="#d97706" opacity="0.9"/>
+        </g>
+        <g transform="translate(468, 17)" color="#a4a4b2">
+          <g fill="#a4a4b2"><circle cx="3" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="27" cy="6" r="1.4"/></g>
+        </g>
+      </g>
+
+      <!-- Group: ACME-LABS -->
+      <g font-family="Inter, system-ui, sans-serif" transform="translate(210, 284)">
+        <polygon points="0,0 8,0 4,6" fill="#747480"/>
+        <text x="14" y="4" font-size="10" font-weight="600" fill="#a4a4b2" letter-spacing="0.5">ACME-LABS</text>
+        <g transform="translate(94, -6)">
+          <rect width="18" height="14" rx="7" fill="#0a0a0d" stroke="#1e1e28"/>
+          <text x="9" y="10" text-anchor="middle" font-size="9" font-weight="600" fill="#747480">3</text>
+        </g>
+      </g>
+
+      <!-- Row: starlight-ui -->
+      <g transform="translate(200, 300)" font-family="Inter, system-ui, sans-serif">
+        <rect width="508" height="46" rx="8" fill="#14141a" stroke="#1e1e28"/>
+        <rect x="12" y="9" width="28" height="28" rx="6" fill="url(#avatar-starlight)"/>
+        <text x="26" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">S</text>
+        <text x="50" y="20" font-size="13" font-weight="600" fill="#FFFFFF">starlight-ui</text>
+        <text x="50" y="34" font-size="10" fill="#83839a">~/work/acme/starlight-ui</text>
+        <g transform="translate(240, 15)" color="#a4a4b2">
+          <rect width="64" height="18" rx="9" fill="#0f0f11" stroke="#1e1e28"/>
+          <g transform="translate(6, 3)"><g fill="none" stroke="#a4a4b2" stroke-width="1.2" stroke-linecap="round"><circle cx="3" cy="3" r="1.4"/><circle cx="3" cy="9" r="1.4"/><circle cx="9" cy="3" r="1.4"/><path d="M3 4.4 L3 7.6"/><path d="M9 4.4 a4 4 0 0 1 -4 4"/></g></g>
+          <text x="22" y="12" font-size="10" fill="#e2e4e9">main</text>
+        </g>
+        <text x="352" y="28" font-size="11" font-weight="500" fill="#16a34a">clean</text>
+        <g transform="translate(410, 16)">
+          <rect x="0" y="11" width="3" height="7" rx="1" fill="#2f66e6" opacity="0.55"/>
+          <rect x="5" y="13" width="3" height="5" rx="1" fill="#2f66e6" opacity="0.5"/>
+          <rect x="10" y="8" width="3" height="10" rx="1" fill="#2f66e6" opacity="0.65"/>
+          <rect x="15" y="10" width="3" height="8" rx="1" fill="#2f66e6" opacity="0.6"/>
+          <rect x="20" y="5" width="3" height="13" rx="1" fill="#2f66e6" opacity="0.75"/>
+          <rect x="25" y="9" width="3" height="9" rx="1" fill="#2f66e6" opacity="0.65"/>
+          <rect x="30" y="3" width="3" height="15" rx="1" fill="#2f66e6" opacity="0.8"/>
+          <rect x="35" y="7" width="3" height="11" rx="1" fill="#2f66e6" opacity="0.7"/>
+          <rect x="40" y="1" width="3" height="17" rx="1" fill="#2f66e6" opacity="0.9"/>
+          <rect x="45" y="5" width="3" height="13" rx="1" fill="#2f66e6" opacity="0.75"/>
+        </g>
+        <g transform="translate(468, 17)" color="#a4a4b2">
+          <g fill="#a4a4b2"><circle cx="3" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="27" cy="6" r="1.4"/></g>
+        </g>
+      </g>
+
+      <!-- Row: pulse-ios (dirty) -->
+      <g transform="translate(200, 352)" font-family="Inter, system-ui, sans-serif">
+        <rect width="508" height="46" rx="8" fill="#14141a" stroke="#1e1e28"/>
+        <rect x="12" y="9" width="28" height="28" rx="6" fill="url(#avatar-pulse)"/>
+        <text x="26" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">P</text>
+        <text x="50" y="20" font-size="13" font-weight="600" fill="#FFFFFF">pulse-ios</text>
+        <g transform="translate(112, 10)">
+          <rect width="44" height="14" rx="3" fill="rgba(217,119,6,0.18)"/>
+          <text x="22" y="10" text-anchor="middle" font-size="8" font-weight="700" fill="#d97706" letter-spacing="0.5">DIRTY</text>
+        </g>
+        <text x="50" y="34" font-size="10" fill="#83839a">~/work/acme/pulse-ios</text>
+        <g transform="translate(240, 15)" color="#a4a4b2">
+          <rect width="88" height="18" rx="9" fill="#0f0f11" stroke="#1e1e28"/>
+          <g transform="translate(6, 3)"><g fill="none" stroke="#a4a4b2" stroke-width="1.2" stroke-linecap="round"><circle cx="3" cy="3" r="1.4"/><circle cx="3" cy="9" r="1.4"/><circle cx="9" cy="3" r="1.4"/><path d="M3 4.4 L3 7.6"/><path d="M9 4.4 a4 4 0 0 1 -4 4"/></g></g>
+          <text x="22" y="12" font-size="10" fill="#e2e4e9">feat/home-v2</text>
+        </g>
+        <text x="344" y="24" font-size="11" font-weight="600" fill="#16a34a">+128</text>
+        <text x="378" y="24" font-size="11" font-weight="600" fill="#dc2626">−24</text>
+        <text x="344" y="36" font-size="10" fill="#747480">7 files</text>
+        <g transform="translate(410, 16)">
+          <rect x="0" y="9" width="3" height="9" rx="1" fill="#d97706" opacity="0.6"/>
+          <rect x="5" y="6" width="3" height="12" rx="1" fill="#d97706" opacity="0.7"/>
+          <rect x="10" y="11" width="3" height="7" rx="1" fill="#d97706" opacity="0.55"/>
+          <rect x="15" y="4" width="3" height="14" rx="1" fill="#d97706" opacity="0.75"/>
+          <rect x="20" y="7" width="3" height="11" rx="1" fill="#d97706" opacity="0.65"/>
+          <rect x="25" y="2" width="3" height="16" rx="1" fill="#d97706" opacity="0.85"/>
+          <rect x="30" y="0" width="3" height="18" rx="1" fill="#d97706"/>
+          <rect x="35" y="5" width="3" height="13" rx="1" fill="#d97706" opacity="0.75"/>
+          <rect x="40" y="2" width="3" height="16" rx="1" fill="#d97706" opacity="0.85"/>
+          <rect x="45" y="0" width="3" height="18" rx="1" fill="#d97706"/>
+        </g>
+        <g transform="translate(468, 17)" color="#a4a4b2">
+          <g fill="#a4a4b2"><circle cx="3" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="27" cy="6" r="1.4"/></g>
+        </g>
+      </g>
+    </g>
+
+    <!-- Frame border -->
+    <rect width="720" height="456" rx="14" fill="none" stroke="#1e1e28"/>
+  </g>
+</svg>

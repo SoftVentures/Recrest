@@ -150,7 +150,10 @@ export function ActivityPage() {
           </div>
           <div className="a-act-filters">
             <Select value={selectedRepo} onValueChange={setSelectedRepo}>
-              <SelectTrigger className="a-act-sel-trigger h-8 w-[200px]">
+              <SelectTrigger
+                className="a-act-sel-trigger h-8 w-[200px]"
+                aria-label={t("activity.filter.all_repos")}
+              >
                 <SelectValue>
                   {selectedRepo === "all" ? (
                     <span className="flex items-center gap-2">
@@ -190,7 +193,10 @@ export function ActivityPage() {
               </SelectContent>
             </Select>
             <Select value={selectedAuthor} onValueChange={setSelectedAuthor}>
-              <SelectTrigger className="a-act-sel-trigger h-8 w-[200px]">
+              <SelectTrigger
+                className="a-act-sel-trigger h-8 w-[200px]"
+                aria-label={t("activity.filter.all_authors")}
+              >
                 <SelectValue>
                   {selectedAuthor === "all" ? (
                     <span className="flex items-center gap-2">

@@ -10,3 +10,5 @@ const meta: Meta<typeof FileChangesSkeleton> = {
 export default meta;
 
 export const Default: StoryObj<typeof FileChangesSkeleton> = {};
+export const SingleRow: StoryObj<typeof FileChangesSkeleton> = { args: { rows: 1 } };
+export const ManyRows: StoryObj<typeof FileChangesSkeleton> = { args: { rows: 12 } };

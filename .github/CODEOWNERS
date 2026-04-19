@@ -1,0 +1,17 @@
+# CODEOWNERS
+#
+# Rules are evaluated top-to-bottom; the last matching rule wins for each file.
+# Add team handles (e.g. `@SoftVentures/recrest-maintainers`) once the team
+# exists, keeping the individual maintainer as a fallback at the top of the file.
+
+# Fallback — everything is owned by the primary maintainer.
+*                  @EinfachValle
+
+# Backend (Rust / Tauri)
+/app/src-tauri/    @EinfachValle
+
+# Shared package — cross-workspace contract, treat changes with extra care.
+/shared/           @EinfachValle
+
+# Repository automation, workflows, and community health files.
+/.github/          @EinfachValle

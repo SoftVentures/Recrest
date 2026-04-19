@@ -1,0 +1,203 @@
+{
+  "nav": {
+    "overview": "Überblick",
+    "privacy": "Datenschutz",
+    "contribute": "Mitmachen",
+    "github": "GitHub",
+    "download": "Download",
+    "toggleTheme": "Design umschalten",
+    "menu": "Menü öffnen"
+  },
+  "hero": {
+    "eyebrow": "v{{version}} — Bitbucket-Support hinzugefügt",
+    "titleLine1": "Alle deine lokalen Git-Repos.",
+    "titleLine2": "In einem ruhigen, nativen Dashboard.",
+    "sub": "Recrest ist eine native Desktop-App, die deine <1>lokalen Git-Repositories</1>, deren Working-Tree-Status, Merge Requests und CI-Checks von <3>GitHub</3>, <5>GitLab</5> und <7>Bitbucket</7> an einem ruhigen Ort zusammenführt.",
+    "downloadFallback": "Neuestes Release laden",
+    "downloadForOs": "Download für {{os}}",
+    "starOnGithub": "Auf GitHub sternen",
+    "versionHint": "Recrest v{{version}} · <1>alle Releases</1>",
+    "metaPlatforms": "macOS · Windows · Linux",
+    "metaFoss": "Frei & Open Source",
+    "metaLocal": "Nur lokal, keine Cloud",
+    "worksWith": "Funktioniert mit",
+    "mockTitle": "Recrest — 28 Repositories",
+    "sidebar": {
+      "allRepos": "Alle Repos",
+      "branches": "Branches",
+      "mergeRequests": "Merge Requests",
+      "activity": "Aktivität",
+      "remotes": "Remotes"
+    },
+    "filters": {
+      "all": "Alle",
+      "dirty": "Dirty",
+      "ahead": "Voraus",
+      "openMrs": "Offene MRs"
+    },
+    "mainHeader": "Alle Repositories",
+    "mainHeaderSub": "{{count}} Projekte",
+    "demo": {
+      "searchPlaceholder": "Repos suchen…",
+      "lastCommit": "Letzter Commit",
+      "openIn": "Öffnen in",
+      "openIde": "IDE",
+      "openTerminal": "Terminal",
+      "openRemote": "Auf Remote öffnen",
+      "detail": {
+        "readme": "Readme",
+        "branch": "Branch",
+        "changes": "Working Tree",
+        "clean": "clean",
+        "dirty": "{{count}} geänderte Dateien",
+        "mrs": "Offene MRs",
+        "ci": "CI-Status",
+        "mrCount_one": "{{count}} offener MR",
+        "mrCount_other": "{{count}} offene MRs"
+      },
+      "groupRepos_one": "{{count}} Repo",
+      "groupRepos_other": "{{count}} Repos",
+      "stars_one": "{{count}} Star",
+      "stars_other": "{{count}} Stars"
+    }
+  },
+  "privacy": {
+    "eyebrow": "Dein Code, deine Maschine",
+    "title": "Auf Tauri gebaut. Läuft komplett auf deinem Laptop.",
+    "body": "Recrest liest deine Git-Repositories direkt von der Festplatte und spricht mit GitHub, GitLab & Bitbucket APIs von deiner Maschine aus — nichts dazwischen.",
+    "stats": {
+      "bundle": "Natives Bundle",
+      "ram": "RAM idle",
+      "telemetry": "Telemetrie, nie"
+    },
+    "dataFlow": {
+      "disk": "Deine Festplatte",
+      "recrest": "Recrest",
+      "remote": "Remote-APIs",
+      "arrowIn": "liest lokale Repos",
+      "arrowOut": "spricht direkt mit Remote",
+      "noServer": "kein Recrest-Server"
+    },
+    "bullets": {
+      "noServers": {
+        "title": "Keine Recrest-Server.",
+        "body": "Keine Telemetrie, keine Analytics. Deine Repo-Liste verlässt nie deine Festplatte."
+      },
+      "keychain": {
+        "title": "Tokens bleiben im OS-Keychain.",
+        "body": "macOS Keychain, Windows Credential Manager oder Linux Secret Service — nie bei uns."
+      },
+      "native": {
+        "title": "Nativ & schlank.",
+        "body": "~12 MB Bundle, <80 MB RAM idle. Rust-Core, Web-Tech-UI."
+      },
+      "offline": {
+        "title": "Funktioniert offline.",
+        "body": "Lokaler Status aktualisiert sich weiter. Remote-Zustand läuft weiter, sobald du wieder online bist."
+      }
+    }
+  },
+  "contribute": {
+    "eyebrow": "Open Source",
+    "title": "Offen entwickelt. Hilf mit, es zu formen.",
+    "body": "Recrest steht unter MIT-Lizenz und wird auf GitHub entwickelt. Ob du einen Typo fixt oder die Diff-Engine neu schreibst — du bist willkommen.",
+    "ctaContribute": "Auf GitHub mitmachen",
+    "ctaRoadmap": "Roadmap lesen",
+    "ways": {
+      "issue": {
+        "title": "Issue öffnen",
+        "body": "Bug Reports, Feature-Wünsche und „das fühlte sich komisch an“-Beobachtungen — alles willkommen."
+      },
+      "pr": {
+        "title": "Pull Request öffnen",
+        "body": "Rust, TypeScript oder Design-Tokens — die Codebase ist freundlich und wird schnell reviewt."
+      },
+      "discussion": {
+        "title": "Diskussion beitreten",
+        "body": "In GitHub Discussions besprechen wir anstehende Designs und Trade-offs."
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Ein ruhiges Desktop-Dashboard für Entwickler, die über viele Git-Repositories arbeiten. Mit Sorgfalt gemacht, unter MIT geteilt.",
+    "columns": {
+      "product": "Produkt",
+      "project": "Projekt",
+      "legal": "Rechtliches"
+    },
+    "links": {
+      "overview": "Überblick",
+      "privacy": "Datenschutz",
+      "download": "Download",
+      "github": "GitHub",
+      "roadmap": "Roadmap",
+      "issues": "Issues",
+      "discussions": "Diskussionen",
+      "license": "Lizenz (MIT)",
+      "credits": "Mitwirkende"
+    },
+    "copyright": "© {{year}} Recrest · Unter MIT veröffentlicht · v{{version}}",
+    "language": "Sprache"
+  },
+  "a11y": {
+    "skipToContent": "Zum Hauptinhalt springen"
+  },
+  "legal": {
+    "backToHome": "Zurück zur Startseite",
+    "nav": {
+      "imprint": "Impressum",
+      "privacyPolicy": "Datenschutz",
+      "accessibility": "Barrierefreiheit"
+    },
+    "lastUpdated": "Zuletzt aktualisiert: {{date}}",
+    "imprint": {
+      "title": "Impressum",
+      "subtitle": "Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG).",
+      "sections": {
+        "provider": "Anbieter",
+        "contact": "Kontakt",
+        "responsible": "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV",
+        "liability": "Haftungsausschluss",
+        "disclaimer": "Haftung für Links"
+      },
+      "liabilityBody": "Die Inhalte dieser Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Recrest ist ein Open-Source-Projekt; die Software wird unter der MIT-Lizenz ohne jegliche Gewährleistung bereitgestellt.",
+      "disclaimerBody": "Diese Website enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.",
+      "missing": {
+        "title": "Impressum nicht konfiguriert",
+        "body": "Für dieses Deployment wurde kein Impressum hinterlegt. Bitte folgende Umgebungsvariablen zur Build-Zeit setzen: {{keys}}."
+      }
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "subtitle": "Informationen gemäß Art. 13 DSGVO.",
+      "intro": "Diese Datenschutzerklärung informiert darüber, wie das Recrest-Projekt beim Besuch dieser Website mit personenbezogenen Daten umgeht. Die Desktop-Anwendung Recrest selbst überträgt keine personenbezogenen Daten an uns; Details dazu findest du im Privacy-Abschnitt auf der Startseite.",
+      "sections": {
+        "controller": "Verantwortlicher",
+        "hosting": "Hosting",
+        "logs": "Server-Logfiles",
+        "external": "Externe Links",
+        "rights": "Deine Rechte",
+        "changes": "Änderungen dieser Erklärung"
+      },
+      "hostingBody": "Diese Website wird auf GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA) gehostet. GitHub kann dabei Metadaten wie deine IP-Adresse, den User-Agent deines Browsers und den Zeitpunkt der Anfrage verarbeiten, um den Dienst bereitzustellen und vor Missbrauch zu schützen. Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren und stabilen Bereitstellung). Weitere Informationen findest du in der <1>Datenschutzerklärung von GitHub</1>.",
+      "logsBody": "Wir selbst betreiben keine Analyse-Tools, Tracker oder Cookies. Es werden durch uns über diese Website keine personenbezogenen Daten direkt erhoben.",
+      "externalBody": "Diese Seite verlinkt auf externe Dienste wie GitHub-Repositories, GitHub-Discussions und Release-Downloads. Sobald du einem Link folgst, erhält der verlinkte Dienst deine Anfrage und kann deine Daten nach seiner eigenen Datenschutzerklärung verarbeiten.",
+      "rightsBody": "Dir stehen nach der DSGVO die Rechte auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung, auf Widerspruch sowie auf Datenübertragbarkeit zu. Wende dich dafür bitte an den im Impressum genannten Verantwortlichen.",
+      "changesBody": "Wir passen diese Datenschutzerklärung bei Änderungen der technischen oder rechtlichen Situation an. Die jeweils aktuelle Version ist immer auf dieser Seite abrufbar."
+    },
+    "accessibility": {
+      "title": "Erklärung zur Barrierefreiheit",
+      "subtitle": "Informationen gemäß Barrierefreiheitsstärkungsgesetz (BFSG) und WCAG 2.1 AA.",
+      "status": "Konformitätsstatus",
+      "statusBody": "Recrest orientiert sich an den <1>Web Content Accessibility Guidelines (WCAG) 2.1 auf Konformitätsstufe AA</1>. Sowohl die Website als auch die Desktop-Anwendung werden fortlaufend automatisiert (Axe) und manuell gegen diesen Standard geprüft. Zum Zeitpunkt dieser Erklärung sind keine Verstöße der Stufen critical, serious oder moderate bekannt.",
+      "scope": "Geltungsbereich",
+      "scopeBody": "Diese Erklärung gilt für die Landingpage von Recrest sowie für die Desktop-Anwendung Recrest in der jeweils aktuellen Version.",
+      "known": "Bekannte Einschränkungen",
+      "knownBody": "Uns sind derzeit keine Inhalte bekannt, die gegen WCAG 2.1 AA verstoßen. Scroll-Animationen auf der Startseite werden automatisch deaktiviert, sobald das Betriebssystem <1>prefers-reduced-motion</1> signalisiert.",
+      "feedback": "Feedback",
+      "feedbackBody": "Wenn du auf dieser Website oder in der Desktop-Anwendung auf Barrieren stößt, melde dich gerne unter <1>{{email}}</1>. Wir antworten so schnell wie möglich.",
+      "enforcement": "Durchsetzungsverfahren",
+      "enforcementBody": "Solltest du mit unserer Antwort nicht zufrieden sein, kannst du dich an die Schlichtungsstelle nach dem Behindertengleichstellungsgesetz (<1>www.schlichtungsstelle-bgg.de</1>) wenden oder – speziell zum BFSG – an die zuständige Marktüberwachungsstelle deines Bundeslandes."
+    }
+  }
+}

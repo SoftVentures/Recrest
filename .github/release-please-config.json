@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "pull-request-title-pattern": "chore: release ${version}",
+  "include-v-in-tag": true,
+  "separate-pull-requests": false,
+  "packages": {
+    ".": {
+      "package-name": "recrest",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

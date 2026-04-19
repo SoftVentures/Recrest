@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/SoftVentures/Recrest/security/advisories/new
+    about: Please report security issues privately via GitHub Security Advisories.
+  - name: Questions & Discussions
+    url: https://github.com/SoftVentures/Recrest/discussions
+    about: Use Discussions for questions, ideas, and show-and-tell.

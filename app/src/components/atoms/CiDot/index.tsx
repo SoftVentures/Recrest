@@ -22,7 +22,7 @@ export function CiDot({ state }: CiDotProps) {
         alignItems: "center",
         gap: 5,
         fontSize: 11,
-        color: "var(--ink-2)",
+        color: "var(--ink-1)",
         fontWeight: 500,
       }}
     >

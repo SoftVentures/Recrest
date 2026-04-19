@@ -11,4 +11,6 @@ export default meta;
 
 export const Rust: StoryObj<typeof LangDot> = { args: { lang: "rs" } };
 export const TypeScript: StoryObj<typeof LangDot> = { args: { lang: "ts" } };
+export const Python: StoryObj<typeof LangDot> = { args: { lang: "Python" } };
+export const Go: StoryObj<typeof LangDot> = { args: { lang: "go" } };
 export const Unknown: StoryObj<typeof LangDot> = { args: { lang: null } };

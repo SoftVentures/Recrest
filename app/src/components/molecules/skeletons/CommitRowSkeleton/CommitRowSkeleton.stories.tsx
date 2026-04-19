@@ -9,4 +9,14 @@ const meta: Meta<typeof CommitRowSkeleton> = {
 
 export default meta;
 
-export const Default: StoryObj<typeof CommitRowSkeleton> = {};
+export const Single: StoryObj<typeof CommitRowSkeleton> = {};
+
+export const Stack: StoryObj<typeof CommitRowSkeleton> = {
+  render: () => (
+    <div style={{ width: 420 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <CommitRowSkeleton key={i} />
+      ))}
+    </div>
+  ),
+};

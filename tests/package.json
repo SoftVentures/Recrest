@@ -6,13 +6,21 @@
   "scripts": {
     "test:ts": "tsc --noEmit",
     "test:e2e": "playwright test",
+    "test:e2e:landing": "playwright test --project=landing-desktop --project=landing-mobile",
+    "test:e2e:app": "playwright test --project=app-desktop --project=app-mobile",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:update-snapshots": "playwright test --update-snapshots",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@recrest/shared": "0.1.0"
+  },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.7.4",
     "@typescript-eslint/eslint-plugin": "^8.8.0",

@@ -18,3 +18,6 @@
 *.yml text
 *.ts text
 *.tsx text
+
+# Husky hooks must stay LF on all platforms
+.husky/* text eol=lf

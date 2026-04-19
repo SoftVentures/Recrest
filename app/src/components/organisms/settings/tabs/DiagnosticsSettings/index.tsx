@@ -37,6 +37,7 @@ export function DiagnosticsSettings() {
           checked={crashReporting}
           disabled={disabled}
           onCheckedChange={(v) => void save({ crashReporting: v })}
+          aria-label={t("diagnostics.crash_reporting")}
         />
       </SettingsField>
       <div className="space-y-1.5 rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">

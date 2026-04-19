@@ -1,0 +1,69 @@
+name: Bug report
+description: Report something that is broken, crashing, or behaving incorrectly.
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please search [existing issues](https://github.com/SoftVentures/Recrest/issues?q=is%3Aissue) first to avoid duplicates.
+  - type: input
+    id: version
+    attributes:
+      label: Recrest version
+      description: "Find it under Settings → About, or via `git rev-parse --short HEAD` if you built from source."
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: "Windows 11 23H2 / macOS 14.4 / Ubuntu 22.04"
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Provide a minimal, ordered list that reliably triggers the bug.
+      placeholder: |
+        1. Open Recrest
+        2. Navigate to …
+        3. Click …
+        4. Observe …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste relevant console or app logs. Drag-and-drop screenshots here.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](../../blob/main/CODE_OF_CONDUCT.md).
+          required: true

@@ -11,4 +11,8 @@ export default meta;
 
 export const Unchecked: StoryObj<typeof Checkbox> = { args: { checked: false } };
 export const Checked: StoryObj<typeof Checkbox> = { args: { checked: true } };
+export const Indeterminate: StoryObj<typeof Checkbox> = { args: { checked: "indeterminate" } };
 export const Disabled: StoryObj<typeof Checkbox> = { args: { disabled: true } };
+export const DisabledChecked: StoryObj<typeof Checkbox> = {
+  args: { disabled: true, checked: true },
+};

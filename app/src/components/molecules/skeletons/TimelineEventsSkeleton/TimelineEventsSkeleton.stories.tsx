@@ -10,3 +10,5 @@ const meta: Meta<typeof TimelineEventsSkeleton> = {
 export default meta;
 
 export const Default: StoryObj<typeof TimelineEventsSkeleton> = {};
+export const SingleRow: StoryObj<typeof TimelineEventsSkeleton> = { args: { rows: 1 } };
+export const ManyRows: StoryObj<typeof TimelineEventsSkeleton> = { args: { rows: 10 } };

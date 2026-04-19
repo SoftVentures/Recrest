@@ -12,3 +12,6 @@ export default meta;
 export const Mixed: StoryObj<typeof DiffStat> = { args: { added: 42, removed: 17 } };
 export const OnlyAdded: StoryObj<typeof DiffStat> = { args: { added: 12, removed: 0 } };
 export const OnlyRemoved: StoryObj<typeof DiffStat> = { args: { added: 0, removed: 53 } };
+export const Large: StoryObj<typeof DiffStat> = { args: { added: 1248, removed: 932 } };
+/** Returns null, so Storybook shows an empty canvas. */
+export const None: StoryObj<typeof DiffStat> = { args: { added: 0, removed: 0 } };

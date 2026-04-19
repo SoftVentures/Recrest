@@ -27,6 +27,7 @@ export function NotificationSettings() {
           checked={n.enabled}
           disabled={disabled}
           onCheckedChange={(v) => update({ enabled: v })}
+          aria-label={t("notifications.enabled")}
         />
       </SettingsField>
       <SettingsField label={t("notifications.new_pr")}>
@@ -34,6 +35,7 @@ export function NotificationSettings() {
           checked={n.newPr}
           disabled={disabled || !n.enabled}
           onCheckedChange={(v) => update({ newPr: v })}
+          aria-label={t("notifications.new_pr")}
         />
       </SettingsField>
       <SettingsField label={t("notifications.ci_failed")}>
@@ -41,6 +43,7 @@ export function NotificationSettings() {
           checked={n.ciFailed}
           disabled={disabled || !n.enabled}
           onCheckedChange={(v) => update({ ciFailed: v })}
+          aria-label={t("notifications.ci_failed")}
         />
       </SettingsField>
       <SettingsField label={t("notifications.merge_ready")}>
@@ -48,6 +51,7 @@ export function NotificationSettings() {
           checked={n.mergeReady}
           disabled={disabled || !n.enabled}
           onCheckedChange={(v) => update({ mergeReady: v })}
+          aria-label={t("notifications.merge_ready")}
         />
       </SettingsField>
     </SettingsSection>

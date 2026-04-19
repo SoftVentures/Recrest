@@ -9,4 +9,14 @@ const meta: Meta<typeof MrRowSkeleton> = {
 
 export default meta;
 
-export const Default: StoryObj<typeof MrRowSkeleton> = {};
+export const Single: StoryObj<typeof MrRowSkeleton> = {};
+
+export const Stack: StoryObj<typeof MrRowSkeleton> = {
+  render: () => (
+    <div className="a-mr-rows" style={{ width: 560 }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <MrRowSkeleton key={i} />
+      ))}
+    </div>
+  ),
+};

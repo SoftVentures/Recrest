@@ -9,4 +9,14 @@ const meta: Meta<typeof RepoRowSkeleton> = {
 
 export default meta;
 
-export const Default: StoryObj<typeof RepoRowSkeleton> = {};
+export const Single: StoryObj<typeof RepoRowSkeleton> = {};
+
+export const Stack: StoryObj<typeof RepoRowSkeleton> = {
+  render: () => (
+    <div className="a-table" style={{ width: 860 }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <RepoRowSkeleton key={i} />
+      ))}
+    </div>
+  ),
+};

@@ -1,0 +1,203 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "privacy": "Privacy",
+    "contribute": "Contribute",
+    "github": "GitHub",
+    "download": "Download",
+    "toggleTheme": "Toggle theme",
+    "menu": "Open menu"
+  },
+  "hero": {
+    "eyebrow": "v{{version}} — Bitbucket support added",
+    "titleLine1": "All your local git repos.",
+    "titleLine2": "In one calm, native dashboard.",
+    "sub": "Recrest is a native desktop app that brings your <1>local Git repositories</1>, their working‑tree status, merge requests and CI checks from <3>GitHub</3>, <5>GitLab</5> and <7>Bitbucket</7> into a single, calm place.",
+    "downloadFallback": "Download latest release",
+    "downloadForOs": "Download for {{os}}",
+    "starOnGithub": "Star on GitHub",
+    "versionHint": "Recrest v{{version}} · <1>all releases</1>",
+    "metaPlatforms": "macOS · Windows · Linux",
+    "metaFoss": "Free & open source",
+    "metaLocal": "Local‑only, no cloud",
+    "worksWith": "Works with",
+    "mockTitle": "Recrest — 28 repositories",
+    "sidebar": {
+      "allRepos": "All repos",
+      "branches": "Branches",
+      "mergeRequests": "Merge requests",
+      "activity": "Activity",
+      "remotes": "Remotes"
+    },
+    "filters": {
+      "all": "All",
+      "dirty": "Dirty",
+      "ahead": "Ahead",
+      "openMrs": "Open MRs"
+    },
+    "mainHeader": "All repositories",
+    "mainHeaderSub": "{{count}} projects",
+    "demo": {
+      "searchPlaceholder": "Search repos…",
+      "lastCommit": "Last commit",
+      "openIn": "Open in",
+      "openIde": "IDE",
+      "openTerminal": "Terminal",
+      "openRemote": "Open on remote",
+      "detail": {
+        "readme": "Readme",
+        "branch": "Branch",
+        "changes": "Working tree",
+        "clean": "clean",
+        "dirty": "{{count}} changed files",
+        "mrs": "Open MRs",
+        "ci": "CI status",
+        "mrCount_one": "{{count}} open MR",
+        "mrCount_other": "{{count}} open MRs"
+      },
+      "groupRepos_one": "{{count}} repo",
+      "groupRepos_other": "{{count}} repos",
+      "stars_one": "{{count}} star",
+      "stars_other": "{{count}} stars"
+    }
+  },
+  "privacy": {
+    "eyebrow": "Your code, your machine",
+    "title": "Built on Tauri. Runs entirely on your laptop.",
+    "body": "Recrest reads your Git repositories directly from disk and talks to GitHub, GitLab & Bitbucket APIs from your machine — nothing in between.",
+    "stats": {
+      "bundle": "native bundle",
+      "ram": "RAM idle",
+      "telemetry": "telemetry, ever"
+    },
+    "dataFlow": {
+      "disk": "Your disk",
+      "recrest": "Recrest",
+      "remote": "Remote APIs",
+      "arrowIn": "reads local repos",
+      "arrowOut": "talks directly to remote",
+      "noServer": "no Recrest server"
+    },
+    "bullets": {
+      "noServers": {
+        "title": "No Recrest servers.",
+        "body": "No telemetry, no analytics. Your repo list never leaves your disk."
+      },
+      "keychain": {
+        "title": "Tokens stay in your OS keychain.",
+        "body": "macOS Keychain, Windows Credential Manager or Linux Secret Service — never ours."
+      },
+      "native": {
+        "title": "Native & tiny.",
+        "body": "~12 MB bundle, <80 MB RAM idle. Rust core, web‑tech UI."
+      },
+      "offline": {
+        "title": "Works offline.",
+        "body": "Local status keeps updating. Remote state resumes when you're back online."
+      }
+    }
+  },
+  "contribute": {
+    "eyebrow": "Open source",
+    "title": "Built in the open. Help shape it.",
+    "body": "Recrest is MIT‑licensed and developed on GitHub. Whether you fix a typo or rewrite the diff engine — you're welcome here.",
+    "ctaContribute": "Contribute on GitHub",
+    "ctaRoadmap": "Read the roadmap",
+    "ways": {
+      "issue": {
+        "title": "File an issue",
+        "body": "Bug reports, feature requests and \"that felt off\" observations — all welcome."
+      },
+      "pr": {
+        "title": "Open a pull request",
+        "body": "Rust, TypeScript or design tokens — the codebase is friendly and reviewed fast."
+      },
+      "discussion": {
+        "title": "Join the discussion",
+        "body": "GitHub Discussions is where we talk through upcoming designs and trade‑offs."
+      }
+    }
+  },
+  "footer": {
+    "tagline": "A quiet desktop dashboard for developers who work across many Git repositories. Made with care, shared under MIT.",
+    "columns": {
+      "product": "Product",
+      "project": "Project",
+      "legal": "Legal"
+    },
+    "links": {
+      "overview": "Overview",
+      "privacy": "Privacy",
+      "download": "Download",
+      "github": "GitHub",
+      "roadmap": "Roadmap",
+      "issues": "Issues",
+      "discussions": "Discussions",
+      "license": "License (MIT)",
+      "credits": "Credits"
+    },
+    "copyright": "© {{year}} Recrest · Released under MIT · v{{version}}",
+    "language": "Language"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
+  "legal": {
+    "backToHome": "Back to homepage",
+    "nav": {
+      "imprint": "Imprint",
+      "privacyPolicy": "Privacy policy",
+      "accessibility": "Accessibility"
+    },
+    "lastUpdated": "Last updated: {{date}}",
+    "imprint": {
+      "title": "Imprint",
+      "subtitle": "Legal information pursuant to § 5 Digital Services Act (DDG).",
+      "sections": {
+        "provider": "Provider",
+        "contact": "Contact",
+        "responsible": "Responsible for editorial content (§ 18 (2) MStV)",
+        "liability": "Liability",
+        "disclaimer": "Disclaimer"
+      },
+      "liabilityBody": "The content of this website has been compiled with the greatest possible care. We cannot, however, guarantee that the content is correct, complete or up to date. Recrest is an open-source project; the software is provided \"as is\" under the MIT license, without any warranty.",
+      "disclaimerBody": "This website contains links to external websites over which we have no influence. We therefore cannot accept any responsibility for their content. The respective provider or operator is always responsible for the content of the linked pages.",
+      "missing": {
+        "title": "Imprint unavailable",
+        "body": "The imprint has not been configured for this deployment. Please set the following environment variables at build time: {{keys}}."
+      }
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "subtitle": "Information pursuant to Art. 13 GDPR.",
+      "intro": "This privacy policy explains how the Recrest project handles personal data when you visit this website. Recrest the desktop application does not transmit personal data; see the Privacy section on the homepage for details.",
+      "sections": {
+        "controller": "Controller",
+        "hosting": "Hosting",
+        "logs": "Server log files",
+        "external": "External links",
+        "rights": "Your rights",
+        "changes": "Changes to this policy"
+      },
+      "hostingBody": "This website is hosted on GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA). GitHub may process request metadata such as your IP address, the user agent of your browser and the time of the request for the purpose of operating the service and protecting it from abuse. The processing takes place on the basis of Art. 6 (1) lit. f GDPR (legitimate interest in providing a secure and stable service). For further information see the <1>GitHub Privacy Statement</1>.",
+      "logsBody": "We do not run our own analytics, trackers or cookies. No personal data is collected by us directly through this website.",
+      "externalBody": "This site links to external services such as GitHub repositories, GitHub Discussions and release downloads. When you follow a link, the linked service receives your request and may process your data according to its own privacy policy.",
+      "rightsBody": "You have the right, under the GDPR, to access, rectify, erase or restrict the processing of your data, to object to processing and to data portability. Please contact the data controller listed in the imprint.",
+      "changesBody": "We may update this privacy policy when the technical or legal situation changes. The current version is always available on this page."
+    },
+    "accessibility": {
+      "title": "Accessibility statement",
+      "subtitle": "Information pursuant to the German Accessibility Strengthening Act (BFSG) and WCAG 2.1 AA.",
+      "status": "Conformance status",
+      "statusBody": "Recrest aims to meet the <1>Web Content Accessibility Guidelines (WCAG) 2.1 at level AA</1>. Both the website and the desktop application are tested continuously against this standard using automated (Axe) and manual checks. At the time of writing, no critical, serious or moderate violations are known.",
+      "scope": "Scope",
+      "scopeBody": "This statement applies to the Recrest landing page and the Recrest desktop application in its current version.",
+      "known": "Known limitations",
+      "knownBody": "We are not aware of any content that fails WCAG 2.1 AA at this time. Scroll-based animations on the homepage automatically pause when the operating system signals <1>prefers-reduced-motion</1>.",
+      "feedback": "Feedback",
+      "feedbackBody": "If you encounter barriers on this website or in the desktop application, please contact us at <1>{{email}}</1>. We will respond as quickly as possible.",
+      "enforcement": "Enforcement",
+      "enforcementBody": "If you are not satisfied with our response, you can contact the Federal Arbitration Body for Accessibility (Schlichtungsstelle nach dem Behindertengleichstellungsgesetz) at <1>www.schlichtungsstelle-bgg.de</1> or, for the BFSG specifically, the Market Surveillance Authority (Marktüberwachungsstelle) of the state in which you reside."
+    }
+  }
+}

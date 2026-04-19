@@ -96,7 +96,7 @@ export function AppearanceSettings() {
             </div>
             <div className="a-set-row-r">
               <Select value={s.theme} onValueChange={(v) => onThemeChange(v as ThemeMode)}>
-                <SelectTrigger className="a-set-trigger">
+                <SelectTrigger className="a-set-trigger" aria-label={t("fields.theme")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,7 +115,7 @@ export function AppearanceSettings() {
             </div>
             <div className="a-set-row-r">
               <Select value={s.locale} onValueChange={onLocaleChange}>
-                <SelectTrigger className="a-set-trigger">
+                <SelectTrigger className="a-set-trigger" aria-label={t("fields.language")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,6 +124,8 @@ export function AppearanceSettings() {
                       <ReactCountryFlag
                         countryCode={LOCALE_FLAG.en!}
                         svg
+                        aria-hidden
+                        title=""
                         style={{ width: "1.1em", height: "1.1em", borderRadius: 2 }}
                       />
                       English
@@ -134,6 +136,8 @@ export function AppearanceSettings() {
                       <ReactCountryFlag
                         countryCode={LOCALE_FLAG.de!}
                         svg
+                        aria-hidden
+                        title=""
                         style={{ width: "1.1em", height: "1.1em", borderRadius: 2 }}
                       />
                       Deutsch
@@ -172,7 +176,11 @@ export function AppearanceSettings() {
             </div>
             <div className="a-set-row-r">
               <Select value={s.font} onValueChange={(v) => dispatch(setFont(v as FontId))}>
-                <SelectTrigger className="a-set-trigger" style={{ minWidth: 180 }}>
+                <SelectTrigger
+                  className="a-set-trigger"
+                  style={{ minWidth: 180 }}
+                  aria-label={t("fields.font")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -196,7 +204,11 @@ export function AppearanceSettings() {
                 value={s.fontSize}
                 onValueChange={(v) => dispatch(setFontSize(v as FontSizeId))}
               >
-                <SelectTrigger className="a-set-trigger" style={{ minWidth: 160 }}>
+                <SelectTrigger
+                  className="a-set-trigger"
+                  style={{ minWidth: 160 }}
+                  aria-label={t("fields.font_size")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -224,6 +236,7 @@ export function AppearanceSettings() {
               <Switch
                 checked={s.highContrast}
                 onCheckedChange={(v) => dispatch(setHighContrast(v))}
+                aria-label={t("accessibility.high_contrast")}
               />
             </div>
           </div>
@@ -236,6 +249,7 @@ export function AppearanceSettings() {
               <Switch
                 checked={s.reducedMotion}
                 onCheckedChange={(v) => dispatch(setReducedMotion(v))}
+                aria-label={t("accessibility.reduced_motion")}
               />
             </div>
           </div>
@@ -248,6 +262,7 @@ export function AppearanceSettings() {
               <Switch
                 checked={s.underlineLinks}
                 onCheckedChange={(v) => dispatch(setUnderlineLinks(v))}
+                aria-label={t("accessibility.underline_links")}
               />
             </div>
           </div>

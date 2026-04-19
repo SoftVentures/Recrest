@@ -9,4 +9,14 @@ const meta: Meta<typeof RemoteRepoCardSkeleton> = {
 
 export default meta;
 
-export const Default: StoryObj<typeof RemoteRepoCardSkeleton> = {};
+export const Single: StoryObj<typeof RemoteRepoCardSkeleton> = {};
+
+export const Stack: StoryObj<typeof RemoteRepoCardSkeleton> = {
+  render: () => (
+    <div style={{ width: 560 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <RemoteRepoCardSkeleton key={i} />
+      ))}
+    </div>
+  ),
+};
