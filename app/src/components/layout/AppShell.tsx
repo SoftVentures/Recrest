@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useRef } from "react";
 
+import { useLocation } from "react-router-dom";
+
 import { useTranslation } from "react-i18next";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -8,16 +10,22 @@ import { SearchOverlay } from "@/components/search/SearchOverlay";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useDevice } from "@/hooks/useDevice";
+import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useSearchHotkey } from "@/hooks/useSearch";
 import { useTauri } from "@/hooks/useTauri";
 import { useThemeEffect } from "@/hooks/useTheme";
+import { useTrayBadgeSync } from "@/hooks/useTrayBadgeSync";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setLocale } from "@/store/slices/settingsSlice";
 import { setSidebarCollapsed } from "@/store/slices/uiSlice";
+import { setSelectedRepo } from "@/store/slices/uiSlice";
 
+import { DetailPane } from "./DetailPane";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import { Titlebar } from "./Titlebar";
+import { popOutDetailWindow } from "./popout";
 
 interface AppShellProps {
   children: ReactNode;
@@ -26,21 +34,44 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   useThemeEffect();
   useSearchHotkey();
+  useGlobalShortcuts();
   useLocaleSync();
   useResponsiveSidebar();
   useTauri();
+  useTrayBadgeSync();
+
+  const location = useLocation();
+  const dispatch = useAppDispatch();
+  const selectedRepoId = useAppSelector((s) => s.ui.selectedRepoId);
+  const enriched = useEnrichedRepos();
+  const canShowDetail =
+    location.pathname.startsWith("/repos") || location.pathname.startsWith("/dirty");
+  const selectedRepo =
+    canShowDetail && selectedRepoId ? enriched.find((r) => r.id === selectedRepoId) : null;
+  const detailVisible = selectedRepo != null;
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="flex h-screen w-screen flex-col overflow-hidden">
+      <div className="app">
         <Titlebar />
-        <div className="flex min-h-0 flex-1">
-          <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
+        <div className="shell">
+          <div className={`a-app${detailVisible ? "" : " no-detail"}`}>
+            <Sidebar />
             <Header />
-            <main className="flex-1 overflow-y-auto bg-background">
-              <ErrorBoundary>{children}</ErrorBoundary>
+            <main className="a-main">
+              <div className="a-content-scroll scroll">
+                <div className="a-content">
+                  <ErrorBoundary>{children}</ErrorBoundary>
+                </div>
+              </div>
             </main>
+            {selectedRepo && (
+              <DetailPane
+                repo={selectedRepo}
+                onClose={() => dispatch(setSelectedRepo(null))}
+                onPopOut={() => popOutDetailWindow(selectedRepo.id)}
+              />
+            )}
           </div>
         </div>
         <SearchOverlay />
@@ -51,11 +82,6 @@ export function AppShell({ children }: AppShellProps) {
   );
 }
 
-/**
- * Keeps Redux `settings.locale` and i18next in sync. i18next owns locale
- * persistence (via its own localStorage detector); the store just needs to
- * reflect the active value so components selecting from state render correctly.
- */
 function useLocaleSync(): void {
   const { i18n } = useTranslation();
   const dispatch = useAppDispatch();
@@ -71,10 +97,6 @@ function useLocaleSync(): void {
   }, [dispatch, i18n, storeLocale]);
 }
 
-/**
- * Auto-collapse the sidebar when the viewport falls into mobile/tablet
- * territory, and restore the user's persisted preference when it grows back.
- */
 function useResponsiveSidebar(): void {
   const device = useDevice();
   const dispatch = useAppDispatch();
@@ -92,7 +114,6 @@ function useResponsiveSidebar(): void {
       forcedRef.current = false;
       dispatch(setSidebarCollapsed(userPrefRef.current));
     }
-    // Only re-evaluate when device category flips — not on every collapsed change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [device.isMobile, device.isTablet, dispatch]);
 }

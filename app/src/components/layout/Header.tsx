@@ -1,108 +1,149 @@
+import { useState } from "react";
+
 import { useLocation } from "react-router-dom";
 
-import { Menu, Plus, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { HEADER_HEIGHT } from "@recrest/shared";
-
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Icon } from "@/components/icons/Icon";
+import { Kbd } from "@/components/repos/primitives";
+import { IconButton } from "@/components/ui/IconButton";
+import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
+import { isTauri } from "@/lib/tauri";
+import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loadRepos } from "@/store/slices/reposSlice";
-import { setSearchOpen, setSidebarCollapsed } from "@/store/slices/uiSlice";
+import { loadRepos, scanForRepos } from "@/store/slices/reposSlice";
+import { saveSettings } from "@/store/slices/settingsSlice";
+import { bumpRefreshNonce, setSearchOpen } from "@/store/slices/uiSlice";
 
 export function Header() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const location = useLocation();
-  const sidebarCollapsed = useAppSelector((s) => s.ui.sidebarCollapsed);
-  const selectedRepoId = useAppSelector((s) => s.ui.selectedRepoId);
-  const repos = useAppSelector((s) => s.repos.items);
+  const platform = usePlatform();
+  const { title, meta } = useHeaderContext();
+  const reposLoading = useAppSelector((s) => s.repos.loading);
+  const scanPaths = useAppSelector((s) => s.settings.scanPaths);
+  const searchKbd = formatShortcut(platform, { mod: true, key: "K" });
+  const [adding, setAdding] = useState(false);
 
-  const crumb = useBreadcrumb(
-    location.pathname,
-    selectedRepoId ? (repos[selectedRepoId]?.name ?? null) : null,
-  );
+  const onRefresh = () => {
+    void dispatch(loadRepos());
+    dispatch(bumpRefreshNonce());
+  };
+
+  const onAddRepo = async () => {
+    if (!isTauri()) {
+      toast.info("Add repo works in the desktop app only.");
+      return;
+    }
+    setAdding(true);
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({ directory: true, multiple: false, title: "Pick repo folder" });
+      if (typeof picked !== "string" || !picked) return;
+      if (scanPaths.includes(picked)) {
+        toast.info("That path is already scanned.");
+        return;
+      }
+      const next = [...scanPaths, picked];
+      await dispatch(saveSettings({ scanPaths: next })).unwrap();
+      await dispatch(scanForRepos(next)).unwrap();
+      dispatch(bumpRefreshNonce());
+      toast.success("Scan path added.");
+    } catch {
+      toast.error("Couldn't add that path.");
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
-    <header
-      className="flex items-center gap-2 border-b border-border bg-card px-3 sm:px-4"
-      style={{ height: HEADER_HEIGHT }}
-    >
-      {/* Mobile hamburger: toggles the sidebar drawer. md+ users have the
-          inline collapse button at the bottom of the sidebar. */}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="md:hidden"
-        onClick={() => dispatch(setSidebarCollapsed(!sidebarCollapsed))}
-        aria-label={sidebarCollapsed ? t("nav.expand") : t("nav.collapse")}
-      >
-        <Menu aria-hidden />
-      </Button>
-
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{crumb}</div>
+    <div className="a-top">
+      <div className="a-top-left">
+        <h1 className="a-top-title">{title}</h1>
+        {meta && <span className="a-top-meta">{meta}</span>}
       </div>
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => dispatch(setSearchOpen(true))}
-        className="hidden min-w-0 gap-2 text-muted-foreground sm:flex"
-        aria-label={t("actions.search")}
-      >
-        <Search aria-hidden />
-        <span className="hidden md:inline">{t("actions.search")}</span>
-        <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-[10px]">⌘K</kbd>
-      </Button>
-
-      {/* Sub-sm: search becomes icon-only */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="sm:hidden"
-            onClick={() => dispatch(setSearchOpen(true))}
-            aria-label={t("actions.search")}
-          >
-            <Search aria-hidden />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t("actions.search")}</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => void dispatch(loadRepos())}
-            aria-label={t("actions.refresh")}
-          >
-            <RefreshCw aria-hidden />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t("actions.refresh")}</TooltipContent>
-      </Tooltip>
-
-      <Button size="sm" className="hidden sm:inline-flex">
-        <Plus aria-hidden />
-        {t("actions.add_repo")}
-      </Button>
-    </header>
+      <div className="a-top-center">
+        <button
+          type="button"
+          className="a-search"
+          onClick={() => dispatch(setSearchOpen(true))}
+          aria-label={t("actions.search")}
+        >
+          <Icon name="search" size={13} />
+          <span className="a-search-placeholder">
+            {t("actions.search_placeholder", "Search repositories, branches, PRs…")}
+          </span>
+          <Kbd>{searchKbd}</Kbd>
+        </button>
+      </div>
+      <div className="a-top-right">
+        <IconButton
+          tooltip={t("actions.refresh")}
+          aria-label={t("actions.refresh")}
+          onClick={onRefresh}
+          disabled={reposLoading}
+          data-spinning={reposLoading ? "true" : undefined}
+        >
+          <Icon name="refresh" size={14} />
+        </IconButton>
+        <button
+          type="button"
+          className="r-btn primary"
+          onClick={() => void onAddRepo()}
+          disabled={adding}
+        >
+          <Icon name="plus" size={13} />
+          {adding ? "…" : t("actions.add_repo")}
+        </button>
+      </div>
+    </div>
   );
 }
 
-function useBreadcrumb(pathname: string, selectedRepoName: string | null): string {
+function useHeaderContext(): { title: string; meta: string | null } {
   const { t } = useTranslation();
-  if (pathname.startsWith("/pull-requests")) return t("breadcrumb.prs");
-  if (pathname.startsWith("/settings")) return t("breadcrumb.settings");
-  if (pathname.startsWith("/repos")) {
-    return selectedRepoName
-      ? t("breadcrumb.repos_selected", { name: selectedRepoName })
-      : t("breadcrumb.repos");
+  const location = useLocation();
+  const repos = useAppSelector((s) => s.repos.items);
+  const prs = useAppSelector((s) => s.prs.items);
+  const repoList = Object.values(repos);
+  const dirtyCount = repoList.filter((r) => r.status.dirty).length;
+  const mrOpen = Object.values(prs)
+    .flat()
+    .filter((p) => p.state === "open").length;
+
+  const path = location.pathname;
+  if (path.startsWith("/dashboard")) {
+    return {
+      title: t("view.dashboard.title"),
+      meta: t("view.dashboard.meta", { count: repoList.length }),
+    };
   }
-  return "";
+  if (path.startsWith("/merge-requests")) {
+    return {
+      title: t("view.mrs.title"),
+      meta: t("view.mrs.meta", { count: mrOpen }),
+    };
+  }
+  if (path.startsWith("/dirty")) {
+    return {
+      title: t("view.dirty.title"),
+      meta: t("view.dirty.meta", { count: dirtyCount }),
+    };
+  }
+  if (path.startsWith("/branches")) {
+    return {
+      title: t("view.branches.title"),
+      meta: t("view.branches.meta", { count: repoList.length }),
+    };
+  }
+  if (path.startsWith("/activity")) {
+    return { title: t("view.activity.title"), meta: t("view.activity.meta") };
+  }
+  if (path.startsWith("/settings")) {
+    return { title: t("view.settings.title"), meta: null };
+  }
+  return {
+    title: t("view.repos.title"),
+    meta: t("view.repos.meta", { count: repoList.length, total: repoList.length }),
+  };
 }

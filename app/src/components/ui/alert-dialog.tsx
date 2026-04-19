@@ -47,10 +47,7 @@ export function AlertDialogContent({
 
 export function AlertDialogHeader({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div
-      className={cn("flex flex-col space-y-2 text-center sm:text-left", className)}
-      {...props}
-    />
+    <div className={cn("flex flex-col space-y-2 text-center sm:text-left", className)} {...props} />
   );
 }
 
@@ -94,12 +91,7 @@ export function AlertDialogAction({
   className,
   ...props
 }: ComponentProps<typeof AlertDialogPrimitive.Action>) {
-  return (
-    <AlertDialogPrimitive.Action
-      className={cn(buttonVariants(), className)}
-      {...props}
-    />
-  );
+  return <AlertDialogPrimitive.Action className={cn(buttonVariants(), className)} {...props} />;
 }
 
 export function AlertDialogCancel({

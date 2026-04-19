@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "Willkommen bei Recrest",
-    "tagline": "Ein schlankes Developer-Dashboard für deine lokalen Repos und Pull Requests.",
+    "tagline": "Ein schlankes Developer-Dashboard für deine lokalen Repos und Merge Requests.",
     "body": "Kurze Einrichtung — ein paar Einstellungen, dann wählst du die Ordner mit deinem Code aus, fertig.",
     "cta": "Loslegen",
     "back": "Zurück"
@@ -18,7 +18,7 @@
     "close_to_tray": "In Tray schließen",
     "close_to_tray_desc": "Beim Schließen im System-Tray weiterlaufen lassen.",
     "notifications": "Desktop-Benachrichtigungen",
-    "notifications_desc": "Über neue Pull Requests und CI-Ergebnisse informieren.",
+    "notifications_desc": "Über neue Merge Requests und CI-Ergebnisse informieren.",
     "next": "Weiter"
   },
   "pickFolder": {
@@ -34,8 +34,8 @@
   },
   "connectProvider": {
     "title": "Git-Host verbinden",
-    "body": "Optional — verbinde GitHub, GitLab oder Bitbucket, um offene Pull Requests hier zu sehen. Du kannst das auch später in den Einstellungen tun.",
-    "local_note": "Dein lokaler Git-Status, Branches und uncommittete Änderungen werden so oder so angezeigt. Dies ergänzt nur die Sicht auf Pull Requests.",
+    "body": "Optional — verbinde GitHub, GitLab oder Bitbucket, um offene Merge Requests hier zu sehen. Du kannst das auch später in den Einstellungen tun.",
+    "local_note": "Dein lokaler Git-Status, Branches und uncommittete Änderungen werden so oder so angezeigt. Dies ergänzt nur die Sicht auf Merge Requests.",
     "token_placeholder": "Personal Access Token",
     "connect": "Verbinden",
     "skip": "Überspringen",
@@ -56,7 +56,7 @@
   },
   "done": {
     "title": "Alles bereit",
-    "body": "Recrest ist einsatzbereit. Schau dir deine Repositories und Pull Requests in der Seitenleiste an.",
+    "body": "Recrest ist einsatzbereit. Schau dir deine Repositories und Merge Requests in der Seitenleiste an.",
     "cta": "Dashboard öffnen"
   }
 }

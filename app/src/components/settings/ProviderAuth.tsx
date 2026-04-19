@@ -2,8 +2,14 @@ import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { PROVIDER_IDS, PROVIDER_NAMES, type ProviderId } from "@recrest/shared";
+import {
+  PROVIDER_CREATE_TOKEN_URLS,
+  PROVIDER_IDS,
+  PROVIDER_NAMES,
+  type ProviderId,
+} from "@recrest/shared";
 
+import { Icon } from "@/components/icons/Icon";
 import { SettingsSection } from "@/components/settings/shared";
 import {
   AlertDialog,
@@ -16,10 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { InfoHint } from "@/components/ui/info-hint";
-import { Input } from "@/components/ui/input";
+import { openExternal } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearProviderToken, setProviderToken } from "@/store/slices/providersSlice";
@@ -27,17 +30,10 @@ import { clearProviderToken, setProviderToken } from "@/store/slices/providersSl
 export function ProviderAuth() {
   const { t } = useTranslation("settings");
   return (
-    <SettingsSection
-      title={t("sections.providers")}
-      description={t("providers.description")}
-    >
-      <ul className="divide-y divide-border rounded-md border border-border">
-        {PROVIDER_IDS.map((id) => (
-          <li key={id} className="p-3">
-            <ProviderRow providerId={id} />
-          </li>
-        ))}
-      </ul>
+    <SettingsSection title={t("sections.providers")} description={t("providers.description")}>
+      {PROVIDER_IDS.map((id) => (
+        <ProviderRow key={id} providerId={id} />
+      ))}
     </SettingsSection>
   );
 }
@@ -47,9 +43,11 @@ function ProviderRow({ providerId }: { providerId: ProviderId }) {
   const dispatch = useAppDispatch();
   const connection = useAppSelector((s) => s.providers.connections[providerId]);
   const [token, setToken] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const connected = connection?.connected ?? false;
+  const providerName = PROVIDER_NAMES[providerId];
 
   const handleConnect = async () => {
     if (!token.trim()) return;
@@ -57,7 +55,8 @@ function ProviderRow({ providerId }: { providerId: ProviderId }) {
     try {
       await dispatch(setProviderToken({ providerId, token: token.trim() })).unwrap();
       setToken("");
-      toast.success(t("providers.connected", { name: PROVIDER_NAMES[providerId] }));
+      setExpanded(false);
+      toast.success(t("providers.connected", { name: providerName }));
     } catch {
       toast.error(t("unauthorized", { ns: "errors" }));
     } finally {
@@ -68,91 +67,112 @@ function ProviderRow({ providerId }: { providerId: ProviderId }) {
   const handleDisconnect = async () => {
     try {
       await dispatch(clearProviderToken(providerId)).unwrap();
-      toast.success(t("providers.disconnected", { name: PROVIDER_NAMES[providerId] }));
+      toast.success(t("providers.disconnected", { name: providerName }));
     } catch {
       toast.error(t("internal", { ns: "errors" }));
     }
   };
 
+  const openTokenPage = () => {
+    void openExternal(PROVIDER_CREATE_TOKEN_URLS[providerId]);
+    setExpanded(true);
+  };
+
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium">{PROVIDER_NAMES[providerId]}</span>
-          {connected ? (
-            <Badge variant="success" size="sm">
-              {t("providers.status_connected")}
-            </Badge>
-          ) : (
-            <Badge variant="muted" size="sm">
-              {t("providers.status_disconnected")}
-            </Badge>
-          )}
+    <div className="a-set-row a-prov-row">
+      <div className="a-set-row-l a-prov-body">
+        <div className="a-prov-head">
+          <Icon name={providerId === "github" ? "github" : "git"} size={16} />
+          <span className="a-prov-name">{providerName}</span>
+          <span className={connected ? "a-prov-state connected" : "a-prov-state"}>
+            {connected ? t("providers.status_connected") : t("providers.status_disconnected")}
+          </span>
         </div>
         {connected && connection?.username && (
-          <div className="truncate text-xs text-muted-foreground">
-            {connection.username}
+          <div className="a-prov-user">{connection.username}</div>
+        )}
+        {expanded && !connected && (
+          <div className="a-prov-form">
+            <p className="a-prov-hint">
+              {t("providers.paste_here", {
+                defaultValue:
+                  "Paste the token you just created — we store it encrypted in your OS keychain.",
+              })}
+            </p>
+            <div className="a-prov-input-row">
+              <input
+                type="password"
+                className="a-set-input a-prov-input"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder={t("providers.token_placeholder")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleConnect();
+                  }
+                }}
+                autoFocus
+              />
+              <button
+                type="button"
+                className="r-btn primary"
+                disabled={!token.trim() || submitting}
+                onClick={() => void handleConnect()}
+              >
+                {submitting
+                  ? t("providers.connecting", { defaultValue: "Connecting…" })
+                  : t("providers.save", { defaultValue: "Save" })}
+              </button>
+              <button
+                type="button"
+                className="r-btn ghost"
+                onClick={() => {
+                  setExpanded(false);
+                  setToken("");
+                }}
+              >
+                {t("actions.cancel", { ns: "common" })}
+              </button>
+            </div>
           </div>
         )}
       </div>
-      {connected ? (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              {t("providers.disconnect")}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {t("providers.confirm_disconnect_title", {
-                  name: PROVIDER_NAMES[providerId],
-                })}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("providers.confirm_disconnect_desc")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>
-                {t("actions.cancel", { ns: "common" })}
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={() => void handleDisconnect()}>
+      <div className="a-set-row-r a-prov-actions">
+        {connected ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button type="button" className="r-btn">
                 {t("providers.disconnect")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:w-56">
-            <Input
-              type="password"
-              placeholder={t("providers.token_placeholder")}
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void handleConnect();
-                }
-              }}
-              className="w-full pr-8"
-              autoComplete="off"
-            />
-            <span className="absolute inset-y-0 right-2 flex items-center">
-              <InfoHint side="left">{t("providers.token_hint")}</InfoHint>
-            </span>
-          </div>
-          <Button
-            disabled={!token.trim()}
-            loading={submitting}
-            onClick={() => void handleConnect()}
-          >
-            {t("providers.connect")}
-          </Button>
-        </div>
-      )}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {t("providers.confirm_disconnect_title", { name: providerName })}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("providers.confirm_disconnect_desc")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("actions.cancel", { ns: "common" })}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void handleDisconnect()}>
+                  {t("providers.disconnect")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : !expanded ? (
+          <button type="button" className="r-btn primary" onClick={openTokenPage}>
+            <Icon name="external" size={12} />
+            {t("providers.connect_with", {
+              name: providerName,
+              defaultValue: "Connect {{name}}",
+            })}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

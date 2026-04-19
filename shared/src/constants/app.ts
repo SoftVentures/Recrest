@@ -8,8 +8,8 @@ export const URLS = {
   docs: "https://github.com/softventures/recrest#readme",
 } as const;
 
-export const MIN_WINDOW_WIDTH = 960;
-export const MIN_WINDOW_HEIGHT = 600;
+export const MIN_WINDOW_WIDTH = 1100;
+export const MIN_WINDOW_HEIGHT = 720;
 export const DEFAULT_WINDOW_WIDTH = 1280;
 export const DEFAULT_WINDOW_HEIGHT = 800;
 export const WINDOW_STATE_DEBOUNCE_MS = 500;

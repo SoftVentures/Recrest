@@ -30,7 +30,9 @@ export const updaterService = {
     }
   },
 
-  async downloadAndInstall(onProgress?: (received: number, total?: number) => void): Promise<boolean> {
+  async downloadAndInstall(
+    onProgress?: (received: number, total?: number) => void,
+  ): Promise<boolean> {
     if (!isTauri()) return false;
     try {
       const { check } = await import("@tauri-apps/plugin-updater");

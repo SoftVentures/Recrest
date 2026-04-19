@@ -3,12 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   onNext: () => void;
@@ -23,9 +18,7 @@ export function WelcomeStep({ onNext }: Props) {
           <Logo className="h-10 w-10 shrink-0" />
           <div className="min-w-0">
             <DialogTitle>{t("welcome.title")}</DialogTitle>
-            <DialogDescription className="mt-1">
-              {t("welcome.tagline")}
-            </DialogDescription>
+            <DialogDescription className="mt-1">{t("welcome.tagline")}</DialogDescription>
           </div>
         </div>
       </DialogHeader>

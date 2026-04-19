@@ -1,14 +1,17 @@
 {
   "app": {
     "name": "Recrest",
-    "tagline": "Leichtgewichtiges Developer Dashboard"
+    "tagline": "Leichtgewichtiges Developer-Dashboard"
   },
   "nav": {
+    "dashboard": "Dashboard",
     "repos": "Repositories",
-    "prs": "Pull Requests",
+    "prs": "Merge Requests",
+    "merge_requests": "Merge Requests",
+    "dirty": "Dirty",
+    "branches": "Branches",
+    "activity": "Aktivität",
     "settings": "Einstellungen",
-    "pipelines": "CI-Pipelines",
-    "pipelines_coming_soon": "Demnächst",
     "groups": "Gruppen",
     "collapse": "Einklappen",
     "expand": "Ausklappen"
@@ -16,7 +19,7 @@
   "breadcrumb": {
     "repos": "Repositories",
     "repos_selected": "Repositories › {{name}}",
-    "prs": "Pull Requests",
+    "prs": "Merge Requests",
     "settings": "Einstellungen"
   },
   "actions": {
@@ -25,6 +28,7 @@
     "add_repo": "Repo hinzufügen",
     "remove": "Entfernen",
     "search": "Suchen",
+    "search_placeholder": "Repos, Branches, MRs durchsuchen…",
     "open_in_ide": "In IDE öffnen",
     "open_terminal": "Terminal öffnen",
     "open_platform": "Auf Plattform öffnen",
@@ -34,8 +38,131 @@
     "delete": "Löschen"
   },
   "states": {
-    "loading": "Lädt …",
-    "empty": "Hier ist noch nichts",
+    "loading": "Wird geladen…",
+    "empty": "Nichts hier",
     "error": "Etwas ist schiefgelaufen"
+  },
+  "view": {
+    "dashboard": { "title": "Dashboard", "meta": "{{count}} Repos" },
+    "repos": { "title": "Repositories", "meta": "{{count}} von {{total}}" },
+    "mrs": { "title": "Merge Requests", "meta": "{{count}} offen" },
+    "dirty": { "title": "Geänderte Repos", "meta": "{{count}} mit lokalen Änderungen" },
+    "branches": { "title": "Branches", "meta": "über {{count}} Repos" },
+    "activity": { "title": "Aktivität", "meta": "letzte 14 Tage" },
+    "settings": { "title": "Einstellungen" }
+  },
+  "repos": {
+    "col": {
+      "repository": "Repository",
+      "branch": "Branch",
+      "status": "Status",
+      "activity": "Aktivität · 14T",
+      "actions": "Aktionen"
+    }
+  },
+  "dash": {
+    "kpi": {
+      "repositories": "Repositories",
+      "repositories_sub": "{{count}} mit Änderungen",
+      "merge_requests": "Merge Requests",
+      "merge_requests_sub": "{{count}} Entwurf",
+      "ahead_behind": "Ahead / Behind",
+      "ahead_behind_sub": "über alle Remotes",
+      "commits": "Commits · 14T",
+      "commits_sub": "Spitzentag {{count}}"
+    },
+    "activity": {
+      "title": "Aktivität · letzte 14 Tage",
+      "meta": "{{total}} Commits in {{repos}} Repos"
+    },
+    "attention": { "title": "Braucht deine Aufmerksamkeit", "empty": "Alles sauber und synchron." },
+    "mrs": {
+      "title": "Offene Merge Requests",
+      "all": "Alle anzeigen →",
+      "empty": "Keine offenen Merge Requests."
+    },
+    "commits": { "title": "Letzte Commits", "all": "Alle Aktivität →" },
+    "langs": { "title": "Sprachen" },
+    "quick": {
+      "title": "Schnellaktionen",
+      "fetch_all": "Alle fetchen",
+      "clone": "Repo klonen",
+      "find": "Repo-übergreifend suchen",
+      "workspace": "Workspace öffnen"
+    }
+  },
+  "mrs": {
+    "filter": {
+      "open": "Offen",
+      "draft": "Entwurf",
+      "merged": "Gemerged",
+      "closed": "Geschlossen"
+    },
+    "filters": "Filter",
+    "actions": { "merge": "Mergen", "checkout": "Checkout" },
+    "strip": { "branch": "Branch", "changes": "Änderungen", "ci": "CI" },
+    "drawer": {
+      "meta": "Metadaten",
+      "opened_on": "Geöffnet am {{date}}",
+      "updated_on": "Zuletzt aktualisiert {{date}}"
+    }
+  },
+  "branches": {
+    "filter": { "all": "Alle", "ahead": "Voraus", "behind": "Zurück", "stale": "Veraltet" },
+    "branches": "Branches"
+  },
+  "activity": {
+    "chart": { "title": "Commits · letzte 14 Tage", "sub": "{{total}} Commits" },
+    "filter": { "all_repos": "Alle Repositories", "all_authors": "Alle Autor:innen" },
+    "commits": "Commits",
+    "empty": "Keine Commits passen zum Filter."
+  },
+  "settings": {
+    "tab": {
+      "general": "Allgemein",
+      "accounts": "Konten",
+      "integrations": "Integrationen",
+      "shortcuts": "Shortcuts",
+      "storage": "Speicher",
+      "about": "Über"
+    },
+    "general": {
+      "title": "Allgemein",
+      "intro": "Anwendungsverhalten, Erscheinungsbild und Benachrichtigungen.",
+      "appearance": "Erscheinungsbild",
+      "theme": "Theme",
+      "theme_sub": "Hell / Dunkel / dem System folgen.",
+      "accent": "Akzentfarbe",
+      "accent_sub": "Die Highlight-Farbe für die gesamte App."
+    },
+    "accounts": {
+      "title": "Konten",
+      "intro": "Remotes, bei denen du angemeldet bist."
+    },
+    "integrations": {
+      "title": "Integrationen",
+      "intro": "Editoren, Terminals und externe Tools."
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "intro": "Tastenkombinationen.",
+      "navigation": "Navigation",
+      "jump": "Zu Repo springen",
+      "pull": "Aktuellen Branch pullen",
+      "fetch_all": "Alle fetchen",
+      "toggle_detail": "Detail-Pane umschalten",
+      "next_prev_repo": "Nächstes / vorheriges Repo",
+      "open_editor": "Im Editor öffnen",
+      "open_terminal": "Terminal öffnen"
+    },
+    "storage": {
+      "title": "Speicher",
+      "intro": "Wo Recrest Caches, Indizes und Klon-Ziele ablegt."
+    },
+    "about": {
+      "title": "Über Recrest",
+      "intro": "Versionsinformationen, Lizenzen und Credits.",
+      "version": "Version"
+    }
   }
 }

@@ -6,12 +6,7 @@ import { PROVIDER_IDS, PROVIDER_NAMES, type ProviderId } from "@recrest/shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/lib/toast";
@@ -117,11 +112,7 @@ function ProviderForm({ providerId }: { providerId: ProviderId }) {
         className="flex-1"
         autoComplete="off"
       />
-      <Button
-        onClick={() => void handleConnect()}
-        disabled={!token.trim()}
-        loading={submitting}
-      >
+      <Button onClick={() => void handleConnect()} disabled={!token.trim()} loading={submitting}>
         {t("connectProvider.connect")}
       </Button>
     </div>

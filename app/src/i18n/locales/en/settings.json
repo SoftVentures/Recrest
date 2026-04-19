@@ -1,7 +1,8 @@
 {
   "title": "Settings",
   "sections": {
-    "general": "General",
+    "general": "System",
+    "appearance": "Appearance",
     "desktop": "Desktop",
     "notifications": "Notifications",
     "updates": "Updates",
@@ -12,15 +13,46 @@
   },
   "fields": {
     "theme": "Theme",
+    "theme_sub": "Light, dark, or follow the OS.",
     "language": "Language",
+    "language_sub": "Interface language.",
+    "accent": "Accent",
+    "accent_sub": "Pick the highlight colour used across the app.",
+    "font": "Font",
+    "font_sub": "Typeface used across the interface. OpenDyslexic is a dyslexia-friendly font.",
+    "font_size": "Interface size",
+    "font_size_sub": "Scale the entire interface up or down for comfort.",
     "polling_interval": "Polling interval (minutes)",
-    "polling_interval_hint": "How often Recrest asks your git hosts for new pull requests. Lower values update faster but use more bandwidth and can hit provider rate limits.",
+    "polling_interval_hint": "How often Recrest asks your git hosts for new merge requests. Lower values update faster but use more bandwidth and can hit provider rate limits.",
     "default_ide": "Default IDE"
   },
   "theme": {
     "light": "Light",
     "dark": "Dark",
     "system": "Follow system"
+  },
+  "font_size": {
+    "sm": "Small",
+    "md": "Medium",
+    "lg": "Large",
+    "xl": "Extra large"
+  },
+  "accent": {
+    "coral": "Coral",
+    "blue": "Blue",
+    "green": "Green",
+    "purple": "Purple",
+    "pink": "Pink",
+    "amber": "Amber"
+  },
+  "accessibility": {
+    "title": "Accessibility",
+    "high_contrast": "High contrast",
+    "high_contrast_sub": "Reinforce borders and dim text for better legibility.",
+    "reduced_motion": "Reduce motion",
+    "reduced_motion_sub": "Disable non-essential animations and transitions.",
+    "underline_links": "Underline links",
+    "underline_links_sub": "Always underline links instead of only on hover."
   },
   "ide": {
     "auto_detect": "Auto-detect"
@@ -36,13 +68,13 @@
     "confirm_remove_desc": "Repositories under {{path}} will disappear from the dashboard. The folder itself stays on disk."
   },
   "providers": {
-    "description": "Connect a Personal Access Token to list pull requests.",
+    "description": "Connect a Personal Access Token to list merge requests.",
     "connect": "Connect",
     "disconnect": "Disconnect",
     "status_connected": "Connected",
     "status_disconnected": "Not connected",
     "token_placeholder": "Personal Access Token",
-    "token_hint": "A Personal Access Token is a long string issued by your git host instead of your password. Recrest needs one with read access to pull requests — e.g. the `repo` scope on GitHub, `read_api` on GitLab, or an app password with Pull Requests: Read on Bitbucket. Stored encrypted in your OS keychain, never in plain text.",
+    "token_hint": "A Personal Access Token is a long string issued by your git host instead of your password. Recrest needs one with read access to merge requests — e.g. the `repo` scope on GitHub, `read_api` on GitLab, or an app password with Pull Requests: Read on Bitbucket. Stored encrypted in your OS keychain, never in plain text.",
     "connected": "Connected to {{name}}.",
     "disconnected": "Disconnected from {{name}}.",
     "confirm_disconnect_title": "Disconnect {{name}}?",
@@ -61,7 +93,7 @@
   "notifications": {
     "enabled": "Desktop notifications",
     "enabled_desc": "Allow Recrest to send native notifications.",
-    "new_pr": "New pull requests",
+    "new_pr": "New merge requests",
     "ci_failed": "CI failures",
     "merge_ready": "Ready to merge"
   },

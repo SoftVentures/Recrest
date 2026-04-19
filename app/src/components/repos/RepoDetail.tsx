@@ -39,20 +39,12 @@ export function RepoDetail({ repo }: RepoDetailProps) {
             <FolderOpen aria-hidden />
             {t("actions.open_in_ide", { ns: "common" })}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void runCommand("open_terminal")}
-          >
+          <Button variant="outline" size="sm" onClick={() => void runCommand("open_terminal")}>
             <Terminal aria-hidden />
             {t("actions.open_terminal", { ns: "common" })}
           </Button>
           {repo.remoteUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void openExternal(repo.remoteUrl!)}
-            >
+            <Button variant="outline" size="sm" onClick={() => void openExternal(repo.remoteUrl!)}>
               <ExternalLink aria-hidden />
               {t("actions.open_remote", { ns: "common" })}
             </Button>
@@ -69,9 +61,7 @@ export function RepoDetail({ repo }: RepoDetailProps) {
         <StatCard
           label={t("detail.last_commit")}
           value={
-            repo.status.lastCommit
-              ? formatRelativeTime(repo.status.lastCommit.timestamp)
-              : "—"
+            repo.status.lastCommit ? formatRelativeTime(repo.status.lastCommit.timestamp) : "—"
           }
         />
       </div>

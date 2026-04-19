@@ -17,14 +17,7 @@ import settingsEn from "@/i18n/locales/en/settings.json";
 
 export const SUPPORTED_LOCALES = ["en", "de"] as const;
 export const DEFAULT_NAMESPACE = "common";
-export const NAMESPACES = [
-  "common",
-  "repos",
-  "prs",
-  "settings",
-  "errors",
-  "onboarding",
-] as const;
+export const NAMESPACES = ["common", "repos", "prs", "settings", "errors", "onboarding"] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 

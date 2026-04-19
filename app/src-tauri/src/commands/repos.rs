@@ -1,7 +1,13 @@
+use std::path::PathBuf;
+
+use base64::engine::general_purpose::STANDARD as B64;
+use base64::Engine;
+use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::Serialize;
 use tauri::{AppHandle, State};
 
 use crate::config::settings::RepoRecord;
+use crate::git::logo;
 use crate::git::scanner::ScanOptions;
 use crate::git::status;
 use crate::AppState;
@@ -18,10 +24,15 @@ pub struct RepoDto {
     pub remote_url: Option<String>,
     pub provider_id: Option<String>,
     pub status: status::RepoStatusDto,
+    /// Filesystem path of the auto-detected light-theme logo (if any).
+    /// The frontend fetches its bytes on demand via `load_logo_bytes`.
+    pub logo_path: Option<String>,
+    pub logo_dark_path: Option<String>,
 }
 
 impl RepoDto {
     pub fn from_record(record: &RepoRecord, status: status::RepoStatusDto) -> Self {
+        let logos = logo::detect_repo_logo(&record.path);
         Self {
             id: record.id.clone(),
             name: record.name.clone(),
@@ -30,6 +41,8 @@ impl RepoDto {
             remote_url: record.remote_url.clone(),
             provider_id: record.provider_id.clone(),
             status,
+            logo_path: logos.light.map(|p| p.to_string_lossy().to_string()),
+            logo_dark_path: logos.dark.map(|p| p.to_string_lossy().to_string()),
         }
     }
 }
@@ -113,6 +126,150 @@ pub async fn add_repo(
     }
 
     Ok(RepoDto::from_record(&record, status))
+}
+
+/// One commit entry returned by `list_recent_commits`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentCommitDto {
+    pub sha: String,
+    pub summary: String,
+    pub author: String,
+    pub timestamp: DateTime<Utc>,
+    pub repo_id: String,
+    pub repo_name: String,
+}
+
+/// Collect commits from the last `days` days across every registered repo
+/// (or a single one when `repo_id` is given). Cheap because we stop walking
+/// each history as soon as we cross the cutoff.
+#[tauri::command]
+pub async fn list_recent_commits(
+    state: State<'_, AppState>,
+    repo_id: Option<String>,
+    days: Option<u32>,
+    limit: Option<u32>,
+) -> Result<Vec<RecentCommitDto>, CommandError> {
+    let days = days.unwrap_or(14) as i64;
+    let limit = limit.unwrap_or(500) as usize;
+    let cutoff_date = Local::now().date_naive() - chrono::Duration::days(days - 1);
+
+    let config = state.config.lock().await;
+    let records: Vec<(String, String, PathBuf)> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|r| repo_id.as_deref().map_or(true, |id| id == r.id))
+        .map(|r| (r.id.clone(), r.name.clone(), r.path.clone()))
+        .collect();
+    drop(config);
+
+    let mut out: Vec<RecentCommitDto> = Vec::new();
+    for (id, name, path) in records {
+        if let Err(err) = collect_recent_commits(&id, &name, &path, cutoff_date, &mut out) {
+            tracing::debug!("list_recent_commits: skipped {id}: {err}");
+        }
+    }
+
+    // Newest first across all repos.
+    out.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    out.truncate(limit);
+    Ok(out)
+}
+
+fn collect_recent_commits(
+    id: &str,
+    name: &str,
+    path: &std::path::Path,
+    cutoff_date: chrono::NaiveDate,
+    out: &mut Vec<RecentCommitDto>,
+) -> Result<(), git2::Error> {
+    let repo = git2::Repository::open(path)?;
+    let head = match repo.head() {
+        Ok(h) => h,
+        Err(_) => return Ok(()),
+    };
+    let Some(head_oid) = head.target() else { return Ok(()) };
+
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(git2::Sort::TIME)?;
+    revwalk.push(head_oid)?;
+
+    for oid in revwalk {
+        let Ok(oid) = oid else { continue };
+        let Ok(commit) = repo.find_commit(oid) else { continue };
+        let ts = commit.time().seconds();
+        let Some(local_dt) = Local.timestamp_opt(ts, 0).single() else { continue };
+        if local_dt.date_naive() < cutoff_date {
+            break; // TIME-sorted: the rest is older
+        }
+        let Some(utc_ts) = Utc.timestamp_opt(ts, 0).single() else { continue };
+        let author = commit.author();
+        out.push(RecentCommitDto {
+            sha: commit.id().to_string(),
+            summary: commit.summary().unwrap_or("").to_string(),
+            author: author.name().unwrap_or("unknown").to_string(),
+            timestamp: utc_ts,
+            repo_id: id.to_string(),
+            repo_name: name.to_string(),
+        });
+    }
+    Ok(())
+}
+
+/// Base64-encoded image bytes + MIME, returned to the renderer as a data URI.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LogoBlobDto {
+    pub mime_type: String,
+    pub data: String,
+}
+
+/// Reads the bytes of an image that belongs to a registered repository and
+/// returns them Base64-encoded. Refuses any path that isn't actually inside
+/// one of the scanned repos (prevents the renderer from reading arbitrary
+/// files via this command).
+#[tauri::command]
+pub async fn load_logo_bytes(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<LogoBlobDto, CommandError> {
+    let requested = std::path::PathBuf::from(&path);
+    let canonical = std::fs::canonicalize(&requested)
+        .map_err(|e| CommandError::not_found(format!("logo not found: {e}")))?;
+
+    // Authorise: the resolved path must live under at least one registered repo.
+    let config = state.config.lock().await;
+    let allowed = config.settings().repos.values().any(|r| {
+        std::fs::canonicalize(&r.path)
+            .map(|root| canonical.starts_with(root))
+            .unwrap_or(false)
+    });
+    drop(config);
+    if !allowed {
+        return Err(CommandError::bad_request("logo path outside any registered repo"));
+    }
+
+    let meta = std::fs::metadata(&canonical)
+        .map_err(|e| CommandError::not_found(format!("logo stat failed: {e}")))?;
+    if !meta.is_file() {
+        return Err(CommandError::bad_request("logo path is not a file"));
+    }
+    if meta.len() > logo::MAX_LOGO_BYTES {
+        return Err(CommandError::bad_request(format!(
+            "logo too large ({} bytes, max {})",
+            meta.len(),
+            logo::MAX_LOGO_BYTES
+        )));
+    }
+
+    let bytes = std::fs::read(&canonical)
+        .map_err(|e| CommandError::internal(format!("logo read failed: {e}")))?;
+
+    Ok(LogoBlobDto {
+        mime_type: logo::mime_from_path(&canonical).to_string(),
+        data: B64.encode(&bytes),
+    })
 }
 
 #[tauri::command]

@@ -51,10 +51,7 @@ export async function listen<T>(event: string, handler: EventCallback<T>): Promi
  * Like `listen`, but never throws — returns a no-op unsubscribe if the
  * subscription itself fails (e.g. plugin not registered).
  */
-export async function safeListen<T>(
-  event: string,
-  handler: EventCallback<T>,
-): Promise<UnlistenFn> {
+export async function safeListen<T>(event: string, handler: EventCallback<T>): Promise<UnlistenFn> {
   if (!isTauri()) return () => {};
   try {
     return await tauriListen<T>(event, handler);

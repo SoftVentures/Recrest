@@ -68,11 +68,7 @@ export function useTauriNotifications(enabled: boolean): void {
 
       if (!prev) continue;
 
-      if (
-        settings.ciFailed &&
-        prev.ciStatus !== "failure" &&
-        curr.ciStatus === "failure"
-      ) {
+      if (settings.ciFailed && prev.ciStatus !== "failure" && curr.ciStatus === "failure") {
         void notificationService.send({
           title: "CI failed",
           body: curr.title,

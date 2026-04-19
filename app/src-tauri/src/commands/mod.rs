@@ -1,5 +1,6 @@
 pub mod error;
 pub mod git_info;
+pub mod git_ops;
 pub mod ide;
 pub mod providers;
 pub mod repos;

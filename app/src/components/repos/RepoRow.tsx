@@ -1,50 +1,40 @@
-import type { KeyboardEvent } from "react";
-
-import { ExternalLink, FolderOpen, GitBranch, Terminal } from "lucide-react";
-import { useTranslation } from "react-i18next";
-
-import {
-  PROVIDER_NAMES,
-  type Repository,
-  formatBranchName,
-  formatRelativeTime,
-  truncatePath,
-} from "@recrest/shared";
-
+import { Icon } from "@/components/icons/Icon";
+import { RepoAvatar } from "@/components/repos/RepoAvatar";
+import { AheadBehind, DiffStat, Sparkline } from "@/components/repos/primitives";
+import { IconButton } from "@/components/ui/IconButton";
+import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, openExternal } from "@/lib/tauri";
-import { cn } from "@/lib/utils";
-import { useAppDispatch } from "@/store/hooks";
-import { setSelectedRepo } from "@/store/slices/uiSlice";
+import { toast } from "@/lib/toast";
+
+export const COL_TEMPLATE = "minmax(220px, 1.6fr) minmax(130px, 0.8fr) 110px 96px 120px";
 
 interface RepoRowProps {
-  repo: Repository;
-  selected: boolean;
-  prCount: number;
+  repo: EnrichedRepo;
+  selected?: boolean;
+  onSelect: (id: string) => void;
 }
 
-export function RepoRow({ repo, selected, prCount }: RepoRowProps) {
-  const { t } = useTranslation("repos");
-  const dispatch = useAppDispatch();
-
-  const statusColor = repo.status.conflicted
-    ? "bg-destructive"
-    : repo.status.dirty
-      ? "bg-warning"
-      : "bg-success";
-
-  const statusLabel = t(
-    repo.status.conflicted
-      ? "status.conflicted"
-      : repo.status.dirty
-        ? "status.dirty"
-        : "status.clean",
-  );
-
-  const select = () => dispatch(setSelectedRepo(repo.id));
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
+  const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      select();
+      onSelect(repo.id);
+    }
+  };
+
+  const runCommand = async (cmd: string) => {
+    try {
+      await invoke(cmd, { repoId: repo.id });
+    } catch {
+      toast.error("Command failed");
+    }
+  };
+
+  const openRemote = () => {
+    if (repo.remoteUrl) {
+      void openExternal(repo.remoteUrl);
+    } else {
+      toast.error("No remote configured");
     }
   };
 
@@ -52,107 +42,67 @@ export function RepoRow({ repo, selected, prCount }: RepoRowProps) {
     <div
       role="button"
       tabIndex={0}
-      aria-pressed={selected}
-      onClick={select}
-      onKeyDown={onKeyDown}
-      className={cn(
-        "group flex w-full cursor-pointer items-center gap-3 border-b border-border px-4 py-3 text-left",
-        "hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected && "bg-accent",
-      )}
+      className={`a-row d-comfy${selected ? " selected" : ""}`}
+      style={{ gridTemplateColumns: COL_TEMPLATE }}
+      onClick={() => onSelect(repo.id)}
+      onKeyDown={handleKey}
     >
-      <span className={cn("h-2 w-2 shrink-0 rounded-full", statusColor)} aria-label={statusLabel} />
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium">{repo.name}</span>
-          {repo.providerId && (
-            <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
-              {PROVIDER_NAMES[repo.providerId]}
-            </span>
-          )}
+      <div className="a-c-name">
+        <RepoAvatar repo={repo} size={28} radius={6} />
+        <div className="a-name-stack">
+          <div className="a-name-line">
+            <span className="a-name">{repo.name}</span>
+            {repo.pinned && <Icon name="pin" size={11} color="var(--accent)" />}
+          </div>
+          <div className="a-path">{repo.path}</div>
         </div>
-        <div className="truncate text-xs text-muted-foreground">{truncatePath(repo.path)}</div>
       </div>
 
-      <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-        <GitBranch className="h-3.5 w-3.5" aria-hidden />
-        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-          {formatBranchName(repo.status.branch)}
+      <div className="a-c-branch">
+        <span className="a-branch-chip">
+          <Icon name="branch" size={11} />
+          <span>{repo.status.branch ?? "—"}</span>
         </span>
+        <AheadBehind ahead={repo.status.ahead} behind={repo.status.behind} compact />
       </div>
 
-      <div className="hidden w-20 text-right text-xs text-muted-foreground tabular-nums md:block">
-        {repo.status.ahead > 0 && <span className="text-success">↑{repo.status.ahead} </span>}
-        {repo.status.behind > 0 && <span className="text-destructive">↓{repo.status.behind}</span>}
-        {!repo.status.ahead && !repo.status.behind && "—"}
-      </div>
-
-      <div className="hidden w-14 text-right text-xs text-muted-foreground md:block">
-        {prCount > 0 ? t("pr_count", { count: prCount }) : "—"}
-      </div>
-
-      <div className="hidden w-28 truncate text-right text-xs text-muted-foreground md:block">
-        {repo.status.lastCommit ? formatRelativeTime(repo.status.lastCommit.timestamp) : "—"}
-      </div>
-
-      <div
-        className="hidden items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 md:flex"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        <RowAction
-          label={t("actions.open_in_ide", { ns: "common" })}
-          icon={FolderOpen}
-          onClick={() => {
-            void invoke("open_in_ide", { repoId: repo.id });
-          }}
-        />
-        <RowAction label={t("actions.open_terminal", { ns: "common" })} icon={Terminal} disabled />
-        {repo.remoteUrl && (
-          <RowAction
-            label={t("actions.open_remote", { ns: "common" })}
-            icon={ExternalLink}
-            onClick={(remoteUrl) => void openExternal(normalizeRemoteForWeb(remoteUrl))}
-            arg={repo.remoteUrl}
-          />
+      <div className="a-c-status">
+        {repo.status.dirty ? (
+          <>
+            <DiffStat added={repo.added} removed={repo.removed} />
+            <span className="a-status-sub">
+              {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
+            </span>
+          </>
+        ) : repo.stale ? (
+          <span style={{ color: "var(--ink-3)", fontSize: 11 }}>stale</span>
+        ) : (
+          <span style={{ color: "var(--ink-4)", fontSize: 11 }}>clean</span>
         )}
+      </div>
+
+      <div className="a-c-activity">
+        <Sparkline data={repo.activity} active={repo.status.dirty} width={88} height={16} />
+      </div>
+
+      <div className="a-c-actions" onClick={(e) => e.stopPropagation()}>
+        <IconButton tooltip="Open in IDE" onClick={() => void runCommand("open_in_ide")}>
+          <Icon name="code" size={13} />
+        </IconButton>
+        <IconButton tooltip="Open in terminal" onClick={() => void runCommand("open_terminal")}>
+          <Icon name="terminal" size={13} />
+        </IconButton>
+        <IconButton
+          tooltip={repo.remoteUrl ? "Open on GitHub" : "No remote configured"}
+          onClick={openRemote}
+          disabled={!repo.remoteUrl}
+        >
+          <Icon name="github" size={13} />
+        </IconButton>
+        <IconButton tooltip="Open in Explorer" onClick={() => void runCommand("open_in_explorer")}>
+          <Icon name="folder" size={13} />
+        </IconButton>
       </div>
     </div>
   );
-}
-
-interface RowActionProps<A = void> {
-  label: string;
-  icon: typeof FolderOpen;
-  onClick?: (arg: A) => void;
-  arg?: A;
-  disabled?: boolean;
-}
-
-function RowAction<A>({ label, icon: Icon, onClick, arg, disabled }: RowActionProps<A>) {
-  return (
-    <button
-      type="button"
-      onClick={() => onClick?.(arg as A)}
-      disabled={disabled}
-      aria-label={label}
-      className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent disabled:opacity-40"
-    >
-      <Icon className="h-3.5 w-3.5" aria-hidden />
-    </button>
-  );
-}
-
-function normalizeRemoteForWeb(remote: string): string {
-  if (remote.startsWith("git@")) {
-    const match = remote.match(/^git@([^:]+):(.+)$/);
-    if (match) {
-      const [, host, pathPart] = match;
-      if (host && pathPart) {
-        return `https://${host}/${pathPart.replace(/\.git$/, "")}`;
-      }
-    }
-  }
-  return remote.replace(/\.git$/, "");
 }

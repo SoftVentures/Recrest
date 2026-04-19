@@ -2,13 +2,14 @@ import React from "react";
 
 import { BrowserRouter } from "react-router-dom";
 
-import ReactDOM from "react-dom/client";
-import { Provider } from "react-redux";
-
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
+import "@fontsource/opendyslexic/400.css";
+import "@fontsource/opendyslexic/700.css";
+import ReactDOM from "react-dom/client";
+import { Provider } from "react-redux";
 
 import App from "@/App";
 import "@/i18n";

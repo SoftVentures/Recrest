@@ -1,7 +1,8 @@
 {
   "title": "Einstellungen",
   "sections": {
-    "general": "Allgemein",
+    "general": "System",
+    "appearance": "Erscheinungsbild",
     "desktop": "Desktop",
     "notifications": "Benachrichtigungen",
     "updates": "Updates",
@@ -12,15 +13,46 @@
   },
   "fields": {
     "theme": "Design",
+    "theme_sub": "Hell, dunkel oder System folgen.",
     "language": "Sprache",
+    "language_sub": "Sprache der Oberfläche.",
+    "accent": "Akzentfarbe",
+    "accent_sub": "Die Highlight-Farbe für die gesamte App.",
+    "font": "Schriftart",
+    "font_sub": "Die Schrift der Oberfläche. OpenDyslexic ist eine Legasthenie-freundliche Schrift.",
+    "font_size": "Oberflächengröße",
+    "font_size_sub": "Skaliere die komplette Oberfläche für mehr Lesekomfort.",
     "polling_interval": "Polling-Intervall (Minuten)",
-    "polling_interval_hint": "Wie oft Recrest bei deinen Git-Hosts nach neuen Pull Requests fragt. Kleinere Werte aktualisieren schneller, brauchen aber mehr Bandbreite und können an Rate-Limits der Provider stoßen.",
+    "polling_interval_hint": "Wie oft Recrest bei deinen Git-Hosts nach neuen Merge Requests fragt. Kleinere Werte aktualisieren schneller, brauchen aber mehr Bandbreite und können an Rate-Limits der Provider stoßen.",
     "default_ide": "Standard-IDE"
   },
   "theme": {
     "light": "Hell",
     "dark": "Dunkel",
     "system": "Systemstandard"
+  },
+  "font_size": {
+    "sm": "Klein",
+    "md": "Mittel",
+    "lg": "Groß",
+    "xl": "Sehr groß"
+  },
+  "accent": {
+    "coral": "Koralle",
+    "blue": "Blau",
+    "green": "Grün",
+    "purple": "Violett",
+    "pink": "Pink",
+    "amber": "Bernstein"
+  },
+  "accessibility": {
+    "title": "Barrierefreiheit",
+    "high_contrast": "Hoher Kontrast",
+    "high_contrast_sub": "Ränder verstärken und Text kräftiger setzen für bessere Lesbarkeit.",
+    "reduced_motion": "Animationen reduzieren",
+    "reduced_motion_sub": "Nicht essenzielle Animationen und Übergänge deaktivieren.",
+    "underline_links": "Links unterstreichen",
+    "underline_links_sub": "Links immer unterstreichen statt nur beim Hovern."
   },
   "ide": {
     "auto_detect": "Automatisch erkennen"
@@ -36,13 +68,13 @@
     "confirm_remove_desc": "Repositories unter {{path}} verschwinden aus dem Dashboard. Der Ordner bleibt auf der Platte."
   },
   "providers": {
-    "description": "Verbinde ein Personal Access Token, um Pull Requests zu laden.",
+    "description": "Verbinde ein Personal Access Token, um Merge Requests zu laden.",
     "connect": "Verbinden",
     "disconnect": "Trennen",
     "status_connected": "Verbunden",
     "status_disconnected": "Nicht verbunden",
     "token_placeholder": "Personal Access Token",
-    "token_hint": "Ein Personal Access Token ist ein langer String, den dein Git-Host statt Passwort ausstellt. Recrest braucht einen mit Leserechten auf Pull Requests — z. B. Scope `repo` bei GitHub, `read_api` bei GitLab oder ein App-Passwort mit Pull Requests: Read bei Bitbucket. Verschlüsselt im OS-Keychain, nie im Klartext gespeichert.",
+    "token_hint": "Ein Personal Access Token ist ein langer String, den dein Git-Host statt Passwort ausstellt. Recrest braucht einen mit Leserechten auf Merge Requests — z. B. Scope `repo` bei GitHub, `read_api` bei GitLab oder ein App-Passwort mit Pull Requests: Read bei Bitbucket. Verschlüsselt im OS-Keychain, nie im Klartext gespeichert.",
     "connected": "Mit {{name}} verbunden.",
     "disconnected": "Von {{name}} getrennt.",
     "confirm_disconnect_title": "{{name}} trennen?",
@@ -61,7 +93,7 @@
   "notifications": {
     "enabled": "Desktop-Benachrichtigungen",
     "enabled_desc": "Recrest darf native Benachrichtigungen senden.",
-    "new_pr": "Neue Pull Requests",
+    "new_pr": "Neue Merge Requests",
     "ci_failed": "Fehlgeschlagene CI-Prüfungen",
     "merge_ready": "Bereit zum Mergen"
   },

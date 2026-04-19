@@ -25,3 +25,13 @@ export const PROVIDER_OAUTH_SCOPES: Record<ProviderId, string[]> = {
   gitlab: ["read_api", "read_user", "read_repository"],
   bitbucket: ["account", "repository", "pullrequest"],
 };
+
+/** Deep link to the token-creation page for each provider, pre-configured
+ *  with Recrest's required scopes so the user only has to click "Generate"
+ *  and copy the token back. Not OAuth, but close enough for a 1-click UX. */
+export const PROVIDER_CREATE_TOKEN_URLS: Record<ProviderId, string> = {
+  github: "https://github.com/settings/tokens/new?scopes=repo,read:user&description=Recrest",
+  gitlab:
+    "https://gitlab.com/-/user_settings/personal_access_tokens?name=Recrest&scopes=read_api,read_user,read_repository",
+  bitbucket: "https://bitbucket.org/account/settings/app-passwords/new",
+};

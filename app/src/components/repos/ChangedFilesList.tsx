@@ -37,10 +37,7 @@ export function ChangedFilesList({ files, truncated }: ChangedFilesListProps) {
         {files.map((file, i) => {
           const marker = MARKER[file.status];
           return (
-            <li
-              key={`${file.path}-${i}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 text-xs"
-            >
+            <li key={`${file.path}-${i}`} className="flex items-center gap-2 px-2.5 py-1.5 text-xs">
               <span
                 aria-label={t(`detail.marker.${file.status}`)}
                 title={t(`detail.marker.${file.status}`)}

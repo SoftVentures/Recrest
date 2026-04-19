@@ -14,14 +14,7 @@ import { InitialScanStep } from "./steps/InitialScanStep";
 import { PickFolderStep } from "./steps/PickFolderStep";
 import { WelcomeStep } from "./steps/WelcomeStep";
 
-const STEPS = [
-  "welcome",
-  "basics",
-  "folders",
-  "provider",
-  "scan",
-  "done",
-] as const;
+const STEPS = ["welcome", "basics", "folders", "provider", "scan", "done"] as const;
 type Step = (typeof STEPS)[number];
 
 export function OnboardingWizard() {

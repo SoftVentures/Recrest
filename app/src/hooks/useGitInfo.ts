@@ -4,9 +4,7 @@ import type { GitInfo } from "@recrest/shared";
 
 import { systemService } from "@/lib/tauri/services";
 
-type State =
-  | { status: "loading"; info: null }
-  | { status: "ready"; info: GitInfo | null };
+type State = { status: "loading"; info: null } | { status: "ready"; info: GitInfo | null };
 
 // Module-level cache so multiple consumers don't each spawn `git --version`.
 let cached: GitInfo | null | undefined = undefined;

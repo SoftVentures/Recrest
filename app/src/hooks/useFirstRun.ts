@@ -17,8 +17,8 @@ export function useFirstRun(): {
   const providers = useAppSelector((s) => s.providers.connections);
   const settingsLoaded = useAppSelector((s) => !s.settings.loading);
 
-  const [dismissed, setDismissed] = useState<boolean>(() =>
-    typeof localStorage !== "undefined" && localStorage.getItem(STORAGE_KEY) === "true",
+  const [dismissed, setDismissed] = useState<boolean>(
+    () => typeof localStorage !== "undefined" && localStorage.getItem(STORAGE_KEY) === "true",
   );
 
   // Re-read localStorage once on mount in case another tab/window changed it.

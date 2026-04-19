@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { FolderPlus, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "@/components/icons/Icon";
 import { SettingsSection } from "@/components/settings/shared";
 import {
   AlertDialog,
@@ -15,9 +15,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { scanForRepos } from "@/store/slices/reposSlice";
@@ -28,112 +27,161 @@ export function RepoSources() {
   const dispatch = useAppDispatch();
   const scanPaths = useAppSelector((s) => s.settings.scanPaths);
   const [draft, setDraft] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const addPath = async () => {
-    const trimmed = draft.trim();
-    if (!trimmed) return;
-    const next = Array.from(new Set([...scanPaths, trimmed]));
-    setAdding(true);
+  const commit = async (next: string[], toastKey: "added" | "removed") => {
     try {
       await dispatch(saveSettings({ scanPaths: next })).unwrap();
-      setDraft("");
       void dispatch(scanForRepos(next));
-      toast.success(t("sources.added"));
+      toast.success(t(`sources.${toastKey}`));
     } catch {
       toast.error(t("internal", { ns: "errors" }));
-    } finally {
-      setAdding(false);
     }
   };
 
-  const removePath = async (path: string) => {
-    const next = scanPaths.filter((p) => p !== path);
+  const addPath = async (rawPath?: string) => {
+    const candidate = (rawPath ?? draft).trim();
+    if (!candidate) return;
+    if (scanPaths.includes(candidate)) {
+      toast.info(t("sources.duplicate", { defaultValue: "Already in the list." }));
+      return;
+    }
+    setBusy(true);
     try {
-      await dispatch(saveSettings({ scanPaths: next })).unwrap();
-      void dispatch(scanForRepos(next));
-      toast.success(t("sources.removed"));
+      await commit([...scanPaths, candidate], "added");
+      setDraft("");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removePath = async (path: string) =>
+    commit(
+      scanPaths.filter((p) => p !== path),
+      "removed",
+    );
+
+  const pickDirectory = async () => {
+    if (!isTauri()) {
+      toast.info(
+        t("sources.browse_desktop_only", {
+          defaultValue: "Browse works in the desktop app only.",
+        }),
+      );
+      return;
+    }
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        directory: true,
+        multiple: false,
+        title: t("sources.browse", { defaultValue: "Browse…" }),
+      });
+      if (typeof picked === "string" && picked) void addPath(picked);
     } catch {
       toast.error(t("internal", { ns: "errors" }));
     }
   };
 
   return (
-    <SettingsSection
-      title={t("sections.sources")}
-      description={t("sources.description")}
-    >
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void addPath();
-            }
-          }}
-          placeholder={t("sources.placeholder")}
-          className="flex-1"
-        />
-        <Button
-          onClick={() => void addPath()}
-          disabled={!draft.trim()}
-          loading={adding}
-        >
-          <Plus aria-hidden />
-          {t("actions.add", { ns: "common" })}
-        </Button>
+    <SettingsSection title={t("sections.sources")} description={t("sources.description")}>
+      <div className="a-set-row a-src-add">
+        <div className="a-set-row-l">
+          <div className="a-set-row-lbl">
+            {t("sources.add_label", { defaultValue: "Add scan path" })}
+          </div>
+          <div className="a-set-row-sub">
+            {t("sources.add_sub", {
+              defaultValue: "Recrest scans this folder and every sub-folder for git repositories.",
+            })}
+          </div>
+        </div>
+        <div className="a-set-row-r a-src-input-row">
+          <input
+            className="a-set-input a-src-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void addPath();
+              }
+            }}
+            placeholder={t("sources.placeholder")}
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            className="r-btn"
+            onClick={() => void pickDirectory()}
+            disabled={busy}
+          >
+            <Icon name="folder" size={13} />
+            {t("sources.browse", { defaultValue: "Browse…" })}
+          </button>
+          <button
+            type="button"
+            className="r-btn primary"
+            onClick={() => void addPath()}
+            disabled={busy || !draft.trim()}
+          >
+            <Icon name="plus" size={13} />
+            {t("actions.add", { ns: "common" })}
+          </button>
+        </div>
       </div>
 
       {scanPaths.length === 0 ? (
-        <EmptyState
-          icon={FolderPlus}
-          title={t("sources.empty")}
-          description={t("sources.empty_desc")}
-        />
+        <div className="a-set-row a-src-empty">
+          <Icon name="folder" size={18} />
+          <div>
+            <div className="a-src-empty-title">{t("sources.empty")}</div>
+            <div className="a-src-empty-sub">{t("sources.empty_desc")}</div>
+          </div>
+        </div>
       ) : (
-        <ul className="divide-y divide-border rounded-md border border-border">
-          {scanPaths.map((path) => (
-            <li key={path} className="flex items-center gap-2 px-3 py-2 text-sm">
-              <span
-                className="flex-1 truncate font-mono text-xs text-muted-foreground"
-                title={path}
-              >
-                {path}
-              </span>
+        scanPaths.map((path) => (
+          <div key={path} className="a-set-row a-src-row">
+            <div className="a-src-row-icon">
+              <Icon name="folder" size={14} />
+            </div>
+            <div className="a-set-row-l a-src-row-path" title={path}>
+              {path}
+            </div>
+            <div className="a-set-row-r">
               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("actions.remove", { ns: "common" })}
-                  >
-                    <Trash2 aria-hidden />
-                  </Button>
-                </AlertDialogTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        aria-label={t("actions.remove", { ns: "common" })}
+                      >
+                        <Icon name="x" size={14} />
+                      </button>
+                    </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("actions.remove", { ns: "common" })}</TooltipContent>
+                </Tooltip>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {t("sources.confirm_remove_title")}
-                    </AlertDialogTitle>
+                    <AlertDialogTitle>{t("sources.confirm_remove_title")}</AlertDialogTitle>
                     <AlertDialogDescription>
                       {t("sources.confirm_remove_desc", { path })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>
-                      {t("actions.cancel", { ns: "common" })}
-                    </AlertDialogCancel>
+                    <AlertDialogCancel>{t("actions.cancel", { ns: "common" })}</AlertDialogCancel>
                     <AlertDialogAction onClick={() => void removePath(path)}>
                       {t("actions.remove", { ns: "common" })}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </li>
-          ))}
-        </ul>
+            </div>
+          </div>
+        ))
       )}
     </SettingsSection>
   );

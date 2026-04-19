@@ -1,7 +1,6 @@
 import { type ReactNode } from "react";
 
 import { InfoHint } from "@/components/ui/info-hint";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 interface SettingsSectionProps {
@@ -11,23 +10,14 @@ interface SettingsSectionProps {
   className?: string;
 }
 
-/** Titled block used repeatedly in SettingsPage. */
-export function SettingsSection({
-  title,
-  description,
-  children,
-  className,
-}: SettingsSectionProps) {
+/** Titled block: small uppercase section label over a rounded card of rows.
+ *  Matches the Appearance / Accessibility / System sections in the General tab. */
+export function SettingsSection({ title, description, children, className }: SettingsSectionProps) {
   return (
-    <section className={cn("space-y-4", className)}>
-      <div className="space-y-1">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
-      </div>
-      <Separator />
-      <div className="space-y-4">{children}</div>
+    <section className={cn("a-set-section", className)}>
+      <h3>{title}</h3>
+      {description && <div className="a-set-section-desc">{description}</div>}
+      <div className="a-set-card">{children}</div>
     </section>
   );
 }
@@ -39,58 +29,35 @@ interface SettingsFieldProps {
   hint?: ReactNode;
   htmlFor?: string;
   children: ReactNode;
-  /** Stack control under label on small screens and when control is wide. */
+  /** Reserved for backwards compatibility — inline is the only layout now. */
   layout?: "inline" | "stacked";
   className?: string;
 }
 
-/** Label+control row. Responsive: stacks under 640px. */
+/** Single row inside a SettingsSection: label + description on the left,
+ *  control on the right. */
 export function SettingsField({
   label,
   description,
   hint,
   htmlFor,
   children,
-  layout = "inline",
   className,
 }: SettingsFieldProps) {
-  const labelNode = (
-    <span className="inline-flex items-center gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-      </label>
-      {hint && <InfoHint>{hint}</InfoHint>}
-    </span>
-  );
-
-  if (layout === "stacked") {
-    return (
-      <div className={cn("space-y-2", className)}>
-        <div>
-          {labelNode}
-          {description && (
-            <p className="text-xs text-muted-foreground">{description}</p>
-          )}
-        </div>
-        {children}
-      </div>
-    );
-  }
-
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6",
-        className,
-      )}
-    >
-      <div className="min-w-0 space-y-0.5">
-        {labelNode}
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
+    <div className={cn("a-set-row", className)}>
+      <div className="a-set-row-l">
+        <label htmlFor={htmlFor} className="a-set-row-lbl">
+          {label}
+          {hint && (
+            <span className="a-set-row-hint">
+              <InfoHint>{hint}</InfoHint>
+            </span>
+          )}
+        </label>
+        {description && <div className="a-set-row-sub">{description}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="a-set-row-r">{children}</div>
     </div>
   );
 }

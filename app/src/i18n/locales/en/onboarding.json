@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "Welcome to Recrest",
-    "tagline": "A lightweight developer dashboard for your local repos and pull requests.",
+    "tagline": "A lightweight developer dashboard for your local repos and merge requests.",
     "body": "Let's set things up in a minute — a few preferences, then pick the folders where your code lives, and you're ready.",
     "cta": "Get started",
     "back": "Back"
@@ -18,7 +18,7 @@
     "close_to_tray": "Close to tray",
     "close_to_tray_desc": "Keep running in the system tray when the window closes.",
     "notifications": "Desktop notifications",
-    "notifications_desc": "Notify me about new pull requests and CI results.",
+    "notifications_desc": "Notify me about new merge requests and CI results.",
     "next": "Continue"
   },
   "pickFolder": {
@@ -34,8 +34,8 @@
   },
   "connectProvider": {
     "title": "Connect a Git host",
-    "body": "Optional — connect GitHub, GitLab, or Bitbucket to see your open pull requests here. You can skip and add this later in Settings.",
-    "local_note": "Your local git status, branches and uncommitted changes are shown regardless. This only adds pull-request visibility.",
+    "body": "Optional — connect GitHub, GitLab, or Bitbucket to see your open merge requests here. You can skip and add this later in Settings.",
+    "local_note": "Your local git status, branches and uncommitted changes are shown regardless. This only adds merge-request visibility.",
     "token_placeholder": "Personal Access Token",
     "connect": "Connect",
     "skip": "Skip",
@@ -56,7 +56,7 @@
   },
   "done": {
     "title": "You're all set",
-    "body": "Recrest is ready. Browse your repositories and pull requests from the sidebar.",
+    "body": "Recrest is ready. Browse your repositories and merge requests from the sidebar.",
     "cta": "Open dashboard"
   }
 }

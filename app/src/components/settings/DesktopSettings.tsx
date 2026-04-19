@@ -6,6 +6,7 @@ import type { AutoUpdateMode, PlatformInfo } from "@recrest/shared";
 
 import { SettingsField, SettingsSection } from "@/components/settings/shared";
 import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/info-hint";
 import {
   Select,
   SelectContent,
@@ -14,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { InfoHint } from "@/components/ui/info-hint";
 import { useGitInfo } from "@/hooks/useGitInfo";
 import { isTauri } from "@/lib/tauri";
 import { systemService, updaterService } from "@/lib/tauri/services";
@@ -41,18 +41,28 @@ export function DesktopSettings() {
   const disabled = !isTauri();
 
   return (
-    <SettingsSection
-      title={t("sections.desktop")}
-      description={disabled ? t("desktop.web_disabled") : undefined}
-    >
-      <SettingsField
-        label={t("desktop.auto_start")}
-        description={t("desktop.auto_start_desc")}
-      >
+    <SettingsSection title={t("sections.desktop")}>
+      <SettingsField label={t("desktop.auto_start")} description={t("desktop.auto_start_desc")}>
         <Switch
           checked={s.autoStart}
           disabled={disabled}
-          onCheckedChange={(v) => void save({ autoStart: v })}
+          onCheckedChange={(v) => {
+            // Persist the pref AND tell the autostart plugin to actually
+            // register/deregister the login item. Without the plugin side,
+            // the OS never learns about the change.
+            void save({ autoStart: v });
+            if (!isTauri()) return;
+            void (async () => {
+              try {
+                const autostart = await import("@tauri-apps/plugin-autostart");
+                if (v) await autostart.enable();
+                else await autostart.disable();
+              } catch {
+                // Plugin might not be available on every platform; the
+                // Redux state still reflects the user's intent.
+              }
+            })();
+          }}
         />
       </SettingsField>
 
@@ -152,11 +162,7 @@ export function UpdatesSettings() {
 
   return (
     <SettingsSection title={t("sections.updates")}>
-      <SettingsField
-        label={t("updates.mode")}
-        hint={t("updates.mode_hint")}
-        htmlFor="update-mode"
-      >
+      <SettingsField label={t("updates.mode")} hint={t("updates.mode_hint")} htmlFor="update-mode">
         <Select
           value={s.autoUpdate}
           onValueChange={(value) => void save({ autoUpdate: value as AutoUpdateMode })}
@@ -223,7 +229,7 @@ export function DiagnosticsSettings() {
             {git.status === "loading"
               ? "…"
               : git.info?.installed
-                ? git.info.version ?? t("diagnostics.git_installed")
+                ? (git.info.version ?? t("diagnostics.git_installed"))
                 : t("diagnostics.git_not_installed")}
           </span>
           <InfoHint>{t("diagnostics.git_hint")}</InfoHint>

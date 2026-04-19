@@ -1,13 +1,17 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import { POLLING_INTERVAL_DEFAULT_MS } from "@recrest/shared";
-
-import type { SettingsState } from "@/store/slices/settingsSlice";
+import {
+  DEFAULT_ACCENT,
+  DEFAULT_FONT,
+  DEFAULT_FONT_SIZE,
+  POLLING_INTERVAL_DEFAULT_MS,
+} from "@recrest/shared";
 
 import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
 import { providersReducer } from "@/store/slices/providersSlice";
 import { prsReducer } from "@/store/slices/prsSlice";
 import { reposReducer } from "@/store/slices/reposSlice";
+import type { SettingsState } from "@/store/slices/settingsSlice";
 import { settingsReducer } from "@/store/slices/settingsSlice";
 import { uiReducer } from "@/store/slices/uiSlice";
 
@@ -26,8 +30,10 @@ export const store = configureStore({
         ui: {
           sidebarCollapsed: persisted.sidebarCollapsed ?? false,
           searchOpen: false,
-          activeView: "repos" as const,
+          activeView: "dashboard" as const,
           selectedRepoId: null,
+          pinnedRepoIds: [],
+          refreshNonce: 0,
         },
         settings: {
           pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,
@@ -46,6 +52,12 @@ export const store = configureStore({
             mergeReady: true,
           },
           crashReporting: false,
+          accent: persisted.accent ?? DEFAULT_ACCENT,
+          font: persisted.font ?? DEFAULT_FONT,
+          fontSize: persisted.fontSize ?? DEFAULT_FONT_SIZE,
+          highContrast: persisted.highContrast ?? false,
+          reducedMotion: persisted.reducedMotion ?? false,
+          underlineLinks: persisted.underlineLinks ?? false,
           loading: false,
           error: null,
         } satisfies SettingsState,

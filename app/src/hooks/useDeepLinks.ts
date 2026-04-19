@@ -50,8 +50,8 @@ export function useDeepLinks(enabled: boolean): void {
 
             if (action === DEEP_LINK_ACTIONS.openPr && parts[0]) {
               dispatch(setSelectedRepo(parts[0]));
-              dispatch(setActiveView("prs"));
-              navigate("/pull-requests");
+              dispatch(setActiveView("merge-requests"));
+              navigate("/merge-requests");
               return;
             }
 

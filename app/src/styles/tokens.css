@@ -1,0 +1,651 @@
+/* ─── Recrest — global tokens ─────────────────── */
+
+:root {
+  /* Light (default) */
+  --app-bg: #fafafa;
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f7f7f8;
+  --surface-3: #eeeeef;
+  --surface-hover: #f2f2f3;
+  --sidebar-bg: #f5f5f6;
+  --border: #ececee;
+  --border-strong: #dedee1;
+  --hairline: rgba(17, 17, 22, 0.06);
+
+  --ink-0: #0b0b0f;
+  --ink-1: #22222a;
+  --ink-2: #52525b;
+  --ink-3: #8a8a94;
+  --ink-4: #b8b8c0;
+
+  --accent: #f46a3d;
+  --accent-weak: #ffe6db;
+  --accent-ink: #b13b15;
+
+  --brand-bg: #ffffff;
+  --brand-ink: #0f1115;
+  --brand-border: #ececee;
+
+  --blue: #2f66e6;
+  --blue-weak: #e8f0ff;
+  --green: #16a34a;
+  --green-weak: #e4f6ea;
+  --amber: #d97706;
+  --amber-weak: #fdf1dc;
+  --red: #dc2626;
+  --red-weak: #fbe9e9;
+  --purple: #7c3aed;
+  --purple-weak: #f0e9ff;
+
+  --shadow-pop: 0 1px 2px rgba(17, 17, 22, 0.04), 0 12px 32px rgba(17, 17, 22, 0.08);
+  --shadow-card: 0 1px 0 rgba(17, 17, 22, 0.04);
+  --shadow-row-hover: 0 1px 0 rgba(17, 17, 22, 0.04), 0 6px 18px rgba(17, 17, 22, 0.06);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 100px;
+
+  --font-sans: "Inter", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Menlo", "Consolas", monospace;
+
+  --row-h-compact: 44px;
+  --row-h-comfy: 60px;
+  --row-h-spacious: 80px;
+}
+
+[data-theme="dark"],
+.dark {
+  --app-bg: #16171d;
+  --canvas: #1b1d25;
+  --surface: #222530;
+  --surface-1: #222530;
+  --surface-2: #262935;
+  --surface-3: #2f3340;
+  --surface-hover: #2c2f3c;
+  --sidebar-bg: #1a1c23;
+  --border: #303445;
+  --border-strong: #3d4156;
+  --hairline: rgba(255, 255, 255, 0.08);
+
+  --ink-0: #ffffff;
+  --ink-1: #ecedf2;
+  --ink-2: #a0a2b2;
+  --ink-3: #777a8e;
+  --ink-4: #585b6d;
+
+  --accent: #ff7f4f;
+  --accent-weak: rgba(255, 127, 79, 0.18);
+  --accent-ink: #ffa888;
+
+  --brand-bg: #0f1115;
+  --brand-ink: #ffffff;
+  --brand-border: #303445;
+
+  --blue: #7ba7ff;
+  --blue-weak: rgba(123, 167, 255, 0.18);
+  --green: #4ae38a;
+  --green-weak: rgba(74, 227, 138, 0.18);
+  --amber: #ffb347;
+  --amber-weak: rgba(255, 179, 71, 0.18);
+  --red: #ff6b6b;
+  --red-weak: rgba(255, 107, 107, 0.18);
+  --purple: #c4a8ff;
+  --purple-weak: rgba(196, 168, 255, 0.18);
+
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.4), 0 20px 40px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --shadow-row-hover: 0 1px 0 rgba(255, 255, 255, 0.03), 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* Accent switch — vivid, saturated palette */
+[data-accent="blue"] {
+  --accent: #3d7bff;
+  --accent-weak: #e2ecff;
+  --accent-ink: #1a42b8;
+}
+[data-accent="green"] {
+  --accent: #10b981;
+  --accent-weak: #d9f7ed;
+  --accent-ink: #0a7a56;
+}
+[data-accent="purple"] {
+  --accent: #8b5cf6;
+  --accent-weak: #ece3ff;
+  --accent-ink: #5b21b6;
+}
+[data-accent="pink"] {
+  --accent: #ec4899;
+  --accent-weak: #fde0ef;
+  --accent-ink: #a3185e;
+}
+[data-accent="amber"] {
+  --accent: #f59e0b;
+  --accent-weak: #fdecc9;
+  --accent-ink: #9a5c04;
+}
+
+[data-theme="dark"][data-accent="blue"],
+.dark[data-accent="blue"] {
+  --accent: #7ba7ff;
+  --accent-weak: rgba(123, 167, 255, 0.2);
+  --accent-ink: #a8c5ff;
+}
+[data-theme="dark"][data-accent="green"],
+.dark[data-accent="green"] {
+  --accent: #4ae38a;
+  --accent-weak: rgba(74, 227, 138, 0.2);
+  --accent-ink: #86f2ad;
+}
+[data-theme="dark"][data-accent="purple"],
+.dark[data-accent="purple"] {
+  --accent: #c4a8ff;
+  --accent-weak: rgba(196, 168, 255, 0.2);
+  --accent-ink: #d8c4ff;
+}
+[data-theme="dark"][data-accent="pink"],
+.dark[data-accent="pink"] {
+  --accent: #ff78b9;
+  --accent-weak: rgba(255, 120, 185, 0.2);
+  --accent-ink: #ffa4d0;
+}
+[data-theme="dark"][data-accent="amber"],
+.dark[data-accent="amber"] {
+  --accent: #ffb347;
+  --accent-weak: rgba(255, 179, 71, 0.2);
+  --accent-ink: #ffc97a;
+}
+
+/* ─── Font family switch ─── */
+:root {
+  --font-scale: 1;
+}
+html[data-font="manrope"] {
+  --font-sans: "Manrope", -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+html[data-font="plex"] {
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+html[data-font="system"] {
+  --font-sans: -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+html[data-font="opendyslexic"] {
+  --font-sans: "OpenDyslexic", -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+/* ─── Font-size / interface scale ─── */
+/* We scale the whole interface via `transform: scale()` on `#root` (the React
+ * mount point). This keeps every Radix floating layer (Select/Tooltip/Dialog),
+ * which portals into `document.body` as a sibling of `#root`, *outside* the
+ * scaled subtree — so their `getBoundingClientRect()` math lines up with the
+ * visual position and popovers don't drift to the wrong coords when the user
+ * changes the size. `zoom` has the opposite behaviour (scales everything
+ * including portals) and breaks Radix. */
+html[data-font-size="sm"] {
+  --ui-scale: 0.9;
+}
+html[data-font-size="md"] {
+  --ui-scale: 1;
+}
+html[data-font-size="lg"] {
+  --ui-scale: 1.12;
+}
+html[data-font-size="xl"] {
+  --ui-scale: 1.25;
+}
+#root {
+  transform: scale(var(--ui-scale, 1));
+  transform-origin: top left;
+  width: calc(100vw / var(--ui-scale, 1));
+  height: calc(100vh / var(--ui-scale, 1));
+  overflow: hidden;
+}
+
+/* ─── Accessibility ─── */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-high-contrast="true"] {
+  --border: var(--ink-3);
+  --border-strong: var(--ink-2);
+  --hairline: var(--ink-3);
+  --ink-3: var(--ink-1);
+  --ink-4: var(--ink-2);
+}
+html[data-underline-links="true"] a,
+html[data-underline-links="true"] .a-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ─── Shared primitives (body/app shell) ─── */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--app-bg);
+  color: var(--ink-1);
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01", "ss03";
+  font-size: 13px;
+}
+#root {
+  height: 100vh;
+}
+
+/* App shell */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--app-bg);
+  color: var(--ink-1);
+}
+
+/* Titlebar — always visible, sits above dialog overlays */
+.titlebar {
+  height: 32px;
+  flex: 0 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Zero right padding so the close button's red hover reaches the edge. */
+  padding: 0 0 0 12px;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+  user-select: none;
+  position: relative;
+  z-index: 200;
+}
+.titlebar .t-title {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.titlebar .t-title .t-name {
+  color: var(--ink-0);
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  font-size: 12.5px;
+}
+.titlebar .t-title .t-sep {
+  color: var(--ink-4);
+  font-weight: 400;
+}
+.titlebar .t-title .t-version {
+  color: var(--ink-3);
+  font-weight: 500;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.titlebar .t-title .t-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f1115;
+  border: 1px solid #0f1115;
+  color: #ffffff;
+}
+.titlebar .t-ctrls {
+  display: flex;
+  gap: 0;
+  -webkit-app-region: no-drag;
+}
+.titlebar .t-btn {
+  width: 46px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.titlebar .t-btn:hover {
+  background: var(--surface-hover);
+  color: var(--ink-0);
+}
+.titlebar .t-btn.close:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+.shell {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* Keyboard kbd */
+.kbd {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Scrollbars (global, slim, accent-tinted, no arrows) ─── */
+.scroll {
+  overflow: auto;
+}
+
+/* Firefox */
+html,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+}
+
+/* WebKit / Blink — applies to every scrollable surface in the app. */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  min-height: 24px;
+  transition: background 0.15s ease;
+}
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 75%, transparent);
+}
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+}
+/* Kill the tiny arrow buttons on top/bottom (and corner) that WebView2 still
+ * renders by default under Windows. Target every variant explicitly — some
+ * Chromium builds ignore the generic selector and only respect the directional
+ * pseudo-classes. */
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-button:start,
+::-webkit-scrollbar-button:end,
+::-webkit-scrollbar-button:vertical:start:decrement,
+::-webkit-scrollbar-button:vertical:end:increment,
+::-webkit-scrollbar-button:horizontal:start:decrement,
+::-webkit-scrollbar-button:horizontal:end:increment,
+::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:double-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* LangDot */
+.lang-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Ahead/Behind chip */
+.ab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.ab-chip .ab-up {
+  color: var(--green);
+}
+.ab-chip .ab-down {
+  color: var(--amber);
+}
+.ab-chip .ab-zero {
+  color: var(--ink-4);
+}
+
+/* Status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 2px var(--canvas);
+}
+.status-dot.clean {
+  background: var(--green);
+}
+.status-dot.dirty {
+  background: var(--amber);
+}
+.status-dot.stale {
+  background: var(--ink-4);
+}
+.status-dot.behind {
+  background: var(--blue);
+}
+
+/* Avatar (author initials) */
+.avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-weak);
+  color: var(--accent-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.avatar.sm {
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+}
+.avatar.lg {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
+/* Badge */
+.r-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.r-badge.plain {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.r-badge.solid {
+  background: var(--ink-0);
+  color: var(--canvas);
+  border-color: transparent;
+}
+.r-badge.blue {
+  background: var(--blue-weak);
+  color: var(--blue);
+  border-color: transparent;
+}
+.r-badge.green {
+  background: var(--green-weak);
+  color: var(--green);
+  border-color: transparent;
+}
+.r-badge.amber {
+  background: var(--amber-weak);
+  color: var(--amber);
+  border-color: transparent;
+}
+.r-badge.red {
+  background: var(--red-weak);
+  color: var(--red);
+  border-color: transparent;
+}
+.r-badge.purple {
+  background: var(--purple-weak);
+  color: var(--purple);
+  border-color: transparent;
+}
+.r-badge.accent {
+  background: var(--accent-weak);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+/* Icon button */
+.icon-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--ink-0);
+  border-color: var(--border);
+}
+
+/* Primary button */
+.r-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1);
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.r-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+.r-btn.primary {
+  background: var(--ink-0);
+  color: var(--canvas);
+  border-color: var(--ink-0);
+}
+.r-btn.primary:hover {
+  opacity: 0.9;
+}
+.r-btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+}
+.r-btn.ghost:hover {
+  background: var(--surface-hover);
+  color: var(--ink-0);
+}
+.r-btn.sm {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-radius: 5px;
+}
+
+/* Sparkline */
+.spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 18px;
+}
+.spark span {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--ink-4);
+  min-height: 2px;
+  flex-shrink: 0;
+}
+.spark.active span {
+  background: var(--accent);
+}
+.spark span.zero {
+  background: var(--border-strong);
+  height: 2px !important;
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

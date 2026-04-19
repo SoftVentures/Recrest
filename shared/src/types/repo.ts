@@ -11,6 +11,17 @@ export interface Repository {
   remoteUrl: string | null;
   providerId: ProviderId | null;
   status: RepositoryStatus;
+  /** Auto-detected logo path inside the repo (see `git::logo::detect_repo_logo`).
+   *  Null when the repo doesn't ship one. Fetch its bytes via `load_logo_bytes`. */
+  logoPath: string | null;
+  logoDarkPath: string | null;
+}
+
+export interface LogoBlob {
+  mimeType: string;
+  /** Base64-encoded image bytes. Turn into a data URI with
+   *  `` `data:${mimeType};base64,${data}` ``. */
+  data: string;
 }
 
 export interface RepositoryStatus {
@@ -29,6 +40,23 @@ export interface RepositoryStatus {
   changedFiles: ChangedFile[];
   /** True when the Rust side skipped some entries because the list exceeded its cap. */
   changedFilesTruncated: boolean;
+  /** Commits per day over the last 14 days (local-time buckets).
+   *  `commitActivity[13]` is today, `[0]` is 13 days ago. */
+  commitActivity: number[];
+  /** Total line additions across HEAD → index → workdir diff. */
+  addedLines: number;
+  removedLines: number;
+  /** Dominant language id (maps to LANGS in the app), null for empty repos. */
+  language: string | null;
+}
+
+export interface RecentCommit {
+  sha: string;
+  summary: string;
+  author: string;
+  timestamp: string; // ISO-8601
+  repoId: RepositoryId;
+  repoName: string;
 }
 
 export type ChangedFileStatus = "staged" | "unstaged" | "untracked" | "conflicted";

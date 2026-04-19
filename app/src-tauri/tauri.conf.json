@@ -16,12 +16,14 @@
         "title": "Recrest",
         "width": 1280,
         "height": 800,
-        "minWidth": 960,
-        "minHeight": 600,
+        "minWidth": 1100,
+        "minHeight": 720,
         "center": true,
         "resizable": true,
         "fullscreen": false,
-        "decorations": false
+        "decorations": false,
+        "dragDropEnabled": true,
+        "acceptFirstMouse": true
       }
     ],
     "security": {
@@ -57,6 +59,8 @@
     "shortDescription": "Lightweight developer dashboard",
     "longDescription": "Recrest surfaces local git repositories, their working-tree status, open pull requests, and CI checks in one native desktop app.",
     "copyright": "Copyright (c) 2026 SoftVentures",
+    "publisher": "SoftVentures",
+    "homepage": "https://github.com/softventures/recrest",
     "windows": {
       "nsis": {
         "displayLanguageSelector": true,

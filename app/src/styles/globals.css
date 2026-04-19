@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./tokens.css";
+@import "./layout.css";
+@import "./views.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -75,8 +78,8 @@
     "Inter", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Helvetica Neue", system-ui, sans-serif;
   --font-mono:
-    "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo,
-    Consolas, monospace;
+    "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
 }
 
 .dark {

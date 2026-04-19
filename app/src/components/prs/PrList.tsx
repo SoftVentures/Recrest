@@ -27,13 +27,7 @@ export function PrList() {
   }, [prsByRepo, repos]);
 
   if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon={GitPullRequest}
-        title={t("empty")}
-        description={t("empty_desc")}
-      />
-    );
+    return <EmptyState icon={GitPullRequest} title={t("empty")} description={t("empty_desc")} />;
   }
 
   return (

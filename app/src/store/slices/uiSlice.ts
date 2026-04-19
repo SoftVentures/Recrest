@@ -1,19 +1,33 @@
 import { type PayloadAction, createSlice } from "@reduxjs/toolkit";
 
-export type ActiveView = "repos" | "prs" | "settings";
+export type ActiveView =
+  | "dashboard"
+  | "repos"
+  | "merge-requests"
+  | "dirty"
+  | "branches"
+  | "activity"
+  | "settings";
 
 export interface UiState {
   sidebarCollapsed: boolean;
   searchOpen: boolean;
   activeView: ActiveView;
   selectedRepoId: string | null;
+  pinnedRepoIds: string[];
+  /** Increments on every manual refresh. Hooks that pull ephemeral data
+   *  (e.g. recent commits) depend on this so a header-refresh click rewalks
+   *  them too. */
+  refreshNonce: number;
 }
 
 const initialState: UiState = {
   sidebarCollapsed: false,
   searchOpen: false,
-  activeView: "repos",
+  activeView: "dashboard",
   selectedRepoId: null,
+  pinnedRepoIds: [],
+  refreshNonce: 0,
 };
 
 const uiSlice = createSlice({
@@ -35,9 +49,24 @@ const uiSlice = createSlice({
     setSelectedRepo(state, action: PayloadAction<string | null>) {
       state.selectedRepoId = action.payload;
     },
+    togglePinnedRepo(state, action: PayloadAction<string>) {
+      const idx = state.pinnedRepoIds.indexOf(action.payload);
+      if (idx >= 0) state.pinnedRepoIds.splice(idx, 1);
+      else state.pinnedRepoIds.push(action.payload);
+    },
+    bumpRefreshNonce(state) {
+      state.refreshNonce += 1;
+    },
   },
 });
 
-export const { toggleSidebar, setSidebarCollapsed, setSearchOpen, setActiveView, setSelectedRepo } =
-  uiSlice.actions;
+export const {
+  toggleSidebar,
+  setSidebarCollapsed,
+  setSearchOpen,
+  setActiveView,
+  setSelectedRepo,
+  togglePinnedRepo,
+  bumpRefreshNonce,
+} = uiSlice.actions;
 export const uiReducer = uiSlice.reducer;

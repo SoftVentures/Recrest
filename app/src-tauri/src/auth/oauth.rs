@@ -6,6 +6,10 @@
 
 use uuid::Uuid;
 
+/// Generates an opaque CSRF-style state token for an OAuth authorization
+/// request. Unused today — kept available for the upcoming deep-link based
+/// OAuth callback handling.
+#[allow(dead_code)]
 pub fn new_state() -> String {
     Uuid::new_v4().to_string()
 }

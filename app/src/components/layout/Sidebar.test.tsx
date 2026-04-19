@@ -25,7 +25,8 @@ describe("Sidebar", () => {
     );
 
     expect(screen.getByRole("navigation", { hidden: true })).toBeInTheDocument();
+    expect(screen.getByText(/dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/repositories/i)).toBeInTheDocument();
-    expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
+    expect(screen.getByText(/merge requests/i)).toBeInTheDocument();
   });
 });

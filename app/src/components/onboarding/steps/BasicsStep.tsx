@@ -3,12 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ThemeMode } from "@recrest/shared";
 
 import { Button } from "@/components/ui/button";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -101,9 +96,7 @@ export function BasicsStep({ onBack, onNext }: Props) {
             <div className="flex items-start justify-between gap-6">
               <div className="min-w-0 space-y-0.5">
                 <Label>{t("basics.auto_start")}</Label>
-                <p className="text-xs text-muted-foreground">
-                  {t("basics.auto_start_desc")}
-                </p>
+                <p className="text-xs text-muted-foreground">{t("basics.auto_start_desc")}</p>
               </div>
               <Switch
                 checked={settings.autoStart}
@@ -114,9 +107,7 @@ export function BasicsStep({ onBack, onNext }: Props) {
             <div className="flex items-start justify-between gap-6">
               <div className="min-w-0 space-y-0.5">
                 <Label>{t("basics.close_to_tray")}</Label>
-                <p className="text-xs text-muted-foreground">
-                  {t("basics.close_to_tray_desc")}
-                </p>
+                <p className="text-xs text-muted-foreground">{t("basics.close_to_tray_desc")}</p>
               </div>
               <Switch
                 checked={settings.closeToTray}
@@ -127,9 +118,7 @@ export function BasicsStep({ onBack, onNext }: Props) {
             <div className="flex items-start justify-between gap-6">
               <div className="min-w-0 space-y-0.5">
                 <Label>{t("basics.notifications")}</Label>
-                <p className="text-xs text-muted-foreground">
-                  {t("basics.notifications_desc")}
-                </p>
+                <p className="text-xs text-muted-foreground">{t("basics.notifications_desc")}</p>
               </div>
               <Switch
                 checked={settings.notifications.enabled}

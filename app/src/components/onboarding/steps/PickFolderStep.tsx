@@ -4,12 +4,7 @@ import { FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -89,11 +84,7 @@ export function PickFolderStep({ onBack, onNext }: Props) {
             className="flex-1"
           />
           {isTauri() ? (
-            <Button
-              variant="outline"
-              onClick={() => void browse()}
-              loading={browsing}
-            >
+            <Button variant="outline" onClick={() => void browse()} loading={browsing}>
               <FolderOpen aria-hidden />
               {t("pickFolder.browse")}
             </Button>
@@ -112,10 +103,7 @@ export function PickFolderStep({ onBack, onNext }: Props) {
         ) : (
           <ul className="divide-y divide-border rounded-md border border-border">
             {scanPaths.map((path) => (
-              <li
-                key={path}
-                className="flex items-center gap-2 px-3 py-2 text-sm"
-              >
+              <li key={path} className="flex items-center gap-2 px-3 py-2 text-sm">
                 <span
                   className="flex-1 truncate font-mono text-xs text-muted-foreground"
                   title={path}

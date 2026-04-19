@@ -1,12 +1,18 @@
 import type { Middleware } from "@reduxjs/toolkit";
 
-import type { ThemeMode } from "@recrest/shared";
+import type { AccentId, FontId, FontSizeId, ThemeMode } from "@recrest/shared";
 
 const STORAGE_KEY = "recrest:ui";
 
 interface PersistedShape {
   sidebarCollapsed: boolean;
   theme: ThemeMode;
+  accent: AccentId;
+  font: FontId;
+  fontSize: FontSizeId;
+  highContrast: boolean;
+  reducedMotion: boolean;
+  underlineLinks: boolean;
 }
 
 // Minimal shape the persistence middleware needs to read — intentionally
@@ -14,7 +20,15 @@ interface PersistedShape {
 // store module.
 interface PersistableState {
   ui: { sidebarCollapsed: boolean };
-  settings: { theme: ThemeMode };
+  settings: {
+    theme: ThemeMode;
+    accent: AccentId;
+    font: FontId;
+    fontSize: FontSizeId;
+    highContrast: boolean;
+    reducedMotion: boolean;
+    underlineLinks: boolean;
+  };
 }
 
 function isBrowser(): boolean {
@@ -36,6 +50,12 @@ function serialize(state: PersistableState): string {
   const snapshot: PersistedShape = {
     sidebarCollapsed: state.ui.sidebarCollapsed,
     theme: state.settings.theme,
+    accent: state.settings.accent,
+    font: state.settings.font,
+    fontSize: state.settings.fontSize,
+    highContrast: state.settings.highContrast,
+    reducedMotion: state.settings.reducedMotion,
+    underlineLinks: state.settings.underlineLinks,
   };
   return JSON.stringify(snapshot);
 }

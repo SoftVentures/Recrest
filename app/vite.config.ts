@@ -1,8 +1,21 @@
+import { execFileSync } from "node:child_process";
+
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
+
+function gitShortSha(): string {
+  try {
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "dev";
+  }
+}
 
 const host = process.env.TAURI_DEV_HOST;
 // Tauri sets TAURI_ENV_PLATFORM when it spawns the dev server as a child
@@ -33,6 +46,8 @@ export default defineConfig({
     // Some npm packages still reference Node's `global`; alias it to `globalThis`
     // so they work in the webview without shipping polyfills.
     global: "globalThis",
+    __GIT_SHA__: JSON.stringify(gitShortSha()),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   optimizeDeps: {
     // Pre-bundle frequently-imported deps so the dev server's first load
@@ -46,7 +61,16 @@ export default defineConfig({
       "react-i18next",
       "i18next",
       "lucide-react",
+      "linguist-languages",
     ],
+    esbuildOptions: {
+      // linguist-languages ships `export { default as 'Name With Space' }`
+      // which needs ES2022 string-keyed exports.
+      target: "es2022",
+    },
+  },
+  esbuild: {
+    target: "es2022",
   },
   server: {
     port: devPort,
@@ -65,7 +89,10 @@ export default defineConfig({
   },
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
-    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    // ES2022 is required for packages like linguist-languages that use
+    // string-keyed export names (e.g. `export { default as 'Rocq Prover' }`).
+    // Tauri's embedded webviews (WebView2, WKWebView, WebKitGTK) all support it.
+    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome110" : "safari16",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
     rollupOptions: {

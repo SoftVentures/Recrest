@@ -42,6 +42,16 @@ impl RepoWatcher {
 
     pub async fn watch_repo(&mut self, id: &str, path: &Path) -> notify::Result<()> {
         let git_dir = path.join(".git");
+        // Repo directory may have been deleted or moved since it was registered
+        // (e.g. user threw the folder in the Recycle Bin). Skip silently — the
+        // caller can't do anything about it and a warn! would spam logs.
+        if !git_dir.exists() {
+            tracing::debug!(
+                "watch_repo: skipping {id} — {} no longer exists",
+                git_dir.display()
+            );
+            return Ok(());
+        }
         self.debouncer.watch(&git_dir, RecursiveMode::Recursive)?;
         self.watched.lock().await.insert(git_dir, id.to_string());
         Ok(())

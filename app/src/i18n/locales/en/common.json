@@ -4,11 +4,14 @@
     "tagline": "Lightweight developer dashboard"
   },
   "nav": {
+    "dashboard": "Dashboard",
     "repos": "Repositories",
-    "prs": "Pull Requests",
+    "prs": "Merge Requests",
+    "merge_requests": "Merge Requests",
+    "dirty": "Dirty",
+    "branches": "Branches",
+    "activity": "Activity",
     "settings": "Settings",
-    "pipelines": "CI Pipelines",
-    "pipelines_coming_soon": "Coming soon",
     "groups": "Groups",
     "collapse": "Collapse",
     "expand": "Expand"
@@ -16,7 +19,7 @@
   "breadcrumb": {
     "repos": "Repositories",
     "repos_selected": "Repositories › {{name}}",
-    "prs": "Pull Requests",
+    "prs": "Merge Requests",
     "settings": "Settings"
   },
   "actions": {
@@ -25,6 +28,7 @@
     "add_repo": "Add repo",
     "remove": "Remove",
     "search": "Search",
+    "search_placeholder": "Search repositories, branches, MRs…",
     "open_in_ide": "Open in IDE",
     "open_terminal": "Open terminal",
     "open_platform": "Open on platform",
@@ -37,5 +41,123 @@
     "loading": "Loading…",
     "empty": "Nothing here yet",
     "error": "Something went wrong"
+  },
+  "view": {
+    "dashboard": { "title": "Dashboard", "meta": "{{count}} repos" },
+    "repos": { "title": "Repositories", "meta": "{{count}} of {{total}}" },
+    "mrs": { "title": "Merge Requests", "meta": "{{count}} open" },
+    "dirty": { "title": "Dirty repositories", "meta": "{{count}} with uncommitted changes" },
+    "branches": { "title": "Branches", "meta": "across {{count}} repos" },
+    "activity": { "title": "Activity", "meta": "last 14 days" },
+    "settings": { "title": "Settings" }
+  },
+  "repos": {
+    "col": {
+      "repository": "Repository",
+      "branch": "Branch",
+      "status": "Status",
+      "activity": "Activity · 14d",
+      "actions": "Actions"
+    }
+  },
+  "dash": {
+    "kpi": {
+      "repositories": "Repositories",
+      "repositories_sub": "{{count}} with changes",
+      "merge_requests": "Merge Requests",
+      "merge_requests_sub": "{{count}} draft",
+      "ahead_behind": "Ahead / behind",
+      "ahead_behind_sub": "across all remotes",
+      "commits": "Commits · 14d",
+      "commits_sub": "peak day {{count}}"
+    },
+    "activity": {
+      "title": "Activity · last 14 days",
+      "meta": "{{total}} commits across {{repos}} repos"
+    },
+    "attention": { "title": "Needs your attention", "empty": "Everything is clean and in sync." },
+    "mrs": {
+      "title": "Open merge requests",
+      "all": "View all →",
+      "empty": "No open merge requests."
+    },
+    "commits": { "title": "Recent commits", "all": "All activity →" },
+    "langs": { "title": "Languages" },
+    "quick": {
+      "title": "Quick actions",
+      "fetch_all": "Fetch all",
+      "clone": "Clone repo",
+      "find": "Find across repos",
+      "workspace": "Open workspace"
+    }
+  },
+  "mrs": {
+    "filter": { "open": "Open", "draft": "Draft", "merged": "Merged", "closed": "Closed" },
+    "filters": "Filters",
+    "actions": { "merge": "Merge", "checkout": "Checkout" },
+    "strip": { "branch": "Branch", "changes": "Changes", "ci": "CI" },
+    "drawer": {
+      "meta": "Metadata",
+      "opened_on": "Opened on {{date}}",
+      "updated_on": "Last updated {{date}}"
+    }
+  },
+  "branches": {
+    "filter": { "all": "All", "ahead": "Ahead", "behind": "Behind", "stale": "Stale" },
+    "branches": "branches"
+  },
+  "activity": {
+    "chart": { "title": "Commits · last 14 days", "sub": "{{total}} commits" },
+    "filter": { "all_repos": "All repositories", "all_authors": "All authors" },
+    "commits": "commits",
+    "empty": "No commits match your filter."
+  },
+  "settings": {
+    "tab": {
+      "general": "General",
+      "accounts": "Accounts",
+      "integrations": "Integrations",
+      "shortcuts": "Shortcuts",
+      "storage": "Storage",
+      "about": "About"
+    },
+    "general": {
+      "title": "General",
+      "intro": "Application behaviour, appearance, and notifications.",
+      "appearance": "Appearance",
+      "theme": "Theme",
+      "theme_sub": "Light / Dark / follow the OS.",
+      "accent": "Accent",
+      "accent_sub": "Pick the highlight colour used across the app."
+    },
+    "accounts": {
+      "title": "Accounts",
+      "intro": "Remotes you've signed in to."
+    },
+    "integrations": {
+      "title": "Integrations",
+      "intro": "Editors, terminals, and external tools."
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "intro": "Keyboard bindings.",
+      "navigation": "Navigation",
+      "jump": "Jump to repo",
+      "pull": "Pull current branch",
+      "fetch_all": "Fetch all",
+      "toggle_detail": "Toggle detail pane",
+      "next_prev_repo": "Next / previous repo",
+      "open_editor": "Open in editor",
+      "open_terminal": "Open terminal"
+    },
+    "storage": {
+      "title": "Storage",
+      "intro": "Where Recrest keeps caches, indexes, and clone targets."
+    },
+    "about": {
+      "title": "About Recrest",
+      "intro": "Version information, licenses, and credits.",
+      "version": "Version"
+    }
   }
 }

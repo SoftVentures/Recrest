@@ -2,10 +2,12 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { useNavigate } from "react-router-dom";
 
-import { ArrowRight, Folder, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { useSearchResults } from "@/hooks/useSearch";
+import { Icon } from "@/components/icons/Icon";
+import { RepoAvatar } from "@/components/repos/RepoAvatar";
+import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
+import { type SearchResult, useSearchResults } from "@/hooks/useSearch";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setSearchOpen } from "@/store/slices/uiSlice";
 
@@ -13,17 +15,23 @@ export function SearchOverlay() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const platform = usePlatform();
   const open = useAppSelector((s) => s.ui.searchOpen);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const openShortcut = formatShortcut(platform, { mod: true, key: "K" });
 
   const options = useMemo(
     () => ({
       navigate: (path: string) => navigate(path),
       labels: {
+        dashboard: t("nav.dashboard"),
         repos: t("nav.repos"),
-        prs: t("nav.prs"),
+        merge_requests: t("nav.merge_requests"),
+        dirty: t("nav.dirty"),
+        branches: t("nav.branches"),
+        activity: t("nav.activity"),
         settings: t("nav.settings"),
       },
     }),
@@ -31,6 +39,9 @@ export function SearchOverlay() {
   );
 
   const results = useSearchResults(query, options);
+
+  const navResults = useMemo(() => results.filter((r) => r.kind === "nav"), [results]);
+  const repoResults = useMemo(() => results.filter((r) => r.kind === "repo"), [results]);
 
   useEffect(() => {
     if (open) {
@@ -65,21 +76,46 @@ export function SearchOverlay() {
     }
   };
 
+  const renderRow = (r: SearchResult, globalIndex: number) => (
+    <li
+      key={r.id}
+      id={`search-result-${r.id}`}
+      role="option"
+      aria-selected={globalIndex === cursor}
+      className="a-search-row-li"
+    >
+      <button
+        type="button"
+        onMouseEnter={() => setCursor(globalIndex)}
+        onClick={r.onSelect}
+        className="a-search-row"
+        data-active={globalIndex === cursor ? "true" : undefined}
+      >
+        {r.kind === "repo" && r.repo ? (
+          <RepoAvatar repo={r.repo} size={22} radius={5} />
+        ) : (
+          <span className="a-search-row-icon">
+            <Icon name={r.icon ?? "chev"} size={13} />
+          </span>
+        )}
+        <span className="a-search-row-label">{r.label}</span>
+        <span className="a-search-row-hint">{r.hint}</span>
+      </button>
+    </li>
+  );
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={t("actions.search")}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[10vh]"
+      className="a-search-backdrop"
       onClick={() => dispatch(setSearchOpen(false))}
       onKeyDown={onKeyDown}
     >
-      <div
-        className="w-full max-w-xl rounded-lg border border-border bg-card shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 border-b border-border px-3">
-          <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <div className="a-search-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="a-search-head">
+          <Icon name="search" size={14} color="var(--ink-3)" />
           <input
             ref={inputRef}
             value={query}
@@ -87,50 +123,40 @@ export function SearchOverlay() {
               setQuery(e.target.value);
               setCursor(0);
             }}
-            placeholder={t("actions.search")}
-            className="h-11 flex-1 bg-transparent text-sm outline-none"
+            placeholder={t("actions.search_placeholder", "Search repositories, branches, PRs…")}
+            className="a-search-input"
             aria-activedescendant={
               results[cursor] ? `search-result-${results[cursor].id}` : undefined
             }
           />
-          <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
-            Esc
-          </kbd>
+          <span className="a-search-kbds">
+            <kbd className="kbd">{openShortcut}</kbd>
+            <kbd className="kbd">Esc</kbd>
+          </span>
         </div>
-        <ul role="listbox" className="max-h-80 overflow-y-auto py-1">
+        <ul role="listbox" className="a-search-list">
           {results.length === 0 ? (
-            <li className="px-3 py-4 text-center text-xs text-muted-foreground">
-              {t("states.empty")}
-            </li>
+            <li className="a-search-empty">{t("states.empty")}</li>
           ) : (
-            results.map((r, i) => (
-              <li
-                key={r.id}
-                id={`search-result-${r.id}`}
-                role="option"
-                aria-selected={i === cursor}
-              >
-                <button
-                  type="button"
-                  onMouseEnter={() => setCursor(i)}
-                  onClick={r.onSelect}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-                    i === cursor ? "bg-accent text-accent-foreground" : ""
-                  }`}
-                >
-                  {r.kind === "nav" ? (
-                    <ArrowRight
-                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                      aria-hidden
-                    />
-                  ) : (
-                    <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                  )}
-                  <span className="flex-1 truncate">{r.label}</span>
-                  <span className="truncate text-xs text-muted-foreground">{r.hint}</span>
-                </button>
-              </li>
-            ))
+            <>
+              {navResults.length > 0 && (
+                <>
+                  <li className="a-search-group">{t("actions.search_group_nav", "Go to")}</li>
+                  {navResults.map((r, i) => renderRow(r, i))}
+                </>
+              )}
+              {navResults.length > 0 && repoResults.length > 0 && (
+                <li className="a-search-divider" aria-hidden />
+              )}
+              {repoResults.length > 0 && (
+                <>
+                  <li className="a-search-group">
+                    {t("actions.search_group_repos", "Repositories")}
+                  </li>
+                  {repoResults.map((r, i) => renderRow(r, navResults.length + i))}
+                </>
+              )}
+            </>
           )}
         </ul>
       </div>

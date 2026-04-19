@@ -16,4 +16,5 @@ export * from "./types/settings.js";
 export * from "./types/tauri.js";
 
 export * from "./utils/formatting.js";
+export * from "./utils/languages.js";
 export * from "./utils/matching.js";

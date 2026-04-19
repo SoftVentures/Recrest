@@ -76,8 +76,17 @@ const reposSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? "scan failed";
       })
+      .addCase(loadRepos.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(loadRepos.fulfilled, (state, action) => {
+        state.loading = false;
         state.items = Object.fromEntries(action.payload.map((r) => [r.id, r]));
+      })
+      .addCase(loadRepos.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message ?? "load failed";
       })
       .addCase(refreshRepoStatus.fulfilled, (state, action) => {
         state.items[action.payload.id] = action.payload;

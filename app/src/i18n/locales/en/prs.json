@@ -1,5 +1,5 @@
 {
-  "title": "Pull Requests",
+  "title": "Merge Requests",
   "columns": {
     "title": "Title",
     "author": "Author",
@@ -20,5 +20,5 @@
     "failure": "Failure",
     "none": "No checks"
   },
-  "empty": "No open pull requests."
+  "empty": "No open merge requests."
 }

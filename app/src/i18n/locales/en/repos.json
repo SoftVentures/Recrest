@@ -5,13 +5,13 @@
     "dirty": "With changes",
     "behind": "Behind remote",
     "ahead": "Ahead of remote",
-    "open_prs": "Open PRs"
+    "open_prs": "Open MRs"
   },
   "columns": {
     "name": "Repository",
     "branch": "Branch",
     "status": "Status",
-    "pull_requests": "PRs",
+    "pull_requests": "MRs",
     "ci": "CI",
     "last_commit": "Last commit"
   },
@@ -27,8 +27,8 @@
     "files": "{{count}} file",
     "files_other": "{{count}} files",
     "last_commit": "Last commit",
-    "open_prs": "Open pull requests",
-    "open_prs_empty_desc": "Connect a provider in Settings to see pull requests here.",
+    "open_prs": "Open merge requests",
+    "open_prs_empty_desc": "Connect a provider in Settings to see merge requests here.",
     "changes_title": "Working tree",
     "working_tree_clean": "Working tree clean.",
     "changes_truncated": "More files changed — showing the first entries.",
@@ -40,8 +40,8 @@
       "conflicted": "Merge conflict"
     }
   },
-  "pr_count_one": "{{count}} PR",
-  "pr_count_other": "{{count}} PRs",
+  "pr_count_one": "{{count}} MR",
+  "pr_count_other": "{{count}} MRs",
   "empty": "No repositories yet",
   "empty_desc": "Add one or more scan paths in Settings to discover your local git repositories."
 }

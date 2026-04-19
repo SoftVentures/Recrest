@@ -5,13 +5,13 @@
     "dirty": "Mit Änderungen",
     "behind": "Hinter Remote",
     "ahead": "Vor Remote",
-    "open_prs": "Offene PRs"
+    "open_prs": "Offene MRs"
   },
   "columns": {
     "name": "Repository",
     "branch": "Branch",
     "status": "Status",
-    "pull_requests": "PRs",
+    "pull_requests": "MRs",
     "ci": "CI",
     "last_commit": "Letzter Commit"
   },
@@ -27,8 +27,8 @@
     "files": "{{count}} Datei",
     "files_other": "{{count}} Dateien",
     "last_commit": "Letzter Commit",
-    "open_prs": "Offene Pull Requests",
-    "open_prs_empty_desc": "Verbinde einen Provider in den Einstellungen, um hier Pull Requests zu sehen.",
+    "open_prs": "Offene Merge Requests",
+    "open_prs_empty_desc": "Verbinde einen Provider in den Einstellungen, um hier Merge Requests zu sehen.",
     "changes_title": "Arbeitsverzeichnis",
     "working_tree_clean": "Arbeitsverzeichnis sauber.",
     "changes_truncated": "Weitere Dateien geändert — erste Einträge werden angezeigt.",
@@ -40,8 +40,8 @@
       "conflicted": "Merge-Konflikt"
     }
   },
-  "pr_count_one": "{{count}} PR",
-  "pr_count_other": "{{count}} PRs",
+  "pr_count_one": "{{count}} MR",
+  "pr_count_other": "{{count}} MRs",
   "empty": "Noch keine Repositories",
   "empty_desc": "Füge einen oder mehrere Scan-Pfade in den Einstellungen hinzu, damit Recrest deine lokalen Git-Repositories findet."
 }

@@ -1,5 +1,5 @@
 {
-  "title": "Pull Requests",
+  "title": "Merge Requests",
   "columns": {
     "title": "Titel",
     "author": "Autor",
@@ -20,6 +20,6 @@
     "failure": "Fehlgeschlagen",
     "none": "Keine Checks"
   },
-  "empty": "Keine offenen Pull Requests",
-  "empty_desc": "Verbinde einen Provider in den Einstellungen, dann erscheinen hier die Pull Requests deiner Repositories."
+  "empty": "Keine offenen Merge Requests",
+  "empty_desc": "Verbinde einen Provider in den Einstellungen, dann erscheinen hier die Merge Requests deiner Repositories."
 }
