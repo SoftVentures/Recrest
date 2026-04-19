@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isTrashPath } from "./repoEnrich";
+import { isTrashPath } from "@/lib/repoEnrich";
 
 describe("isTrashPath", () => {
   it("matches Windows $RECYCLE.BIN paths case-insensitively", () => {

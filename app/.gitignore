@@ -32,5 +32,8 @@ dist-ssr
 # build output
 build/
 
+# Storybook
+storybook-static/
+
 # Superpowers brainstorm mockups
 .superpowers/

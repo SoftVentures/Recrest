@@ -1,6 +1,14 @@
-import type { WindowState } from "@recrest/shared";
+import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, type WindowState } from "@recrest/shared";
 
 import { isTauri, safeInvoke } from "@/lib/tauri";
+
+function clampToMin(state: WindowState): WindowState {
+  return {
+    ...state,
+    width: Math.max(state.width, MIN_WINDOW_WIDTH),
+    height: Math.max(state.height, MIN_WINDOW_HEIGHT),
+  };
+}
 
 export const windowService = {
   async loadState(): Promise<WindowState | null> {
@@ -19,11 +27,12 @@ export const windowService = {
     if (!isTauri()) return;
     const win = await getCurrentWindow();
     if (!win) return;
+    const safe = clampToMin(state);
     try {
       const { LogicalSize, LogicalPosition } = await import("@tauri-apps/api/window");
-      await win.setSize(new LogicalSize(state.width, state.height));
-      await win.setPosition(new LogicalPosition(state.x, state.y));
-      if (state.isMaximized) {
+      await win.setSize(new LogicalSize(safe.width, safe.height));
+      await win.setPosition(new LogicalPosition(safe.x, safe.y));
+      if (safe.isMaximized) {
         await win.maximize();
       }
     } catch (err) {

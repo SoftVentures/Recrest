@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
 
-import { DEEP_LINK_ACTIONS, DEEP_LINK_SCHEME } from "@recrest/shared";
+import { AppRoute, DEEP_LINK_ACTIONS, DEEP_LINK_SCHEME } from "@recrest/shared";
 
 import { useAppDispatch } from "@/store/hooks";
 import { addRepo } from "@/store/slices/reposSlice";
@@ -51,7 +51,7 @@ export function useDeepLinks(enabled: boolean): void {
             if (action === DEEP_LINK_ACTIONS.openPr && parts[0]) {
               dispatch(setSelectedRepo(parts[0]));
               dispatch(setActiveView("merge-requests"));
-              navigate("/merge-requests");
+              navigate(AppRoute.MERGE_REQUESTS);
               return;
             }
 

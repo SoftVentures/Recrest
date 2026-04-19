@@ -49,6 +49,10 @@ pub struct AppSettings {
     pub repos: BTreeMap<String, RepoRecord>,
     #[serde(default)]
     pub groups: BTreeMap<String, RepoGroup>,
+    /// Per-provider, non-secret overrides (primarily the API base URL for
+    /// self-hosted instances). Tokens still live in the OS keychain.
+    #[serde(default)]
+    pub provider_settings: BTreeMap<String, ProviderSettings>,
 }
 
 fn default_auto_update() -> String {
@@ -75,8 +79,19 @@ impl Default for AppSettings {
             crash_reporting: false,
             repos: BTreeMap::new(),
             groups: BTreeMap::new(),
+            provider_settings: BTreeMap::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderSettings {
+    /// Override for the API base URL (e.g. `https://gitlab.my-company.com/api/v4`
+    /// or `https://github.my-company.com/api/v3`). Empty / absent means "use
+    /// the cloud default baked into the provider".
+    #[serde(default)]
+    pub base_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

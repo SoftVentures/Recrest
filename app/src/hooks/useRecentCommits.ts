@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { RecentCommit } from "@recrest/shared";
+import { type RecentCommit, TauriCommand } from "@recrest/shared";
 
 import { invoke, isTauri } from "@/lib/tauri";
 import { useAppSelector } from "@/store/hooks";
@@ -30,7 +30,7 @@ export function useRecentCommits({ repoId, days = 14, limit = 500 }: Args = {}):
     }
     let cancelled = false;
     setLoading(true);
-    invoke<RecentCommit[]>("list_recent_commits", { repoId, days, limit })
+    invoke<RecentCommit[]>(TauriCommand.LIST_RECENT_COMMITS, { repoId, days, limit })
       .then((list) => {
         if (!cancelled) setCommits(list);
       })

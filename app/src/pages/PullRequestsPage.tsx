@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
-import { PrList } from "@/components/prs/PrList";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@/components/atoms/Spinner";
+import { PrList } from "@/components/organisms/prs/PrList";
 import { usePrPolling } from "@/hooks/useProviders";
 import { useAppSelector } from "@/store/hooks";
 

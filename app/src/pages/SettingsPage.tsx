@@ -1,1 +1,1 @@
-export { SettingsView as SettingsPage } from "@/components/settings/SettingsPage";
+export { SettingsView as SettingsPage } from "@/components/organisms/settings/SettingsView";

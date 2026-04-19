@@ -1,9 +1,9 @@
-export { windowService } from "./windowService";
-export { trayService } from "./trayService";
-export { storageService } from "./storageService";
-export { notificationService } from "./notificationService";
+export { windowService } from "@/lib/tauri/services/windowService";
+export { trayService } from "@/lib/tauri/services/trayService";
+export { storageService } from "@/lib/tauri/services/storageService";
+export { notificationService } from "@/lib/tauri/services/notificationService";
 export type { NotificationPayload } from "./notificationService";
-export { autostartService } from "./autostartService";
-export { updaterService } from "./updaterService";
+export { autostartService } from "@/lib/tauri/services/autostartService";
+export { updaterService } from "@/lib/tauri/services/updaterService";
 export type { UpdateInfo } from "./updaterService";
-export { systemService } from "./systemService";
+export { systemService } from "@/lib/tauri/services/systemService";

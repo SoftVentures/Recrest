@@ -19,6 +19,9 @@ export interface UiState {
    *  (e.g. recent commits) depend on this so a header-refresh click rewalks
    *  them too. */
   refreshNonce: number;
+  importDialogOpen: boolean;
+  findDialogOpen: boolean;
+  updaterBanner: { version: string; body: string | null } | null;
 }
 
 const initialState: UiState = {
@@ -28,6 +31,9 @@ const initialState: UiState = {
   selectedRepoId: null,
   pinnedRepoIds: [],
   refreshNonce: 0,
+  importDialogOpen: false,
+  findDialogOpen: false,
+  updaterBanner: null,
 };
 
 const uiSlice = createSlice({
@@ -57,6 +63,18 @@ const uiSlice = createSlice({
     bumpRefreshNonce(state) {
       state.refreshNonce += 1;
     },
+    setImportDialogOpen(state, action: PayloadAction<boolean>) {
+      state.importDialogOpen = action.payload;
+    },
+    setFindDialogOpen(state, action: PayloadAction<boolean>) {
+      state.findDialogOpen = action.payload;
+    },
+    setUpdaterBanner(
+      state,
+      action: PayloadAction<{ version: string; body: string | null } | null>,
+    ) {
+      state.updaterBanner = action.payload;
+    },
   },
 });
 
@@ -68,5 +86,8 @@ export const {
   setSelectedRepo,
   togglePinnedRepo,
   bumpRefreshNonce,
+  setImportDialogOpen,
+  setFindDialogOpen,
+  setUpdaterBanner,
 } = uiSlice.actions;
 export const uiReducer = uiSlice.reducer;

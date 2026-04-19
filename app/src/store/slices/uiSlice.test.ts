@@ -7,7 +7,7 @@ import {
   setSidebarCollapsed,
   toggleSidebar,
   uiReducer,
-} from "./uiSlice";
+} from "@/store/slices/uiSlice";
 
 describe("uiSlice", () => {
   const initial = uiReducer(undefined, { type: "@@INIT" });

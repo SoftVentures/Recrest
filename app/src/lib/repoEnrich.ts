@@ -29,7 +29,7 @@ export interface EnrichedRepo extends Repository {
   filesChanged: number;
   activity: number[];
   pinned: boolean;
-  stale: boolean;
+  clean: boolean;
 }
 
 const SEP = /[\\/]/;
@@ -48,6 +48,13 @@ export function enrichRepo(repo: Repository, pinnedIds: readonly string[] = []):
   const filesChanged =
     repo.status.staged + repo.status.unstaged + repo.status.untracked + repo.status.conflicted;
 
+  // "clean" = untouched for the full activity window (no commits) AND nothing
+  // in flight locally. The commit-activity window is 14 days, so clean == "no
+  // commit in the last two weeks + no dirty working tree + not ahead of origin".
+  const noRecentCommits = repo.status.commitActivity.every((v) => v === 0);
+  const clean =
+    !repo.status.dirty && filesChanged === 0 && repo.status.ahead === 0 && noRecentCommits;
+
   return {
     ...repo,
     group,
@@ -57,7 +64,7 @@ export function enrichRepo(repo: Repository, pinnedIds: readonly string[] = []):
     filesChanged,
     activity: repo.status.commitActivity,
     pinned: pinnedIds.includes(repo.id),
-    stale: !repo.status.dirty && filesChanged === 0 && repo.status.ahead === 0,
+    clean,
   };
 }
 

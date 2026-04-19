@@ -3,6 +3,10 @@ import { toast as sonner } from "sonner";
 interface ToastOptions {
   description?: string;
   duration?: number;
+  /** Forwarded to sonner so callers can replace a specific toast — used to
+   *  turn a `loading(...)` toast into a terminal success/error rather than
+   *  stacking a second toast. */
+  id?: string | number;
 }
 
 /**
@@ -22,8 +26,8 @@ export const toast = {
   warning(message: string, options?: ToastOptions) {
     sonner.warning(message, options);
   },
-  loading(message: string) {
-    return sonner.loading(message);
+  loading(message: string, options?: ToastOptions) {
+    return sonner.loading(message, options);
   },
   dismiss(id?: string | number) {
     sonner.dismiss(id);

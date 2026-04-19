@@ -10,6 +10,7 @@ import {
 import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
 import { providersReducer } from "@/store/slices/providersSlice";
 import { prsReducer } from "@/store/slices/prsSlice";
+import { remoteImportReducer } from "@/store/slices/remoteImportSlice";
 import { reposReducer } from "@/store/slices/reposSlice";
 import type { SettingsState } from "@/store/slices/settingsSlice";
 import { settingsReducer } from "@/store/slices/settingsSlice";
@@ -22,6 +23,7 @@ export const store = configureStore({
     repos: reposReducer,
     prs: prsReducer,
     providers: providersReducer,
+    remoteImport: remoteImportReducer,
     settings: settingsReducer,
     ui: uiReducer,
   },
@@ -34,6 +36,9 @@ export const store = configureStore({
           selectedRepoId: null,
           pinnedRepoIds: [],
           refreshNonce: 0,
+          importDialogOpen: false,
+          findDialogOpen: false,
+          updaterBanner: null,
         },
         settings: {
           pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,

@@ -4,26 +4,39 @@ import { useNavigate } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
-import { Icon } from "@/components/icons/Icon";
-import { RepoAvatar } from "@/components/repos/RepoAvatar";
-import { CIDot, type CIState, langMeta } from "@/components/repos/primitives";
+import { AppRoute, TauriCommand } from "@recrest/shared";
+
+import { CiDot, type CiState } from "@/components/atoms/CiDot";
+import { Icon } from "@/components/atoms/Icon";
+import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { ActivityBarsSkeleton } from "@/components/molecules/skeletons/ActivityBarsSkeleton";
+import { CardBlockSkeleton } from "@/components/molecules/skeletons/CardBlockSkeleton";
+import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
+import { langMeta } from "@/lib/languages";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loadRepos, scanForRepos } from "@/store/slices/reposSlice";
-import { saveSettings } from "@/store/slices/settingsSlice";
-import { bumpRefreshNonce, setSearchOpen, setSelectedRepo } from "@/store/slices/uiSlice";
+import { loadRepos } from "@/store/slices/reposSlice";
+import {
+  bumpRefreshNonce,
+  setFindDialogOpen,
+  setImportDialogOpen,
+  setSelectedRepo,
+} from "@/store/slices/uiSlice";
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
+  const reposLoading = useAppSelector((s) => s.repos.loading);
   const prsItems = useAppSelector((s) => s.prs.items);
   const prs = Object.values(prsItems).flat();
+  const connections = useAppSelector((s) => s.providers.connections);
+  const anyProviderConnected = Object.values(connections).some((c) => c?.connected);
 
   const dirtyRepos = repos.filter((r) => r.status.dirty);
   const behindRepos = repos.filter((r) => r.status.behind > 0);
@@ -58,14 +71,13 @@ export function DashboardPage() {
     navigate(path);
   };
 
-  const scanPaths = useAppSelector((s) => s.settings.scanPaths);
   const [fetching, setFetching] = useState(false);
 
   const onFetchAll = async () => {
     if (!isTauri()) return;
     setFetching(true);
     try {
-      const ok = await invoke<number>("git_fetch_all");
+      const ok = await invoke<number>(TauriCommand.GIT_FETCH_ALL);
       toast.success(`Fetched ${ok} repo${ok === 1 ? "" : "s"}`);
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -76,31 +88,47 @@ export function DashboardPage() {
     }
   };
 
-  const onAddScanPath = async () => {
-    if (!isTauri()) {
-      toast.info("Adding repos needs the desktop app.");
+  const onOpenImport = () => dispatch(setImportDialogOpen(true));
+  const onFindAcrossRepos = () => dispatch(setFindDialogOpen(true));
+
+  const onOpenWorkspace = async () => {
+    const ids = repos.map((r) => r.id);
+    if (!isTauri() || ids.length === 0) {
+      navigate(AppRoute.REPOS);
       return;
     }
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const picked = await open({ directory: true, multiple: false, title: "Pick repo folder" });
-      if (typeof picked !== "string" || !picked) return;
-      if (scanPaths.includes(picked)) return;
-      const next = [...scanPaths, picked];
-      await dispatch(saveSettings({ scanPaths: next })).unwrap();
-      await dispatch(scanForRepos(next)).unwrap();
-      dispatch(bumpRefreshNonce());
-      toast.success("Scan path added.");
+      await invoke(TauriCommand.CREATE_AND_OPEN_WORKSPACE, { repoIds: ids });
     } catch {
-      toast.error("Couldn't add that folder");
+      navigate(AppRoute.REPOS);
     }
   };
 
-  const onFindAcrossRepos = () => {
-    // No dedicated cross-repo search yet — route through the existing command
-    // palette which already indexes every repo.
-    dispatch(setSearchOpen(true));
-  };
+  if (reposLoading && repos.length === 0) {
+    return (
+      <div className="a-dash" aria-busy>
+        <div className="a-dash-kpis">
+          <KpiSkeleton />
+          <KpiSkeleton />
+          <KpiSkeleton />
+          <KpiSkeleton />
+        </div>
+        <div className="a-dash-grid">
+          <section className="a-dash-card a-dash-activity">
+            <div className="a-dash-card-h">
+              <h3>{t("dash.activity.title")}</h3>
+            </div>
+            <ActivityBarsSkeleton />
+          </section>
+          <CardBlockSkeleton rows={3} />
+          <CardBlockSkeleton rows={4} />
+          <CardBlockSkeleton rows={5} />
+          <CardBlockSkeleton rows={3} />
+          <CardBlockSkeleton rows={3} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="a-dash">
@@ -109,15 +137,17 @@ export function DashboardPage() {
           label={t("dash.kpi.repositories")}
           value={repos.length}
           sub={t("dash.kpi.repositories_sub", { count: dirtyRepos.length })}
-          onClick={() => navigate("/repos")}
+          onClick={() => navigate(AppRoute.REPOS)}
         />
-        <KPI
-          label={t("dash.kpi.merge_requests")}
-          value={openPRs.length}
-          sub={t("dash.kpi.merge_requests_sub", { count: prs.filter((p) => p.draft).length })}
-          tone="accent"
-          onClick={() => navigate("/merge-requests")}
-        />
+        {anyProviderConnected && (
+          <KPI
+            label={t("dash.kpi.merge_requests")}
+            value={openPRs.length}
+            sub={t("dash.kpi.merge_requests_sub", { count: prs.filter((p) => p.draft).length })}
+            tone="accent"
+            onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
+          />
+        )}
         <KPI
           label={t("dash.kpi.ahead_behind")}
           value={
@@ -126,7 +156,7 @@ export function DashboardPage() {
             </>
           }
           sub={t("dash.kpi.ahead_behind_sub")}
-          onClick={() => navigate("/branches")}
+          onClick={() => navigate(AppRoute.BRANCHES)}
         />
         <KPI
           label={t("dash.kpi.commits")}
@@ -179,43 +209,49 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <section className="a-dash-card">
-          <div className="a-dash-card-h">
-            <h3>{t("dash.mrs.title")}</h3>
-            <button
-              type="button"
-              className="a-dash-link"
-              onClick={() => navigate("/merge-requests")}
-            >
-              {t("dash.mrs.all")}
-            </button>
-          </div>
-          <div className="a-dash-mrs">
-            {openPRs.slice(0, 4).map((p) => (
+        {anyProviderConnected && (
+          <section className="a-dash-card">
+            <div className="a-dash-card-h">
+              <h3>{t("dash.mrs.title")}</h3>
               <button
-                key={p.id}
                 type="button"
-                className="a-dash-mr"
-                onClick={() => navigate("/merge-requests")}
+                className="a-dash-link"
+                onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
               >
-                <Icon name="pr" size={14} color={p.draft ? "var(--ink-3)" : "var(--green)"} />
-                <div className="a-dash-mr-body">
-                  <div className="a-dash-mr-title">{p.title}</div>
-                  <div className="a-dash-mr-meta">
-                    #{p.number} · {p.author}
-                  </div>
-                </div>
-                <CIDot state={ciToDot(p.ciStatus)} />
+                {t("dash.mrs.all")}
               </button>
-            ))}
-            {openPRs.length === 0 && <div className="a-dash-empty">{t("dash.mrs.empty")}</div>}
-          </div>
-        </section>
+            </div>
+            <div className="a-dash-mrs">
+              {openPRs.slice(0, 4).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="a-dash-mr"
+                  onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
+                >
+                  <Icon name="pr" size={14} color={p.draft ? "var(--ink-3)" : "var(--green)"} />
+                  <div className="a-dash-mr-body">
+                    <div className="a-dash-mr-title">{p.title}</div>
+                    <div className="a-dash-mr-meta">
+                      #{p.number} · {p.author}
+                    </div>
+                  </div>
+                  <CiDot state={ciToDot(p.ciStatus)} />
+                </button>
+              ))}
+              {openPRs.length === 0 && <div className="a-dash-empty">{t("dash.mrs.empty")}</div>}
+            </div>
+          </section>
+        )}
 
         <section className="a-dash-card">
           <div className="a-dash-card-h">
             <h3>{t("dash.commits.title")}</h3>
-            <button type="button" className="a-dash-link" onClick={() => navigate("/activity")}>
+            <button
+              type="button"
+              className="a-dash-link"
+              onClick={() => navigate(AppRoute.ACTIVITY)}
+            >
               {t("dash.commits.all")}
             </button>
           </div>
@@ -292,8 +328,8 @@ export function DashboardPage() {
             <button
               type="button"
               className="a-dash-qbtn"
-              onClick={() => void onAddScanPath()}
-              title="Pick a folder to add to your scanned paths"
+              onClick={onOpenImport}
+              title="Clone from a URL or import from GitHub / GitLab / Bitbucket"
             >
               <Icon name="plus" size={14} />
               <span>{t("dash.quick.clone")}</span>
@@ -305,8 +341,8 @@ export function DashboardPage() {
             <button
               type="button"
               className="a-dash-qbtn"
-              onClick={() => navigate("/repos")}
-              title="Open the Repositories view"
+              onClick={() => void onOpenWorkspace()}
+              title="Open a multi-root IDE workspace with all scanned repos"
             >
               <Icon name="terminal" size={14} />
               <span>{t("dash.quick.workspace")}</span>
@@ -373,7 +409,7 @@ function AttentionRow({
   );
 }
 
-function ciToDot(s: string | null): CIState {
+function ciToDot(s: string | null): CiState {
   if (s === "success") return "passing";
   if (s === "failure") return "failing";
   if (s === "running" || s === "pending") return "running";

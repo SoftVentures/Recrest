@@ -1,10 +1,13 @@
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
+
+const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 
 function gitShortSha(): string {
   try {
@@ -42,6 +45,11 @@ export default defineConfig({
     }),
   ],
   clearScreen: false,
+  resolve: {
+    alias: {
+      "@": srcDir,
+    },
+  },
   define: {
     // Some npm packages still reference Node's `global`; alias it to `globalThis`
     // so they work in the webview without shipping polyfills.
@@ -62,6 +70,7 @@ export default defineConfig({
       "i18next",
       "lucide-react",
       "linguist-languages",
+      "simple-icons",
     ],
     esbuildOptions: {
       // linguist-languages ships `export { default as 'Name With Space' }`

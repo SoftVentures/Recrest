@@ -9,6 +9,8 @@ import {
   type WindowState,
 } from "@recrest/shared";
 
+import { useDeepLinks } from "@/hooks/useDeepLinks";
+import { useTauriNotifications } from "@/hooks/useTauriNotifications";
 import { isTauri } from "@/lib/tauri";
 import {
   autostartService,
@@ -18,9 +20,6 @@ import {
   windowService,
 } from "@/lib/tauri/services";
 import { useAppSelector } from "@/store/hooks";
-
-import { useDeepLinks } from "./useDeepLinks";
-import { useTauriNotifications } from "./useTauriNotifications";
 
 /**
  * Orchestrates all Tauri desktop integrations. Mount once, high in the tree
@@ -66,13 +65,19 @@ function useWindowStateSync(enabled: boolean): void {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
       const win = getCurrentWindow();
+      // Never persist while minimized — sizes are 0 on some platforms and
+      // would trap the next launch in a tiny window.
+      if (await win.isMinimized()) return;
       const scale = await win.scaleFactor();
       const size = await win.outerSize();
       const pos = await win.outerPosition();
       const isMaximized = await win.isMaximized();
+      const logicalWidth = size.width / scale;
+      const logicalHeight = size.height / scale;
+      if (logicalWidth < MIN_WINDOW_WIDTH || logicalHeight < MIN_WINDOW_HEIGHT) return;
       const state: WindowState = {
-        width: size.width / scale,
-        height: size.height / scale,
+        width: logicalWidth,
+        height: logicalHeight,
         x: pos.x / scale,
         y: pos.y / scale,
         isMaximized,

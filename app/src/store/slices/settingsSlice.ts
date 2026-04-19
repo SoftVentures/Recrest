@@ -9,6 +9,7 @@ import {
   type FontId,
   type FontSizeId,
   POLLING_INTERVAL_DEFAULT_MS,
+  TauriCommand,
   type ThemeMode,
 } from "@recrest/shared";
 
@@ -58,12 +59,12 @@ const initialState: SettingsState = {
 };
 
 export const loadSettings = createAsyncThunk<AppSettings>("settings/load", async () =>
-  invoke<AppSettings>("get_settings"),
+  invoke<AppSettings>(TauriCommand.GET_SETTINGS),
 );
 
 export const saveSettings = createAsyncThunk<AppSettings, Partial<AppSettings>>(
   "settings/save",
-  async (patch) => invoke<AppSettings>("update_settings", { patch }),
+  async (patch) => invoke<AppSettings>(TauriCommand.UPDATE_SETTINGS, { patch }),
 );
 
 const settingsSlice = createSlice({

@@ -14,7 +14,7 @@ use crate::AppState;
 
 use super::error::CommandError;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoDto {
     pub id: String,

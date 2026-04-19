@@ -1,6 +1,6 @@
 import { type PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
-import type { ProviderConnection, ProviderId } from "@recrest/shared";
+import { type ProviderConnection, type ProviderId, TauriCommand } from "@recrest/shared";
 
 import { invoke } from "@/lib/tauri";
 
@@ -17,22 +17,29 @@ const initialState: ProvidersState = {
 };
 
 export const loadProviders = createAsyncThunk<ProviderConnection[]>("providers/list", async () =>
-  invoke<ProviderConnection[]>("list_providers"),
+  invoke<ProviderConnection[]>(TauriCommand.LIST_PROVIDERS),
 );
 
 export const setProviderToken = createAsyncThunk<
   ProviderConnection,
   { providerId: ProviderId; token: string; username?: string | null }
 >("providers/set-token", async (payload) =>
-  invoke<ProviderConnection>("set_provider_token", payload),
+  invoke<ProviderConnection>(TauriCommand.SET_PROVIDER_TOKEN, payload),
 );
 
 export const clearProviderToken = createAsyncThunk<ProviderId, ProviderId>(
   "providers/clear-token",
   async (providerId) => {
-    await invoke<void>("clear_provider_token", { providerId });
+    await invoke<void>(TauriCommand.CLEAR_PROVIDER_TOKEN, { providerId });
     return providerId;
   },
+);
+
+export const setProviderBaseUrl = createAsyncThunk<
+  ProviderConnection,
+  { providerId: ProviderId; baseUrl: string | null }
+>("providers/set-base-url", async (payload) =>
+  invoke<ProviderConnection>(TauriCommand.SET_PROVIDER_BASE_URL, payload),
 );
 
 const providersSlice = createSlice({
@@ -58,6 +65,9 @@ const providersSlice = createSlice({
         state.error = action.error.message ?? "failed to load providers";
       })
       .addCase(setProviderToken.fulfilled, (state, action) => {
+        state.connections[action.payload.providerId] = action.payload;
+      })
+      .addCase(setProviderBaseUrl.fulfilled, (state, action) => {
         state.connections[action.payload.providerId] = action.payload;
       })
       .addCase(clearProviderToken.fulfilled, (state, action) => {

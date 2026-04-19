@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 
+import { useRepos } from "@/hooks/useRepos";
 import { type EnrichedRepo, enrichRepos } from "@/lib/repoEnrich";
 import { useAppSelector } from "@/store/hooks";
-
-import { useRepos } from "./useRepos";
 
 /** Returns the current repo list plus UI-only enrichment (group/lang/activity/pinned). */
 export function useEnrichedRepos(): EnrichedRepo[] {

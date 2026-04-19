@@ -78,7 +78,17 @@
     "connected": "Mit {{name}} verbunden.",
     "disconnected": "Von {{name}} getrennt.",
     "confirm_disconnect_title": "{{name}} trennen?",
-    "confirm_disconnect_desc": "Der Token wird aus dem System-Keychain entfernt. Du kannst jederzeit wieder verbinden."
+    "confirm_disconnect_desc": "Der Token wird aus dem System-Keychain entfernt. Du kannst jederzeit wieder verbinden.",
+    "bitbucket_username_label": "Bitbucket-Benutzername",
+    "bitbucket_username_placeholder": "dein-workspace-oder-benutzername",
+    "bitbucket_username_hint": "Bitbucket-App-Passwörter brauchen zusätzlich den Account-Benutzernamen — das ist der Name aus deiner Profil-URL (bitbucket.org/<benutzername>), nicht deine E-Mail.",
+    "base_url_label": "API-Basis-URL",
+    "base_url_placeholder_github": "https://api.github.com",
+    "base_url_placeholder_gitlab": "https://gitlab.com/api/v4",
+    "base_url_placeholder_bitbucket": "https://api.bitbucket.org/2.0",
+    "base_url_hint": "Für selbst-gehostete Instanzen (GitHub Enterprise, GitLab self-managed, Bitbucket Server). Leer lassen, um den Standard-Cloud-Endpunkt zu nutzen.",
+    "edit_base_url": "API-Basis-URL ändern",
+    "self_hosted": "Selbst-gehostet"
   },
   "desktop": {
     "web_disabled": "Diese Einstellungen greifen nur in der Desktop-App.",

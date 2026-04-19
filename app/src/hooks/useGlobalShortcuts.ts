@@ -2,6 +2,8 @@ import { useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
 
+import { AppRoute, WindowEvent } from "@recrest/shared";
+
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { loadRepos } from "@/store/slices/reposSlice";
 import { bumpRefreshNonce, setSearchOpen } from "@/store/slices/uiSlice";
@@ -41,7 +43,7 @@ export function useGlobalShortcuts(): void {
       // thunk this fires it instead.
       if (key === "p" && ev.shiftKey) {
         ev.preventDefault();
-        window.dispatchEvent(new CustomEvent("recrest:pull-current", { detail: selectedRepoId }));
+        window.dispatchEvent(new CustomEvent(WindowEvent.PULL_CURRENT, { detail: selectedRepoId }));
         return;
       }
 
@@ -58,7 +60,9 @@ export function useGlobalShortcuts(): void {
       if ((key === "enter" || ev.key === "Enter") && !ev.shiftKey && !ev.altKey) {
         if (selectedRepoId) {
           ev.preventDefault();
-          window.dispatchEvent(new CustomEvent("recrest:open-editor", { detail: selectedRepoId }));
+          window.dispatchEvent(
+            new CustomEvent(WindowEvent.OPEN_EDITOR, { detail: selectedRepoId }),
+          );
         }
         return;
       }
@@ -68,7 +72,7 @@ export function useGlobalShortcuts(): void {
         if (selectedRepoId) {
           ev.preventDefault();
           window.dispatchEvent(
-            new CustomEvent("recrest:open-terminal", { detail: selectedRepoId }),
+            new CustomEvent(WindowEvent.OPEN_TERMINAL, { detail: selectedRepoId }),
           );
         }
         return;
@@ -77,14 +81,14 @@ export function useGlobalShortcuts(): void {
       // ⌘] — toggle detail pane.
       if (key === "]" && !ev.shiftKey && !ev.altKey) {
         ev.preventDefault();
-        window.dispatchEvent(new CustomEvent("recrest:toggle-detail"));
+        window.dispatchEvent(new CustomEvent(WindowEvent.TOGGLE_DETAIL));
         return;
       }
 
       // ⌘, — open settings.
       if (ev.key === "," && !ev.shiftKey && !ev.altKey) {
         ev.preventDefault();
-        navigate("/settings");
+        navigate(AppRoute.SETTINGS);
         return;
       }
     };

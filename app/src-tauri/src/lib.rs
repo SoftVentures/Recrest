@@ -24,6 +24,9 @@ pub struct AppState {
     pub config: Arc<Mutex<ConfigStore>>,
     pub providers: Arc<ProviderRegistry>,
     pub watcher: Arc<Mutex<Option<RepoWatcher>>>,
+    /// Tuple of (provider_id, CSRF nonce) for the in-flight OAuth flow.
+    /// Cleared as soon as `complete_oauth` consumes it.
+    pub oauth_pending: Arc<Mutex<Option<(String, String)>>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -53,29 +56,61 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // Crash reporting — opt-in via SENTRY_DSN at compile time, production only.
-            #[cfg(not(debug_assertions))]
-            let _sentry_guard = sentry::init(sentry::ClientOptions {
-                dsn: option_env!("SENTRY_DSN").and_then(|s| s.parse().ok()),
-                release: Some(env!("CARGO_PKG_VERSION").into()),
-                environment: Some("production".into()),
-                ..Default::default()
-            });
-
             // Logging is handled by `tracing_subscriber` above; we don't register
             // `tauri_plugin_log` because its `env_logger` sink would clash with
             // tracing's global dispatcher (only one logger can be installed).
 
-            // Auto-updater plugin (release only — requires endpoint config).
-            #[cfg(not(debug_assertions))]
-            {
-                let _ = app
-                    .handle()
-                    .plugin(tauri_plugin_updater::Builder::new().build());
-            }
-
             let handle = app.handle().clone();
             let config = ConfigStore::load_or_default(&handle)?;
+
+            // Crash reporting — opt-in via the `crashReporting` setting + a
+            // compile-time DSN. `mem::forget` on the returned guard is the
+            // simplest way to keep sentry alive for the app's lifetime; the
+            // native `ClientInitGuard` drops-to-deinit and we don't want that.
+            #[cfg(not(debug_assertions))]
+            if config.settings().crash_reporting {
+                if let Some(dsn) = option_env!("SENTRY_DSN").and_then(|s| s.parse().ok()) {
+                    let guard = sentry::init(sentry::ClientOptions {
+                        dsn: Some(dsn),
+                        release: Some(env!("CARGO_PKG_VERSION").into()),
+                        environment: Some("production".into()),
+                        ..Default::default()
+                    });
+                    std::mem::forget(guard);
+                }
+            }
+
+            // Auto-updater plugin (release only). We register it unconditionally
+            // and kick off a silent background check on startup when the user
+            // has opted in via `auto_update`. Failures are swallowed — a missing
+            // endpoint or network error must not block app startup.
+            #[cfg(not(debug_assertions))]
+            {
+                let _ = handle.plugin(tauri_plugin_updater::Builder::new().build());
+                let auto_update = config.settings().auto_update.clone();
+                if auto_update != "never" && auto_update != "manual" {
+                    let updater_handle = handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        use tauri_plugin_updater::UpdaterExt;
+                        let Ok(updater) = updater_handle.updater() else { return };
+                        match updater.check().await {
+                            Ok(Some(update)) => {
+                                let _ = tauri::Emitter::emit(
+                                    &updater_handle,
+                                    "updater://available",
+                                    serde_json::json!({
+                                        "version": update.version,
+                                        "currentVersion": update.current_version,
+                                        "body": update.body,
+                                    }),
+                                );
+                            }
+                            Ok(None) => {}
+                            Err(err) => tracing::debug!("updater check failed: {err}"),
+                        }
+                    });
+                }
+            }
 
             // Build a watcher and subscribe to every known repo. Failures here
             // shouldn't block startup — live-updates are a nice-to-have, not
@@ -107,12 +142,48 @@ pub fn run() {
 
             let start_minimized = config.settings().start_minimized;
 
+            // Hydrate each provider with any persisted self-hosted base URL so
+            // the first API call after startup already targets the right
+            // endpoint (rather than defaulting to the cloud URL until the user
+            // re-enters the setting).
+            let registry = ProviderRegistry::with_defaults();
+            let provider_settings = config.settings().provider_settings.clone();
+            for (pid, prov_settings) in &provider_settings {
+                if let Some(provider) = registry.get(pid) {
+                    let base = prov_settings.base_url.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let _ = provider.set_base_url(base).await;
+                    });
+                }
+            }
+
             let state = AppState {
                 config: Arc::new(Mutex::new(config)),
-                providers: Arc::new(ProviderRegistry::with_defaults()),
+                providers: Arc::new(registry),
                 watcher: watcher_slot,
+                oauth_pending: Arc::new(Mutex::new(None)),
             };
             app.manage(state);
+
+            // Deep-link listener for the OAuth callback. The handler only
+            // re-emits the URL to the renderer; CSRF matching + token exchange
+            // happens in `complete_oauth` so the sensitive work stays in Rust.
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let deep_handle = handle.clone();
+                handle.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        let s = url.as_str();
+                        if s.starts_with("recrest://oauth/callback") {
+                            let _ = tauri::Emitter::emit(
+                                &deep_handle,
+                                "oauth://callback",
+                                serde_json::json!({ "url": s }),
+                            );
+                        }
+                    }
+                });
+            }
 
             // Honour the "Start minimized" preference — hide the main window to
             // the tray instead of showing it on boot.
@@ -233,10 +304,26 @@ pub fn run() {
             commands::git_ops::git_pull,
             commands::git_ops::git_push,
             commands::git_ops::git_checkout,
+            commands::git_ops::git_checkout_remote,
+            commands::git_ops::git_list_branches,
+            commands::git_ops::git_branch_create,
+            commands::git_ops::git_merge,
+            commands::clone::git_clone,
+            commands::search::find_across_repos,
+            commands::remote_import::list_remote_repositories,
+            commands::remote_import::list_remote_organizations,
+            commands::remote_import::clone_remote_repository,
+            commands::remote_import::clone_remote_repositories_bulk,
+            commands::remote_import::create_and_open_workspace,
             commands::providers::list_providers,
             commands::providers::set_provider_token,
+            commands::providers::set_provider_base_url,
             commands::providers::clear_provider_token,
             commands::providers::fetch_pull_requests,
+            commands::providers::get_pr_detail,
+            commands::notifications::notify,
+            commands::oauth::begin_oauth,
+            commands::oauth::complete_oauth,
             commands::settings::get_settings,
             commands::settings::update_settings,
             commands::window::save_window_state,

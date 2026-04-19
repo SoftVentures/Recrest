@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 
+import { StorageKey } from "@recrest/shared";
+
 import { useAppSelector } from "@/store/hooks";
 
-const STORAGE_KEY = "recrest:onboarding-dismissed";
+const STORAGE_KEY = StorageKey.ONBOARDING_DISMISSED;
 
 /**
  * First-run detection. True when no scan paths and no connected providers,

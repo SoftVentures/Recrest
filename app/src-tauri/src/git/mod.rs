@@ -1,3 +1,4 @@
+pub mod branches;
 pub mod logo;
 pub mod scanner;
 pub mod status;

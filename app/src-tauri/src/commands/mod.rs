@@ -1,6 +1,11 @@
+pub mod clone;
 pub mod error;
 pub mod git_info;
 pub mod git_ops;
+pub mod notifications;
+pub mod oauth;
+pub mod remote_import;
+pub mod search;
 pub mod ide;
 pub mod providers;
 pub mod repos;

@@ -8,7 +8,7 @@
     "repos": "Repositories",
     "prs": "Merge Requests",
     "merge_requests": "Merge Requests",
-    "dirty": "Dirty",
+    "changes": "Änderungen",
     "branches": "Branches",
     "activity": "Aktivität",
     "settings": "Einstellungen",
@@ -46,7 +46,7 @@
     "dashboard": { "title": "Dashboard", "meta": "{{count}} Repos" },
     "repos": { "title": "Repositories", "meta": "{{count}} von {{total}}" },
     "mrs": { "title": "Merge Requests", "meta": "{{count}} offen" },
-    "dirty": { "title": "Geänderte Repos", "meta": "{{count}} mit lokalen Änderungen" },
+    "changes": { "title": "Änderungen", "meta": "{{count}} mit lokalen Änderungen" },
     "branches": { "title": "Branches", "meta": "über {{count}} Repos" },
     "activity": { "title": "Aktivität", "meta": "letzte 14 Tage" },
     "settings": { "title": "Einstellungen" }
@@ -108,14 +108,68 @@
     }
   },
   "branches": {
-    "filter": { "all": "Alle", "ahead": "Voraus", "behind": "Zurück", "stale": "Veraltet" },
-    "branches": "Branches"
+    "filter": {
+      "all": "Alle",
+      "ahead": "Voraus",
+      "behind": "Zurück",
+      "clean": "Clean",
+      "local": "Lokal",
+      "remote": "Nur Remote"
+    },
+    "branches": "Branches",
+    "loading": "Lade Branches…",
+    "empty": "Keine Branches passen zum Filter.",
+    "no_repos": "Noch keine Repositories — füge eines hinzu, um seine Branches zu sehen.",
+    "tag": {
+      "current": "aktuell",
+      "dirty": "dirty",
+      "clean": "clean",
+      "remote": "remote"
+    },
+    "last_commit_by": "von {{author}}",
+    "actions": {
+      "pull": "Pull",
+      "push": "Push",
+      "checkout": "Checkout",
+      "checkout_remote": "Checkout"
+    },
+    "row": {
+      "upstream_tracking": "verfolgt {{upstream}}",
+      "no_upstream": "kein Upstream"
+    }
   },
   "activity": {
     "chart": { "title": "Commits · letzte 14 Tage", "sub": "{{total}} Commits" },
     "filter": { "all_repos": "Alle Repositories", "all_authors": "Alle Autor:innen" },
     "commits": "Commits",
-    "empty": "Keine Commits passen zum Filter."
+    "empty": "Keine Commits passen zum Filter.",
+    "kpi": {
+      "commits_week": "Commits · diese Woche",
+      "authors_week": "Aktive Autor:innen",
+      "repos_week": "Aktive Repos",
+      "streak": "Aktueller Streak",
+      "delta_up": "+{{delta}} vs. Vorwoche",
+      "delta_down": "{{delta}} vs. Vorwoche",
+      "delta_flat": "keine Änderung vs. Vorwoche",
+      "streak_days_one": "{{count}} Tag",
+      "streak_days_other": "{{count}} Tage",
+      "on_fire": "on fire"
+    },
+    "leaders": {
+      "title": "Top-Contributors",
+      "sub": "letzte 14 Tage · {{count}} Autor:innen",
+      "empty": "Keine Contributors im Zeitraum.",
+      "share": "{{pct}}% Anteil"
+    },
+    "cadence": {
+      "title": "Rhythmus",
+      "longest_streak": "Längster Streak",
+      "busiest_day": "Aktivster Tag",
+      "peak_hour": "Haupt-Zeit",
+      "quietest": "Ruhige Repos",
+      "quietest_none": "Alle Repos zeigen Aktivität.",
+      "none": "—"
+    }
   },
   "settings": {
     "tab": {

@@ -157,4 +157,29 @@
   :focus-visible {
     outline: none;
   }
+
+  /* Native <button> defaults to `cursor: default`, and Radix compounds render
+     generic <div>s for tabs/menuitems. Force a pointer for anything a user is
+     supposed to click, and fall back to `not-allowed` when explicitly disabled. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="menuitemcheckbox"]:not([aria-disabled="true"]),
+  [role="menuitemradio"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="radio"]:not([aria-disabled="true"]),
+  [role="combobox"]:not([aria-disabled="true"]),
+  summary,
+  label[data-slot="switch"],
+  a[href] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }

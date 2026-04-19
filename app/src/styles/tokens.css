@@ -282,8 +282,7 @@ body {
 }
 .titlebar .t-title .t-name {
   color: var(--ink-0);
-  font-weight: 700;
-  letter-spacing: -0.1px;
+  font-weight: 500;
   font-size: 12.5px;
 }
 .titlebar .t-title .t-sep {
@@ -462,9 +461,6 @@ body::-webkit-scrollbar-corner,
 }
 .status-dot.dirty {
   background: var(--amber);
-}
-.status-dot.stale {
-  background: var(--ink-4);
 }
 .status-dot.behind {
   background: var(--blue);

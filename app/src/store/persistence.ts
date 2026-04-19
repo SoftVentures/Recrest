@@ -1,8 +1,14 @@
 import type { Middleware } from "@reduxjs/toolkit";
 
-import type { AccentId, FontId, FontSizeId, ThemeMode } from "@recrest/shared";
+import {
+  type AccentId,
+  type FontId,
+  type FontSizeId,
+  StorageKey,
+  type ThemeMode,
+} from "@recrest/shared";
 
-const STORAGE_KEY = "recrest:ui";
+const STORAGE_KEY = StorageKey.UI_STATE;
 
 interface PersistedShape {
   sidebarCollapsed: boolean;

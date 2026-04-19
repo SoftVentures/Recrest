@@ -60,7 +60,7 @@ export function useTauriNotifications(enabled: boolean): void {
 
       if (!prev && curr.state === "open" && !curr.draft && settings.newPr) {
         void notificationService.send({
-          title: "New pull request",
+          title: "New merge request",
           body: curr.title,
         });
         continue;

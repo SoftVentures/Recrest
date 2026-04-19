@@ -40,6 +40,12 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "src-tauri/**"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "src-tauri/**",
+      "storybook-static/**",
+      "src/scripts/**",
+    ],
   },
 );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { LogoBlob } from "@recrest/shared";
+import { type LogoBlob, TauriCommand } from "@recrest/shared";
 
 import { invoke, isTauri } from "@/lib/tauri";
 import { useAppSelector } from "@/store/hooks";
@@ -44,7 +44,7 @@ export function useRepoLogo({ logoPath, logoDarkPath }: Args): string | null {
     }
 
     let cancelled = false;
-    invoke<LogoBlob>("load_logo_bytes", { path: wanted })
+    invoke<LogoBlob>(TauriCommand.LOAD_LOGO_BYTES, { path: wanted })
       .then((blob) => {
         const uri = `data:${blob.mimeType};base64,${blob.data}`;
         CACHE.set(wanted, uri);

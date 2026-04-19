@@ -21,6 +21,102 @@ pub struct PullRequestDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PullRequestDetailDto {
+    #[serde(flatten)]
+    pub pr: PullRequestDto,
+    pub body: Option<String>,
+    pub mergeable: Option<bool>,
+    pub reviewers: Vec<ReviewerDto>,
+    pub files: Vec<FileChangeDto>,
+    pub timeline: Vec<TimelineEventDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewerDto {
+    pub login: String,
+    pub name: Option<String>,
+    pub avatar_url: Option<String>,
+    pub state: ReviewState,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewState {
+    Pending,
+    Approved,
+    ChangesRequested,
+    Commented,
+    Dismissed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileChangeDto {
+    pub path: String,
+    pub additions: u64,
+    pub deletions: u64,
+    pub status: FileChangeStatus,
+    pub diff_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FileChangeStatus {
+    Added,
+    Modified,
+    Removed,
+    Renamed,
+    Copied,
+    Changed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimelineEventDto {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub event_type: String,
+    pub actor: Option<String>,
+    pub at: DateTime<Utc>,
+    pub body: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteRepositoryDto {
+    pub provider_id: String,
+    pub id: String,
+    pub full_name: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub default_branch: String,
+    pub is_private: bool,
+    pub is_fork: bool,
+    pub is_archived: bool,
+    pub clone_url_https: String,
+    pub clone_url_ssh: Option<String>,
+    pub html_url: String,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub pushed_at: Option<DateTime<Utc>>,
+    pub size_kb: Option<u64>,
+    pub language: Option<String>,
+    pub owner_login: String,
+    pub owner_avatar_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrganizationDto {
+    pub provider_id: String,
+    pub id: String,
+    pub slug: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PrState {
     Open,

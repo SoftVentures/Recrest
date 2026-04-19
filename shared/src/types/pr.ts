@@ -17,3 +17,49 @@ export interface PullRequest {
   deletions: number | null;
   ciStatus: CiStatus | null;
 }
+
+export type ReviewState = "pending" | "approved" | "changes_requested" | "commented" | "dismissed";
+
+export interface Reviewer {
+  login: string;
+  name: string | null;
+  avatarUrl: string | null;
+  state: ReviewState;
+}
+
+export type FileChangeStatus = "added" | "modified" | "removed" | "renamed" | "copied" | "changed";
+
+export interface FileChange {
+  path: string;
+  additions: number;
+  deletions: number;
+  status: FileChangeStatus;
+  diffUrl: string | null;
+}
+
+export interface TimelineEvent {
+  id: string;
+  type: string;
+  actor: string | null;
+  at: string; // ISO-8601
+  body: string | null;
+}
+
+/** Full PR detail as returned by `get_pr_detail`. Inherits the base
+ *  `PullRequest` fields (flattened by serde on the Rust side). */
+export interface PullRequestDetail extends PullRequest {
+  body: string | null;
+  mergeable: boolean | null;
+  reviewers: Reviewer[];
+  files: FileChange[];
+  timeline: TimelineEvent[];
+}
+
+/** UI-only filter state for the merge-requests page. Lives in Redux so it
+ *  survives drawer open/close and route changes. */
+export interface PrFilters {
+  state: ("open" | "merged" | "closed")[];
+  ciStatus: CiStatus[];
+  draft: "any" | "hide" | "only";
+  author: string | null;
+}

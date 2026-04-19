@@ -1,35 +1,35 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { AppShell } from "@/components/layout/AppShell";
-import { detailHashId } from "@/components/layout/popout";
+import { AppRoute } from "@recrest/shared";
+
+import { AppShell } from "@/components/organisms/layout/AppShell";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { BranchesPage } from "@/pages/BranchesPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { MergeRequestsPage } from "@/pages/MergeRequestsPage";
+import { RepoDetailPage } from "@/pages/RepoDetailPage";
 import { ReposPage } from "@/pages/ReposPage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { StandaloneDetailPage } from "@/pages/StandaloneDetailPage";
 
 export default function App() {
-  const standaloneRepoId = detailHashId();
-  if (standaloneRepoId) {
-    return <StandaloneDetailPage repoId={standaloneRepoId} />;
-  }
-
   return (
     <AppShell>
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/repos" element={<ReposPage />} />
-        <Route path="/repos/:repoId" element={<ReposPage />} />
-        <Route path="/dirty" element={<ReposPage dirtyOnly />} />
-        <Route path="/merge-requests" element={<MergeRequestsPage />} />
+        <Route path={AppRoute.ROOT} element={<Navigate to={AppRoute.DASHBOARD} replace />} />
+        <Route path={AppRoute.DASHBOARD} element={<DashboardPage />} />
+        <Route path={AppRoute.REPOS} element={<ReposPage />} />
+        <Route path={AppRoute.REPOS_WITH_ID} element={<ReposPage />} />
+        <Route path={AppRoute.REPO} element={<RepoDetailPage />} />
+        <Route path={AppRoute.CHANGES} element={<ReposPage dirtyOnly />} />
+        <Route path={AppRoute.MERGE_REQUESTS} element={<MergeRequestsPage />} />
         {/* Legacy path — keep working until deep links settle. */}
-        <Route path="/pull-requests" element={<Navigate to="/merge-requests" replace />} />
-        <Route path="/branches" element={<BranchesPage />} />
-        <Route path="/activity" element={<ActivityPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path={AppRoute.MERGE_REQUESTS_LEGACY}
+          element={<Navigate to={AppRoute.MERGE_REQUESTS} replace />}
+        />
+        <Route path={AppRoute.BRANCHES} element={<BranchesPage />} />
+        <Route path={AppRoute.ACTIVITY} element={<ActivityPage />} />
+        <Route path={AppRoute.SETTINGS} element={<SettingsPage />} />
       </Routes>
     </AppShell>
   );
