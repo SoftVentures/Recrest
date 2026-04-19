@@ -42,7 +42,7 @@ jobs:
           VITE_IMPRINT_PHONE: ${{ secrets.VITE_IMPRINT_PHONE }}
           VITE_IMPRINT_RESPONSIBLE_PERSON: ${{ secrets.VITE_IMPRINT_RESPONSIBLE_PERSON }}
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: landingpage/dist
 
