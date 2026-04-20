@@ -1,13 +1,13 @@
 use std::sync::RwLock;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, FixedOffset, Utc};
 use serde::Deserialize;
 
 use super::api::{
-    parse_owner_repo, CiStatus, FileChangeDto, FileChangeStatus, OrganizationDto, PrState,
-    PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto,
-    TimelineEventDto,
+    parse_owner_repo, CheckRunSummaryDto, CiStatus, FileChangeDto, FileChangeStatus,
+    OrganizationDto, PrEventDto, PrEventKind, PrState, PullRequestDetailDto, PullRequestDto,
+    RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto,
 };
 use super::r#trait::GitProvider;
 use crate::auth::token::TokenStore;
@@ -267,6 +267,175 @@ impl GitProvider for GithubProvider {
             files,
             timeline,
         })
+    }
+
+    async fn list_pr_events(
+        &self,
+        remote_url: &str,
+        days: u32,
+        repo_id: &str,
+        repo_name: &str,
+    ) -> Result<Vec<PrEventDto>, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let cutoff = Utc::now() - Duration::days(days as i64);
+
+        let mut out: Vec<PrEventDto> = Vec::new();
+        for page in 1..=3u32 {
+            let url = format!(
+                "{base}/repos/{owner}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page={PER_PAGE}&page={page}"
+            );
+            let batch: Vec<GhPull> = gh_json(&self.http, &token, &url, None).await?;
+            if batch.is_empty() {
+                break;
+            }
+            let batch_len = batch.len();
+            let mut any_in_window = false;
+            for pr in batch {
+                if pr.updated_at < cutoff {
+                    continue;
+                }
+                any_in_window = true;
+                let author = pr.user.as_ref().map(|u| u.login.clone()).unwrap_or_default();
+                let url = pr.html_url.clone();
+                if pr.created_at >= cutoff {
+                    out.push(PrEventDto {
+                        repo_id: repo_id.to_string(),
+                        repo_name: repo_name.to_string(),
+                        number: pr.number,
+                        title: pr.title.clone(),
+                        author: author.clone(),
+                        kind: PrEventKind::Opened,
+                        timestamp: pr.created_at,
+                        url: url.clone(),
+                    });
+                }
+                if let Some(merged_at) = pr.merged_at {
+                    if merged_at >= cutoff {
+                        out.push(PrEventDto {
+                            repo_id: repo_id.to_string(),
+                            repo_name: repo_name.to_string(),
+                            number: pr.number,
+                            title: pr.title.clone(),
+                            author: author.clone(),
+                            kind: PrEventKind::Merged,
+                            timestamp: merged_at,
+                            url: url.clone(),
+                        });
+                    }
+                } else if pr.state == "closed" {
+                    if pr.updated_at >= cutoff {
+                        out.push(PrEventDto {
+                            repo_id: repo_id.to_string(),
+                            repo_name: repo_name.to_string(),
+                            number: pr.number,
+                            title: pr.title,
+                            author,
+                            kind: PrEventKind::Closed,
+                            timestamp: pr.updated_at,
+                            url,
+                        });
+                    }
+                }
+            }
+            if (batch_len as u32) < PER_PAGE {
+                break;
+            }
+            // Results come sorted by updated desc — once an entire page is
+            // outside the window we can stop paginating.
+            if !any_in_window {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    async fn list_check_runs(
+        &self,
+        remote_url: &str,
+        shas: &[String],
+        repo_id: &str,
+        repo_name: &str,
+        local_tz_offset_minutes: i32,
+    ) -> Result<Vec<CheckRunSummaryDto>, CommandError> {
+        if shas.is_empty() {
+            return Ok(Vec::new());
+        }
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let tz = FixedOffset::east_opt(local_tz_offset_minutes * 60).unwrap_or_else(|| {
+            FixedOffset::east_opt(0).expect("zero offset is always valid")
+        });
+
+        // Bucket per local YYYY-MM-DD → (total, passed, failed, failing-shas).
+        let mut buckets: std::collections::HashMap<String, (u32, u32, u32, Vec<String>)> =
+            std::collections::HashMap::new();
+
+        // Bounded parallelism: chunks of 4 in flight at a time.
+        let chunk_size = 4usize;
+        for chunk in shas.chunks(chunk_size) {
+            let mut tasks = Vec::with_capacity(chunk.len());
+            for sha in chunk {
+                let url = format!(
+                    "{base}/repos/{owner}/{repo}/commits/{sha}/check-runs?per_page=50"
+                );
+                let http = self.http.clone();
+                let token = token.clone();
+                let sha = sha.clone();
+                tasks.push(tokio::spawn(async move {
+                    let res: Result<GhCheckRunsResponse, CommandError> =
+                        gh_json(&http, &token, &url, None).await;
+                    (sha, res)
+                }));
+            }
+            for task in tasks {
+                let (sha, res) = match task.await {
+                    Ok(v) => v,
+                    Err(_) => continue,
+                };
+                let body = match res {
+                    Ok(b) => b,
+                    Err(_) => continue,
+                };
+                for run in body.check_runs {
+                    let at = run.completed_at.or(run.started_at);
+                    let Some(at) = at else { continue };
+                    let day = at.with_timezone(&tz).format("%Y-%m-%d").to_string();
+                    let entry = buckets.entry(day).or_insert((0, 0, 0, Vec::new()));
+                    entry.0 += 1;
+                    match run.conclusion.as_deref() {
+                        Some("success") => entry.1 += 1,
+                        Some("failure") | Some("timed_out") | Some("action_required")
+                        | Some("startup_failure") => {
+                            entry.2 += 1;
+                            if entry.3.len() < 3 && !entry.3.contains(&sha) {
+                                entry.3.push(sha.clone());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        let mut out: Vec<CheckRunSummaryDto> = buckets
+            .into_iter()
+            .map(|(day, (total, passed, failed, sha_samples))| CheckRunSummaryDto {
+                repo_id: repo_id.to_string(),
+                repo_name: repo_name.to_string(),
+                day,
+                total,
+                passed,
+                failed,
+                sha_samples,
+            })
+            .collect();
+        out.sort_by(|a, b| a.day.cmp(&b.day));
+        Ok(out)
     }
 
     async fn list_repositories(&self) -> Result<Vec<RemoteRepositoryDto>, CommandError> {
@@ -610,4 +779,21 @@ struct GhOrg {
 struct GhTokenResponse {
     #[serde(default)]
     access_token: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct GhCheckRunsResponse {
+    #[serde(default)]
+    check_runs: Vec<GhCheckRun>,
+}
+
+#[derive(Deserialize)]
+struct GhCheckRun {
+    /// `success` | `failure` | `neutral` | `cancelled` | `timed_out` | `action_required` | `stale` | `skipped` | `startup_failure` | null
+    #[serde(default)]
+    conclusion: Option<String>,
+    #[serde(default)]
+    started_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    completed_at: Option<DateTime<Utc>>,
 }

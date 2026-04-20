@@ -3,6 +3,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use super::error::CommandError;
+use super::process::configure as no_window;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,7 +21,10 @@ pub async fn check_git() -> Result<GitInfo, CommandError> {
 }
 
 fn detect() -> GitInfo {
-    let version = match Command::new("git").arg("--version").output() {
+    let mut cmd = Command::new("git");
+    cmd.arg("--version");
+    no_window(&mut cmd);
+    let version = match cmd.output() {
         Ok(out) if out.status.success() => parse_version(&String::from_utf8_lossy(&out.stdout)),
         _ => None,
     };
@@ -45,9 +49,12 @@ fn parse_version(stdout: &str) -> Option<String> {
 /// in `commands/ide.rs` so we don't pull in a new dependency just for this.
 fn locate_git() -> Option<String> {
     #[cfg(unix)]
-    let output = Command::new("which").arg("git").output().ok()?;
+    let mut cmd = Command::new("which");
     #[cfg(windows)]
-    let output = Command::new("where").arg("git").output().ok()?;
+    let mut cmd = Command::new("where");
+    cmd.arg("git");
+    no_window(&mut cmd);
+    let output = cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }

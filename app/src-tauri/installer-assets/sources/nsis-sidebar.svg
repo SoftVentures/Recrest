@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="314" viewBox="0 0 164 314">
+  <title>Recrest NSIS installer sidebar</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1D24"/>
+      <stop offset="1" stop-color="#0B0D12"/>
+    </linearGradient>
+  </defs>
+  <rect width="164" height="314" fill="url(#bg)"/>
+  <g transform="translate(32, 88)" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 54 L50 10 L100 54"/>
+    <path d="M0 82 L50 38 L100 82" opacity="0.5"/>
+  </g>
+  <text x="82" y="220" font-family="Segoe UI, Inter, system-ui, Arial, sans-serif" font-size="22" font-weight="600" text-anchor="middle" fill="#FFFFFF" letter-spacing="-0.3">Recrest</text>
+  <text x="82" y="244" font-family="Segoe UI, Inter, system-ui, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#9CA3AF" letter-spacing="0.4">DEVELOPER DASHBOARD</text>
+</svg>

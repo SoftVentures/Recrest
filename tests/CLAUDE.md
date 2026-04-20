@@ -43,7 +43,7 @@ Outside the Tauri runtime `invoke()` throws `tauri-ipc-unavailable`. In `dev:web
 ## Writing specs
 
 - Put specs under `src/e2e/landing/` or `src/e2e/app/`. One file per feature area, prefixed with a two-digit index so execution order (and the README's mental model) stays predictable.
-- Prefer role-based selectors (`page.getByRole('button', { name: /add repo/i })`) — locale-aware and tied to the same ARIA attributes real users see. For structural elements use `data-testid` only when role + name is not unique.
+- **App specs (`src/e2e/app/**`) address every element via `data-testid`** (`page.getByTestId('nav-repos')` or `page.locator('[data-testid="repo-row"][data-repo-id="…"]')`). No `getByRole`, `getByText`, `getByLabel`, `getByTitle`, or CSS-class locators for interaction/assertion. The only exceptions are stable platform attributes (`html[data-theme]`) and masks in the visual spec. Add a testid to the component instead of loosening the test. Landing specs may still use role/text where the copy is part of the contract.
 - **Locale**: Default is EN. Force a different locale via the fixture option (`test.use({ locale: "de" })`). The fixture writes both `i18nextLng` (app) and `recrest-landing-locale` (landing) to localStorage before navigation.
 - **Theme**: Same pattern — `test.use({ theme: "dark" })`.
 - **Mobile-specific assertions** should be guarded with `test.skip(project.name !== "landing-mobile", ...)` or similar.

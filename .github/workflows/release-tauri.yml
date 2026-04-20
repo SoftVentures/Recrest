@@ -1,7 +1,9 @@
 # Triggered by the tag that release-please creates when its Release PR is merged.
-# Builds Tauri installers for Linux / Windows / macOS and uploads them as a draft
-# GitHub Release. Runs unsigned until TAURI_SIGNING_PRIVATE_KEY is populated —
-# signing secrets are passed through only when they exist.
+# Builds Tauri installers for Linux / Windows / macOS, bündelt sie pro OS in
+# ein ZIP (`recrest-<tag>-windows.zip` / `-macos.zip` / `-linux.zip`) und lädt
+# diese als GitHub-Release-Assets hoch. Runs unsigned until
+# TAURI_SIGNING_PRIVATE_KEY is populated — signing secrets are passed through
+# only when they exist.
 name: Release (Tauri)
 
 on:
@@ -106,8 +108,12 @@ jobs:
           args: ${{ matrix.args }}
           projectPath: ./app
 
-  checksums:
-    name: Checksums
+  # Lädt alle Einzel-Installer vom Draft-Release runter, packt sie per OS in
+  # ein ZIP (`recrest-<tag>-windows.zip` usw.), lädt die ZIPs hoch und entfernt
+  # die ursprünglichen Einzel-Assets, damit die Release-Seite drei klare
+  # Download-Pakete statt einer langen Dateiliste zeigt.
+  repackage:
+    name: Repackage into per-OS ZIPs
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -115,25 +121,107 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p assets
+          mkdir -p dl
           gh release download "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
-            --dir assets \
+            --dir dl \
             --pattern '*.dmg' \
             --pattern '*.msi' \
             --pattern '*.exe' \
             --pattern '*.AppImage' \
             --pattern '*.deb' \
             --pattern '*.rpm' \
+            --pattern '*.app.tar.gz' \
+            || true
+          ls -la dl || true
+
+      - name: Group files per OS and zip
+        id: zip
+        run: |
+          set -euo pipefail
+          mkdir -p stage/windows stage/macos stage/linux
+
+          shopt -s nullglob
+          for f in dl/*.msi dl/*.exe; do
+            mv "$f" stage/windows/
+          done
+          for f in dl/*.dmg dl/*.app.tar.gz; do
+            mv "$f" stage/macos/
+          done
+          for f in dl/*.AppImage dl/*.deb dl/*.rpm; do
+            mv "$f" stage/linux/
+          done
+
+          tag="${{ github.ref_name }}"
+          mkdir -p out
+          produced=()
+          for os in windows macos linux; do
+            if [ -n "$(ls -A "stage/$os" 2>/dev/null)" ]; then
+              zip_name="recrest-${tag}-${os}.zip"
+              (cd stage && zip -r "../out/$zip_name" "$os")
+              produced+=("out/$zip_name")
+              echo "built: $zip_name"
+            else
+              echo "skip: no assets for $os"
+            fi
+          done
+
+          if [ "${#produced[@]}" -eq 0 ]; then
+            echo "no per-OS zips produced — leaving release assets untouched"
+            echo "uploaded=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "uploaded=true" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${produced[@]}" > zips.list
+
+      - name: Upload per-OS ZIPs
+        if: steps.zip.outputs.uploaded == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          xargs -a zips.list gh release upload "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+      - name: Remove original single-installer assets
+        if: steps.zip.outputs.uploaded == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for f in dl/*; do
+            [ -f "$f" ] || continue
+            asset="$(basename "$f")"
+            echo "deleting old asset: $asset"
+            gh release delete-asset "${{ github.ref_name }}" "$asset" \
+              --repo "${{ github.repository }}" \
+              --yes || true
+          done
+
+  checksums:
+    name: Checksums
+    needs: repackage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download per-OS zips
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p assets
+          gh release download "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --dir assets \
+            --pattern '*.zip' \
             || true
       - name: Compute SHA256SUMS
         run: |
           cd assets
-          if compgen -G "*" > /dev/null; then
-            sha256sum * > SHA256SUMS.txt
+          if compgen -G "*.zip" > /dev/null; then
+            sha256sum *.zip > SHA256SUMS.txt
             cat SHA256SUMS.txt
           else
-            echo "no installer assets found — skipping checksum step"
+            echo "no zip assets found — skipping checksum step"
             exit 0
           fi
       - name: Upload checksums to release

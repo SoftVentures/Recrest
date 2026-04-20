@@ -1,22 +1,49 @@
-import type { CSSProperties } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 
+import { gravatarUrl } from "@/lib/gravatar";
 import { initialsFromName } from "@/lib/initials";
 
 interface AuthorAvatarProps {
   name: string | null | undefined;
   size?: number;
-  /** Optional image URL. When omitted we render coloured initials. */
+  /** Explicit image URL. Wins over the `email` fallback below. */
   src?: string | null;
+  /** Commit / PR author email. When provided (and `src` isn't), we derive a
+   *  Gravatar URL from its md5 so the avatar matches what VSCode / GitLens
+   *  renders for the same commit. A 404 from Gravatar falls back to the
+   *  coloured-initials chip — no broken-image placeholder ever ships. */
+  email?: string | null;
   className?: string;
 }
 
-/** Small round avatar — either the author's image, or their initials rendered
- *  over a deterministic gradient derived from the name. */
-export function AuthorAvatar({ name, size = 24, src, className }: AuthorAvatarProps) {
+/** Small round avatar — explicit src → Gravatar-from-email → coloured
+ *  initials chip. The image is always rendered **inside a fixed-size circular
+ *  mask** with `object-fit: cover`, so a 2x Gravatar (which comes back as a
+ *  larger-than-container bitmap to stay crisp on HiDPI displays) is cleanly
+ *  cropped to the circle instead of stretching the layout or bleeding past
+ *  the chip edge. The initials chip sits underneath so a slow image never
+ *  leaves a blank hole and a 404 falls back cleanly via `onError`. */
+export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorAvatarProps) {
   const label = initialsFromName(name) || "?";
-  const style: CSSProperties = {
+  const resolvedSrc = src ?? (email ? gravatarUrl(email, size) : null);
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => {
+    // Reset the failure flag whenever the underlying URL changes — otherwise
+    // a failed Gravatar for author A would permanently suppress a successful
+    // one for author B reusing the same component slot.
+    setImgFailed(false);
+  }, [resolvedSrc]);
+
+  const chipStyle: CSSProperties = {
+    // Explicit min/max so a flex parent (e.g. the MR drawer) can't squish or
+    // stretch the chip off its square footprint — which is what made the
+    // Gravatar "slightly scaled" look bad.
     width: size,
+    minWidth: size,
+    maxWidth: size,
     height: size,
+    minHeight: size,
+    maxHeight: size,
     borderRadius: "50%",
     background: gradientFor(name ?? ""),
     color: "#fff",
@@ -28,22 +55,48 @@ export function AuthorAvatar({ name, size = 24, src, className }: AuthorAvatarPr
     flexShrink: 0,
     overflow: "hidden",
     letterSpacing: 0,
+    position: "relative",
+    // Keep images from inheriting global Tailwind preflight img styles like
+    // `max-width: 100%` that could leak into the absolutely-positioned img
+    // inside.
+    boxSizing: "content-box",
   };
-  if (src) {
+
+  if (!resolvedSrc || imgFailed) {
     return (
-      <img
-        src={src}
-        alt={name ?? ""}
-        width={size}
-        height={size}
-        className={className}
-        style={style}
-      />
+      <span className={className} style={chipStyle} aria-label={name ?? "unknown"}>
+        {label}
+      </span>
     );
   }
+
   return (
-    <span className={className} style={style} aria-label={name ?? "unknown"}>
+    <span className={className} style={chipStyle} aria-label={name ?? "unknown"}>
       {label}
+      <img
+        src={resolvedSrc}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+        style={{
+          // Filling the circular mask — width/height 100% to the chip, plus
+          // `object-fit: cover` so Gravatar's 2x bitmap is cropped not
+          // squeezed. `display: block` avoids the tiny inline-descent gap
+          // that Tailwind's preflight otherwise leaves under <img>.
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          display: "block",
+          objectFit: "cover",
+          borderRadius: "50%",
+          background: "transparent",
+          maxWidth: "none",
+          margin: 0,
+          padding: 0,
+        }}
+      />
     </span>
   );
 }

@@ -119,10 +119,15 @@ export function SearchOverlay() {
       aria-modal="true"
       aria-label={t("actions.search")}
       className="a-search-backdrop"
+      data-testid="search-overlay"
       onClick={() => dispatch(setSearchOpen(false))}
       onKeyDown={onKeyDown}
     >
-      <div className="a-search-panel" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="a-search-panel"
+        data-testid="search-panel"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="a-search-head">
           <Icon name="search" size={14} color="var(--ink-3)" />
           <input

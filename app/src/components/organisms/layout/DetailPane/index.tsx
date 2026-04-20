@@ -10,6 +10,7 @@ import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { DiffStat } from "@/components/atoms/DiffStat";
 import { Icon } from "@/components/atoms/Icon";
 import { IconButton } from "@/components/molecules/IconButton";
+import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar, setRepoLogo } from "@/components/molecules/RepoAvatar";
 import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { CreateBranchDialog } from "@/components/organisms/repos/CreateBranchDialog";
@@ -144,7 +145,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
   };
 
   return (
-    <aside className="a-detail">
+    <aside className="a-detail" data-testid="detail-pane" data-repo-id={repo.id}>
       <div className="a-dp-hdr">
         <div className="a-dp-title">
           <label className="a-dp-avatar-wrap" title="Click to set a custom logo">
@@ -186,21 +187,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
       </div>
 
       <div className="a-dp-actions">
-        <button
-          type="button"
-          className="r-btn primary"
-          onClick={() =>
-            void runCommand(TauriCommand.OPEN_IN_IDE, { successLabel: "Opened in IDE" })
-          }
-          disabled={cmdBusy !== null}
-        >
-          {cmdBusy === "open_in_ide" ? (
-            <Icon name="refresh" size={13} />
-          ) : (
-            <Icon name="code" size={13} />
-          )}{" "}
-          {cmdBusy === "open_in_ide" ? "Opening IDE…" : "Open in IDE"}
-        </button>
+        <OpenInIdeButton repoId={repo.id} />
         <IconButton
           tooltip="Open in terminal"
           className="r-btn"

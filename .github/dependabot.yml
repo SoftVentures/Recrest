@@ -1,8 +1,15 @@
 version: 2
 updates:
-  # Root workspace (yarn workspaces)
+  # Alle npm-Workspaces in einem Eintrag — `directories:` (Plural) fasst
+  # Updates über alle Pfade hinweg zu gemeinsamen PRs zusammen.
   - package-ecosystem: npm
-    directory: "/"
+    directories:
+      - "/"
+      - "/app"
+      - "/shared"
+      - "/tests"
+      - "/landingpage"
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
@@ -10,87 +17,20 @@ updates:
     labels:
       - dependencies
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "dependabot"
+      prefix-development: "dependabot(dev)"
     groups:
-      all:
+      npm-all:
         patterns: ["*"]
         update-types: ["minor", "patch"]
-      majors:
+      npm-majors:
         patterns: ["*"]
         update-types: ["major"]
-
-  - package-ecosystem: npm
-    directory: "/app"
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    labels:
-      - dependencies
-    commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
-    groups:
-      radix:
-        patterns: ["@radix-ui/*"]
-      tauri:
-        patterns: ["@tauri-apps/*"]
-      storybook:
-        patterns: ["@storybook/*", "storybook"]
-      testing:
-        patterns: ["@testing-library/*", "vitest", "jsdom"]
-      minor-and-patch:
-        patterns: ["*"]
-        update-types: ["minor", "patch"]
-      majors:
-        patterns: ["*"]
-        update-types: ["major"]
-
-  - package-ecosystem: npm
-    directory: "/shared"
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 1
-    labels:
-      - dependencies
-    commit-message:
-      prefix: "chore(deps)"
-    groups:
-      all:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: "/tests"
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 1
-    labels:
-      - dependencies
-    commit-message:
-      prefix: "chore(deps)"
-    groups:
-      all:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: "/landingpage"
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 1
-    labels:
-      - dependencies
-    commit-message:
-      prefix: "chore(deps)"
-    groups:
-      all:
-        patterns: ["*"]
 
   # Rust backend
   - package-ecosystem: cargo
     directory: "/app/src-tauri"
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
@@ -98,18 +38,19 @@ updates:
     labels:
       - dependencies
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "dependabot"
     groups:
-      minor-and-patch:
+      cargo-all:
         patterns: ["*"]
         update-types: ["minor", "patch"]
-      majors:
+      cargo-majors:
         patterns: ["*"]
         update-types: ["major"]
 
   # CI actions pinned via `uses:`
   - package-ecosystem: github-actions
     directory: "/"
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
@@ -117,7 +58,7 @@ updates:
     labels:
       - dependencies
     commit-message:
-      prefix: "chore(ci)"
+      prefix: "dependabot"
     groups:
-      all:
+      actions-all:
         patterns: ["*"]

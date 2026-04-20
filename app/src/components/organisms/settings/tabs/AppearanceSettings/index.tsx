@@ -1,3 +1,4 @@
+import { Monitor, Moon, Sun } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useTranslation } from "react-i18next";
 
@@ -100,9 +101,24 @@ export function AppearanceSettings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="system">{t("theme.system")}</SelectItem>
-                  <SelectItem value="light">{t("theme.light")}</SelectItem>
-                  <SelectItem value="dark">{t("theme.dark")}</SelectItem>
+                  <SelectItem value="system">
+                    <span className="inline-flex items-center gap-2">
+                      <Monitor className="h-3.5 w-3.5" aria-hidden />
+                      {t("theme.system")}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="light">
+                    <span className="inline-flex items-center gap-2">
+                      <Sun className="h-3.5 w-3.5" aria-hidden />
+                      {t("theme.light")}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="dark">
+                    <span className="inline-flex items-center gap-2">
+                      <Moon className="h-3.5 w-3.5" aria-hidden />
+                      {t("theme.dark")}
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

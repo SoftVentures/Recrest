@@ -45,14 +45,15 @@ yarn test:e2e
 
 | Prefix      | Use for                              |
 | ----------- | ------------------------------------ |
-| `feat/`     | New user-facing feature              |
-| `fix/`      | Bug fix                              |
-| `chore/`    | Tooling, deps, build, non-code noise |
+| `feature/`  | New user-facing feature              |
+| `bugfix/`   | Bug fix                              |
+| `patch/`    | Small, targeted non-feature change   |
 | `docs/`     | Documentation-only change            |
-| `refactor/` | Behavior-preserving internal change  |
 | `test/`     | Add or fix tests only                |
-| `perf/`     | Performance improvement              |
-| `ci/`       | CI / workflow changes                |
+| `ci/`       | CI, tooling, deps, non-code noise    |
+| `release/`  | Release-branch for version bump      |
+| `hotfix/`   | Emergency fix off main               |
+| `revert/`   | Revert a prior commit                |
 
 ## Commit messages — Conventional Commits
 
@@ -68,15 +69,15 @@ All commits on `main` **must** follow [Conventional Commits 1.0](https://www.con
 
 ### Allowed types
 
-`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `ci`, `build`, `style`, `revert`.
+`feature`, `bugfix`, `patch`, `docs`, `test`, `ci`, `revert`, `release`, `hotfix`.
 
 ### Examples
 
 ```text
-feat(activity): add 14-day contributor leaderboard
-fix(branches): prevent stale refs after force-push
+feature(activity): add 14-day contributor leaderboard
+bugfix(branches): prevent stale refs after force-push
 docs(readme): link to contributing guide
-chore(deps): bump @tauri-apps/api to 2.1.1
+ci(deps): bump @tauri-apps/api to 2.1.1
 ```
 
 ### Breaking changes

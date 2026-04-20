@@ -33,7 +33,7 @@ function makeStatus(overrides: Partial<RepositoryStatus>): RepositoryStatus {
     dirty: false,
     lastCommit: {
       sha: "a1b2c3d4e5f6",
-      summary: "chore: bump dependencies",
+      summary: "ci(deps): bump dependencies",
       author: "renovate-bot",
       timestamp: "2026-04-15T10:12:00Z",
     },
@@ -44,6 +44,7 @@ function makeStatus(overrides: Partial<RepositoryStatus>): RepositoryStatus {
     addedLines: 0,
     removedLines: 0,
     language: "TypeScript",
+    languages: null,
     ...overrides,
   };
 }
@@ -71,6 +72,14 @@ export const SEED_REPOS: Repository[] = [
       addedLines: 482,
       removedLines: 117,
       language: "TypeScript",
+      languages: {
+        TypeScript: 612_000,
+        Rust: 148_000,
+        CSS: 86_000,
+        HTML: 24_000,
+        JavaScript: 18_000,
+        Shell: 9_500,
+      },
     }),
   },
   {
@@ -98,14 +107,32 @@ export const SEED_REPOS: Repository[] = [
         timestamp: "2026-04-17T21:04:00Z",
       },
       changedFiles: [
-        { path: "compose/nginx.yml", status: "staged", hasUnstagedChanges: false },
-        { path: "compose/postgres.yml", status: "unstaged", hasUnstagedChanges: false },
-        { path: "scripts/up.sh", status: "unstaged", hasUnstagedChanges: false },
+        {
+          path: "compose/nginx.yml",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "compose/postgres.yml",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        { path: "scripts/up.sh", status: "unstaged", kind: "modified", hasUnstagedChanges: false },
       ],
       commitActivity: commitActivity([0, 1, 2, 1, 0, 0, 3, 2, 1, 0, 1, 2, 0, 1]),
       addedLines: 112,
       removedLines: 48,
       language: "Shell",
+      languages: {
+        Shell: 102_000,
+        YAML: 74_000,
+        Dockerfile: 32_000,
+        Makefile: 18_000,
+        Python: 12_000,
+        JavaScript: 7_800,
+      },
     }),
   },
   {
@@ -124,12 +151,20 @@ export const SEED_REPOS: Repository[] = [
       behind: 3,
       lastCommit: {
         sha: "77aa44bb11cc",
-        summary: "chore(deps): bump axum to 0.8",
+        summary: "ci(deps): bump axum to 0.8",
         author: "maren",
         timestamp: "2026-04-14T08:42:00Z",
       },
       commitActivity: commitActivity([0, 0, 2, 3, 4, 1, 0, 0, 1, 2, 1, 0, 0, 0]),
       language: "Rust",
+      languages: {
+        Rust: 412_000,
+        SQL: 38_000,
+        Shell: 14_000,
+        TOML: 9_400,
+        Python: 6_800,
+        Dockerfile: 4_200,
+      },
     }),
   },
   {
@@ -157,15 +192,46 @@ export const SEED_REPOS: Repository[] = [
         timestamp: "2026-04-18T11:19:00Z",
       },
       changedFiles: [
-        { path: "Pulse/Views/HomeHero.swift", status: "staged", hasUnstagedChanges: true },
-        { path: "Pulse/Views/HeroTimeline.swift", status: "staged", hasUnstagedChanges: false },
-        { path: "Pulse/Views/Cards/AlertCard.swift", status: "staged", hasUnstagedChanges: false },
-        { path: "Pulse/Theme/Color+Semantic.swift", status: "unstaged", hasUnstagedChanges: false },
-        { path: "Pulse.xcodeproj/project.pbxproj", status: "unstaged", hasUnstagedChanges: false },
-        { path: "PulseTests/HomeViewTests.swift", status: "unstaged", hasUnstagedChanges: false },
+        {
+          path: "Pulse/Views/HomeHero.swift",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: true,
+        },
+        {
+          path: "Pulse/Views/HeroTimeline.swift",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "Pulse/Views/Cards/AlertCard.swift",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "Pulse/Theme/Color+Semantic.swift",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "Pulse.xcodeproj/project.pbxproj",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "PulseTests/HomeViewTests.swift",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
         {
           path: "Pulse/Resources/HomeMockData.json",
           status: "unstaged",
+          kind: "modified",
           hasUnstagedChanges: false,
         },
       ],
@@ -173,6 +239,13 @@ export const SEED_REPOS: Repository[] = [
       addedLines: 398,
       removedLines: 142,
       language: "Swift",
+      languages: {
+        Swift: 548_000,
+        "Objective-C": 86_000,
+        Shell: 12_000,
+        Ruby: 9_800,
+        Metal: 4_200,
+      },
     }),
   },
   {
@@ -195,6 +268,14 @@ export const SEED_REPOS: Repository[] = [
       },
       commitActivity: commitActivity([3, 2, 1, 0, 2, 3, 4, 2, 1, 3, 2, 1, 2, 3]),
       language: "TypeScript",
+      languages: {
+        TypeScript: 482_000,
+        CSS: 126_000,
+        MDX: 78_000,
+        HTML: 22_000,
+        JavaScript: 18_000,
+        SCSS: 9_000,
+      },
     }),
   },
   {
@@ -220,23 +301,86 @@ export const SEED_REPOS: Repository[] = [
         timestamp: "2026-04-18T22:40:00Z",
       },
       changedFiles: [
-        { path: "src/editor/Frontmatter.ts", status: "staged", hasUnstagedChanges: false },
-        { path: "src/editor/Lane.tsx", status: "staged", hasUnstagedChanges: true },
-        { path: "src/editor/Toolbar.tsx", status: "staged", hasUnstagedChanges: false },
-        { path: "src/editor/useMarkdown.ts", status: "staged", hasUnstagedChanges: false },
-        { path: "src/app/Sidebar.tsx", status: "unstaged", hasUnstagedChanges: false },
-        { path: "src/app/routes.ts", status: "unstaged", hasUnstagedChanges: false },
-        { path: "src/theme/tokens.css", status: "unstaged", hasUnstagedChanges: false },
-        { path: "tests/editor.spec.ts", status: "unstaged", hasUnstagedChanges: false },
-        { path: "src/editor/preview.ts", status: "unstaged", hasUnstagedChanges: false },
-        { path: "src/editor/keymap.ts", status: "unstaged", hasUnstagedChanges: false },
-        { path: "sandbox/sample.md", status: "untracked", hasUnstagedChanges: false },
-        { path: "sandbox/notes.md", status: "untracked", hasUnstagedChanges: false },
+        {
+          path: "src/editor/Frontmatter.ts",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/editor/Lane.tsx",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: true,
+        },
+        {
+          path: "src/editor/Toolbar.tsx",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/editor/useMarkdown.ts",
+          status: "staged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/app/Sidebar.tsx",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/app/routes.ts",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/theme/tokens.css",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "tests/editor.spec.ts",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/editor/preview.ts",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "src/editor/keymap.ts",
+          status: "unstaged",
+          kind: "modified",
+          hasUnstagedChanges: false,
+        },
+        {
+          path: "sandbox/sample.md",
+          status: "untracked",
+          kind: "added",
+          hasUnstagedChanges: false,
+        },
+        { path: "sandbox/notes.md", status: "untracked", kind: "added", hasUnstagedChanges: false },
       ],
       commitActivity: commitActivity([0, 0, 0, 1, 2, 3, 4, 5, 6, 4, 3, 2, 4, 5]),
       addedLines: 612,
       removedLines: 211,
       language: "TypeScript",
+      languages: {
+        TypeScript: 368_000,
+        CSS: 92_000,
+        JavaScript: 41_000,
+        Rust: 28_000,
+        HTML: 14_000,
+        Shell: 6_400,
+      },
     }),
   },
   {
@@ -254,12 +398,19 @@ export const SEED_REPOS: Repository[] = [
       ahead: 1,
       lastCommit: {
         sha: "55ee77ffaa22",
-        summary: "chore: migrate to vite 5",
+        summary: "ci(deps): migrate to vite 5",
         author: "valentin",
         timestamp: "2026-04-13T09:00:00Z",
       },
       commitActivity: commitActivity([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]),
       language: "JavaScript",
+      languages: {
+        JavaScript: 184_000,
+        CSS: 42_000,
+        Vue: 28_000,
+        HTML: 16_000,
+        Svelte: 11_000,
+      },
     }),
   },
   {
@@ -272,20 +423,41 @@ export const SEED_REPOS: Repository[] = [
     logoPath: null,
     logoDarkPath: null,
     status: makeStatus({
-      branch: "chore/deps",
+      branch: "ci/deps",
       head: "44bb66ddee99",
       behind: 5,
       lastCommit: {
         sha: "44bb66ddee99",
-        summary: "chore(deps): quarterly bump",
+        summary: "ci(deps): quarterly bump",
         author: "valentin",
         timestamp: "2026-04-10T12:00:00Z",
       },
       commitActivity: commitActivity([0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]),
       language: "Python",
+      languages: {
+        Python: 206_000,
+        Jupyter: 48_000,
+        Shell: 14_000,
+        TeX: 9_800,
+        Go: 6_400,
+      },
     }),
   },
 ];
+
+/** Map author names to their commit email so Gravatar-based avatars work
+ *  in the E2E stub the same way they do against real git data. */
+const AUTHOR_EMAILS: Record<string, string> = {
+  valentin: "valentin.roehle@benova.eu",
+  maren: "maren@example.com",
+  tomi: "tomi@example.com",
+  lea: "lea@example.com",
+  "renovate-bot": "bot@renovateapp.com",
+};
+
+function emailFor(author: string): string | null {
+  return AUTHOR_EMAILS[author] ?? null;
+}
 
 export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEntries(
   SEED_REPOS.map((repo) => {
@@ -296,6 +468,7 @@ export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEn
             sha: lc.sha,
             summary: lc.summary,
             author: lc.author,
+            authorEmail: emailFor(lc.author),
             timestamp: lc.timestamp,
             repoId: repo.id,
             repoName: repo.name,
@@ -308,6 +481,7 @@ export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEn
         sha: `${repo.id.slice(-6)}0a`,
         summary: "refactor: extract shared helpers",
         author: lc?.author ?? "valentin",
+        authorEmail: emailFor(lc?.author ?? "valentin"),
         timestamp: "2026-04-11T08:12:00Z",
         repoId: repo.id,
         repoName: repo.name,
@@ -316,6 +490,7 @@ export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEn
         sha: `${repo.id.slice(-6)}1b`,
         summary: "docs: README polish",
         author: lc?.author ?? "valentin",
+        authorEmail: emailFor(lc?.author ?? "valentin"),
         timestamp: "2026-04-09T14:40:00Z",
         repoId: repo.id,
         repoName: repo.name,

@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures/app.fixture.js";
 import { APP_UI_STORAGE_KEY } from "../../helpers/constants.js";
 
 test.describe("app / sidebar collapse", () => {
-  test("fold button toggles the collapsed class + persists to localStorage", async ({
+  test("fold button toggles the collapsed state + persists to localStorage", async ({
     page,
   }, testInfo) => {
     test.skip(
@@ -10,14 +10,13 @@ test.describe("app / sidebar collapse", () => {
       "sidebar is already force-collapsed on mobile by useResponsiveSidebar",
     );
     await page.goto("/");
-    const sidebar = page.getByRole("complementary", { name: /Primary/i });
+    const sidebar = page.getByTestId("sidebar");
     await expect(sidebar).toBeVisible();
-    await expect(sidebar).not.toHaveClass(/collapsed/);
+    await expect(sidebar).not.toHaveAttribute("data-collapsed", "true");
 
-    await sidebar.locator(".a-side-fold").click();
-    await expect(sidebar).toHaveClass(/collapsed/);
+    await page.getByTestId("sidebar-fold-btn").click();
+    await expect(sidebar).toHaveAttribute("data-collapsed", "true");
 
-    // persistenceMiddleware writes ui.sidebarCollapsed into `recrest:ui`.
     const stored = await page.evaluate(
       (key) => window.localStorage.getItem(key),
       APP_UI_STORAGE_KEY,

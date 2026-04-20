@@ -26,11 +26,15 @@ export function PrList() {
   }, [prsByRepo, repos]);
 
   if (rows.length === 0) {
-    return <EmptyState icon={GitPullRequest} title={t("empty")} description={t("empty_desc")} />;
+    return (
+      <div data-testid="mr-list-empty">
+        <EmptyState icon={GitPullRequest} title={t("empty")} description={t("empty_desc")} />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" data-testid="mr-list">
       {rows.map(({ id, repoName, pr }) => (
         <PrRow key={id} pr={pr} repoName={repoName} />
       ))}

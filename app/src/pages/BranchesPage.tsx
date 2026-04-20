@@ -145,7 +145,7 @@ export function BranchesPage() {
     (reposLoading || branchesLoading) && byRepoAll.every((g) => g.branches.length === 0);
 
   return (
-    <div className="a-branches">
+    <div className="a-branches" data-testid="branches-page">
       <div className="a-br-filters">
         <BChip active={filter === ""} onClick={() => setFilter("")}>
           {t("branches.filter.all")} <span>{totals.all}</span>

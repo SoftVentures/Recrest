@@ -262,44 +262,43 @@ body {
   color: var(--ink-1);
 }
 
-/* Titlebar — always visible, sits above dialog overlays */
-.titlebar {
-  height: 32px;
-  flex: 0 0 32px;
+/* OS-specific window chromes. The `.chrome` base holds shared look (background,
+   border, drag-region, z-index); the `.chrome-<os>` modifier refines geometry
+   and controls so each platform feels native.
+
+   Which chrome is mounted is decided at runtime by `useWindowChrome()`; the
+   `data-chrome` attribute on <html> lets us scope root-level rules (border
+   radius, body background) per platform. */
+.chrome {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Zero right padding so the close button's red hover reaches the edge. */
-  padding: 0 0 0 12px;
   background: var(--canvas);
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
+  -webkit-user-select: none;
   user-select: none;
   position: relative;
   z-index: 200;
 }
-.titlebar .t-title {
+.chrome .t-title {
   font-size: 12px;
   display: flex;
   align-items: center;
   gap: 7px;
 }
-.titlebar .t-title .t-name {
+.chrome .t-title .t-name {
   color: var(--ink-0);
   font-weight: 500;
   font-size: 12.5px;
 }
-.titlebar .t-title .t-sep {
-  color: var(--ink-4);
-  font-weight: 400;
-}
-.titlebar .t-title .t-version {
+.chrome .t-title .t-version {
   color: var(--ink-3);
   font-weight: 500;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
-.titlebar .t-title .t-mark {
+.chrome .t-title .t-mark {
   width: 18px;
   height: 18px;
   border-radius: 4px;
@@ -310,12 +309,28 @@ body {
   border: 1px solid #0f1115;
   color: #ffffff;
 }
-.titlebar .t-ctrls {
+
+/* macOS overlay: traffic lights are drawn by the OS at trafficLightPosition,
+   we only reserve space on the left and centre our brand line. */
+.chrome-mac {
+  height: 36px;
+  flex: 0 0 36px;
+  /* 80px reservation so brand never collides with system traffic lights. */
+  padding: 0 12px 0 80px;
+}
+
+/* Windows 11: 32px titlebar, three square 46px buttons right-aligned. */
+.chrome-win11 {
+  height: 32px;
+  flex: 0 0 32px;
+  padding: 0 0 0 12px;
+}
+.chrome-win11 .t-ctrls {
   display: flex;
   gap: 0;
   -webkit-app-region: no-drag;
 }
-.titlebar .t-btn {
+.chrome-win11 .t-btn {
   width: 46px;
   height: 32px;
   display: inline-flex;
@@ -326,13 +341,50 @@ body {
   color: var(--ink-2);
   cursor: pointer;
 }
-.titlebar .t-btn:hover {
+.chrome-win11 .t-btn:hover {
   background: var(--surface-hover);
   color: var(--ink-0);
 }
-.titlebar .t-btn.close:hover {
-  background: #e53935;
+.chrome-win11 .t-btn.close:hover {
+  background: #c42b1c;
   color: #fff;
+}
+
+/* GNOME/libadwaita: taller bar, single round close pill on the right. */
+.chrome-gnome {
+  height: 42px;
+  flex: 0 0 42px;
+  padding: 0 12px;
+}
+.chrome-gnome .t-close-pill {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--surface-hover);
+  color: var(--ink-2);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.chrome-gnome .t-close-pill:hover {
+  background: #e01b24;
+  color: #fff;
+}
+
+/* Rounded window corners on OSes where the compositor doesn't round a
+   borderless window itself. macOS (with native decorations+overlay) already
+   gets this for free — the rule is defensive. */
+html[data-chrome="macos-overlay"] .app,
+html[data-chrome="gnome"] .app {
+  border-radius: 10px;
+  overflow: hidden;
+}
+html[data-chrome="win11"] .app {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .shell {
@@ -354,48 +406,50 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── Scrollbars (global, slim, accent-tinted, no arrows) ─── */
+/* ─── Scrollbars (global, slim, neutral, no arrows) ─── */
 .scroll {
   overflow: auto;
 }
 
-/* Firefox */
+/* Firefox. `--ink-4` is theme-aware, so we get a subtle grey in light mode
+   and a dark grey in dark mode without a media query. */
 html,
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+  scrollbar-color: var(--ink-4) transparent;
 }
 
 /* WebKit / Blink — applies to every scrollable surface in the app. */
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
   background: transparent;
 }
 html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track,
 *::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 4px;
 }
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--accent) 40%, transparent);
-  border-radius: 999px;
+  background: var(--ink-4);
+  border-radius: 4px;
   min-height: 24px;
   transition: background 0.15s ease;
 }
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--accent) 75%, transparent);
+  background: var(--ink-3);
 }
 html::-webkit-scrollbar-thumb:active,
 body::-webkit-scrollbar-thumb:active,
 *::-webkit-scrollbar-thumb:active {
-  background: var(--accent);
+  background: var(--ink-2);
 }
 /* Kill the tiny arrow buttons on top/bottom (and corner) that WebView2 still
  * renders by default under Windows. Target every variant explicitly — some

@@ -15,7 +15,7 @@ export function UpdaterBanner() {
   const banner = useAppSelector((s) => s.ui.updaterBanner);
   if (!banner) return null;
   return (
-    <div className="fixed bottom-4 right-4 z-[60] flex max-w-sm items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-lg">
+    <div className="fixed bottom-4 right-4 z-60 flex max-w-sm items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-lg">
       <div className="flex-1">
         <div className="text-sm font-medium">
           {t("updater.available_title", {

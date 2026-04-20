@@ -7,6 +7,7 @@ use tauri::State;
 use tokio::io::AsyncWriteExt;
 
 use super::error::CommandError;
+use super::process::tokio::configure as no_window_tokio;
 use crate::AppState;
 
 /// Maximum results per command invocation — keeps the UI snappy and the IPC
@@ -101,6 +102,9 @@ async fn search_repo(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    // Suppress the Windows console flash — ripgrep is a console-subsystem
+    // binary and would otherwise flicker a black window on every search.
+    no_window_tokio(&mut cmd);
 
     let mut child = cmd.spawn().map_err(|e| match e.kind() {
         std::io::ErrorKind::NotFound => CommandError::bad_request(

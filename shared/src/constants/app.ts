@@ -1,6 +1,7 @@
 export const APP_NAME = "Recrest";
 export const APP_IDENTIFIER = "eu.softventures.recrest";
-export const APP_VERSION = "0.1.0";
+// x-release-please-version
+export const APP_VERSION = "0.5.1";
 
 export const URLS = {
   homepage: "https://github.com/softventures/recrest",

@@ -55,7 +55,11 @@
     "underline_links_sub": "Always underline links instead of only on hover."
   },
   "ide": {
-    "auto_detect": "Auto-detect"
+    "auto_detect": "Auto-detect",
+    "auto_system_default": "System default ({{ide}})",
+    "no_ide_detected": "No supported IDE detected",
+    "detection_hint": "Install VS Code, Cursor, or a JetBrains IDE so its CLI is on your PATH.",
+    "not_installed_tag": "not installed"
   },
   "sources": {
     "description": "Folders Recrest scans recursively for git repositories.",

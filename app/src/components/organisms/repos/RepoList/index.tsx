@@ -43,7 +43,7 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
   const onSelect = (id: string) => dispatch(setSelectedRepo(id));
 
   return (
-    <div className="a-table">
+    <div className="a-table" data-testid="repo-list">
       <div className="a-thead" style={{ gridTemplateColumns: COL_TEMPLATE }}>
         <div className="a-th">{t("repos.col.repository")}</div>
         <div className="a-th">{t("repos.col.branch")}</div>
@@ -81,7 +81,10 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
       ))}
 
       {repos.length === 0 && (
-        <div style={{ padding: "32px 20px", textAlign: "center", color: "var(--ink-3)" }}>
+        <div
+          style={{ padding: "32px 20px", textAlign: "center", color: "var(--ink-3)" }}
+          data-testid="repo-list-empty"
+        >
           {t("states.empty")}
         </div>
       )}

@@ -39,14 +39,17 @@ export function SettingsView() {
   }, [dispatch]);
 
   return (
-    <div className="a-settings">
-      <aside className="a-settings-nav">
+    <div className="a-settings" data-testid="settings-view">
+      <aside className="a-settings-nav" role="tablist" data-testid="settings-tabs">
         {TABS.map((tb) => (
           <button
             key={tb.id}
             type="button"
+            role="tab"
+            aria-selected={tab === tb.id}
             className="a-settings-tab"
             data-active={tab === tb.id ? "true" : undefined}
+            data-testid={`settings-tab-${tb.id}`}
             onClick={() => setTab(tb.id)}
           >
             <Icon name={tb.icon} size={13} />
@@ -54,7 +57,7 @@ export function SettingsView() {
           </button>
         ))}
       </aside>
-      <div className="a-settings-body">
+      <div className="a-settings-body" data-testid={`settings-panel-${tab}`}>
         {tab === "general" && <SettingsGeneralTab />}
         {tab === "accounts" && <SettingsAccountsTab />}
         {tab === "integrations" && <SettingsIntegrationsTab />}

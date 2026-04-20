@@ -5,6 +5,7 @@ use serde::Serialize;
 use tauri::State;
 
 use super::error::CommandError;
+use super::process::configure as no_window;
 use crate::auth::token::TokenStore;
 use crate::git::{branches, status};
 use crate::AppState;
@@ -53,6 +54,16 @@ fn resolve_provider_for_remote(repo: &Repository, hint: Option<&str>) -> Option<
 /// For Bitbucket the "token" is an app password that's only accepted paired
 /// with the account username — we load it from the companion `bitbucket:username`
 /// entry. GitHub PATs accept any username; GitLab's convention is `oauth2`.
+///
+/// **Note on the credential-helper fallback:** libgit2's `credential_helper`
+/// spawns the system `git credential-manager` process. On Windows that's a
+/// console-subsystem binary, and because Recrest runs in the GUI subsystem
+/// Windows briefly flashes a black terminal window during every fetch/pull
+/// that uses it. To avoid that flash we only fall back to the system helper
+/// when Recrest has *no* provider token of its own — i.e. when the user has
+/// not connected the provider in Settings. When a provider token is present
+/// but fails, we surface a clear auth error instead of silently shelling out
+/// to the system helper.
 fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<String>) {
     let store = TokenStore::new();
     let token = provider_id
@@ -66,6 +77,7 @@ fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<
         Some("gitlab") => "oauth2",
         _ => "x-access-token",
     };
+    let has_recrest_token = token.is_some();
 
     // libgit2 calls the callback once per auth method it wants to try and will
     // retry on failure — track attempts so we don't loop forever when a helper
@@ -96,7 +108,11 @@ fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<
                     return git2::Cred::userpass_plaintext(username, t);
                 }
             }
-            if !tried_helper {
+            // Only fall back to the system credential helper when we have no
+            // Recrest token at all — otherwise libgit2 spawns
+            // `git credential-manager` which flashes a console window on
+            // Windows and takes over auth the user may not have opted into.
+            if !has_recrest_token && !tried_helper {
                 tried_helper = true;
                 if let Ok(config) = git2::Config::open_default() {
                     if let Ok(cred) =
@@ -107,7 +123,7 @@ fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<
                 }
             }
             return Err(git2::Error::from_str(
-                "no credentials for this remote — connect the provider in Settings or configure a git credential helper",
+                "no credentials for this remote — connect the provider in Settings",
             ));
         }
 
@@ -149,9 +165,10 @@ pub async fn open_in_explorer(
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer")
-            .arg(path_str)
-            .spawn()
+        let mut cmd = std::process::Command::new("explorer");
+        cmd.arg(path_str);
+        no_window(&mut cmd);
+        cmd.spawn()
             .map_err(|e| CommandError::internal(format!("explorer failed: {e}")))?;
         return Ok(());
     }

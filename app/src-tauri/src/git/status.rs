@@ -42,6 +42,10 @@ pub struct RepoStatusDto {
     /// Most common file extension in HEAD (mapped to a language id), or None
     /// for empty / unreadable repos. Cheap tree-walk heuristic, not a linguist.
     pub language: Option<String>,
+    /// Per-language byte breakdown (matches GitHub's /languages endpoint
+    /// shape). None when the scanner has not produced a breakdown for this
+    /// repo; the frontend falls back to the dominant `language` in that case.
+    pub languages: Option<std::collections::BTreeMap<String, u64>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -58,6 +62,9 @@ pub struct CommitInfo {
 pub struct ChangedFile {
     pub path: String,
     pub status: ChangedFileStatus,
+    /// Art der Änderung (added/modified/deleted/…) unabhängig vom Staging-State.
+    /// Das Frontend färbt Listen-Einträge danach.
+    pub kind: ChangedFileKind,
     pub has_unstaged_changes: bool,
 }
 
@@ -68,6 +75,16 @@ pub enum ChangedFileStatus {
     Unstaged,
     Untracked,
     Conflicted,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangedFileKind {
+    Added,
+    Modified,
+    Deleted,
+    Renamed,
+    Typechange,
 }
 
 impl RepoStatusDto {
@@ -90,6 +107,7 @@ impl RepoStatusDto {
             added_lines: 0,
             removed_lines: 0,
             language: None,
+            languages: None,
         }
     }
 }
@@ -165,9 +183,12 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
             continue;
         };
 
+        let kind = classify_kind(s, primary);
+
         changed_files.push(ChangedFile {
             path,
             status: primary,
+            kind,
             has_unstaged_changes: also_unstaged,
         });
     }
@@ -198,7 +219,7 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
 
     let commit_activity = commit_activity_14d(&repo).unwrap_or([0; ACTIVITY_DAYS]);
     let (added_lines, removed_lines) = worktree_diff_lines(&repo).unwrap_or((0, 0));
-    let language = dominant_language(&repo).ok().flatten();
+    let (language, languages) = detect_languages(&repo).unwrap_or((None, None));
 
     Ok(RepoStatusDto {
         branch,
@@ -218,7 +239,44 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
         added_lines,
         removed_lines,
         language,
+        languages,
     })
+}
+
+/// Leitet die Art der Änderung aus den git2-Status-Flags ab. Für Staged-
+/// Einträge schauen wir auf die Index-Flags, sonst auf die Worktree-Flags;
+/// Untracked zählt als Added (die Datei ist komplett neu). Conflicts bleiben
+/// als „Modified" klassifiziert — die Diff-Sicht muss eh vom User aufgelöst
+/// werden, die Zusatzinfo hilft der Listenfarbe nicht.
+fn classify_kind(s: Status, primary: ChangedFileStatus) -> ChangedFileKind {
+    match primary {
+        ChangedFileStatus::Untracked => ChangedFileKind::Added,
+        ChangedFileStatus::Conflicted => ChangedFileKind::Modified,
+        ChangedFileStatus::Staged => {
+            if s.is_index_deleted() {
+                ChangedFileKind::Deleted
+            } else if s.is_index_renamed() {
+                ChangedFileKind::Renamed
+            } else if s.is_index_new() {
+                ChangedFileKind::Added
+            } else if s.is_index_typechange() {
+                ChangedFileKind::Typechange
+            } else {
+                ChangedFileKind::Modified
+            }
+        }
+        ChangedFileStatus::Unstaged => {
+            if s.is_wt_deleted() {
+                ChangedFileKind::Deleted
+            } else if s.is_wt_renamed() {
+                ChangedFileKind::Renamed
+            } else if s.is_wt_typechange() {
+                ChangedFileKind::Typechange
+            } else {
+                ChangedFileKind::Modified
+            }
+        }
+    }
 }
 
 fn touches_worktree(s: Status) -> bool {
@@ -327,14 +385,25 @@ fn worktree_diff_lines(repo: &Repository) -> Result<(u64, u64), git2::Error> {
 }
 
 /// Walks the HEAD tree (capped), groups paths by file extension, and returns
-/// the most common extension (lowercased, without leading dot). The frontend
-/// maps that extension to a language name/color via the `linguist-languages`
-/// dataset — keeping linguist-logic off the Rust side.
-fn dominant_language(repo: &Repository) -> Result<Option<String>, git2::Error> {
-    let Ok(head) = repo.head() else { return Ok(None) };
-    let Ok(tree) = head.peel_to_tree() else { return Ok(None) };
+/// both the single dominant extension AND the full byte-weighted breakdown
+/// across extensions. The frontend maps extensions to language names/colors
+/// via the `linguist-languages` dataset — keeping linguist-logic off the
+/// Rust side.
+fn detect_languages(
+    repo: &Repository,
+) -> Result<
+    (
+        Option<String>,
+        Option<std::collections::BTreeMap<String, u64>>,
+    ),
+    git2::Error,
+> {
+    let Ok(head) = repo.head() else { return Ok((None, None)) };
+    let Ok(tree) = head.peel_to_tree() else { return Ok((None, None)) };
 
-    let mut counts: HashMap<String, usize> = HashMap::new();
+    // Track byte counts per extension so the breakdown reflects file size,
+    // not just count — large TS files outweigh a trailing .md sample.
+    let mut bytes: HashMap<String, u64> = HashMap::new();
     let mut seen = 0usize;
     tree.walk(TreeWalkMode::PreOrder, |_root, entry| {
         if seen >= MAX_TREE_ENTRIES_FOR_LANG {
@@ -345,13 +414,28 @@ fn dominant_language(repo: &Repository) -> Result<Option<String>, git2::Error> {
         }
         let Some(name) = entry.name() else { return TreeWalkResult::Ok };
         if let Some(ext) = trailing_extension(name) {
-            *counts.entry(ext).or_insert(0) += 1;
+            let size = repo
+                .find_blob(entry.id())
+                .map(|b| b.size() as u64)
+                .unwrap_or(1);
+            *bytes.entry(ext).or_insert(0) += size;
         }
         seen += 1;
         TreeWalkResult::Ok
     })?;
 
-    Ok(counts.into_iter().max_by_key(|(_, n)| *n).map(|(ext, _)| ext))
+    if bytes.is_empty() {
+        return Ok((None, None));
+    }
+
+    let dominant = bytes
+        .iter()
+        .max_by_key(|(_, n)| **n)
+        .map(|(ext, _)| ext.clone());
+
+    // BTreeMap so serialised order is stable; consumers sort by value anyway.
+    let breakdown: std::collections::BTreeMap<String, u64> = bytes.into_iter().collect();
+    Ok((dominant, Some(breakdown)))
 }
 
 /// Extracts the trailing file extension (without leading dot, lowercased).

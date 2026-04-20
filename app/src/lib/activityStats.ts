@@ -36,12 +36,59 @@ export function dayLabel(d: number): string {
   return `${d} days ago`;
 }
 
-/** Stable color for a repo id — golden-angle hash, fixed S/L. */
-export function colorForRepo(id: string): string {
+/** Curated 14-swatch palette laid out so adjacent slots walk around the hue
+ *  wheel — any sequential assignment lands on perceptually distinct neighbours
+ *  even at small bar-segment sizes. We only keep one swatch per hue family
+ *  (no indigo + sky + blue + cyan stack) so 3-blue collisions can't happen
+ *  when the sequential walker picks the first N colors. */
+export const ACTIVITY_PALETTE = [
+  "#6366f1", // indigo
+  "#f97316", // orange
+  "#14b8a6", // teal
+  "#ec4899", // pink
+  "#eab308", // yellow
+  "#8b5cf6", // violet
+  "#10b981", // emerald
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#a855f7", // purple
+  "#84cc16", // lime
+  "#f59e0b", // amber
+  "#0ea5e9", // sky
+  "#f43f5e", // rose
+] as const;
+
+function hashString(s: string): number {
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  const hue = Math.abs(h * 137.508) % 360;
-  return `hsl(${hue.toFixed(0)} 70% 55%)`;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/** Stable color for a repo id when no context is available. Still hash-based
+ *  so the same id always resolves to the same swatch across unrelated UI
+ *  surfaces (e.g. repo row accents). Prefer [`buildRepoColorMap`] inside a
+ *  specific chart where you need guaranteed uniqueness. */
+export function colorForRepo(id: string): string {
+  return ACTIVITY_PALETTE[hashString(id) % ACTIVITY_PALETTE.length]!;
+}
+
+/** Build a collision-free color map for a specific chart context. Walks the
+ *  unique repo set in deterministic order (sorted by id) and assigns palette
+ *  entries one at a time, so two repos in the same chart never share a
+ *  color — critical for stacked bars where adjacent segments must read as
+ *  distinct. Falls back to the hash once repo count exceeds palette size. */
+export function buildRepoColorMap(ids: readonly string[]): Map<string, string> {
+  const unique = Array.from(new Set(ids)).sort();
+  const map = new Map<string, string>();
+  for (let i = 0; i < unique.length; i++) {
+    const id = unique[i]!;
+    if (i < ACTIVITY_PALETTE.length) {
+      map.set(id, ACTIVITY_PALETTE[i]!);
+    } else {
+      map.set(id, colorForRepo(id));
+    }
+  }
+  return map;
 }
 
 /** Consecutive-days-with-≥1-commit streak ending at `today`. */
@@ -190,6 +237,9 @@ export function computeActivityStats(
 
 export interface AuthorBucket {
   author: string;
+  /** First commit email we saw for this author — drives the Gravatar avatar
+   *  in leaderboard rows. Null when no commit in range carried an email. */
+  email: string | null;
   count: number;
   share: number;
   sparkline: number[];
@@ -201,15 +251,22 @@ export function computeLeaderboard(
   today: Date,
   limit = 5,
 ): AuthorBucket[] {
-  const byAuthor = new Map<string, { count: number; spark: number[] }>();
+  const byAuthor = new Map<string, { email: string | null; count: number; spark: number[] }>();
   for (const c of commits) {
     const d = daysAgo(c.timestamp, today);
     if (d < 0) continue;
     let bucket = byAuthor.get(c.author);
     if (!bucket) {
-      bucket = { count: 0, spark: Array.from({ length: ACTIVITY_DAYS }, () => 0) };
+      bucket = {
+        email: null,
+        count: 0,
+        spark: Array.from({ length: ACTIVITY_DAYS }, () => 0),
+      };
       byAuthor.set(c.author, bucket);
     }
+    // First email sticks — the same author usually commits under one email,
+    // and we don't want the leaderboard row flipping avatars between days.
+    if (!bucket.email && c.authorEmail) bucket.email = c.authorEmail;
     bucket.count += 1;
     bucket.spark[d] = (bucket.spark[d] ?? 0) + 1;
   }
@@ -217,6 +274,7 @@ export function computeLeaderboard(
   return [...byAuthor.entries()]
     .map(([author, v]) => ({
       author,
+      email: v.email,
       count: v.count,
       share: v.count / total,
       sparkline: v.spark,
@@ -251,6 +309,9 @@ export function computeStackedChart(commits: readonly RecentCommit[], today: Dat
     if (entry) entry.count += 1;
     else m.set(c.repoId, { name: c.repoName, count: 1 });
   }
+  // Collision-free color map across the whole chart, not per-day: a repo
+  // should read as the same color no matter which day its segment appears.
+  const colorMap = buildRepoColorMap(commits.map((c) => c.repoId));
   for (const [day, m] of perDayRepo) {
     const target = days[day];
     if (!target) continue;
@@ -259,7 +320,7 @@ export function computeStackedChart(commits: readonly RecentCommit[], today: Dat
         repoId,
         repoName: v.name,
         count: v.count,
-        color: colorForRepo(repoId),
+        color: colorMap.get(repoId) ?? colorForRepo(repoId),
       }))
       .sort((a, b) => b.count - a.count);
     target.segments = segs;

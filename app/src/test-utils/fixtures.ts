@@ -6,7 +6,15 @@
  * no DOM mutations) so it works identically in jsdom and a Storybook
  * iframe.
  */
-import type { BranchInfo, ProviderConnection, Repository, RepositoryStatus } from "@recrest/shared";
+import type {
+  BranchInfo,
+  ProviderConnection,
+  PullRequest,
+  Repository,
+  RepositoryStatus,
+} from "@recrest/shared";
+
+import { type EnrichedRepo, enrichRepo } from "@/lib/repoEnrich";
 
 export const emptyStatus: RepositoryStatus = {
   branch: "main",
@@ -26,6 +34,7 @@ export const emptyStatus: RepositoryStatus = {
   addedLines: 0,
   removedLines: 0,
   language: null,
+  languages: null,
 };
 
 export const sampleRepo: Repository = {
@@ -60,3 +69,38 @@ export const sampleProvider: ProviderConnection = {
   supportsOauth: false,
   baseUrl: "https://api.github.com",
 };
+
+/** Factory helper: build a `Repository` DTO with per-field overrides. */
+export function makeRepo(over: Partial<Repository> = {}): Repository {
+  return {
+    ...sampleRepo,
+    ...over,
+    status: { ...emptyStatus, ...(over.status ?? {}) },
+  };
+}
+
+/** Factory helper: build an enriched repo the UI-side components expect. */
+export function makeEnrichedRepo(over: Partial<Repository> = {}): EnrichedRepo {
+  return enrichRepo(makeRepo(over));
+}
+
+/** Factory helper: a minimal `PullRequest` DTO usable in tests + stories. */
+export function makePullRequest(over: Partial<PullRequest> = {}): PullRequest {
+  return {
+    id: "pr-1",
+    number: 1,
+    title: "feat: something useful",
+    url: "https://example.com/pr/1",
+    author: "octocat",
+    state: "open",
+    draft: false,
+    sourceBranch: "feature/x",
+    targetBranch: "main",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    additions: null,
+    deletions: null,
+    ciStatus: null,
+    ...over,
+  } as unknown as PullRequest;
+}

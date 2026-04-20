@@ -12,6 +12,7 @@ export * from "./constants/routes.js";
 export * from "./constants/storage-keys.js";
 export * from "./constants/ui.js";
 
+export * from "./types/activity.js";
 export * from "./types/errors.js";
 export * from "./types/git.js";
 export * from "./types/ide.js";

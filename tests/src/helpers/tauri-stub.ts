@@ -37,8 +37,144 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
 
   function resolveRecentCommits(args) {
     const repoId = args && args.repoId;
-    if (!repoId) return [];
-    return (SEED.recentCommits && SEED.recentCommits[repoId]) || [];
+    const buckets = SEED.recentCommits || {};
+    if (repoId) {
+      return buckets[repoId] || [];
+    }
+    // No repoId: aggregate across all repos (the Rust backend returns the
+    // full recent-commit feed when called without a filter).
+    const all = [];
+    for (const id of Object.keys(buckets)) {
+      for (const c of buckets[id] || []) all.push(c);
+    }
+    // Newest-first, like the real backend.
+    all.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+    return all;
+  }
+
+  function resolvePrEvents(args) {
+    const days = (args && args.days) || 14;
+    const cutoffMs = Date.now() - days * 86_400_000;
+    const out = [];
+    const prsByRepo = SEED.prs || {};
+    // The frontend fans out list_pr_events per repo, so this handler must
+    // filter to args.repoId. Returning events for every repo on every call
+    // duplicates rows N times in the merged feed.
+    const filterRepoId = args && args.repoId;
+    for (const [repoId, prs] of Object.entries(prsByRepo)) {
+      if (filterRepoId && repoId !== filterRepoId) continue;
+      const repo = SEED.repos.find((r) => r.id === repoId);
+      if (!repo) continue;
+      for (const pr of prs) {
+        const createdMs = new Date(pr.createdAt).getTime();
+        if (createdMs >= cutoffMs) {
+          out.push({
+            repoId,
+            repoName: repo.name,
+            number: pr.number,
+            title: pr.title,
+            author: pr.author,
+            url: pr.url,
+            timestamp: pr.createdAt,
+            kind: "opened",
+          });
+        }
+        // Infer a merge timestamp for merged/closed PRs: fall back to
+        // updatedAt because the base PullRequest DTO does not carry an
+        // explicit mergedAt.
+        if ((pr.state === "merged" || pr.state === "closed") && pr.updatedAt) {
+          const mergedMs = new Date(pr.updatedAt).getTime();
+          if (mergedMs >= cutoffMs) {
+            out.push({
+              repoId,
+              repoName: repo.name,
+              number: pr.number,
+              title: pr.title,
+              author: pr.author,
+              url: pr.url,
+              timestamp: pr.updatedAt,
+              kind: pr.state === "merged" ? "merged" : "closed",
+            });
+          }
+        }
+      }
+    }
+    // Synthesize a handful of extra merged PRs spread across the window so the
+    // velocity chart / TTM histogram have something to chew on beyond the
+    // single merged PR in the seed. Only emitted for the repo the caller
+    // asked about (or for every repo when the caller didn't filter).
+    const nowMs = Date.now();
+    for (let d = 1; d < days; d++) {
+      if (d % 2 === 0) continue;
+      const ts = new Date(nowMs - d * 86_400_000 - 3_600_000 * (d % 5)).toISOString();
+      const repoIdx = d % SEED.repos.length;
+      const repo = SEED.repos[repoIdx];
+      if (!repo) continue;
+      if (filterRepoId && repo.id !== filterRepoId) continue;
+      const num = 900 + d;
+      const title = "chore: weekly cleanup " + d;
+      const url = (repo.remoteUrl || "https://example.com") + "/pull/" + num;
+      out.push({
+        repoId: repo.id,
+        repoName: repo.name,
+        number: num,
+        title,
+        author: "valentin",
+        url,
+        timestamp: new Date(nowMs - (d + 1) * 86_400_000).toISOString(),
+        kind: "opened",
+      });
+      out.push({
+        repoId: repo.id,
+        repoName: repo.name,
+        number: num,
+        title,
+        author: "valentin",
+        url,
+        timestamp: ts,
+        kind: "merged",
+      });
+    }
+    return out;
+  }
+
+  function resolveCheckRuns(args) {
+    // Respect the per-repo call contract — the frontend fans out per repo,
+    // so this handler must return summaries for just args.repoId. Returning
+    // the full dataset every time dupes rows N times in the timeline.
+    const repoId = args && args.repoId;
+    const repo = repoId ? SEED.repos.find((r) => r.id === repoId) : null;
+    if (!repo) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const out = [];
+    // 14 days of history, varied per repo via a tiny PRNG on repo id.
+    let h = 0;
+    for (let i = 0; i < repo.id.length; i++) h = (h * 31 + repo.id.charCodeAt(i)) >>> 0;
+    for (let d = 0; d < 14; d++) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - d);
+      const dayStr = day.toISOString().slice(0, 10);
+      // Vary totals: 2–7 runs per day, 0–3 failing based on a cheap hash.
+      const seedA = ((h ^ (d * 2654435761)) >>> 0) % 100;
+      if (seedA < 15) continue; // some days without check runs at all
+      const total = 2 + (seedA % 6);
+      const failed = seedA < 30 ? (seedA % 3) : 0;
+      const passed = Math.max(0, total - failed);
+      out.push({
+        repoId: repo.id,
+        repoName: repo.name,
+        day: dayStr,
+        commitSha: repo.status.head || "00000000",
+        total,
+        passed,
+        failed,
+        neutral: 0,
+        pending: 0,
+      });
+    }
+    return out;
   }
 
   function resolveStatus(repoId) {
@@ -72,6 +208,12 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return undefined;
       case "list_recent_commits":
         return resolveRecentCommits(args);
+      case "list_pr_events":
+        return resolvePrEvents(args);
+      case "list_check_runs":
+        return resolveCheckRuns(args);
+      case "detect_ides":
+        return ["vscode"];
       case "load_logo_bytes":
         return null;
       case "open_in_ide":

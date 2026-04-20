@@ -20,9 +20,19 @@ describe("AuthorAvatar", () => {
   });
 
   it("rendert ein Bild, wenn eine src übergeben ist", () => {
-    render(<AuthorAvatar name="Bob" src="https://example.com/pic.png" />);
-    const img = screen.getByRole("img");
+    const { container } = render(<AuthorAvatar name="Bob" src="https://example.com/pic.png" />);
+    // The image is presentational now — the surrounding chip carries the
+    // aria-label, so we look it up via the DOM rather than by role.
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
     expect(img).toHaveAttribute("src", "https://example.com/pic.png");
-    expect(img).toHaveAttribute("alt", "Bob");
+    expect(screen.getByLabelText("Bob")).toBeInTheDocument();
+  });
+
+  it("baut eine Gravatar-URL aus einer E-Mail", () => {
+    const { container } = render(<AuthorAvatar name="Grav" email="valentin.roehle@benova.eu" />);
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toMatch(/^https:\/\/www\.gravatar\.com\/avatar\//);
   });
 });

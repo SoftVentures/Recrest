@@ -41,7 +41,7 @@ release-please reads commit types between the last release tag and
 | `feat!:` or `BREAKING CHANGE:`                                     | major   |
 | `feat:`                                                            | minor   |
 | `fix:`, `perf:`, `revert:`                                         | patch   |
-| `chore:`, `docs:`, `refactor:`, `test:`, `ci:`, `build:`, `style:` | no bump |
+| `docs:`, `test:`, `ci:`                                            | no bump |
 
 A Release PR is opened automatically and kept up to date as new commits
 land. Merging that PR is what triggers the tag push and therefore the

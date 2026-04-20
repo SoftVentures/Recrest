@@ -10,6 +10,7 @@ import {
   flatDemoRepos,
   repoAvatarColor,
 } from "../data/demoWorkspace";
+import { type Os, useOsDetect } from "../hooks/useOsDetect";
 import { useParallax } from "../hooks/useParallax";
 import {
   ActivityIcon,
@@ -134,7 +135,7 @@ const IconChangesDot = ({ color }: { color: string }) => (
   />
 );
 
-/* ─── Window controls (Windows 11 style) ─────────────── */
+/* ─── Window controls — Windows 11 style ─────────────── */
 function WindowsControls() {
   return (
     <div className="demo-winctrls" aria-hidden>
@@ -156,6 +157,37 @@ function WindowsControls() {
       </span>
     </div>
   );
+}
+
+/* ─── Window controls — macOS traffic lights ─────────── */
+function MacTrafficLights() {
+  return (
+    <div className="demo-macctrls" aria-hidden>
+      <span className="demo-mac-light close" />
+      <span className="demo-mac-light min" />
+      <span className="demo-mac-light max" />
+    </div>
+  );
+}
+
+/* ─── Window controls — GNOME/libadwaita close pill ──── */
+function GnomeClose() {
+  return (
+    <div className="demo-gnomectrls" aria-hidden>
+      <span className="demo-gnome-close">
+        <svg width={10} height={10} viewBox="0 0 10 10">
+          <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth={1.4} />
+        </svg>
+      </span>
+    </div>
+  );
+}
+
+/** Which chrome variant to render in the demo. "unknown" falls back to Win11. */
+function chromeForOs(os: Os): "mac" | "win" | "linux" {
+  if (os === "macos") return "mac";
+  if (os === "linux") return "linux";
+  return "win";
 }
 
 /* ─── Sparkline (bar chart, app-style) ───────────────── */
@@ -336,7 +368,7 @@ function DetailPane({ repo }: { repo: DemoRepo }) {
     {
       author: "Mira W.",
       sha: "62070fa",
-      msg: "chore: scaffold src-tauri + wire plugins",
+      msg: "ci: scaffold src-tauri + wire plugins",
       when: "2 d ago",
       color: "#2f66e6",
       initials: "MW",
@@ -469,6 +501,10 @@ export function HeroDemo() {
   const [selectedId, setSelectedId] = useState<string>(DEFAULT_SELECTED_ID);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
+  // Mirror visitor's OS in the demo window chrome so the preview matches the
+  // app they'd actually install.
+  const chrome = chromeForOs(useOsDetect());
+
   const selected = flatDemoRepos.find((r) => r.id === selectedId) ?? flatDemoRepos[0]!;
   const totalRepos = flatDemoRepos.length;
   const dirtyCount = flatDemoRepos.filter((r) => r.dirty).length;
@@ -476,16 +512,18 @@ export function HeroDemo() {
   return (
     <div className="hero-screenshot">
       <div className="screenshot-frame demo-frame" ref={frameRef}>
-        {/* ─── Titlebar ───────────────────────────────────── */}
-        <div className="demo-titlebar">
+        {/* ─── Titlebar — OS-specific chrome ──────────────── */}
+        <div className={`demo-titlebar demo-titlebar-${chrome}`}>
+          {chrome === "mac" && <MacTrafficLights />}
           <div className="demo-titlebar-left">
             <div className="demo-titlebar-icon">
               <BrandMark />
             </div>
             <span>Recrest</span>
-            <span className="demo-titlebar-version">v0.1.0</span>
+            <span className="demo-titlebar-version">v{__APP_VERSION__}</span>
           </div>
-          <WindowsControls />
+          {chrome === "win" && <WindowsControls />}
+          {chrome === "linux" && <GnomeClose />}
         </div>
 
         {/* ─── Body: sidebar + main ───────────────────────── */}

@@ -29,6 +29,9 @@ export interface AppearancePrefs {
 export interface SettingsState extends AppSettings, AppearancePrefs {
   loading: boolean;
   error: string | null;
+  /** IDs of IDE CLIs actually found on $PATH. Populated by `loadDetectedIdes`.
+   *  Empty list means the user sees a "no IDE detected" hint in Settings. */
+  detectedIdes: string[];
 }
 
 const initialState: SettingsState = {
@@ -56,6 +59,7 @@ const initialState: SettingsState = {
   underlineLinks: false,
   loading: false,
   error: null,
+  detectedIdes: [],
 };
 
 export const loadSettings = createAsyncThunk<AppSettings>("settings/load", async () =>
@@ -65,6 +69,13 @@ export const loadSettings = createAsyncThunk<AppSettings>("settings/load", async
 export const saveSettings = createAsyncThunk<AppSettings, Partial<AppSettings>>(
   "settings/save",
   async (patch) => invoke<AppSettings>(TauriCommand.UPDATE_SETTINGS, { patch }),
+);
+
+/** Fragt Rust nach allen IDE-IDs, deren CLI sich auf dem PATH befindet.
+ *  Schlägt außerhalb Tauris fehl — dann bleibt `detectedIdes` leer und die
+ *  Settings-UI zeigt einen passenden Empty-State. */
+export const loadDetectedIdes = createAsyncThunk<string[]>("settings/detectIdes", async () =>
+  invoke<string[]>(TauriCommand.DETECT_IDES),
 );
 
 const settingsSlice = createSlice({
@@ -103,6 +114,12 @@ const settingsSlice = createSlice({
       })
       .addCase(saveSettings.fulfilled, (state, action) => {
         Object.assign(state, action.payload);
+      })
+      .addCase(loadDetectedIdes.fulfilled, (state, action) => {
+        state.detectedIdes = action.payload ?? [];
+      })
+      .addCase(loadDetectedIdes.rejected, (state) => {
+        state.detectedIdes = [];
       });
   },
 });

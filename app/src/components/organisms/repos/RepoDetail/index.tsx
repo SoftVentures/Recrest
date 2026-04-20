@@ -1,4 +1,4 @@
-import { ExternalLink, FolderOpen, Terminal } from "lucide-react";
+import { ExternalLink, Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -11,6 +11,7 @@ import {
 
 import { Button } from "@/components/atoms/Button";
 import { EmptyState } from "@/components/molecules/EmptyState";
+import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { ChangedFilesList } from "@/components/organisms/repos/ChangedFilesList";
 import { invoke, openExternal } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -41,10 +42,7 @@ export function RepoDetail({ repo }: RepoDetailProps) {
           {repo.path}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => void runCommand(TauriCommand.OPEN_IN_IDE)}>
-            <FolderOpen aria-hidden />
-            {t("actions.open_in_ide", { ns: "common" })}
-          </Button>
+          <OpenInIdeButton repoId={repo.id} variant="default" />
           <Button
             variant="outline"
             size="sm"

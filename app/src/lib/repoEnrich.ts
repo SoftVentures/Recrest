@@ -24,6 +24,10 @@ export function isTrashPath(path: string): boolean {
 export interface EnrichedRepo extends Repository {
   group: string;
   lang: string;
+  /** Per-language share (0..1) from the backend's byte breakdown, normalised.
+   *  Empty object when no breakdown is available. Keys preserve the original
+   *  language names (case matters for `languageByName`). */
+  langShares: Record<string, number>;
   added: number;
   removed: number;
   filesChanged: number;
@@ -55,10 +59,24 @@ export function enrichRepo(repo: Repository, pinnedIds: readonly string[] = []):
   const clean =
     !repo.status.dirty && filesChanged === 0 && repo.status.ahead === 0 && noRecentCommits;
 
+  // Normalise the language byte breakdown into 0..1 shares so downstream
+  // aggregations don't have to care whether the backend returned bytes or
+  // already-normalised fractions.
+  const langShares: Record<string, number> = {};
+  const rawLangs = repo.status.languages;
+  if (rawLangs) {
+    let sum = 0;
+    for (const v of Object.values(rawLangs)) sum += v;
+    if (sum > 0) {
+      for (const [k, v] of Object.entries(rawLangs)) langShares[k] = v / sum;
+    }
+  }
+
   return {
     ...repo,
     group,
     lang,
+    langShares,
     added: repo.status.addedLines,
     removed: repo.status.removedLines,
     filesChanged,

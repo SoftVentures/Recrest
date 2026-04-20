@@ -96,7 +96,7 @@ export function MergeRequestsPage() {
   const current = filtered.find((r) => r.pr.id === selectedId) ?? filtered[0] ?? null;
 
   return (
-    <div className={`a-mr${current ? " with-drawer" : ""}`}>
+    <div className={`a-mr${current ? " with-drawer" : ""}`} data-testid="merge-requests-page">
       <div className="a-mr-list">
         <div className="a-mr-filter-bar">
           <Chip active={tab === "open"} onClick={() => setTab("open")}>
@@ -123,6 +123,10 @@ export function MergeRequestsPage() {
                 type="button"
                 key={pr.id}
                 className={`a-mr-row${pr.id === current?.pr.id ? " selected" : ""}`}
+                data-testid="mr-row"
+                data-mr-id={pr.id}
+                data-mr-number={pr.number}
+                data-mr-selected={pr.id === current?.pr.id ? "true" : undefined}
                 onClick={() => setSelectedId(pr.id)}
               >
                 <div className="a-mr-row-icon">
