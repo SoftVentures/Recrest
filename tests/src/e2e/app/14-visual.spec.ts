@@ -17,6 +17,10 @@ test.describe("app / visual", () => {
     ({ browserName }) => browserName !== "chromium",
     "chromium only — fonts + antialiasing differ across platforms",
   );
+  test.skip(
+    !!process.env.CI,
+    "visual baselines are platform-specific and not committed; run locally",
+  );
 
   test.use({ uiLocale: "en" });
 

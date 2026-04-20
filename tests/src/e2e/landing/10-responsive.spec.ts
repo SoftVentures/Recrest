@@ -11,6 +11,10 @@ import { VIEWPORT_LIST } from "../../helpers/viewports.js";
  */
 test.describe("landing / responsive sweep", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "only runs on chromium");
+  test.skip(
+    !!process.env.CI,
+    "visual baselines are platform-specific and not committed; run locally",
+  );
 
   for (const vp of VIEWPORT_LIST) {
     test(`viewport ${vp.label} (${vp.width}×${vp.height})`, async ({ page }) => {

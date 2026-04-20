@@ -54,6 +54,16 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
+      - name: Load release notes
+        id: release_notes
+        shell: bash
+        run: |
+          {
+            echo 'body<<EOF'
+            cat RELEASE.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app (unsigned)
         if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}
         uses: tauri-apps/tauri-action@v0
@@ -64,28 +74,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Recrest ${{ github.ref_name }}"
-          releaseBody: |
-            Thanks for downloading Recrest!
-
-            ## Install
-
-            - **macOS:** open the `.dmg` and drag Recrest into Applications. On first launch, macOS Gatekeeper may block the app because it is not yet code-signed. Right-click the app and choose *Open*, or run `xattr -cr /Applications/Recrest.app` in Terminal.
-            - **Windows:** run the `.msi` installer. Windows SmartScreen will warn about an unknown publisher — click *More info* → *Run anyway*. The warning goes away once our reputation builds up (or we can afford a code-signing certificate).
-            - **Linux:** use the `.AppImage` (make executable: `chmod +x Recrest_*.AppImage`) or install the `.deb` / `.rpm`.
-
-            ## Verify the download
-
-            The `SHA256SUMS.txt` asset contains checksums for every installer on this release. Verify with:
-
-            ```bash
-            sha256sum -c SHA256SUMS.txt        # Linux
-            shasum -a 256 -c SHA256SUMS.txt    # macOS
-            Get-FileHash <file> -Algorithm SHA256  # Windows PowerShell
-            ```
-
-            ## Why the OS warnings?
-
-            Recrest is an open-source project without a paid code-signing certificate yet (Apple Developer ID: $99/year, Windows EV cert: $300+/year). The installers are built directly from this tag by GitHub Actions. See the [README](https://github.com/SoftVentures/Recrest#download--install) for the full story.
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
@@ -108,7 +97,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Recrest ${{ github.ref_name }}"
-          releaseBody: "See the attached assets to download and install this version. All installers are signed."
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

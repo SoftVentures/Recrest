@@ -7,7 +7,15 @@
   "packages": {
     ".": {
       "package-name": "recrest",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        { "type": "json", "path": "app/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "shared/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "landingpage/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "tests/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "app/src-tauri/tauri.conf.json", "jsonpath": "$.version" },
+        "app/src-tauri/Cargo.toml"
+      ]
     }
   }
 }

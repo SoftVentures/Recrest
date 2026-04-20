@@ -64,7 +64,7 @@ jobs:
 
   e2e:
     name: Playwright E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -72,6 +72,18 @@ jobs:
           node-version-file: .nvmrc
           cache: yarn
       - run: yarn install --frozen-lockfile
+      - name: Seed .env for legal-imprint tests
+        run: |
+          cat > .env <<'EOF'
+          VITE_IMPRINT_NAME="Recrest Test Deployment"
+          VITE_IMPRINT_STREET="Teststraße 42"
+          VITE_IMPRINT_POSTAL_CODE="10115"
+          VITE_IMPRINT_CITY="Berlin"
+          VITE_IMPRINT_COUNTRY="Deutschland"
+          VITE_IMPRINT_EMAIL="legal@example.com"
+          VITE_IMPRINT_PHONE="+49 30 0000000"
+          VITE_IMPRINT_RESPONSIBLE_PERSON="Max Mustermann"
+          EOF
       - name: Install Playwright browsers
         run: yarn workspace @recrest/tests exec playwright install --with-deps
       - run: yarn test:e2e

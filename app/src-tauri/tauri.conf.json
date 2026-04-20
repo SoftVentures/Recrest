@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Recrest",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "identifier": "eu.softventures.recrest",
   "build": {
     "beforeDevCommand": "yarn dev",
