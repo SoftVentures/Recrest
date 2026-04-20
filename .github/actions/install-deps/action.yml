@@ -1,0 +1,17 @@
+name: "Install JS dependencies"
+description: "yarn install --frozen-lockfile with retries to absorb transient registry 5xx / network flakes."
+runs:
+  using: "composite"
+  steps:
+    - name: yarn install (with retries)
+      shell: bash
+      run: |
+        for attempt in 1 2 3 4 5; do
+          if yarn install --frozen-lockfile --network-timeout 600000; then
+            exit 0
+          fi
+          echo "::warning::yarn install failed on attempt $attempt, retrying in 15s..."
+          sleep 15
+        done
+        echo "::error::yarn install failed after 5 attempts"
+        exit 1

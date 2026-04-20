@@ -24,6 +24,10 @@ jobs:
           - platform: windows-latest
             args: ""
     runs-on: ${{ matrix.platform }}
+    # Each OS is independent; one platform failing should not block the other
+    # two from publishing their installers. Missing assets can be attached
+    # manually (gh release upload) or by re-running the failed leg once fixed.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +55,7 @@ jobs:
             patchelf \
             libayatana-appindicator3-dev
 
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
 
       - name: Load release notes
         id: release_notes

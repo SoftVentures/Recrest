@@ -28,7 +28,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - name: Build landingpage
         run: yarn build:landingpage
         env:

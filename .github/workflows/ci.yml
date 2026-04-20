@@ -23,7 +23,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn typecheck
 
   lint:
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn lint
 
   format:
@@ -47,7 +47,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn format:check
 
   test:
@@ -59,7 +59,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn test
 
   e2e:
@@ -72,7 +72,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - name: Seed .env for legal-imprint tests
         run: |
           cat > .env <<'EOF'
@@ -105,7 +105,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn workspace @recrest/app build-storybook
 
   web-build:
@@ -117,7 +117,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn workspace @recrest/shared build
       - run: yarn workspace @recrest/app build
 
@@ -130,7 +130,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/install-deps
       - run: yarn build:landingpage
 
   # Aggregate required-status-check referenced by Branch Protection.
