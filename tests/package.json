@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@recrest/shared": "0.1.0"
+    "@recrest/shared": "*"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
