@@ -4,11 +4,10 @@ import { describe, expect, it } from "vitest";
 import { IdeIcon } from "@/components/atoms/IdeIcon";
 
 /**
- * The Iconify logos (`logos:*`) render synchronously once
- * `@iconify-json/logos` is imported, but in jsdom the inner `<svg>` only
- * materialises when the icon data is known at runtime. Tests therefore focus
- * on the Cursor path (inline SVG, fully deterministic) plus a smoke check
- * that every official IDE id mounts without crashing.
+ * IDE logos are inlined as SVGs via `vite-plugin-svgr` (`.svg?react`), so
+ * they render deterministically in jsdom. Tests cover the Cursor path
+ * (inline SVG from `simple-icons`) plus a smoke check that every official
+ * IDE id mounts without crashing.
  */
 describe("IdeIcon", () => {
   it("renders the Cursor logo inline with the expected aria-label", () => {

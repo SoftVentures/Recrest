@@ -1,23 +1,28 @@
-import { type CSSProperties } from "react";
+import { type CSSProperties, type FC, type SVGProps } from "react";
 
-import { Icon } from "@iconify/react";
 import { siCursor } from "simple-icons";
 
 import type { IdeId } from "@recrest/shared";
 
+import IntellijIdeaLogo from "@/components/atoms/IdeIcon/logos/intellij-idea.svg?react";
+import JetbrainsLogo from "@/components/atoms/IdeIcon/logos/jetbrains.svg?react";
+import VSCodeLogo from "@/components/atoms/IdeIcon/logos/visual-studio-code.svg?react";
+import WebstormLogo from "@/components/atoms/IdeIcon/logos/webstorm.svg?react";
+
 /**
- * Official IDE logos pulled from `@iconify-json/logos` (Iconify's curated
- * brand collection). For VS Code Insiders there is no dedicated icon — we
- * re-use the VS Code logo with a hue-rotate filter to approximate the
- * characteristic Insiders teal. Cursor is rendered inline via
- * `simple-icons` because Iconify's logos set doesn't ship that entry yet.
+ * Official IDE logos inlined from the Iconify `logos` set (committed as
+ * static SVGs in `./logos/`). Imported via `vite-plugin-svgr`'s `?react`
+ * suffix so they become real React components at build time — no runtime
+ * fetch to any CDN, which is what Tauri's strict CSP requires.
+ * Cursor stays inline from `simple-icons` (the `logos` set doesn't ship it).
+ * VS Code Insiders reuses the VS Code mark with a hue-rotate filter.
  */
-const ICONIFY: Partial<Record<IdeId, string>> = {
-  vscode: "logos:visual-studio-code",
-  "vscode-insiders": "logos:visual-studio-code",
-  webstorm: "logos:webstorm",
-  idea: "logos:intellij-idea",
-  "jetbrains-toolbox": "logos:jetbrains",
+const LOGO_COMPONENT: Partial<Record<IdeId, FC<SVGProps<SVGSVGElement>>>> = {
+  vscode: VSCodeLogo,
+  "vscode-insiders": VSCodeLogo,
+  webstorm: WebstormLogo,
+  idea: IntellijIdeaLogo,
+  "jetbrains-toolbox": JetbrainsLogo,
 };
 
 interface IdeIconProps {
@@ -40,8 +45,8 @@ export function IdeIcon({ id, size = 16, color = "brand", title, style, classNam
     );
   }
 
-  const iconName = ICONIFY[id];
-  if (!iconName) return null;
+  const LogoComponent = LOGO_COMPONENT[id];
+  if (!LogoComponent) return null;
 
   const filterParts: string[] = [];
   if (mono) filterParts.push("grayscale(1)");
@@ -55,13 +60,13 @@ export function IdeIcon({ id, size = 16, color = "brand", title, style, classNam
   };
 
   return (
-    <Icon
-      icon={iconName}
+    <LogoComponent
       width={size}
       height={size}
+      role="img"
       aria-label={title ?? id}
-      style={iconStyle}
       className={className}
+      style={iconStyle}
     />
   );
 }
