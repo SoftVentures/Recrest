@@ -25,6 +25,8 @@ export function PrRow({ pr, repoName }: PrRowProps) {
     <button
       type="button"
       onClick={() => void openExternal(pr.url)}
+      data-testid="mr-row"
+      data-mr-number={pr.number}
       className="flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left text-sm hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <GitPullRequest
@@ -34,7 +36,9 @@ export function PrRow({ pr, repoName }: PrRowProps) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium">{pr.title}</span>
+          <span className="truncate font-medium" data-testid="mr-row-title">
+            {pr.title}
+          </span>
           {pr.draft && (
             <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
               {t("state.draft")}

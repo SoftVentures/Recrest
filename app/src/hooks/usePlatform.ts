@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
+import { isTauri } from "@/lib/tauri";
+
 export type Platform = "mac" | "windows" | "linux";
+
+/** Which window-chrome style to render. `"none"` = no custom chrome (web dev). */
+export type WindowChrome = "macos-overlay" | "win11" | "gnome" | "none";
 
 function detectFromUserAgent(): Platform {
   if (typeof navigator === "undefined") return "windows";
@@ -35,6 +40,21 @@ export function usePlatform(): Platform {
   }, []);
 
   return platform;
+}
+
+/**
+ * Maps platform + runtime to the chrome variant the UI should render.
+ * In the pure-web dev mode the browser provides its own chrome — we return
+ * `"none"` so the app mounts without a bespoke titlebar.
+ */
+export function useWindowChrome(): WindowChrome {
+  const platform = usePlatform();
+  const [inTauri, setInTauri] = useState(false);
+  useEffect(() => setInTauri(isTauri()), []);
+  if (!inTauri) return "none";
+  if (platform === "mac") return "macos-overlay";
+  if (platform === "windows") return "win11";
+  return "gnome";
 }
 
 /** Returns the user-facing text for a cross-platform modifier + key combo. */

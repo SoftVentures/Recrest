@@ -134,6 +134,43 @@ pub enum CiStatus {
     None,
 }
 
+/// Life-cycle transition observed on a PR/MR in the 14-day window. Mirrors
+/// `PrEventKind` in `@recrest/shared` (serde `snake_case` → TS string union).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PrEventKind {
+    Opened,
+    Merged,
+    Closed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrEventDto {
+    pub repo_id: String,
+    pub repo_name: String,
+    pub number: u64,
+    pub title: String,
+    pub author: String,
+    pub kind: PrEventKind,
+    pub timestamp: DateTime<Utc>,
+    pub url: String,
+}
+
+/// Per-repo per-local-day CI check-run rollup.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckRunSummaryDto {
+    pub repo_id: String,
+    pub repo_name: String,
+    /// Local-day key, `YYYY-MM-DD`.
+    pub day: String,
+    pub total: u32,
+    pub passed: u32,
+    pub failed: u32,
+    pub sha_samples: Vec<String>,
+}
+
 /// Remote URL → `(owner, repo)` extraction.
 /// Supports both HTTPS and SSH URLs.
 pub fn parse_owner_repo(remote_url: &str) -> Option<(String, String)> {

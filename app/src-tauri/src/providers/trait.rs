@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 
 use super::api::{
-    OrganizationDto, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto,
+    CheckRunSummaryDto, OrganizationDto, PrEventDto, PullRequestDetailDto, PullRequestDto,
+    RemoteRepositoryDto,
 };
 use crate::commands::error::CommandError;
 
@@ -32,6 +33,33 @@ pub trait GitProvider: Send + Sync {
     }
 
     async fn list_pull_requests(&self, remote_url: &str) -> Result<Vec<PullRequestDto>, CommandError>;
+
+    /// PR/MR life-cycle events (opened / merged / closed) within the last
+    /// `days` days. Default impl returns an empty list so providers that
+    /// don't support it yet don't break the Activity page.
+    async fn list_pr_events(
+        &self,
+        _remote_url: &str,
+        _days: u32,
+        _repo_id: &str,
+        _repo_name: &str,
+    ) -> Result<Vec<PrEventDto>, CommandError> {
+        Ok(Vec::new())
+    }
+
+    /// CI check-runs for the supplied commit SHAs, aggregated per local day.
+    /// `local_tz_offset_minutes` carries the user's current UTC offset so the
+    /// backend groups runs into the same day boundaries the UI renders on.
+    async fn list_check_runs(
+        &self,
+        _remote_url: &str,
+        _shas: &[String],
+        _repo_id: &str,
+        _repo_name: &str,
+        _local_tz_offset_minutes: i32,
+    ) -> Result<Vec<CheckRunSummaryDto>, CommandError> {
+        Ok(Vec::new())
+    }
 
     /// PR detail (reviewers, files, timeline). Default impl errors out so
     /// partially-implemented providers keep compiling — callers get a clean

@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+# Blocks the push when the current branch name doesn't follow our scheme.
+# Allowlist: main, develop, dependabot/* (owned by GitHub's bot).
+# Anything else must start with one of the allowed commit types + "/".
+# Bypass (emergency only): git push --no-verify
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Detached HEAD -> no branch name, let git decide on its own.
+[ "$branch" = "HEAD" ] && exit 0
+
+pattern='^(main|develop|(feature|bugfix|patch|docs|test|ci|revert|release|hotfix|dependabot)\/.+)$'
+
+if ! printf '%s' "$branch" | grep -Eq "$pattern"; then
+  cat >&2 <<EOF
+✖ Push aborted: branch name "$branch" does not match the required pattern.
+
+Allowed:
+  - main, develop
+  - <type>/<topic>  with type ∈ feature, bugfix, patch, docs, test, ci, revert, release, hotfix
+  - dependabot/*    (reserved for Dependabot itself)
+
+Rename:
+  git branch -m <type>/short-topic
+EOF
+  exit 1
+fi

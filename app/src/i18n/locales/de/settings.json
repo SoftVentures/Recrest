@@ -55,7 +55,11 @@
     "underline_links_sub": "Links immer unterstreichen statt nur beim Hovern."
   },
   "ide": {
-    "auto_detect": "Automatisch erkennen"
+    "auto_detect": "Automatisch erkennen",
+    "auto_system_default": "System-Standard ({{ide}})",
+    "no_ide_detected": "Keine unterstützte IDE erkannt",
+    "detection_hint": "Installiere VS Code, Cursor oder eine JetBrains-IDE, damit deren CLI auf dem PATH liegt.",
+    "not_installed_tag": "nicht installiert"
   },
   "sources": {
     "description": "Ordner, die Recrest rekursiv nach Git-Repositories durchsucht.",

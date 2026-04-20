@@ -8,3 +8,7 @@ package-lock.json
 *.tsbuildinfo
 app/src-tauri/target
 app/src-tauri/gen
+
+# SVGs have no Prettier parser and are either hand-crafted art or generated
+# from upstream icon sets; leave them untouched.
+*.svg

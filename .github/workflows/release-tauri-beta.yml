@@ -1,0 +1,142 @@
+# Manuell ausgelöster Tauri-Build für Beta-Installer aus `develop` (oder einem
+# beliebigen Ref). Führt KEINEN Version-Bump durch und legt KEIN GitHub-Release
+# an. Matrix-Jobs liefern Installer in OS-spezifische Staging-Artifacts; der
+# collect-Job konsolidiert sie in EIN Artifact mit `windows/`, `macos/`,
+# `linux/`-Unterordnern.
+name: Release (Tauri Beta)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Ref (branch, tag, SHA) to build"
+        default: develop
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            os: macos
+            args: "--target universal-apple-darwin"
+          - platform: ubuntu-22.04
+            os: linux
+            args: ""
+          - platform: windows-latest
+            os: windows
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./app/src-tauri -> target"
+
+      - name: Install Linux dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libayatana-appindicator3-dev
+
+      - uses: ./.github/actions/install-deps
+
+      - name: Build Tauri app (unsigned)
+        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        with:
+          args: ${{ matrix.args }}
+          projectPath: ./app
+
+      - name: Build Tauri app (signed)
+        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          args: ${{ matrix.args }}
+          projectPath: ./app
+
+      - name: Stage installers under OS folder
+        shell: bash
+        run: |
+          mkdir -p "stage/${{ matrix.os }}"
+          shopt -s globstar nullglob
+          for f in \
+            app/src-tauri/target/**/release/bundle/**/*.dmg \
+            app/src-tauri/target/**/release/bundle/**/*.msi \
+            app/src-tauri/target/**/release/bundle/**/*.exe \
+            app/src-tauri/target/**/release/bundle/**/*.AppImage \
+            app/src-tauri/target/**/release/bundle/**/*.deb \
+            app/src-tauri/target/**/release/bundle/**/*.rpm; do
+            cp "$f" "stage/${{ matrix.os }}/" 2>/dev/null || true
+          done
+          ls -la "stage/${{ matrix.os }}" || true
+
+      - name: Upload staging artifact (${{ matrix.os }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: recrest-beta-staging-${{ matrix.os }}
+          path: stage/
+          if-no-files-found: warn
+          retention-days: 1
+
+  collect:
+    name: Collect into single artifact with OS folders
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.build.result != 'cancelled' }}
+    steps:
+      - name: Download all staging artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: recrest-beta-staging-*
+          path: merged/
+          merge-multiple: true
+
+      - name: List merged tree
+        run: ls -R merged || true
+
+      - name: Upload consolidated artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: recrest-beta-${{ github.sha }}
+          path: merged/
+          if-no-files-found: warn
+          retention-days: 14

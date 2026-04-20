@@ -16,6 +16,7 @@ export const TauriCommand = {
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
   OPEN_IN_IDE: "open_in_ide",
+  DETECT_IDES: "detect_ides",
   OPEN_TERMINAL: "open_terminal",
 
   // git operations
@@ -48,6 +49,8 @@ export const TauriCommand = {
   CLEAR_PROVIDER_TOKEN: "clear_provider_token",
   FETCH_PULL_REQUESTS: "fetch_pull_requests",
   GET_PR_DETAIL: "get_pr_detail",
+  LIST_PR_EVENTS: "list_pr_events",
+  LIST_CHECK_RUNS: "list_check_runs",
 
   // notifications
   NOTIFY: "notify",

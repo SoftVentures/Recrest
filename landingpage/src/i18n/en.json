@@ -9,7 +9,7 @@
     "menu": "Open menu"
   },
   "hero": {
-    "eyebrow": "v{{version}} — Bitbucket support added",
+    "eyebrow": "v{{version}} — latest release",
     "titleLine1": "All your local git repos.",
     "titleLine2": "In one calm, native dashboard.",
     "sub": "Recrest is a native desktop app that brings your <1>local Git repositories</1>, their working‑tree status, merge requests and CI checks from <3>GitHub</3>, <5>GitLab</5> and <7>Bitbucket</7> into a single, calm place.",

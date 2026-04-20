@@ -34,15 +34,22 @@ export function Header() {
   };
 
   return (
-    <div className="a-top">
+    <div className="a-top" data-testid="app-header">
       <div className="a-top-left">
-        <h1 className="a-top-title">{title}</h1>
-        {meta && <span className="a-top-meta">{meta}</span>}
+        <h1 className="a-top-title" data-testid="app-header-title">
+          {title}
+        </h1>
+        {meta && (
+          <span className="a-top-meta" data-testid="app-header-meta">
+            {meta}
+          </span>
+        )}
       </div>
       <div className="a-top-center">
         <button
           type="button"
           className="a-search"
+          data-testid="search-trigger"
           onClick={() => dispatch(setSearchOpen(true))}
           aria-label={t("actions.search")}
         >
@@ -57,13 +64,19 @@ export function Header() {
         <IconButton
           tooltip={t("actions.refresh")}
           aria-label={t("actions.refresh")}
+          data-testid="btn-refresh"
           onClick={onRefresh}
           disabled={reposLoading}
           data-spinning={reposLoading ? "true" : undefined}
         >
           <Icon name="refresh" size={14} />
         </IconButton>
-        <button type="button" className="r-btn primary" onClick={onAddRepo}>
+        <button
+          type="button"
+          className="r-btn primary"
+          data-testid="btn-add-repo"
+          onClick={onAddRepo}
+        >
           <Icon name="plus" size={13} />
           {t("actions.add_repo")}
         </button>

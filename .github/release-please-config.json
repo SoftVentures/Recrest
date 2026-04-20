@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "node",
-  "pull-request-title-pattern": "chore: release ${version}",
+  "pull-request-title-pattern": "release: ${version}",
   "include-v-in-tag": true,
   "separate-pull-requests": false,
   "packages": {
@@ -14,6 +14,7 @@
         { "type": "json", "path": "landingpage/package.json", "jsonpath": "$.version" },
         { "type": "json", "path": "tests/package.json", "jsonpath": "$.version" },
         { "type": "json", "path": "app/src-tauri/tauri.conf.json", "jsonpath": "$.version" },
+        { "type": "generic", "path": "shared/src/constants/app.ts" },
         "app/src-tauri/Cargo.toml"
       ]
     }

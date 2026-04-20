@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: [main]
+    branches: [main, develop]
 
 permissions:
   contents: read
@@ -14,6 +14,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  branch-name:
+    name: Branch name
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate head branch name
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          pattern='^(main|develop|(feature|bugfix|patch|docs|test|ci|revert|release|hotfix|dependabot)\/.+)$'
+          if ! printf '%s' "$HEAD_REF" | grep -Eq "$pattern"; then
+            echo "::error::Branch name '$HEAD_REF' does not match the required pattern."
+            echo "Allowed: main, develop, <type>/<topic> with type ∈ feature|bugfix|patch|docs|test|ci|revert|release|hotfix, or dependabot/*"
+            exit 1
+          fi
+          echo "OK: $HEAD_REF"
+
+  dependabot-type:
+    name: dependabot commit-type reserved
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Check for dependabot-typed commits by non-bot authors
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
+            echo "PR author is dependabot[bot] — nothing to enforce."
+            exit 0
+          fi
+
+          offenders="$(git log --format='%h %s' "$BASE_SHA..$HEAD_SHA" | grep -E '^[0-9a-f]+ dependabot(\([^)]*\))?!?:' || true)"
+
+          if [ -n "$offenders" ]; then
+            echo "::error::Commit type 'dependabot' is reserved for dependabot[bot]."
+            echo "The following commits use the prefix without authorisation:"
+            printf '%s\n' "$offenders"
+            echo ""
+            echo "Fix: use a different allowed type (e.g. ci, patch, bugfix)."
+            exit 1
+          fi
+
+          echo "OK: no dependabot commits authored by non-bot users."
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
@@ -138,7 +191,18 @@ jobs:
   ci-pass:
     name: CI pass
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, format, test, storybook, web-build, landingpage-build]
+    needs:
+      [
+        branch-name,
+        dependabot-type,
+        typecheck,
+        lint,
+        format,
+        test,
+        storybook,
+        web-build,
+        landingpage-build,
+      ]
     if: always()
     steps:
       - name: Verify all required jobs passed

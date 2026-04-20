@@ -35,6 +35,12 @@ pub fn run() {
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .init();
 
+    // GUI-gestartete Apps erben auf macOS/Linux nicht den interaktiven $PATH
+    // aus dem User-Shell. Das ist der Hauptgrund, warum `open_in_ide` in
+    // Prod-Builds oft fehlschlägt obwohl `code`/`cursor` im Terminal laufen.
+    // fix-path-env repariert den PATH einmalig beim Start.
+    let _ = fix_path_env::fix();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
@@ -297,6 +303,7 @@ pub fn run() {
             commands::repos::list_recent_commits,
             commands::repos::load_logo_bytes,
             commands::repos::open_in_ide,
+            commands::ide::detect_ides,
             commands::repos::open_terminal,
             commands::git_ops::open_in_explorer,
             commands::git_ops::git_fetch,
@@ -321,6 +328,8 @@ pub fn run() {
             commands::providers::clear_provider_token,
             commands::providers::fetch_pull_requests,
             commands::providers::get_pr_detail,
+            commands::activity::list_pr_events,
+            commands::activity::list_check_runs,
             commands::notifications::notify,
             commands::oauth::begin_oauth,
             commands::oauth::complete_oauth,

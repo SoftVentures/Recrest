@@ -135,6 +135,9 @@ pub struct RecentCommitDto {
     pub sha: String,
     pub summary: String,
     pub author: String,
+    /// Commit author email. Optional because signed-off commits sometimes
+    /// redact the original author and git2 returns an empty string there.
+    pub author_email: Option<String>,
     pub timestamp: DateTime<Utc>,
     pub repo_id: String,
     pub repo_name: String,
@@ -205,10 +208,15 @@ fn collect_recent_commits(
         }
         let Some(utc_ts) = Utc.timestamp_opt(ts, 0).single() else { continue };
         let author = commit.author();
+        let email = author
+            .email()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
         out.push(RecentCommitDto {
             sha: commit.id().to_string(),
             summary: commit.summary().unwrap_or("").to_string(),
             author: author.name().unwrap_or("unknown").to_string(),
+            author_email: email,
             timestamp: utc_ts,
             repo_id: id.to_string(),
             repo_name: name.to_string(),

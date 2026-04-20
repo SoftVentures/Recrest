@@ -16,10 +16,8 @@ test.describe("app / navigation", () => {
   for (const route of ROUTES) {
     test(`loads ${route} without crashing`, async ({ page }) => {
       await page.goto(route);
-      await expect(page.locator(".app")).toBeVisible();
-      // ErrorBoundary fallback must not be present.
-      await expect(page.getByText(/something went wrong/i)).toHaveCount(0);
-      // The URL should stabilise on the requested route (or an explicit redirect of it).
+      await expect(page.getByTestId("app")).toBeVisible();
+      await expect(page.getByTestId("error-boundary-fallback")).toHaveCount(0);
       await expect(page).toHaveURL(new RegExp(`${route.replace(/\//g, "\\/")}(\\?|$)`));
     });
   }

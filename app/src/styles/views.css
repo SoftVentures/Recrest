@@ -619,6 +619,24 @@
   border-color: var(--border-strong);
 }
 
+.a-ide-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.a-ide-row.is-unavailable {
+  color: var(--ink-4);
+  opacity: 0.55;
+}
+.a-ide-missing {
+  margin-left: auto;
+  padding-left: 10px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-4);
+}
+
 .a-locale-opt {
   display: inline-flex;
   align-items: center;
@@ -1367,6 +1385,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  height: 100%;
 }
 .a-act-kpi-label {
   font-size: 11px;
@@ -1395,10 +1414,12 @@
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
 }
-.a-act-kpi.tone-up .a-act-kpi-delta {
+.a-act-kpi.tone-up .a-act-kpi-delta,
+.a-act-kpi-delta.tone-up {
   color: var(--color-success, var(--green));
 }
-.a-act-kpi.tone-down .a-act-kpi-delta {
+.a-act-kpi.tone-down .a-act-kpi-delta,
+.a-act-kpi-delta.tone-down {
   color: var(--amber);
 }
 .a-act-kpi.a-act-streak.hot .a-act-kpi-value {
@@ -1431,6 +1452,7 @@
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  height: 100%;
 }
 .a-act-card-h {
   display: flex;
@@ -1802,4 +1824,1321 @@
 .a-act-item-sha {
   font-family: var(--font-mono);
   color: var(--ink-3);
+}
+
+/* ─── Activity — bento grid + premium card additions ─── */
+.a-act-page-h {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.a-act-page-h h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--ink-0);
+}
+.a-act-page-sub {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.a-act-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+}
+@media (max-width: 1400px) {
+  .a-act-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .a-act-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Column-span helpers mirroring the design doc. */
+.a-act-span-3 {
+  grid-column: span 3;
+}
+.a-act-span-4 {
+  grid-column: span 4;
+}
+.a-act-span-5 {
+  grid-column: span 5;
+}
+.a-act-span-6 {
+  grid-column: span 6;
+}
+.a-act-span-7 {
+  grid-column: span 7;
+}
+.a-act-span-8 {
+  grid-column: span 8;
+}
+.a-act-span-12 {
+  grid-column: 1 / -1;
+}
+@media (max-width: 1400px) {
+  .a-act-span-3,
+  .a-act-span-4,
+  .a-act-span-5,
+  .a-act-span-6,
+  .a-act-span-7,
+  .a-act-span-8 {
+    grid-column: span 4;
+  }
+  .a-act-span-12 {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 900px) {
+  .a-act-span-3,
+  .a-act-span-4,
+  .a-act-span-5,
+  .a-act-span-6,
+  .a-act-span-7,
+  .a-act-span-8,
+  .a-act-span-12 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Card chrome micro-interactions (hover lift only — no glow). */
+.a-act-card {
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.a-act-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Vertical card stack inside a grid cell (e.g. Streak/Peak/Quietest column). */
+.a-act-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.a-act-stack > .a-act-card,
+.a-act-stack > .a-act-kpi {
+  height: auto;
+}
+
+/* Bigger hero KPI (Phase-2 redesign). */
+.a-act-hero .a-act-kpi {
+  padding: 14px 16px 12px;
+  gap: 6px;
+}
+.a-act-hero .a-act-kpi-value {
+  font-size: 30px;
+}
+.a-act-hero-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  min-height: 22px;
+}
+
+/* Mini sparkline inside hero KPIs. */
+.a-act-kpi-spark {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  flex: 1;
+  height: 22px;
+  align-items: end;
+}
+.a-act-kpi-spark span {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 2px;
+  min-height: 2px;
+}
+
+/* Stacked avatars (authors hero). */
+.a-act-avstack {
+  display: inline-flex;
+  align-items: center;
+}
+.a-act-avstack > * {
+  margin-left: -6px;
+  border: 2px solid var(--surface-1);
+}
+.a-act-avstack > *:first-child {
+  margin-left: 0;
+}
+
+/* Segmented bar for Open-PRs hero. */
+.a-act-segbar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface-2);
+  gap: 2px;
+}
+.a-act-segbar span {
+  flex: 1;
+}
+.a-act-segbar-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.a-act-segbar-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* CI health ring. */
+.a-act-ring {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.a-act-ring-svg {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+}
+.a-act-ring-track {
+  stroke: var(--surface-3);
+  fill: none;
+  stroke-width: 8;
+}
+.a-act-ring-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.4s ease;
+}
+.a-act-ring-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.a-act-ring-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink-0);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-ring-sub {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* Heatmap weekday × hour. */
+.a-act-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 140px;
+}
+.a-act-heatmap-row {
+  display: grid;
+  grid-template-columns: 24px repeat(24, 1fr);
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+.a-act-heatmap-label {
+  font-size: 9.5px;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.a-act-heatmap-cell {
+  border-radius: 2px;
+  /* `--intensity` runs 0 (empty) → ~1 (peak). When the component renders an
+   * empty hour it clamps intensity to 0, so `calc(0 * 100%)` collapses the
+   * mix to pure surface-2. The floor inside HeatmapCard keeps any non-zero
+   * value at ≥35% so low-activity hours stay clearly warmer than empty. */
+  background: color-mix(in srgb, var(--accent) calc(var(--intensity) * 100%), var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  transition: transform 0.08s ease;
+}
+.a-act-heatmap-cell:hover {
+  transform: scale(1.35);
+}
+.a-act-heatmap-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--ink-3);
+  margin-top: 6px;
+  padding-left: 26px;
+}
+
+/* Language donut. */
+.a-act-donut-wrap {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.a-act-donut-svg {
+  width: 120px;
+  height: 120px;
+}
+.a-act-donut-centre {
+  font-size: 20px;
+  font-weight: 700;
+  fill: var(--ink-0);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.a-act-donut-sub {
+  font-size: 8px;
+  fill: var(--ink-3);
+  text-anchor: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ===== Loader skeletons =====
+ * Shimmer animation + a handful of preset shapes (bars, donut, rows, line,
+ * heatmap, radial) so every Activity card can show something meaningful
+ * while its data is in flight. */
+@keyframes aActSkelShimmer {
+  0% {
+    background-position: -160px 0;
+  }
+  100% {
+    background-position: 160px 0;
+  }
+}
+.a-act-skel-bars,
+.a-act-skel-donut,
+.a-act-skel-line,
+.a-act-skel-rows,
+.a-act-skel-heatmap,
+.a-act-skel-radial {
+  min-height: 120px;
+}
+.a-act-skel-bar,
+.a-act-skel-circle,
+.a-act-skel-legend-row,
+.a-act-skel-row,
+.a-act-skel-line-path,
+.a-act-skel-cell,
+.a-act-skel-radial-disc {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    color-mix(in srgb, var(--border) 50%, var(--surface-2)) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  background-color: var(--surface-2);
+  animation: aActSkelShimmer 1.2s linear infinite;
+  border-radius: 4px;
+}
+.a-act-skel-bars {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 6px;
+  height: 140px;
+  align-items: end;
+}
+.a-act-skel-bar {
+  width: 100%;
+  min-height: 6px;
+}
+.a-act-skel-donut {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.a-act-skel-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+}
+.a-act-skel-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+}
+.a-act-skel-legend-row {
+  height: 10px;
+  width: 100%;
+}
+.a-act-skel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.a-act-skel-row {
+  height: 14px;
+  width: 100%;
+}
+.a-act-skel-row:nth-child(2) {
+  width: 88%;
+}
+.a-act-skel-row:nth-child(3) {
+  width: 72%;
+}
+.a-act-skel-row:nth-child(4) {
+  width: 60%;
+}
+.a-act-skel-line {
+  height: 140px;
+  padding: 10px;
+  display: flex;
+  align-items: end;
+}
+.a-act-skel-line-path {
+  width: 100%;
+  height: 60%;
+  border-radius: 8px;
+}
+.a-act-skel-heatmap {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 2px;
+  height: 140px;
+}
+.a-act-skel-cell {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+}
+.a-act-skel-radial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+.a-act-skel-radial-disc {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+}
+
+/* Rich chart tooltip — legend-style rows with swatch dots so the colors map
+ * cleanly back to the bar stack. */
+.a-act-tt-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.a-act-tt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.a-act-tt-row {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.a-act-tt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.a-act-tt-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-act-tt-num {
+  color: var(--ink-3);
+}
+
+/* Right-slot headline for line-chart cards (e.g. CI pass rate). Replaces
+ * in-plot percentage labels so the graph stays uncluttered. */
+.a-act-line-headline {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* CI Pass Rate card layout — axis labels in an HTML gutter, chart in an SVG
+ * that stretches via preserveAspectRatio=none. Per-repo breakdown rows sit
+ * beneath the chart so users can see which repos drove the aggregate. */
+.a-act-ci-headline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+  gap: 2px;
+}
+.a-act-ci-headline-label {
+  font-size: 10px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.a-act-ci-chart {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 6px;
+  height: 140px;
+  min-height: 140px;
+  max-height: 140px;
+  flex-shrink: 0;
+}
+/* Absolute labels so the gutter can never stretch beyond the plot height. */
+.a-act-ci-axis {
+  position: relative;
+  height: 100%;
+  font-size: 10px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-ci-axis span {
+  position: absolute;
+  right: 0;
+  white-space: nowrap;
+  line-height: 1;
+}
+.a-act-ci-axis span:nth-child(1) {
+  top: 0;
+}
+.a-act-ci-axis span:nth-child(2) {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.a-act-ci-axis span:nth-child(3) {
+  bottom: 0;
+}
+.a-act-ci-plot {
+  position: relative;
+  min-width: 0;
+  /* Grid items auto-size to their content's min-height, which for an SVG
+   * with a viewBox is the width × aspect ratio — that would grow the plot
+   * cell far beyond the chart's 140px height. Force `min-height: 0` so the
+   * grid track can clamp the SVG back to the explicit 100% we want. */
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.a-act-ci-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.a-act-ci-repos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.a-act-ci-repo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px 34px 34px;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-ci-repo-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-act-ci-repo-bar {
+  position: relative;
+  height: 5px;
+  background: var(--surface-2);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.a-act-ci-repo-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--green);
+  transform-origin: left center;
+}
+.a-act-ci-repo.tone-warn .a-act-ci-repo-bar-fill {
+  background: var(--amber);
+}
+.a-act-ci-repo.tone-fail .a-act-ci-repo-bar-fill {
+  background: var(--red);
+}
+.a-act-ci-repo-pct {
+  text-align: right;
+  color: var(--ink-0);
+}
+.a-act-ci-repo.tone-warn .a-act-ci-repo-pct {
+  color: var(--amber);
+}
+.a-act-ci-repo.tone-fail .a-act-ci-repo-pct {
+  color: var(--red);
+}
+.a-act-ci-repo-runs {
+  text-align: right;
+  color: var(--ink-3);
+}
+.a-act-ci-repo-runs::before {
+  content: "·";
+  margin-right: 4px;
+  color: var(--ink-4);
+}
+.a-act-donut-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 4px 14px;
+  font-size: 11px;
+  align-content: start;
+  padding-top: 2px;
+}
+.a-act-donut-legend li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-donut-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* Churn two-tone bars. */
+.a-act-churn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.a-act-churn-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.a-act-churn-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--surface-2);
+  grid-column: 1 / -1;
+}
+.a-act-churn-added {
+  background: var(--green);
+  height: 100%;
+}
+.a-act-churn-removed {
+  background: var(--red);
+  height: 100%;
+}
+.a-act-churn-name {
+  color: var(--ink-1);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-act-churn-nums {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Author-activity clock (radial). */
+.a-act-clock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.a-act-clock svg {
+  width: 150px;
+  height: 150px;
+}
+.a-act-clock-foot {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+/* Line chart (velocity, pass rate). */
+.a-act-line {
+  position: relative;
+  height: 140px;
+}
+.a-act-line svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.a-act-line-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.a-act-line-label {
+  font-size: 9.5px;
+  fill: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-line-series {
+  fill: none;
+  stroke-width: 2;
+}
+.a-act-line-fill {
+  opacity: 0.18;
+}
+.a-act-line-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.a-act-line-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* Histogram (time-to-merge). */
+.a-act-hist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.a-act-hist-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 28px;
+  gap: 8px;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.a-act-hist-bar {
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.a-act-hist-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, white));
+  border-radius: 4px;
+}
+.a-act-hist-ct {
+  text-align: right;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Review queue. */
+.a-act-rq {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.a-act-rq-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.a-act-rq-item:hover {
+  background: var(--surface-3);
+}
+.a-act-rq-title {
+  font-size: 12px;
+  color: var(--ink-0);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-act-rq-meta {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.a-act-rq-age {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--amber);
+  font-size: 11px;
+  align-self: center;
+}
+.a-act-rq-age.old {
+  color: var(--red);
+}
+
+/* Flaky repos list. */
+.a-act-flaky {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.a-act-flaky-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.a-act-flaky-name {
+  color: var(--ink-1);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-act-flaky-rate {
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 11px;
+}
+.a-act-flaky-bar {
+  grid-column: 1 / -1;
+  height: 5px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.a-act-flaky-bar-fill {
+  height: 100%;
+  background: var(--red);
+  border-radius: 3px;
+}
+
+/* Mini stat tiles used inside BusiestPeak. */
+.a-act-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.a-act-mini {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.a-act-mini-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.a-act-mini-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-0);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-mini-sub {
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+/* Timeline card: shared CardShell chrome wraps filter + day sections. */
+.a-act-tl-card .a-act-timeline {
+  gap: 0;
+}
+/* The timeline is usually the tallest card on the page — keep its title and
+ * filter pills in view while the user scrolls through multi-day history. */
+.a-act-tl-card .a-act-card-h {
+  position: sticky;
+  -webkit-sticky: sticky;
+  top: -14px; /* offset the CardShell's top padding */
+  margin: -14px -16px 0;
+  padding: 14px 16px 10px;
+  background: var(--surface-1);
+  z-index: 2;
+  /* Match the surrounding card's corner radius so the sticky header never
+   * paints a flat rectangle over the parent's rounded top edges. */
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.a-act-tl-filter {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: var(--surface-2);
+  padding: 3px;
+  border-radius: 100px;
+}
+.a-act-tl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.a-act-tl-pill:hover {
+  color: var(--ink-0);
+}
+.a-act-tl-pill.active {
+  background: var(--surface-1);
+  color: var(--ink-0);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.a-act-tl-pill-count {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-tl-pill.active .a-act-tl-pill-count {
+  color: var(--accent-ink, var(--ink-2));
+}
+
+/* Day section inside the timeline card (no own card chrome). */
+.a-act-day-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.a-act-day-card:first-child {
+  padding-top: 4px;
+  border-top: none;
+}
+.a-act-day-card:last-child {
+  padding-bottom: 0;
+}
+.a-act-day-card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: none;
+  padding: 0;
+}
+.a-act-day-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-0);
+}
+.a-act-day-card-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.a-act-day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--surface-2);
+  border-radius: 100px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.a-act-day-chip.ok {
+  color: var(--green);
+}
+.a-act-day-chip.err {
+  color: var(--red);
+}
+.a-act-day-chip.info {
+  color: var(--accent-ink);
+}
+
+.a-act-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.a-act-feed-item {
+  display: grid;
+  grid-template-columns: 16px 22px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.a-act-feed-item:hover {
+  background: var(--surface-hover);
+}
+.a-act-feed-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+}
+.a-act-feed-kind.merged {
+  color: var(--accent);
+}
+.a-act-feed-kind.opened {
+  color: var(--info, var(--accent));
+}
+.a-act-feed-kind.closed {
+  color: var(--ink-4);
+}
+.a-act-feed-kind.check-ok {
+  color: var(--green);
+}
+.a-act-feed-kind.check-fail {
+  color: var(--red);
+}
+.a-act-feed-msg {
+  font-size: 12px;
+  color: var(--ink-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.a-act-feed-meta {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.a-act-feed-when {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entry animation: slide up + fade in, staggered per child. */
+@keyframes aActEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.a-act-hero > *,
+.a-act-grid > *,
+.a-act-timeline > * {
+  animation: aActEnter 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.a-act-hero > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.a-act-hero > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+.a-act-hero > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+.a-act-hero > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.a-act-grid > *:nth-child(1) {
+  animation-delay: 180ms;
+}
+.a-act-grid > *:nth-child(2) {
+  animation-delay: 220ms;
+}
+.a-act-grid > *:nth-child(3) {
+  animation-delay: 260ms;
+}
+.a-act-grid > *:nth-child(4) {
+  animation-delay: 300ms;
+}
+.a-act-grid > *:nth-child(5) {
+  animation-delay: 340ms;
+}
+.a-act-grid > *:nth-child(6) {
+  animation-delay: 380ms;
+}
+.a-act-grid > *:nth-child(7) {
+  animation-delay: 420ms;
+}
+.a-act-grid > *:nth-child(8) {
+  animation-delay: 460ms;
+}
+.a-act-grid > *:nth-child(9) {
+  animation-delay: 500ms;
+}
+.a-act-grid > *:nth-child(10) {
+  animation-delay: 540ms;
+}
+.a-act-grid > *:nth-child(n + 11) {
+  animation-delay: 580ms;
+}
+
+.a-act-timeline > *:nth-child(1) {
+  animation-delay: 620ms;
+}
+.a-act-timeline > *:nth-child(2) {
+  animation-delay: 660ms;
+}
+.a-act-timeline > *:nth-child(3) {
+  animation-delay: 700ms;
+}
+.a-act-timeline > *:nth-child(n + 4) {
+  animation-delay: 740ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a-act-hero > *,
+  .a-act-grid > *,
+  .a-act-timeline > * {
+    animation: none;
+  }
+}
+
+/* ===== Chart mount animations =====
+ * Triggered alongside the card fade-in so the data itself also "arrives".
+ * Each chart owns a transform-origin-aware keyframe; reduced-motion disables
+ * them all via a single media query below.
+ */
+
+/* Stacked commit chart — bars grow from 0 height. */
+@keyframes aActGrowY {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.a-act-chart-stack,
+.a-act-chart-bar {
+  transform-origin: bottom;
+  animation: aActGrowY 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 300ms;
+}
+
+/* Hero sparkline bars — same grow-from-bottom, slightly faster. */
+.a-act-anim-spark span {
+  transform-origin: bottom;
+  animation: aActGrowY 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.a-act-anim-spark span:nth-child(1) {
+  animation-delay: 200ms;
+}
+.a-act-anim-spark span:nth-child(2) {
+  animation-delay: 240ms;
+}
+.a-act-anim-spark span:nth-child(3) {
+  animation-delay: 280ms;
+}
+.a-act-anim-spark span:nth-child(4) {
+  animation-delay: 320ms;
+}
+.a-act-anim-spark span:nth-child(5) {
+  animation-delay: 360ms;
+}
+.a-act-anim-spark span:nth-child(6) {
+  animation-delay: 400ms;
+}
+.a-act-anim-spark span:nth-child(7) {
+  animation-delay: 440ms;
+}
+
+/* CI Hero ring — stroke sweep via dashoffset. */
+@keyframes aActDashDraw {
+  from {
+    stroke-dashoffset: var(--dash-start, 160);
+  }
+  to {
+    stroke-dashoffset: var(--dash-end, 0);
+  }
+}
+.a-act-ring-fill {
+  animation: aActDashDraw 0.85s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  animation-delay: 220ms;
+}
+
+/* Language donut wedges — each filled wedge scales in from the center. */
+@keyframes aActArcIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.a-act-donut-arc {
+  /* Donut wedges are filled paths whose shape already starts at the center;
+   * scaling from the wedge's bbox center looks close enough to a "pie grow"
+   * effect and avoids math for a precise 60,60 origin per arc. */
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: aActArcIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Heatmap cells fade in with a row-based stagger. */
+@keyframes aActFadeCell {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.a-act-heatmap-cell {
+  transform-origin: center;
+  animation: aActFadeCell 0.35s ease-out both;
+  animation-delay: calc(380ms + (var(--cell-delay, 0) * 2ms));
+}
+
+/* Radial clock — wedges grow from center. */
+@keyframes aActWedgeGrow {
+  from {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.a-act-clock svg > path {
+  transform-origin: 75px 75px;
+  animation: aActWedgeGrow 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.a-act-clock svg > path:nth-child(24n + 1) {
+  animation-delay: calc(250ms + 0ms);
+}
+.a-act-clock svg > path:nth-child(24n + 2) {
+  animation-delay: calc(250ms + 12ms);
+}
+.a-act-clock svg > path:nth-child(24n + 3) {
+  animation-delay: calc(250ms + 24ms);
+}
+.a-act-clock svg > path:nth-child(24n + 4) {
+  animation-delay: calc(250ms + 36ms);
+}
+.a-act-clock svg > path:nth-child(24n + 5) {
+  animation-delay: calc(250ms + 48ms);
+}
+.a-act-clock svg > path:nth-child(24n + 6) {
+  animation-delay: calc(250ms + 60ms);
+}
+.a-act-clock svg > path:nth-child(24n + 7) {
+  animation-delay: calc(250ms + 72ms);
+}
+.a-act-clock svg > path:nth-child(24n + 8) {
+  animation-delay: calc(250ms + 84ms);
+}
+.a-act-clock svg > path:nth-child(24n + 9) {
+  animation-delay: calc(250ms + 96ms);
+}
+.a-act-clock svg > path:nth-child(24n + 10) {
+  animation-delay: calc(250ms + 108ms);
+}
+.a-act-clock svg > path:nth-child(24n + 11) {
+  animation-delay: calc(250ms + 120ms);
+}
+.a-act-clock svg > path:nth-child(24n + 12) {
+  animation-delay: calc(250ms + 132ms);
+}
+
+/* Line/area SVG charts — draw the stroke via dashoffset. */
+@keyframes aActLineDraw {
+  from {
+    stroke-dashoffset: var(--line-len, 1000);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.a-act-anim-line {
+  stroke-dasharray: var(--line-len, 1000);
+  animation: aActLineDraw 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 300ms;
+}
+.a-act-anim-area {
+  transform-origin: bottom;
+  animation: aActGrowY 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 350ms;
+}
+
+/* Horizontal bars (churn, leaderboard, review queue, flaky, ttm buckets) —
+ * grow from the left edge. */
+@keyframes aActGrowX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.a-act-anim-barh {
+  transform-origin: left center;
+  animation: aActGrowX 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 300ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a-act-chart-stack,
+  .a-act-chart-bar,
+  .a-act-anim-spark span,
+  .a-act-ring-fill,
+  .a-act-donut-arc,
+  .a-act-heatmap-cell,
+  .a-act-clock svg > path,
+  .a-act-anim-line,
+  .a-act-anim-area,
+  .a-act-anim-barh {
+    animation: none;
+  }
 }

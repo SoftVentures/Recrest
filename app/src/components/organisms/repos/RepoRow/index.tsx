@@ -6,6 +6,7 @@ import { DiffStat } from "@/components/atoms/DiffStat";
 import { Icon } from "@/components/atoms/Icon";
 import { Sparkline } from "@/components/atoms/Sparkline";
 import { IconButton } from "@/components/molecules/IconButton";
+import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
 import { useConfirm } from "@/components/molecules/compounds/ConfirmDialog";
 import {
@@ -90,19 +91,27 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
     <div
       className={`a-row d-comfy${selected ? " selected" : ""}`}
       style={{ gridTemplateColumns: COL_TEMPLATE }}
+      data-testid="repo-row"
+      data-repo-id={repo.id}
+      data-repo-name={repo.name}
+      data-selected={selected ? "true" : undefined}
+      data-dirty={repo.status.dirty ? "true" : undefined}
     >
       <div
         role="button"
         tabIndex={0}
         className="a-c-name"
         aria-label={`Select repo: ${repo.name}`}
+        data-testid="repo-row-select"
         onClick={() => onSelect(repo.id)}
         onKeyDown={handleKey}
       >
         <RepoAvatar repo={repo} size={28} radius={6} />
         <div className="a-name-stack">
           <div className="a-name-line">
-            <span className="a-name">{repo.name}</span>
+            <span className="a-name" data-testid="repo-row-name">
+              {repo.name}
+            </span>
             {repo.pinned && <Icon name="pin" size={11} color="var(--accent)" />}
           </div>
           <div className="a-path">{repo.path}</div>
@@ -121,7 +130,7 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
         {repo.status.dirty ? (
           <>
             <DiffStat added={repo.added} removed={repo.removed} />
-            <span className="a-status-sub">
+            <span className="a-status-sub" data-testid="repo-row-dirty">
               {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
             </span>
           </>
@@ -136,12 +145,7 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
 
       <div className="a-c-actions" onClick={(e) => e.stopPropagation()}>
         {confirmNode}
-        <IconButton
-          tooltip="Open in IDE"
-          onClick={() => void runCommand(TauriCommand.OPEN_IN_IDE, "IDE")}
-        >
-          <Icon name="code" size={13} />
-        </IconButton>
+        <OpenInIdeButton repoId={repo.id} variant="icon" />
         <IconButton
           tooltip="Open in terminal"
           onClick={() => void runCommand(TauriCommand.OPEN_TERMINAL, "Terminal")}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { CircleSlash, Hand, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { AutoUpdateMode } from "@recrest/shared";
@@ -53,9 +54,24 @@ export function UpdatesSettings() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="auto">{t("updates.mode_auto")}</SelectItem>
-            <SelectItem value="manual">{t("updates.mode_manual")}</SelectItem>
-            <SelectItem value="off">{t("updates.mode_off")}</SelectItem>
+            <SelectItem value="auto">
+              <span className="inline-flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                {t("updates.mode_auto")}
+              </span>
+            </SelectItem>
+            <SelectItem value="manual">
+              <span className="inline-flex items-center gap-2">
+                <Hand className="h-3.5 w-3.5" aria-hidden />
+                {t("updates.mode_manual")}
+              </span>
+            </SelectItem>
+            <SelectItem value="off">
+              <span className="inline-flex items-center gap-2">
+                <CircleSlash className="h-3.5 w-3.5" aria-hidden />
+                {t("updates.mode_off")}
+              </span>
+            </SelectItem>
           </SelectContent>
         </Select>
       </SettingsField>

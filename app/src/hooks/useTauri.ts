@@ -19,7 +19,8 @@ import {
   updaterService,
   windowService,
 } from "@/lib/tauri/services";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { loadDetectedIdes } from "@/store/slices/settingsSlice";
 
 /**
  * Orchestrates all Tauri desktop integrations. Mount once, high in the tree
@@ -37,6 +38,20 @@ export function useTauri(): void {
   useAutoUpdateCheck(tauri);
   useDeepLinks(tauri);
   useTauriNotifications(tauri);
+  useIdeDetection(tauri);
+}
+
+// ------------------------------------------------------------------ ide detect
+
+let idesDetected = false;
+
+function useIdeDetection(enabled: boolean): void {
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    if (!enabled || idesDetected) return;
+    idesDetected = true;
+    void dispatch(loadDetectedIdes());
+  }, [enabled, dispatch]);
 }
 
 // ---------------------------------------------------------------- window state

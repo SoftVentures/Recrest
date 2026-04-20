@@ -21,6 +21,13 @@ export default defineConfig({
       "@recrest/shared": sharedEntry,
     },
   },
+  // Mirror the build-time constants `vite.config.ts` defines. Without these,
+  // any module that references `__GIT_SHA__` or `__BUILD_TIME__` crashes
+  // under vitest with a `ReferenceError`.
+  define: {
+    __GIT_SHA__: JSON.stringify("test"),
+    __BUILD_TIME__: JSON.stringify("1970-01-01T00:00:00.000Z"),
+  },
   test: {
     environment: "jsdom",
     globals: true,

@@ -1,3 +1,4 @@
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { ThemeMode } from "@recrest/shared";
@@ -65,9 +66,24 @@ export function BasicsStep({ onBack, onNext }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="system">{t("theme.system", { ns: "settings" })}</SelectItem>
-              <SelectItem value="light">{t("theme.light", { ns: "settings" })}</SelectItem>
-              <SelectItem value="dark">{t("theme.dark", { ns: "settings" })}</SelectItem>
+              <SelectItem value="system">
+                <span className="inline-flex items-center gap-2">
+                  <Monitor className="h-3.5 w-3.5" aria-hidden />
+                  {t("theme.system", { ns: "settings" })}
+                </span>
+              </SelectItem>
+              <SelectItem value="light">
+                <span className="inline-flex items-center gap-2">
+                  <Sun className="h-3.5 w-3.5" aria-hidden />
+                  {t("theme.light", { ns: "settings" })}
+                </span>
+              </SelectItem>
+              <SelectItem value="dark">
+                <span className="inline-flex items-center gap-2">
+                  <Moon className="h-3.5 w-3.5" aria-hidden />
+                  {t("theme.dark", { ns: "settings" })}
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

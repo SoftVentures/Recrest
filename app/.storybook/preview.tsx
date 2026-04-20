@@ -1,5 +1,7 @@
 import type { Preview } from "@storybook/react-vite";
 
+import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
+
 import "@/i18n";
 import "@/styles/globals.css";
 
@@ -16,6 +18,13 @@ const preview: Preview = {
       ],
     },
   },
+  decorators: [
+    (Story) => (
+      <TooltipProvider delayDuration={250}>
+        <Story />
+      </TooltipProvider>
+    ),
+  ],
 };
 
 export default preview;

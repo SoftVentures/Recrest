@@ -65,6 +65,7 @@ export const store = configureStore({
           underlineLinks: persisted.underlineLinks ?? false,
           loading: false,
           error: null,
+          detectedIdes: [],
         } satisfies SettingsState,
       }
     : undefined,

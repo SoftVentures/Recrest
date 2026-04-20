@@ -14,5 +14,5 @@ export const WithTitle: StoryObj<typeof InfoCard> = {
 };
 
 export const TitleOnly: StoryObj<typeof InfoCard> = {
-  args: { title: "Last commit", children: "chore: bump deps (2 days ago)" },
+  args: { title: "Last commit", children: "ci(deps): bump deps (2 days ago)" },
 };

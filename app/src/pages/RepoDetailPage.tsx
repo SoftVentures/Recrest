@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
-import { AppRoute, TauriCommand } from "@recrest/shared";
+import { AppRoute, TauriCommand, formatRelativeTime } from "@recrest/shared";
 
 import { AheadBehind } from "@/components/atoms/AheadBehind";
 import { BranchChip } from "@/components/atoms/BranchChip";
@@ -13,8 +13,11 @@ import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { DiffStat } from "@/components/atoms/DiffStat";
 import { Icon } from "@/components/atoms/Icon";
 import { Skeleton } from "@/components/atoms/Skeleton";
-import { Sparkline } from "@/components/atoms/Sparkline";
+// Sparkline import removed — the activity card no longer renders a redundant
+// mini-sparkline under the bar chart.
+import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 import { IconButton } from "@/components/molecules/IconButton";
+import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
 import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
@@ -184,15 +187,7 @@ export function RepoDetailPage() {
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <button
-            type="button"
-            className="r-btn primary"
-            onClick={() => void runCommand(TauriCommand.OPEN_IN_IDE, "IDE")}
-            disabled={cmdBusy !== null}
-          >
-            <Icon name={cmdBusy === "open_in_ide" ? "refresh" : "code"} size={13} />
-            {cmdBusy === "open_in_ide" ? "Opening…" : "Open in IDE"}
-          </button>
+          <OpenInIdeButton repoId={repo.id} />
           <IconButton
             tooltip="Open terminal here"
             className="r-btn"
@@ -261,7 +256,8 @@ export function RepoDetailPage() {
         </div>
       </header>
 
-      {/* KPIs */}
+      {/* KPIs — always four cards; the last one falls back to "Last commit"
+          when we aren't connected to a remote provider. */}
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi
           label={t("repo_detail.kpi.ahead_behind", { defaultValue: "Ahead / Behind" })}
@@ -282,35 +278,61 @@ export function RepoDetailPage() {
           value={totalCommits}
           sub={`peak ${maxBucket}/day`}
         />
-        {repoProviderConnected && (
+        {repoProviderConnected ? (
           <Kpi
             label={t("repo_detail.kpi.prs", { defaultValue: "Open merge requests" })}
             value={prs.filter((p) => p.state === "open").length}
             sub={`${prs.filter((p) => p.draft).length} draft`}
+          />
+        ) : (
+          <Kpi
+            label={t("repo_detail.kpi.last_commit", { defaultValue: "Last commit" })}
+            value={
+              repo.status.lastCommit ? formatRelativeTime(repo.status.lastCommit.timestamp) : "—"
+            }
+            sub={
+              repo.status.lastCommit ? (
+                <span className="truncate">{repo.status.lastCommit.author}</span>
+              ) : undefined
+            }
           />
         )}
       </section>
 
       {/* Grid: activity + uncommitted / prs / commits */}
       <section className="grid gap-3 md:grid-cols-2">
-        <Card title={t("repo_detail.activity", { defaultValue: "Activity — 14 days" })}>
-          <div className="flex h-32 items-end gap-1">
+        <Card
+          title={t("repo_detail.activity", { defaultValue: "Activity — 14 days" })}
+          meta={
+            <span>
+              {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
+            </span>
+          }
+        >
+          {/* Direkte flex-children mit inline `height` — kein wrappender
+              flex-col, dessen eigene Höhe sich sonst dem %-Wert entzieht. */}
+          <div className="flex h-32 w-full items-end gap-1.5">
             {repo.activity.map((v, i) => (
-              <div key={i} className="flex flex-1 flex-col justify-end">
-                <div
-                  className="w-full rounded-sm bg-primary/60"
-                  style={{ height: `${(v / maxBucket) * 100}%`, minHeight: v > 0 ? 2 : 0 }}
-                  title={`${v} commits`}
-                />
-              </div>
+              <div
+                key={i}
+                className="flex-1 rounded-sm"
+                style={{
+                  minWidth: 6,
+                  height: v > 0 ? `${Math.max(6, (v / maxBucket) * 100)}%` : "4px",
+                  background:
+                    v === 0
+                      ? "rgba(127,127,127,0.18)"
+                      : v >= maxBucket * 0.66
+                        ? "var(--accent, #4f8cff)"
+                        : "rgba(79,140,255,0.55)",
+                }}
+                title={`${v} commit${v === 1 ? "" : "s"} · ${13 - i} day${13 - i === 1 ? "" : "s"} ago`}
+              />
             ))}
           </div>
           <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
             <span>14d ago</span>
             <span>today</span>
-          </div>
-          <div className="mt-3">
-            <Sparkline data={repo.activity} active width={320} height={32} />
           </div>
         </Card>
 
@@ -341,15 +363,10 @@ export function RepoDetailPage() {
                 >
                   <span className="truncate">{f.path}</span>
                   <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] capitalize ${
-                      f.status === "conflicted"
-                        ? "bg-destructive/10 text-destructive"
-                        : f.status === "staged"
-                          ? "bg-green-500/10 text-green-500"
-                          : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] capitalize ${fileKindClasses(f.kind)}`}
+                    title={`${f.kind} · ${f.status}`}
                   >
-                    {f.status}
+                    {f.kind}
                   </span>
                 </div>
               ))}
@@ -433,19 +450,22 @@ export function RepoDetailPage() {
               {t("repo_detail.no_commits", { defaultValue: "No commits in the last 30 days." })}
             </div>
           ) : (
-            <div className="max-h-80 space-y-1 overflow-y-auto">
+            <div className="max-h-80 space-y-0.5 overflow-y-auto">
               {commits.map((c) => (
                 <div
                   key={c.sha}
-                  className="border-b border-border/40 py-1.5 text-xs last:border-b-0"
+                  className="flex items-start gap-2.5 border-b border-border/40 py-2 text-xs last:border-b-0"
                 >
-                  <div className="truncate font-medium">{c.summary || "—"}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span>{c.author}</span>
-                    <span>·</span>
-                    <span>{c.timestamp.slice(0, 10)}</span>
-                    <span>·</span>
-                    <span className="font-mono">{c.sha.slice(0, 7)}</span>
+                  <AuthorAvatar name={c.author} email={c.authorEmail} size={24} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{c.summary || "—"}</div>
+                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="truncate">{c.author}</span>
+                      <span>·</span>
+                      <span>{formatRelativeTime(c.timestamp)}</span>
+                      <span>·</span>
+                      <span className="font-mono">{c.sha.slice(0, 7)}</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -493,6 +513,27 @@ function Card({
       <div className="p-4">{children}</div>
     </div>
   );
+}
+
+/**
+ * Farbklassen nach Art der Änderung:
+ *  - `added`/`renamed`    grün (neu bzw. bewegt)
+ *  - `modified`/`typechange` amber (Inhalt/Typ verändert)
+ *  - `deleted`            rot (entfernt)
+ */
+function fileKindClasses(kind: string): string {
+  switch (kind) {
+    case "deleted":
+      return "bg-destructive/10 text-destructive";
+    case "added":
+    case "renamed":
+      return "bg-green-500/10 text-green-500";
+    case "modified":
+    case "typechange":
+      return "bg-amber-500/10 text-amber-500";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
 }
 
 function ciToDot(s: string | null): CiState {

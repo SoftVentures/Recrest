@@ -23,6 +23,7 @@ import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useGlobalEvents } from "@/hooks/useGlobalEvents";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useNotificationTriggers } from "@/hooks/useNotificationTriggers";
+import { useWindowChrome } from "@/hooks/usePlatform";
 import { useSearchHotkey } from "@/hooks/useSearch";
 import { useTauri } from "@/hooks/useTauri";
 import { useThemeEffect } from "@/hooks/useTheme";
@@ -46,6 +47,7 @@ export function AppShell({ children }: AppShellProps) {
   useTrayBadgeSync();
   useGlobalEvents();
   useNotificationTriggers();
+  useChromeAttribute();
 
   const location = useLocation();
   const dispatch = useAppDispatch();
@@ -59,13 +61,13 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="app">
+      <div className="app" data-testid="app">
         <Titlebar />
         <div className="shell">
           <div className={`a-app${detailVisible ? "" : " no-detail"}`}>
             <Sidebar />
             <Header />
-            <main className="a-main">
+            <main className="a-main" data-testid="app-main">
               <div className="a-content-scroll scroll">
                 <div className="a-content">
                   <ErrorBoundary>{children}</ErrorBoundary>
@@ -101,6 +103,20 @@ function useLocaleSync(): void {
     i18n.on("languageChanged", handler);
     return () => i18n.off("languageChanged", handler);
   }, [dispatch, i18n, storeLocale]);
+}
+
+/**
+ * Spiegelt den aktiven Chrome-Variante auf `<html data-chrome="…">`, damit
+ * globale CSS-Regeln (z. B. Border-Radius) plattformspezifisch greifen können.
+ */
+function useChromeAttribute(): void {
+  const chrome = useWindowChrome();
+  useEffect(() => {
+    document.documentElement.dataset.chrome = chrome;
+    return () => {
+      delete document.documentElement.dataset.chrome;
+    };
+  }, [chrome]);
 }
 
 function useResponsiveSidebar(): void {

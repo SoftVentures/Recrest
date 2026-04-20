@@ -9,8 +9,10 @@ import { AppRoute, TauriCommand } from "@recrest/shared";
 import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { Icon } from "@/components/atoms/Icon";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { ActivityBarsSkeleton } from "@/components/molecules/skeletons/ActivityBarsSkeleton";
 import { CardBlockSkeleton } from "@/components/molecules/skeletons/CardBlockSkeleton";
+import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
@@ -54,11 +56,20 @@ export function DashboardPage() {
   const maxDay = Math.max(...agg, 1);
 
   // Real recent commits across all repos — Rust sorts newest-first, we take the top 6.
-  const { commits: recentCommits } = useRecentCommits({ days: 14, limit: 50 });
+  const { commits: recentCommits, loading: commitsLoading } = useRecentCommits({
+    days: 14,
+    limit: 50,
+  });
   const recent = useMemo(() => {
     const byRepo = new Map(repos.map((r) => [r.id, r] as const));
     return recentCommits.slice(0, 6).map((c) => ({ ...c, repo: byRepo.get(c.repoId) }));
   }, [recentCommits, repos]);
+  const commitsInitialLoad = commitsLoading && recent.length === 0;
+
+  // For the KPI grid: how many repos are fully in sync (no dirty tree, no
+  // ahead/behind, no uncommitted). Complements `repositories_sub` which
+  // counts dirty repos.
+  const cleanReposCount = repos.filter((r) => r.clean).length;
 
   const langs = useMemo(() => {
     const c: Record<string, number> = {};
@@ -106,7 +117,7 @@ export function DashboardPage() {
 
   if (reposLoading && repos.length === 0) {
     return (
-      <div className="a-dash" aria-busy>
+      <div className="a-dash" data-testid="dashboard-page" aria-busy>
         <div className="a-dash-kpis">
           <KpiSkeleton />
           <KpiSkeleton />
@@ -131,7 +142,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="a-dash">
+    <div className="a-dash" data-testid="dashboard-page">
       <div className="a-dash-kpis">
         <KPI
           label={t("dash.kpi.repositories")}
@@ -139,13 +150,23 @@ export function DashboardPage() {
           sub={t("dash.kpi.repositories_sub", { count: dirtyRepos.length })}
           onClick={() => navigate(AppRoute.REPOS)}
         />
-        {anyProviderConnected && (
+        {anyProviderConnected ? (
           <KPI
             label={t("dash.kpi.merge_requests")}
             value={openPRs.length}
             sub={t("dash.kpi.merge_requests_sub", { count: prs.filter((p) => p.draft).length })}
             tone="accent"
             onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
+          />
+        ) : (
+          <KPI
+            label={t("dash.kpi.clean_repos")}
+            value={cleanReposCount}
+            sub={t("dash.kpi.clean_repos_sub", {
+              count: cleanReposCount,
+              total: repos.length,
+            })}
+            onClick={() => navigate(AppRoute.REPOS)}
           />
         )}
         <KPI
@@ -174,15 +195,29 @@ export function DashboardPage() {
             </span>
           </div>
           <div className="a-dash-chart">
-            {agg.map((v, i) => (
-              <div key={i} className="a-dash-bar-col">
-                <div
-                  className="a-dash-bar"
-                  style={{ height: `${(v / maxDay) * 100}%` }}
-                  title={`${v} commits`}
-                />
-              </div>
-            ))}
+            {agg.map((v, i) => {
+              // `agg[0]` is 13 days ago, `agg[13]` is today — translate to a
+              // human-readable date so the tooltip answers "when?" not just
+              // "how many?".
+              const daysAgo = 13 - i;
+              const label =
+                daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
+              return (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <div className="a-dash-bar-col">
+                      <div className="a-dash-bar" style={{ height: `${(v / maxDay) * 100}%` }} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <div className="font-medium">
+                      {v} commit{v === 1 ? "" : "s"}
+                    </div>
+                    <div className="text-[10px] opacity-70">{label}</div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
           <div className="a-dash-chart-axis">
             <span>14d ago</span>
@@ -255,29 +290,34 @@ export function DashboardPage() {
               {t("dash.commits.all")}
             </button>
           </div>
+          {/* Skeleton takes the full 6-row height so the card doesn't
+              re-layout when the real commits arrive. */}
           <div className="a-dash-commits">
-            {recent.map((c) => (
-              <button
-                key={c.sha}
-                type="button"
-                className="a-dash-commit"
-                onClick={() => goto(c.repoId)}
-              >
-                {c.repo && <RepoAvatar repo={c.repo} size={24} radius={5} />}
-                <div className="a-dash-commit-body">
-                  <div className="a-dash-commit-msg">{c.summary || "—"}</div>
-                  <div className="a-dash-commit-meta">
-                    <span>{c.repoName}</span>
-                    <span className="a-dp-sep">·</span>
-                    <span>{c.author}</span>
-                    <span className="a-dp-sep">·</span>
-                    <span className="a-dash-commit-sha">{c.sha.slice(0, 7)}</span>
-                  </div>
-                </div>
-              </button>
-            ))}
-            {recent.length === 0 && (
+            {commitsInitialLoad ? (
+              <CommitListSkeleton rows={6} />
+            ) : recent.length === 0 ? (
               <div className="a-dash-empty">{t("dash.commits.empty", { defaultValue: "—" })}</div>
+            ) : (
+              recent.map((c) => (
+                <button
+                  key={c.sha}
+                  type="button"
+                  className="a-dash-commit"
+                  onClick={() => goto(c.repoId)}
+                >
+                  {c.repo && <RepoAvatar repo={c.repo} size={24} radius={5} />}
+                  <div className="a-dash-commit-body">
+                    <div className="a-dash-commit-msg">{c.summary || "—"}</div>
+                    <div className="a-dash-commit-meta">
+                      <span>{c.repoName}</span>
+                      <span className="a-dp-sep">·</span>
+                      <span>{c.author}</span>
+                      <span className="a-dp-sep">·</span>
+                      <span className="a-dash-commit-sha">{c.sha.slice(0, 7)}</span>
+                    </div>
+                  </div>
+                </button>
+              ))
             )}
           </div>
         </section>

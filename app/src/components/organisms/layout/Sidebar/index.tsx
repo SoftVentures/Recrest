@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { AppRoute, type AppRoutePath } from "@recrest/shared";
 
 import { Icon, type IconName } from "@/components/atoms/Icon";
-import { BrandMark } from "@/components/organisms/brand/BrandMark";
+import { Logo } from "@/components/organisms/brand/Logo";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleSidebar } from "@/store/slices/uiSlice";
 
@@ -27,6 +27,7 @@ function SideItem({
   onClick,
   collapsed,
   children,
+  testId,
 }: {
   icon: IconName;
   label: string;
@@ -36,6 +37,7 @@ function SideItem({
   onClick?: () => void;
   collapsed: boolean;
   children?: ReactNode;
+  testId?: string;
 }) {
   return (
     <button
@@ -43,16 +45,31 @@ function SideItem({
       className="a-side-item"
       data-active={active ? "true" : undefined}
       data-dim={dim ? "true" : undefined}
+      data-testid={testId}
       onClick={onClick}
       title={collapsed ? label : undefined}
     >
       <Icon name={icon} size={15} />
       {!collapsed && <span className="a-side-label">{label}</span>}
-      {!collapsed && count != null && <span className="a-side-count">{count}</span>}
-      {collapsed && count != null && count > 0 && <span className="a-side-dot-count">{count}</span>}
+      {!collapsed && count != null && (
+        <span className="a-side-count" data-testid={testId ? `${testId}-count` : undefined}>
+          {count}
+        </span>
+      )}
+      {collapsed && count != null && count > 0 && (
+        <span className="a-side-dot-count" data-testid={testId ? `${testId}-count` : undefined}>
+          {count}
+        </span>
+      )}
       {children}
     </button>
   );
+}
+
+function testIdForRoute(path: string): string {
+  // AppRoute values are paths like "/repos", "/merge-requests"; strip slash +
+  // dedupe dashes to get a stable `nav-<slug>` id.
+  return `nav-${path.replace(/^\//, "").replace(/\//g, "-")}`;
 }
 
 export function Sidebar() {
@@ -90,11 +107,14 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className={`a-sidebar${collapsed ? " collapsed" : ""}`} aria-label="Primary">
+    <aside
+      className={`a-sidebar${collapsed ? " collapsed" : ""}`}
+      aria-label="Primary"
+      data-testid="sidebar"
+      data-collapsed={collapsed ? "true" : undefined}
+    >
       <div className="a-side-brand">
-        <span className="a-brand-mark">
-          <BrandMark size={16} stroke="var(--brand-ink)" strokeWidth={72} />
-        </span>
+        <Logo className="a-brand-mark" />
         {!collapsed && <span className="a-brand-name">Recrest</span>}
       </div>
 
@@ -108,6 +128,7 @@ export function Sidebar() {
                 count={item.count}
                 active={isActive}
                 collapsed={collapsed}
+                testId={testIdForRoute(item.to)}
               />
             )}
           </NavLink>
@@ -117,6 +138,7 @@ export function Sidebar() {
       <button
         type="button"
         className="a-side-fold"
+        data-testid="sidebar-fold-btn"
         onClick={() => dispatch(toggleSidebar())}
         title={collapsed ? t("nav.expand") : t("nav.collapse")}
         aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
@@ -136,6 +158,7 @@ export function Sidebar() {
               active={isActive}
               collapsed={collapsed}
               onClick={() => navigate(AppRoute.SETTINGS)}
+              testId="nav-settings"
             />
           )}
         </NavLink>

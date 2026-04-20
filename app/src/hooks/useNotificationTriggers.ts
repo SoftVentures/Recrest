@@ -15,7 +15,11 @@ type Kind = "new_pr" | "ci_failed" | "merge_ready";
 export function useNotificationTriggers(): void {
   const items = useAppSelector((s) => s.prs.items);
   const details = useAppSelector((s) => s.prs.detail);
-  const firstRunRef = useRef(true);
+  // Only start emitting notifications once we've actually seen a non-empty
+  // PR cache. The first render always has `items = {}`; snapshotting that
+  // as the baseline means every PR that subsequently *loaded* from the
+  // provider would fire a bogus "New merge request" toast on every boot.
+  const hasBaselineRef = useRef(false);
   const seenRef = useRef<Map<string, { ci: string | null; mergeable: boolean | null }>>(new Map());
 
   useEffect(() => {
@@ -28,8 +32,11 @@ export function useNotificationTriggers(): void {
       }
     }
 
-    if (firstRunRef.current) {
-      firstRunRef.current = false;
+    // Defer the baseline snapshot until the cache is actually populated.
+    // An empty cache is the loading state, not a zero-PR steady state.
+    if (!hasBaselineRef.current) {
+      if (next.size === 0) return;
+      hasBaselineRef.current = true;
       seenRef.current = next;
       return;
     }

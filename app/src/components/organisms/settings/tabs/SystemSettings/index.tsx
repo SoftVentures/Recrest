@@ -1,16 +1,21 @@
+import { useMemo } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import {
   IDE_DEFINITIONS,
   IDE_IDS,
+  type IdeId,
   POLLING_INTERVAL_MAX_MS,
   POLLING_INTERVAL_MIN_MS,
 } from "@recrest/shared";
 
+import { IdeIcon } from "@/components/atoms/IdeIcon";
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/molecules/compounds/Select";
@@ -32,6 +37,22 @@ export function SystemSettings() {
   };
 
   const pollingMinutes = Math.round(settings.pollingIntervalMs / 60_000);
+
+  // Alle IDEs werden angeboten — unverfügbare zeigen wir ausgegraut an, damit
+  // der User sofort erkennt, welche Tools er noch installieren könnte.
+  // `detectedIdes` kommt von Rust (which/where über `IDE_COMMANDS`).
+  const detectedSet = useMemo(
+    () => new Set<string>(settings.detectedIdes),
+    [settings.detectedIdes],
+  );
+  const firstDetected = useMemo<IdeId | null>(
+    () => IDE_IDS.find((id) => detectedSet.has(id)) ?? null,
+    [detectedSet],
+  );
+  const hasDetected = firstDetected != null;
+  const autoLabel = firstDetected
+    ? t("ide.auto_system_default", { ide: IDE_DEFINITIONS[firstDetected].name })
+    : t("ide.no_ide_detected");
 
   return (
     <section className="a-set-section">
@@ -68,6 +89,7 @@ export function SystemSettings() {
         <div className="a-set-row">
           <div className="a-set-row-l">
             <div className="a-set-row-lbl">{t("fields.default_ide")}</div>
+            {!hasDetected && <div className="a-set-row-sub">{t("ide.detection_hint")}</div>}
           </div>
           <div className="a-set-row-r">
             <Select
@@ -78,18 +100,33 @@ export function SystemSettings() {
             >
               <SelectTrigger
                 className="a-set-trigger"
-                style={{ minWidth: 180 }}
+                style={{ minWidth: 240 }}
                 aria-label={t("fields.default_ide")}
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">{t("ide.auto_detect")}</SelectItem>
-                {IDE_IDS.map((id) => (
-                  <SelectItem key={id} value={id}>
-                    {IDE_DEFINITIONS[id].name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="auto">
+                  <span className="a-ide-row">
+                    {firstDetected ? <IdeIcon id={firstDetected} size={14} /> : null}
+                    <span>{autoLabel}</span>
+                  </span>
+                </SelectItem>
+                <SelectSeparator />
+                {IDE_IDS.map((id) => {
+                  const detected = detectedSet.has(id);
+                  return (
+                    <SelectItem key={id} value={id} disabled={!detected}>
+                      <span className={`a-ide-row${detected ? "" : " is-unavailable"}`}>
+                        <IdeIcon id={id} size={14} color={detected ? "brand" : "currentColor"} />
+                        <span>{IDE_DEFINITIONS[id].name}</span>
+                        {!detected && (
+                          <span className="a-ide-missing">{t("ide.not_installed_tag")}</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
