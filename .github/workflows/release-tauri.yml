@@ -42,12 +42,11 @@ jobs:
           workspaces: "./app/src-tauri -> target"
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-latest'
+        if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             libayatana-appindicator3-dev
