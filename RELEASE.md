@@ -1,4 +1,4 @@
-# Recrest 0.5.0 — Public beta
+# Recrest 0.5.1 — Public beta
 
 First public preview of Recrest — a native desktop dashboard that pulls your local Git repositories, working-tree status, merge requests and CI checks from GitHub, GitLab and Bitbucket into one place.
 

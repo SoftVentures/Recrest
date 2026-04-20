@@ -13,7 +13,7 @@ export const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`;
  *  (`__APP_VERSION__`). We hard-code the expected value so a bump must update
  *  both sides consciously — drift between `package.json` and the rendered text
  *  becomes a failing test. */
-export const EXPECTED_APP_VERSION = "0.5.0";
+export const EXPECTED_APP_VERSION = "0.5.1";
 
 export const LANDING_LOCALE_STORAGE_KEY = "recrest-landing-locale";
 export const LANDING_THEME_STORAGE_KEY = "recrest-landing-theme";
