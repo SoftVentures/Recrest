@@ -2,6 +2,40 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-04-21
+
+Second beta. Headline additions are the Activity dashboard, native window chrome per OS, a guided onboarding flow, and IDE integration.
+
+### Added
+
+- Activity dashboard with analytics cards: commits / authors / open-PRs / CI-health heroes, plus leaderboard, author-clock, streak, churn, language donut, heatmap, stacked activity, PR velocity, time-to-merge, review queue, CI pass rate, flaky repos, quietest repos and busiest peak.
+- Onboarding wizard — welcome → basics → pick folder → connect provider → initial scan → done, each step skippable.
+- OS-native titlebars: Windows 11 custom chrome with snap affordance, GNOME/Adwaita CSD, macOS overlay respecting traffic-light spacing.
+- Open-in-IDE button (repo + PR rows) with live detection of VS Code, VS Code Insiders, Cursor, WebStorm, IntelliJ IDEA and JetBrains Toolbox; branded icons per IDE.
+- Beta release workflow (`release-tauri-beta.yml`) — builds unsigned installers for any ref on demand without creating a tag or release.
+- `tauri.macos.conf.json` to isolate mac-specific entitlements from the base config.
+- Husky `pre-push` hook gating network-bound operations with typecheck + lint + format.
+
+### Changed
+
+- Every component moved into an atomic-design hierarchy (`atoms/`, `molecules/`, `organisms/`) with colocated Storybook stories and Vitest tests.
+- Installer assets regenerated from SVG sources (DMG background, NSIS header + sidebar).
+- GitHub provider extended with additional endpoints backing the activity dashboard.
+
+### Fixed
+
+- IDE logos render under Tauri's strict CSP — runtime `@iconify/react` CDN fetches replaced with static SVGs inlined via `vite-plugin-svgr`.
+- Linux Tauri build stabilised on `ubuntu-22.04` (webkit / gtk / appindicator dev headers pinned).
+- CI pipeline no longer blocks on Playwright E2E — the job is marked optional until flakiness is triaged.
+- Workspace wildcards for `@recrest/shared` in `tests/` and `landingpage/`, preventing stale `dist/` imports.
+
+### Known gaps
+
+- GitLab and Bitbucket providers still return "not yet implemented".
+- OAuth remains scaffolded; PAT-only auth for now.
+- Installers are unsigned (Apple Developer ID / Windows EV certs pending).
+- `RepoWatcher` is wired on the Rust side but not yet instantiated in `lib.rs::run()`.
+
 ## [0.5.1] — 2026-04-20
 
 First public beta.
@@ -30,4 +64,5 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.6.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.6.0
 [0.5.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.5.1
