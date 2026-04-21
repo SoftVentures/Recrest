@@ -117,7 +117,11 @@ jobs:
 
   e2e:
     name: Playwright E2E (optional)
-    runs-on: ubuntu-22.04
+    # Ubuntu 24.04 is required: Playwright 1.59 ships a WebKit build that
+    # links against libgtk-4, libavif.so.13, libmanette, libhyphen — none of
+    # which are available on the 22.04 image, so `browserType.launch` dies
+    # with "Host system is missing dependencies" before a single test runs.
+    runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
