@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/molecules/compounds/DropdownMenu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
 import { MrListSkeleton } from "@/components/molecules/skeletons/MrListSkeleton";
 import { ReviewerChipsSkeleton } from "@/components/molecules/skeletons/ReviewerChipsSkeleton";
@@ -406,16 +407,21 @@ function MRDrawer({ row, onClose }: MRDrawerProps) {
         >
           <Icon name="code" size={13} /> {busy === "checkout" ? "…" : t("mrs.actions.checkout")}
         </button>
-        <button
-          type="button"
-          className="r-btn"
-          aria-label="Open terminal at repository"
-          title="Open terminal at repository"
-          onClick={() => void onOpenTerminal()}
-          disabled={busy !== null}
-        >
-          <Icon name="terminal" size={13} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="r-btn"
+              aria-label={t("actions.open_terminal_tooltip", { ns: "repos" })}
+              data-testid="mr-row-open-terminal"
+              onClick={() => void onOpenTerminal()}
+              disabled={busy !== null}
+            >
+              <Icon name="terminal" size={13} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t("actions.open_terminal_tooltip", { ns: "repos" })}</TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="a-mr-strip">

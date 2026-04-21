@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { WindowEvent, storageKeyForLogo } from "@recrest/shared";
 
 import { BrandIcon, type BrandSlug } from "@/components/atoms/BrandIcon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { useRepoLogo } from "@/hooks/useRepoLogo";
 
 /** Curated, hand-picked two-stop gradients for repo avatars. Each pair is
@@ -117,36 +118,42 @@ export function RepoAvatar({ repo, size = 24, radius = 6 }: RepoAvatarProps) {
   const src = custom ?? autoLogo;
   if (src) {
     return (
-      <div
-        className="repo-avatar"
-        style={{
-          width: size,
-          height: size,
-          borderRadius: radius,
-          overflow: "hidden",
-          flexShrink: 0,
-          background: "var(--surface-2)",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: custom ? 0 : Math.max(1, Math.round(size * 0.08)),
-        }}
-        title={repo.name}
-      >
-        <img
-          src={src}
-          style={{
-            width: "100%",
-            height: "100%",
-            // `custom` uploads are cropped to fill (keeps the old behaviour).
-            // Auto-detected logos use `contain` so wordmarks / tall icons stay
-            // readable, with a small surface-2 tile as padding.
-            objectFit: custom ? "cover" : "contain",
-            display: "block",
-          }}
-          alt=""
-        />
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className="repo-avatar"
+            style={{
+              width: size,
+              height: size,
+              borderRadius: radius,
+              overflow: "hidden",
+              flexShrink: 0,
+              background: "var(--surface-2)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: custom ? 0 : Math.max(1, Math.round(size * 0.08)),
+            }}
+            aria-label={repo.name}
+            data-testid="repo-avatar"
+          >
+            <img
+              src={src}
+              style={{
+                width: "100%",
+                height: "100%",
+                // `custom` uploads are cropped to fill (keeps the old behaviour).
+                // Auto-detected logos use `contain` so wordmarks / tall icons stay
+                // readable, with a small surface-2 tile as padding.
+                objectFit: custom ? "cover" : "contain",
+                display: "block",
+              }}
+              alt=""
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>{repo.name}</TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -156,24 +163,30 @@ export function RepoAvatar({ repo, size = 24, radius = 6 }: RepoAvatarProps) {
   const specialIcon = detectSpecialIcon(repo.name);
   if (specialIcon) {
     return (
-      <div
-        className="repo-avatar"
-        style={{
-          width: size,
-          height: size,
-          borderRadius: radius,
-          background: gradient,
-          color: "#fff",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
-        }}
-        title={repo.name}
-      >
-        <BrandIcon slug={specialIcon} size={Math.round(size * 0.55)} color="#fff" />
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className="repo-avatar"
+            style={{
+              width: size,
+              height: size,
+              borderRadius: radius,
+              background: gradient,
+              color: "#fff",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+            }}
+            aria-label={repo.name}
+            data-testid="repo-avatar"
+          >
+            <BrandIcon slug={specialIcon} size={Math.round(size * 0.55)} color="#fff" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>{repo.name}</TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -181,29 +194,35 @@ export function RepoAvatar({ repo, size = 24, radius = 6 }: RepoAvatarProps) {
   const letter = cleaned.charAt(0).toUpperCase();
 
   return (
-    <div
-      className="repo-avatar"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: radius,
-        background: gradient,
-        color: "#fff",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: Math.round(size * 0.5),
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        flexShrink: 0,
-        fontFamily: "Inter, -apple-system, sans-serif",
-        textShadow: "0 1px 2px rgba(0,0,0,0.18)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
-      }}
-      title={repo.name}
-    >
-      {letter}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className="repo-avatar"
+          style={{
+            width: size,
+            height: size,
+            borderRadius: radius,
+            background: gradient,
+            color: "#fff",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: Math.round(size * 0.5),
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            flexShrink: 0,
+            fontFamily: "Inter, -apple-system, sans-serif",
+            textShadow: "0 1px 2px rgba(0,0,0,0.18)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+          }}
+          aria-label={repo.name}
+          data-testid="repo-avatar"
+        >
+          {letter}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>{repo.name}</TooltipContent>
+    </Tooltip>
   );
 }
 

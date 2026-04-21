@@ -20,9 +20,11 @@ export function ReviewQueueCard({ entries, loading }: Props) {
       skeleton="rows"
     >
       {entries.length === 0 ? (
-        <div className="a-act-card-empty">{t("activity.cards.review_queue_empty")}</div>
+        <div className="a-act-card-empty" data-testid="activity-card-review-queue-empty">
+          {t("activity.cards.review_queue_empty")}
+        </div>
       ) : (
-        <div className="a-act-rq">
+        <div className="a-act-rq" data-testid="activity-card-review-queue-list">
           {entries.map((e) => {
             const age = Math.round(e.ageDays);
             const ageLabel =
@@ -31,36 +33,29 @@ export function ReviewQueueCard({ entries, loading }: Props) {
                 : t("activity.cards.age_days_other", { count: age });
             const open = () => void openExternal(e.url);
             return (
-              <div
+              <button
+                type="button"
                 key={`${e.repoId}#${e.number}`}
                 className="a-act-rq-item"
-                role="button"
-                tabIndex={0}
                 onClick={open}
-                onKeyDown={(ev) => {
-                  if (ev.key === "Enter" || ev.key === " ") {
-                    ev.preventDefault();
-                    open();
-                  }
-                }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <div className="a-act-rq-title">{e.title}</div>
-                  <div className="a-act-rq-meta">
+                <span className="a-act-rq-body">
+                  <span className="a-act-rq-title">{e.title}</span>
+                  <span className="a-act-rq-meta">
                     <span>{e.repoName}</span>
                     <span>·</span>
                     <span>#{e.number}</span>
                     <span>·</span>
                     <span>{e.author}</span>
-                  </div>
-                </div>
+                  </span>
+                </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className={`a-act-rq-age${age >= 7 ? " old" : ""}`}>{age}d</div>
+                    <span className={`a-act-rq-age${age >= 7 ? " old" : ""}`}>{age}d</span>
                   </TooltipTrigger>
                   <TooltipContent>{ageLabel}</TooltipContent>
                 </Tooltip>
-              </div>
+              </button>
             );
           })}
         </div>

@@ -67,6 +67,19 @@ jobs:
 
           echo "OK: no dependabot commits authored by non-bot users."
 
+  tauri-devtools-guard:
+    name: Guard tauri devtools feature
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Guard against `devtools` Cargo feature on tauri
+        run: |
+          if grep -E 'tauri\s*=\s*\{[^}]*features\s*=\s*\[[^]]*devtools[^]]*\]' app/src-tauri/Cargo.toml; then
+            echo "::error::tauri crate has 'devtools' feature enabled — release builds would ship devtools."
+            exit 1
+          fi
+          echo "OK: devtools feature not enabled."
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
@@ -206,6 +219,7 @@ jobs:
       [
         branch-name,
         dependabot-type,
+        tauri-devtools-guard,
         typecheck,
         lint,
         format,

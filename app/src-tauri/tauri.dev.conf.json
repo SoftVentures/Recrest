@@ -1,5 +1,18 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "security": {
+      "capabilities": [
+        "default",
+        {
+          "identifier": "dev",
+          "description": "Debug-only capability granting the main window access to devtools-related APIs. Tauri only compiles devtools support behind the `devtools` Cargo feature (or a debug build), so this capability is effectively inert in release builds where that feature is not enabled. Inlined here (instead of living in `capabilities/dev.json`) so it is NOT auto-discovered and therefore NEVER loaded for production builds — `tauri.dev.conf.json` is only merged via `tauri dev --config ...` and ignored by `tauri build`.",
+          "windows": ["main"],
+          "permissions": ["core:webview:allow-internal-toggle-devtools"]
+        }
+      ]
+    }
+  },
   "bundle": {
     "icon": [
       "icons-dev/32x32.png",

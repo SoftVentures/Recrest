@@ -38,15 +38,6 @@ interface RepoRowProps {
 export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
   const dispatch = useAppDispatch();
   const { confirm, node: confirmNode } = useConfirm();
-  // Only react to Enter/Space when the row itself is focused, so keyboard
-  // events on inner action buttons don't double-fire.
-  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.target !== e.currentTarget) return;
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onSelect(repo.id);
-    }
-  };
 
   const runCommand = async (cmd: TauriCommandName, label: string) => {
     const id = toast.loading(`Opening ${label}…`);
@@ -101,8 +92,6 @@ export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
 
   return (
     <div
-      role="button"
-      tabIndex={0}
       className={`a-row d-comfy${selected ? " selected" : ""}`}
       style={
         {
@@ -115,10 +104,20 @@ export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
       data-repo-name={repo.name}
       data-selected={selected ? "true" : undefined}
       data-dirty={repo.status.dirty ? "true" : undefined}
-      aria-label={`Select repo: ${repo.name}`}
-      onClick={() => onSelect(repo.id)}
-      onKeyDown={handleKey}
     >
+      {/* Transparent overlay sibling carries the row-selection interaction.
+       *  Keeping it as a sibling of `.a-c-actions` (rather than an ancestor)
+       *  means axe-core's `nested-interactive` rule is happy — real <button>
+       *  descendants in the actions column are not inside another interactive
+       *  element. CSS pins the overlay to fill the row behind the actions
+       *  column (z-index:0 vs actions z-index:1). */}
+      <button
+        type="button"
+        className="a-row-select"
+        aria-label={`Select repo: ${repo.name}`}
+        onClick={() => onSelect(repo.id)}
+        data-testid="repo-row-select"
+      />
       <div className="a-c-name">
         <RepoAvatar repo={repo} size={28} radius={6} />
         <div className="a-name-stack">
@@ -157,7 +156,7 @@ export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
         <Sparkline data={repo.activity} active={repo.status.dirty} width={88} height={16} />
       </div>
 
-      <div className="a-c-actions" onClick={(e) => e.stopPropagation()}>
+      <div className="a-c-actions">
         {confirmNode}
         <OpenInIdeButton repoId={repo.id} variant="icon" />
         <IconButton

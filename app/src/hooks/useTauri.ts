@@ -3,20 +3,17 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   MIN_WINDOW_HEIGHT,
   MIN_WINDOW_WIDTH,
-  UPDATER_INITIAL_DELAY_MS,
-  UPDATER_INTERVAL_MS,
   WINDOW_STATE_DEBOUNCE_MS,
   type WindowState,
 } from "@recrest/shared";
 
 import { useDeepLinks } from "@/hooks/useDeepLinks";
-import { useTauriNotifications } from "@/hooks/useTauriNotifications";
+import { useLastSeenVersion } from "@/hooks/useLastSeenVersion";
 import { isTauri } from "@/lib/tauri";
 import {
   autostartService,
   notificationService,
   trayService,
-  updaterService,
   windowService,
 } from "@/lib/tauri/services";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -35,10 +32,14 @@ export function useTauri(): void {
   useTrayBadgeSync(tauri);
   useNotificationPermission(tauri);
   useAutostartSync(tauri);
-  useAutoUpdateCheck(tauri);
+  // Auto-update scheduling is owned by the Rust side (`src-tauri/src/lib.rs`),
+  // which survives tray-hide and minimized states. The previous JS scheduler
+  // was removed to avoid duplicate probes.
+  // TODO: runtime changes to `settings.autoUpdate` only take effect after
+  // restart — the Rust scheduler reads the mode once at startup.
   useDeepLinks(tauri);
-  useTauriNotifications(tauri);
   useIdeDetection(tauri);
+  useLastSeenVersion();
 }
 
 // ------------------------------------------------------------------ ide detect
@@ -193,31 +194,4 @@ function useAutostartSync(enabled: boolean): void {
     if (!enabled) return;
     void autostartService.sync(autoStart);
   }, [enabled, autoStart]);
-}
-
-// ------------------------------------------------------------------ auto-update
-
-function useAutoUpdateCheck(enabled: boolean): void {
-  const autoUpdate = useAppSelector((s) => s.settings.autoUpdate);
-
-  useEffect(() => {
-    if (!enabled || autoUpdate === "off") return;
-
-    const run = async () => {
-      const info = await updaterService.checkForUpdate();
-      if (!info) return;
-      console.info(`[tauri] update available: v${info.version}`);
-      if (autoUpdate === "auto") {
-        const ok = await updaterService.downloadAndInstall();
-        if (ok) await updaterService.relaunch();
-      }
-    };
-
-    const t = setTimeout(() => void run(), UPDATER_INITIAL_DELAY_MS);
-    const i = setInterval(() => void run(), UPDATER_INTERVAL_MS);
-    return () => {
-      clearTimeout(t);
-      clearInterval(i);
-    };
-  }, [enabled, autoUpdate]);
 }

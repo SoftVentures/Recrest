@@ -2,6 +2,8 @@ import { type ReactNode, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
+
 import { TauriCommand } from "@recrest/shared";
 
 import { BranchChip } from "@/components/atoms/BranchChip";
@@ -13,6 +15,7 @@ import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 import { IconButton } from "@/components/molecules/IconButton";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar, setRepoLogo } from "@/components/molecules/RepoAvatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { CreateBranchDialog } from "@/components/organisms/repos/CreateBranchDialog";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
@@ -43,19 +46,26 @@ function Section({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={`a-dp-section ${open ? "open" : "closed"}`}>
-      <button
-        type="button"
-        className="a-dp-sec-hdr"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label={`${open ? "Collapse" : "Expand"} ${title}`}
-      >
-        <span className="a-dp-sec-chev">
-          <Icon name={open ? "chevDown" : "chev"} size={11} />
-        </span>
-        <span className="a-dp-sec-title">{title}</span>
+      {/* Header row: the collapse-toggle button on the left, optional meta
+       *  on the right as a sibling (not a descendant). Keeping meta outside
+       *  the button lets it contain real <button>/<a> elements without
+       *  nesting interactives — see the "Log →" link in the Recent Commits
+       *  section below. */}
+      <div className="a-dp-sec-hdr-row">
+        <button
+          type="button"
+          className="a-dp-sec-hdr"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={`${open ? "Collapse" : "Expand"} ${title}`}
+        >
+          <span className="a-dp-sec-chev">
+            <Icon name={open ? "chevDown" : "chev"} size={11} />
+          </span>
+          <span className="a-dp-sec-title">{title}</span>
+        </button>
         {meta && <span className="a-dp-sec-meta">{meta}</span>}
-      </button>
+      </div>
       {open && <div className="a-dp-sec-body">{children}</div>}
     </div>
   );
@@ -70,6 +80,7 @@ function formatRustError(err: unknown, fallback: string): string {
 }
 
 export function DetailPane({ repo, onClose }: DetailPaneProps) {
+  const { t } = useTranslation("repos");
   const meta = langMeta(repo.lang);
   const prs = useAppSelector((s) => s.prs.items);
   const repoPrs = prs[repo.id] ?? [];
@@ -149,22 +160,31 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     <aside className="a-detail" data-testid="detail-pane" data-repo-id={repo.id}>
       <div className="a-dp-hdr">
         <div className="a-dp-title">
-          <label className="a-dp-avatar-wrap" title="Click to set a custom logo">
-            <RepoAvatar repo={repo} size={36} radius={8} />
-            <span className="a-dp-avatar-edit">
-              <Icon name="camera" size={11} />
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onLogoUpload(f);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <label
+                className="a-dp-avatar-wrap"
+                aria-label={t("actions.avatar_upload_hint")}
+                data-testid="detail-pane-avatar-upload"
+              >
+                <RepoAvatar repo={repo} size={36} radius={8} />
+                <span className="a-dp-avatar-edit">
+                  <Icon name="camera" size={11} />
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onLogoUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </TooltipTrigger>
+            <TooltipContent>{t("actions.avatar_upload_hint")}</TooltipContent>
+          </Tooltip>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="a-dp-name">{repo.name}</div>
             <div className="a-dp-path">{repo.path}</div>
@@ -255,15 +275,21 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           >
             <Icon name="refresh" size={11} /> {busy === "fetch" ? "Fetching…" : "Fetch"}
           </button>
-          <button
-            type="button"
-            className="r-btn sm"
-            onClick={() => setBranchOpen(true)}
-            disabled={busy !== null}
-            title="Create a new branch from HEAD"
-          >
-            <Icon name="plus" size={11} /> Branch
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="r-btn sm"
+                onClick={() => setBranchOpen(true)}
+                disabled={busy !== null}
+                aria-label={t("actions.create_branch_tooltip")}
+                data-testid="detail-pane-create-branch"
+              >
+                <Icon name="plus" size={11} /> Branch
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t("actions.create_branch_tooltip")}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
       <CreateBranchDialog open={branchOpen} repoId={repo.id} onClose={() => setBranchOpen(false)} />
@@ -297,24 +323,16 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
       <Section
         title="Recent commits"
         meta={
-          <span
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             className="a-dp-link"
             onClick={(e) => {
               e.stopPropagation();
               goToRepoActivity();
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                e.stopPropagation();
-                goToRepoActivity();
-              }
-            }}
           >
             Log →
-          </span>
+          </button>
         }
       >
         <RecentCommitsBody repo={repo} />

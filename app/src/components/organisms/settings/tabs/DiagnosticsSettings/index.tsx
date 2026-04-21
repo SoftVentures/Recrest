@@ -7,6 +7,7 @@ import type { PlatformInfo } from "@recrest/shared";
 import { Switch } from "@/components/atoms/Switch";
 import { InfoHint } from "@/components/molecules/InfoHint";
 import { SettingsField } from "@/components/molecules/SettingsField";
+import { TruncatedTooltip } from "@/components/molecules/compounds/TruncatedTooltip";
 import { SettingsSection } from "@/components/organisms/settings/SettingsSection";
 import { useSettingsSaver } from "@/components/organisms/settings/tabs/useSettingsSaver";
 import { useGitInfo } from "@/hooks/useGitInfo";
@@ -56,9 +57,9 @@ export function DiagnosticsSettings() {
           </span>
           <InfoHint>{t("diagnostics.git_hint")}</InfoHint>
           {git.info?.path && (
-            <span className="truncate font-mono text-[11px] opacity-70" title={git.info.path}>
-              — {git.info.path}
-            </span>
+            <TruncatedTooltip content={git.info.path}>
+              <span className="truncate font-mono text-[11px] opacity-70">— {git.info.path}</span>
+            </TruncatedTooltip>
           )}
         </div>
       </div>

@@ -5,6 +5,7 @@ import { TauriCommand } from "@recrest/shared";
 import { Icon } from "@/components/atoms/Icon";
 import { IdeIcon } from "@/components/atoms/IdeIcon";
 import { IconButton } from "@/components/molecules/IconButton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { useActiveIde } from "@/hooks/useActiveIde";
 import { invoke } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -105,17 +106,26 @@ export function OpenInIdeButton({
     .filter(Boolean)
     .join(" ");
 
-  return (
+  const button = (
     <button
       type="button"
       className={buttonClass}
       onClick={() => void handleClick()}
       disabled={disabled}
-      title={disabledTitle}
+      aria-label={disabledTitle ?? labelText}
+      data-testid="open-in-ide-button"
     >
       {before}
       {iconNode}
       {labelText}
     </button>
+  );
+
+  if (!disabledTitle) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent>{disabledTitle}</TooltipContent>
+    </Tooltip>
   );
 }

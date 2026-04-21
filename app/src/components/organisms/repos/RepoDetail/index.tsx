@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/atoms/Button";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
+import { TruncatedTooltip } from "@/components/molecules/compounds/TruncatedTooltip";
 import { ChangedFilesList } from "@/components/organisms/repos/ChangedFilesList";
 import { invoke, openExternal } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -38,9 +39,9 @@ export function RepoDetail({ repo }: RepoDetailProps) {
     <section className="flex flex-col gap-5 bg-card p-5">
       <header>
         <h2 className="text-lg font-semibold">{repo.name}</h2>
-        <p className="truncate text-xs text-muted-foreground" title={repo.path}>
-          {repo.path}
-        </p>
+        <TruncatedTooltip content={repo.path}>
+          <p className="truncate text-xs text-muted-foreground">{repo.path}</p>
+        </TruncatedTooltip>
         <div className="mt-3 flex flex-wrap gap-2">
           <OpenInIdeButton repoId={repo.id} variant="default" />
           <Button
@@ -125,9 +126,9 @@ function StatCard({ label, value }: StatCardProps) {
   return (
     <div className="rounded-md border border-border p-3">
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-sm font-medium" title={value}>
-        {value}
-      </div>
+      <TruncatedTooltip content={value}>
+        <div className="mt-1 truncate text-sm font-medium">{value}</div>
+      </TruncatedTooltip>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 import { IconButton } from "@/components/molecules/IconButton";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
 import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
@@ -312,23 +313,32 @@ export function RepoDetailPage() {
           {/* Direkte flex-children mit inline `height` — kein wrappender
               flex-col, dessen eigene Höhe sich sonst dem %-Wert entzieht. */}
           <div className="flex h-32 w-full items-end gap-1.5">
-            {repo.activity.map((v, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm"
-                style={{
-                  minWidth: 6,
-                  height: v > 0 ? `${Math.max(6, (v / maxBucket) * 100)}%` : "4px",
-                  background:
-                    v === 0
-                      ? "rgba(127,127,127,0.18)"
-                      : v >= maxBucket * 0.66
-                        ? "var(--accent, #4f8cff)"
-                        : "rgba(79,140,255,0.55)",
-                }}
-                title={`${v} commit${v === 1 ? "" : "s"} · ${13 - i} day${13 - i === 1 ? "" : "s"} ago`}
-              />
-            ))}
+            {repo.activity.map((v, i) => {
+              const label = `${v} commit${v === 1 ? "" : "s"} · ${13 - i} day${13 - i === 1 ? "" : "s"} ago`;
+              return (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="flex-1 rounded-sm"
+                      style={{
+                        minWidth: 6,
+                        height: v > 0 ? `${Math.max(6, (v / maxBucket) * 100)}%` : "4px",
+                        background:
+                          v === 0
+                            ? "rgba(127,127,127,0.18)"
+                            : v >= maxBucket * 0.66
+                              ? "var(--accent, #4f8cff)"
+                              : "rgba(79,140,255,0.55)",
+                      }}
+                      aria-label={label}
+                      data-testid="repo-detail-spark-cell"
+                      data-index={i}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{label}</TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
           <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
             <span>14d ago</span>
@@ -356,20 +366,29 @@ export function RepoDetailPage() {
         >
           {repo.status.dirty ? (
             <div className="max-h-64 space-y-1 overflow-y-auto font-mono text-xs">
-              {repo.status.changedFiles.map((f) => (
-                <div
-                  key={f.path}
-                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1 last:border-b-0"
-                >
-                  <span className="truncate">{f.path}</span>
-                  <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] capitalize ${fileKindClasses(f.kind)}`}
-                    title={`${f.kind} · ${f.status}`}
+              {repo.status.changedFiles.map((f) => {
+                const statusLabel = `${f.kind} · ${f.status}`;
+                return (
+                  <div
+                    key={f.path}
+                    className="flex items-center justify-between gap-2 border-b border-border/40 py-1 last:border-b-0"
                   >
-                    {f.kind}
-                  </span>
-                </div>
-              ))}
+                    <span className="truncate">{f.path}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] capitalize ${fileKindClasses(f.kind)}`}
+                          aria-label={statusLabel}
+                          data-testid="repo-detail-file-status"
+                        >
+                          {f.kind}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{statusLabel}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                );
+              })}
               {repo.status.changedFilesTruncated && (
                 <div className="pt-2 text-center text-[11px] text-muted-foreground">
                   …more files truncated

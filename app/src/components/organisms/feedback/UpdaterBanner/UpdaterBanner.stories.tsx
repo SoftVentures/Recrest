@@ -23,7 +23,10 @@ export const Available: StoryObj<typeof UpdaterBanner> = {
     store.dispatch(
       setUpdaterBanner({
         version: "1.4.0",
+        currentVersion: "1.3.9",
         body: "Activity page redesign, new CI pass-rate trend, bug fixes.",
+        canAutoInstall: true,
+        downloadUrl: null,
       }),
     );
     return <UpdaterBanner />;
@@ -32,7 +35,29 @@ export const Available: StoryObj<typeof UpdaterBanner> = {
 
 export const Minimal: StoryObj<typeof UpdaterBanner> = {
   render: () => {
-    store.dispatch(setUpdaterBanner({ version: "1.4.1", body: null }));
+    store.dispatch(
+      setUpdaterBanner({
+        version: "1.4.1",
+        body: null,
+        canAutoInstall: true,
+        downloadUrl: null,
+      }),
+    );
+    return <UpdaterBanner />;
+  },
+};
+
+export const ManualDownload: StoryObj<typeof UpdaterBanner> = {
+  render: () => {
+    store.dispatch(
+      setUpdaterBanner({
+        version: "1.4.2",
+        currentVersion: "1.3.9",
+        body: "Local development build — updates open in your browser.",
+        canAutoInstall: false,
+        downloadUrl: "https://github.com/SoftVentures/Recrest/releases/tag/v1.4.2",
+      }),
+    );
     return <UpdaterBanner />;
   },
 };

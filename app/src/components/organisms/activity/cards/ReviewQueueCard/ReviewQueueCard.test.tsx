@@ -34,6 +34,6 @@ describe("ReviewQueueCard", () => {
         <ReviewQueueCard entries={[]} />
       </TooltipProvider>,
     );
-    expect(screen.getByText(/No open PRs/i)).toBeInTheDocument();
+    expect(screen.getByTestId("activity-card-review-queue-empty")).toBeInTheDocument();
   });
 });

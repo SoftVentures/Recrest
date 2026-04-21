@@ -51,6 +51,13 @@ base64 = "0.22.1"
 which = "8"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 
+[target.'cfg(windows)'.dependencies]
+# Only needed for setting the AppUserModelID so Windows Toast notifications
+# attribute to "Recrest" instead of the parent process (e.g. powershell.exe
+# in dev). `windows-sys` is ~150kb and compiles in ~2s, much lighter than
+# the full `windows` crate.
+windows-sys = { version = "0.59", features = ["Win32_UI_Shell", "Win32_Foundation"] }
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 

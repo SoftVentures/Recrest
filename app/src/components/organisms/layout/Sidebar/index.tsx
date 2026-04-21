@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { AppRoute, type AppRoutePath } from "@recrest/shared";
 
 import { Icon, type IconName } from "@/components/atoms/Icon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { Logo } from "@/components/organisms/brand/Logo";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleSidebar } from "@/store/slices/uiSlice";
@@ -39,7 +40,7 @@ function SideItem({
   children?: ReactNode;
   testId?: string;
 }) {
-  return (
+  const button = (
     <button
       type="button"
       className="a-side-item"
@@ -47,7 +48,7 @@ function SideItem({
       data-dim={dim ? "true" : undefined}
       data-testid={testId}
       onClick={onClick}
-      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
     >
       <Icon name={icon} size={15} />
       {!collapsed && <span className="a-side-label">{label}</span>}
@@ -63,6 +64,13 @@ function SideItem({
       )}
       {children}
     </button>
+  );
+  if (!collapsed) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -135,16 +143,22 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <button
-        type="button"
-        className="a-side-fold"
-        data-testid="sidebar-fold-btn"
-        onClick={() => dispatch(toggleSidebar())}
-        title={collapsed ? t("nav.expand") : t("nav.collapse")}
-        aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
-      >
-        <Icon name={collapsed ? "expand" : "collapse"} size={13} />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="a-side-fold"
+            data-testid="sidebar-fold-btn"
+            onClick={() => dispatch(toggleSidebar())}
+            aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
+          >
+            <Icon name={collapsed ? "expand" : "collapse"} size={13} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {collapsed ? t("nav.expand") : t("nav.collapse")}
+        </TooltipContent>
+      </Tooltip>
 
       <div className="a-side-foot">
         <NavLink

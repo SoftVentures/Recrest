@@ -16,11 +16,11 @@ describe("SettingsSection", () => {
   });
 
   it("omits the description slot when none is provided", () => {
-    const { container } = render(
+    render(
       <SettingsSection title="X">
         <span />
       </SettingsSection>,
     );
-    expect(container.querySelector(".a-set-section-desc")).toBeNull();
+    expect(screen.queryByTestId("settings-section-desc")).toBeNull();
   });
 });

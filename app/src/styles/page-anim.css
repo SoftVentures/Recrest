@@ -184,17 +184,38 @@
 
 /* ──────────────── Settings ──────────────── quietest page */
 .p-settings {
-  --page-stagger: 30ms;
+  --page-stagger: 40ms;
 }
-.p-settings .p-set-hdr,
-.p-settings h1,
-.p-settings h2 {
+/* Tab strip slides in from the left once. */
+.p-settings .a-settings-nav {
+  animation: pgSlideL var(--page-dur-sm) var(--page-ease) both;
+}
+/* Header block (h2 + intro paragraph) drops down. */
+.p-settings .a-set-head {
   animation: pgFall var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: 40ms;
 }
-.p-settings .p-set-panel > *,
-.p-settings [role="tabpanel"] > * {
+/* Each section in the active tab body rises in with a small stagger.
+ * `nth-child` drives the delay so we don't have to touch every tab to add
+ * an `--i` prop — the markup is already predictable. */
+.p-settings .a-set-page > .a-set-section {
   animation: pgRise var(--page-dur-sm) var(--page-ease) both;
-  animation-delay: calc(80ms + var(--i, 0) * var(--page-stagger));
+  animation-delay: calc(120ms + (var(--page-stagger) * 0));
+}
+.p-settings .a-set-page > .a-set-section:nth-of-type(2) {
+  animation-delay: calc(120ms + var(--page-stagger));
+}
+.p-settings .a-set-page > .a-set-section:nth-of-type(3) {
+  animation-delay: calc(120ms + var(--page-stagger) * 2);
+}
+.p-settings .a-set-page > .a-set-section:nth-of-type(4) {
+  animation-delay: calc(120ms + var(--page-stagger) * 3);
+}
+.p-settings .a-set-page > .a-set-section:nth-of-type(5) {
+  animation-delay: calc(120ms + var(--page-stagger) * 4);
+}
+.p-settings .a-set-page > .a-set-section:nth-of-type(n + 6) {
+  animation-delay: calc(120ms + var(--page-stagger) * 5);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Provider } from "react-redux";
 
 import { Dialog, DialogContent } from "@/components/molecules/compounds/Dialog";
+import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
 import "@/i18n";
 import { store } from "@/store";
 
@@ -14,11 +15,13 @@ import { store } from "@/store";
 export function OnboardingStepHarness({ children }: { children: ReactNode }) {
   return (
     <Provider store={store}>
-      <Dialog open>
-        <DialogContent showClose={false} className="max-w-xl sm:max-w-xl">
-          {children}
-        </DialogContent>
-      </Dialog>
+      <TooltipProvider delayDuration={0}>
+        <Dialog open>
+          <DialogContent showClose={false} className="max-w-xl sm:max-w-xl">
+            {children}
+          </DialogContent>
+        </Dialog>
+      </TooltipProvider>
     </Provider>
   );
 }

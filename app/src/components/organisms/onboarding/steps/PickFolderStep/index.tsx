@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/molecules/compounds/Dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
+import { TruncatedTooltip } from "@/components/molecules/compounds/TruncatedTooltip";
 import { isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -109,12 +111,11 @@ export function PickFolderStep({ onBack, onNext }: Props) {
           <ul className="divide-y divide-border rounded-md border border-border">
             {scanPaths.map((path) => (
               <li key={path} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <span
-                  className="flex-1 truncate font-mono text-xs text-muted-foreground"
-                  title={path}
-                >
-                  {path}
-                </span>
+                <TruncatedTooltip content={path}>
+                  <span className="flex-1 truncate font-mono text-xs text-muted-foreground">
+                    {path}
+                  </span>
+                </TruncatedTooltip>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -133,13 +134,25 @@ export function PickFolderStep({ onBack, onNext }: Props) {
         <Button variant="ghost" onClick={onBack}>
           {t("pickFolder.back")}
         </Button>
-        <Button
-          onClick={onNext}
-          disabled={scanPaths.length === 0}
-          title={scanPaths.length === 0 ? t("pickFolder.at_least_one") : undefined}
-        >
-          {t("pickFolder.next")}
-        </Button>
+        {scanPaths.length === 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onNext}
+                disabled
+                aria-label={t("pickFolder.at_least_one")}
+                data-testid="onboarding-pick-folder-next"
+              >
+                {t("pickFolder.next")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("pickFolder.at_least_one")}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button onClick={onNext} data-testid="onboarding-pick-folder-next">
+            {t("pickFolder.next")}
+          </Button>
+        )}
       </DialogFooter>
     </>
   );

@@ -3,6 +3,7 @@ mod commands;
 mod config;
 mod git;
 mod providers;
+mod update;
 
 use std::sync::Arc;
 
@@ -29,6 +30,24 @@ pub struct AppState {
     pub oauth_pending: Arc<Mutex<Option<(String, String)>>>,
 }
 
+#[cfg(windows)]
+fn set_app_user_model_id() {
+    // Must match `tauri.conf.json::identifier` so future Start-Menu entries
+    // (installer-written shortcuts) and this runtime setting address the
+    // same notification channel.
+    use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+    let aumid: Vec<u16> = "eu.softventures.recrest"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    // `SetCurrentProcessExplicitAppUserModelID` returns an HRESULT; failure
+    // is non-fatal (notifications still work, just with the parent-process
+    // name). Silently swallow so a weird Windows build doesn't crash boot.
+    unsafe {
+        let _ = SetCurrentProcessExplicitAppUserModelID(aumid.as_ptr());
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
@@ -41,7 +60,19 @@ pub fn run() {
     // fix-path-env repariert den PATH einmalig beim Start.
     let _ = fix_path_env::fix();
 
-    tauri::Builder::default()
+    // Windows-specific: register an explicit AppUserModelID so Toast
+    // notifications attribute to "Recrest" instead of the parent process
+    // (e.g. powershell.exe in `yarn dev`). Installed MSI builds already get
+    // this via the Start Menu shortcut the installer writes, but the dev
+    // binary has no registry entry, so Windows falls back to the launching
+    // process name on every toast. Setting it here fixes both dev and
+    // portable launches without touching the registry.
+    #[cfg(windows)]
+    {
+        set_app_user_model_id();
+    }
+
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();
@@ -86,36 +117,55 @@ pub fn run() {
                 }
             }
 
-            // Auto-updater plugin (release only). We register it unconditionally
-            // and kick off a silent background check on startup when the user
-            // has opted in via `auto_update`. Failures are swallowed — a missing
-            // endpoint or network error must not block app startup.
+            // Auto-updater plugin (release only). Registration is gated behind
+            // `not(debug_assertions)` because the plugin requires a valid
+            // pubkey + signed `latest.json` endpoint to initialize, which we
+            // don't want to depend on during development.
             #[cfg(not(debug_assertions))]
             {
                 let _ = handle.plugin(tauri_plugin_updater::Builder::new().build());
-                let auto_update = config.settings().auto_update.clone();
-                if auto_update != "never" && auto_update != "manual" {
-                    let updater_handle = handle.clone();
-                    tauri::async_runtime::spawn(async move {
-                        use tauri_plugin_updater::UpdaterExt;
-                        let Ok(updater) = updater_handle.updater() else { return };
-                        match updater.check().await {
-                            Ok(Some(update)) => {
-                                let _ = tauri::Emitter::emit(
-                                    &updater_handle,
-                                    "updater://available",
-                                    serde_json::json!({
-                                        "version": update.version,
-                                        "currentVersion": update.current_version,
-                                        "body": update.body,
-                                    }),
-                                );
-                            }
-                            Ok(None) => {}
-                            Err(err) => tracing::debug!("updater check failed: {err}"),
-                        }
-                    });
-                }
+            }
+
+            // Schedule startup + periodic update checks when the user has
+            // opted in. `"auto"` and `"manual"` both schedule a background
+            // probe — the only difference is that `auto_install` is set for
+            // `"auto"`, which triggers the plugin's download-and-restart
+            // flow. `"off"` skips scheduling entirely. In debug builds the
+            // helper falls through to the GitHub fallback automatically.
+            let auto_update = config.settings().auto_update.clone();
+            if auto_update != "off" {
+                let auto_install = auto_update == "auto";
+                let check_handle = handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    // One-shot startup check after a ~10s delay so it doesn't
+                    // compete with the initial paint + provider hydration.
+                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                    crate::update::run_update_check(
+                        check_handle.clone(),
+                        auto_install,
+                        false,
+                        None,
+                    )
+                    .await;
+
+                    // Then every 4h for the rest of the app's lifetime.
+                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                        4 * 60 * 60,
+                    ));
+                    // The first tick fires immediately — skip it since we
+                    // just ran the check above.
+                    interval.tick().await;
+                    loop {
+                        interval.tick().await;
+                        crate::update::run_update_check(
+                            check_handle.clone(),
+                            auto_install,
+                            false,
+                            None,
+                        )
+                        .await;
+                    }
+                });
             }
 
             // Build a watcher and subscribe to every known repo. Failures here
@@ -294,54 +344,122 @@ pub fn run() {
                 // app exits because the webview was the only window.
             }
         })
-        .invoke_handler(tauri::generate_handler![
-            commands::repos::scan_repos,
-            commands::repos::list_repos,
-            commands::repos::repo_status,
-            commands::repos::add_repo,
-            commands::repos::remove_repo,
-            commands::repos::list_recent_commits,
-            commands::repos::load_logo_bytes,
-            commands::repos::open_in_ide,
-            commands::ide::detect_ides,
-            commands::repos::open_terminal,
-            commands::git_ops::open_in_explorer,
-            commands::git_ops::git_fetch,
-            commands::git_ops::git_fetch_all,
-            commands::git_ops::git_pull,
-            commands::git_ops::git_push,
-            commands::git_ops::git_checkout,
-            commands::git_ops::git_checkout_remote,
-            commands::git_ops::git_list_branches,
-            commands::git_ops::git_branch_create,
-            commands::git_ops::git_merge,
-            commands::clone::git_clone,
-            commands::search::find_across_repos,
-            commands::remote_import::list_remote_repositories,
-            commands::remote_import::list_remote_organizations,
-            commands::remote_import::clone_remote_repository,
-            commands::remote_import::clone_remote_repositories_bulk,
-            commands::remote_import::create_and_open_workspace,
-            commands::providers::list_providers,
-            commands::providers::set_provider_token,
-            commands::providers::set_provider_base_url,
-            commands::providers::clear_provider_token,
-            commands::providers::fetch_pull_requests,
-            commands::providers::get_pr_detail,
-            commands::activity::list_pr_events,
-            commands::activity::list_check_runs,
-            commands::notifications::notify,
-            commands::oauth::begin_oauth,
-            commands::oauth::complete_oauth,
-            commands::settings::get_settings,
-            commands::settings::update_settings,
-            commands::window::save_window_state,
-            commands::window::load_window_state,
-            commands::window::validate_window_position,
-            commands::system::get_platform_info,
-            commands::git_info::check_git,
-            commands::tray::update_tray_badge,
-        ])
+        ;
+
+    // `tauri::generate_handler!` cannot accept `#[cfg]` attrs on individual
+    // arms, so we duplicate the handler registration — release builds get the
+    // production command list, debug builds additionally expose the three
+    // `commands::dev::*` helpers used by the Developer settings tab. The
+    // `dev` module itself is `#![cfg(debug_assertions)]` so release builds
+    // don't even link it.
+    #[cfg(not(debug_assertions))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        commands::repos::scan_repos,
+        commands::repos::list_repos,
+        commands::repos::repo_status,
+        commands::repos::add_repo,
+        commands::repos::remove_repo,
+        commands::repos::list_recent_commits,
+        commands::repos::load_logo_bytes,
+        commands::repos::open_in_ide,
+        commands::ide::detect_ides,
+        commands::repos::open_terminal,
+        commands::git_ops::open_in_explorer,
+        commands::git_ops::git_fetch,
+        commands::git_ops::git_fetch_all,
+        commands::git_ops::git_pull,
+        commands::git_ops::git_push,
+        commands::git_ops::git_checkout,
+        commands::git_ops::git_checkout_remote,
+        commands::git_ops::git_list_branches,
+        commands::git_ops::git_branch_create,
+        commands::git_ops::git_merge,
+        commands::clone::git_clone,
+        commands::search::find_across_repos,
+        commands::remote_import::list_remote_repositories,
+        commands::remote_import::list_remote_organizations,
+        commands::remote_import::clone_remote_repository,
+        commands::remote_import::clone_remote_repositories_bulk,
+        commands::remote_import::create_and_open_workspace,
+        commands::providers::list_providers,
+        commands::providers::set_provider_token,
+        commands::providers::set_provider_base_url,
+        commands::providers::clear_provider_token,
+        commands::providers::fetch_pull_requests,
+        commands::providers::get_pr_detail,
+        commands::activity::list_pr_events,
+        commands::activity::list_check_runs,
+        commands::notifications::notify,
+        commands::oauth::begin_oauth,
+        commands::oauth::complete_oauth,
+        commands::settings::get_settings,
+        commands::settings::update_settings,
+        commands::window::save_window_state,
+        commands::window::load_window_state,
+        commands::window::validate_window_position,
+        commands::system::get_platform_info,
+        commands::git_info::check_git,
+        commands::tray::update_tray_badge,
+        commands::update::check_for_update,
+        commands::update::install_update,
+    ]);
+
+    #[cfg(debug_assertions)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        commands::repos::scan_repos,
+        commands::repos::list_repos,
+        commands::repos::repo_status,
+        commands::repos::add_repo,
+        commands::repos::remove_repo,
+        commands::repos::list_recent_commits,
+        commands::repos::load_logo_bytes,
+        commands::repos::open_in_ide,
+        commands::ide::detect_ides,
+        commands::repos::open_terminal,
+        commands::git_ops::open_in_explorer,
+        commands::git_ops::git_fetch,
+        commands::git_ops::git_fetch_all,
+        commands::git_ops::git_pull,
+        commands::git_ops::git_push,
+        commands::git_ops::git_checkout,
+        commands::git_ops::git_checkout_remote,
+        commands::git_ops::git_list_branches,
+        commands::git_ops::git_branch_create,
+        commands::git_ops::git_merge,
+        commands::clone::git_clone,
+        commands::search::find_across_repos,
+        commands::remote_import::list_remote_repositories,
+        commands::remote_import::list_remote_organizations,
+        commands::remote_import::clone_remote_repository,
+        commands::remote_import::clone_remote_repositories_bulk,
+        commands::remote_import::create_and_open_workspace,
+        commands::providers::list_providers,
+        commands::providers::set_provider_token,
+        commands::providers::set_provider_base_url,
+        commands::providers::clear_provider_token,
+        commands::providers::fetch_pull_requests,
+        commands::providers::get_pr_detail,
+        commands::activity::list_pr_events,
+        commands::activity::list_check_runs,
+        commands::notifications::notify,
+        commands::oauth::begin_oauth,
+        commands::oauth::complete_oauth,
+        commands::settings::get_settings,
+        commands::settings::update_settings,
+        commands::window::save_window_state,
+        commands::window::load_window_state,
+        commands::window::validate_window_position,
+        commands::system::get_platform_info,
+        commands::git_info::check_git,
+        commands::tray::update_tray_badge,
+        commands::update::check_for_update,
+        commands::update::install_update,
+        commands::dev::get_dev_paths,
+        commands::dev::get_build_triple,
+        commands::dev::dev_panic,
+    ]);
+
+    builder
         .run(tauri::generate_context!())
         .expect("error while running recrest application");
 }

@@ -37,7 +37,10 @@ test.describe("app / shell", () => {
 
     const mrCount = page.getByTestId("nav-merge-requests-count");
     if (await mrCount.count()) {
-      await expect(mrCount).toHaveText(String(SEED_PR_COUNTS.open));
+      // Sidebar only counts PRs from repos whose provider is connected —
+      // gitlab + bitbucket are disconnected in the default seed, so the
+      // visible count is 5, not the raw 8 open PRs in the seed.
+      await expect(mrCount).toHaveText(String(SEED_PR_COUNTS.openVisible));
     }
   });
 });

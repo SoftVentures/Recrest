@@ -6,6 +6,7 @@ import { type BranchInfo, EventChannel, TauriCommand } from "@recrest/shared";
 
 import { Icon } from "@/components/atoms/Icon";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { BranchRowSkeleton } from "@/components/molecules/skeletons/BranchRowSkeleton";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -298,29 +299,34 @@ export function BranchesPage() {
                 <div className="a-br-grouph-count">
                   {g.branches.length} {t("branches.branches")}
                 </div>
-                <button
-                  type="button"
-                  className="r-btn sm ghost a-br-grouph-fetch"
-                  disabled={busyKey === fetchKey}
-                  title={t("branches.actions.fetch_tooltip")}
-                  data-testid="branches-fetch"
-                  data-repo-id={g.repo.id}
-                  onClick={() =>
-                    void run(
-                      fetchKey,
-                      TauriCommand.GIT_FETCH,
-                      { repoId: g.repo.id },
-                      t("branches.actions.fetched", { repo: g.repo.name }),
-                    )
-                  }
-                >
-                  <Icon name="refresh" size={12} />
-                  <span>
-                    {busyKey === fetchKey
-                      ? t("branches.actions.fetching")
-                      : t("branches.actions.fetch")}
-                  </span>
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="r-btn sm ghost a-br-grouph-fetch"
+                      disabled={busyKey === fetchKey}
+                      aria-label={t("branches.actions.fetch_tooltip")}
+                      data-testid="branches-fetch-all"
+                      data-repo-id={g.repo.id}
+                      onClick={() =>
+                        void run(
+                          fetchKey,
+                          TauriCommand.GIT_FETCH,
+                          { repoId: g.repo.id },
+                          t("branches.actions.fetched", { repo: g.repo.name }),
+                        )
+                      }
+                    >
+                      <Icon name="refresh" size={12} />
+                      <span>
+                        {busyKey === fetchKey
+                          ? t("branches.actions.fetching")
+                          : t("branches.actions.fetch")}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("branches.actions.fetch_tooltip")}</TooltipContent>
+                </Tooltip>
               </div>
               <div className="a-br-list">
                 {g.branches.map((b, i) => (

@@ -1,5 +1,10 @@
 {
   "title": "Repositories",
+  "actions": {
+    "open_terminal_tooltip": "Terminal im Repository öffnen",
+    "create_branch_tooltip": "Neuen Branch von HEAD erstellen",
+    "avatar_upload_hint": "Klicken, um ein eigenes Logo festzulegen"
+  },
   "summary": {
     "total": "Gesamt",
     "dirty": "Mit Änderungen",

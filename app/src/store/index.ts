@@ -14,6 +14,7 @@ import { remoteImportReducer } from "@/store/slices/remoteImportSlice";
 import { reposReducer } from "@/store/slices/reposSlice";
 import type { SettingsState } from "@/store/slices/settingsSlice";
 import { settingsReducer } from "@/store/slices/settingsSlice";
+import { uiDevFlagsReducer } from "@/store/slices/uiDevFlagsSlice";
 import { uiReducer } from "@/store/slices/uiSlice";
 
 const persisted = loadPersisted();
@@ -26,6 +27,11 @@ export const store = configureStore({
     remoteImport: remoteImportReducer,
     settings: settingsReducer,
     ui: uiReducer,
+    // Developer-only flags slice — conditionally registered behind
+    // `import.meta.env.DEV` so production bundles don't ship the reducer.
+    // `useDevFlag` returns the default inline when not in dev, so attempts
+    // to access `state.uiDevFlags` in prod are never reached.
+    ...(import.meta.env.DEV ? { uiDevFlags: uiDevFlagsReducer } : {}),
   },
   preloadedState: persisted
     ? {
@@ -39,6 +45,7 @@ export const store = configureStore({
           importDialogOpen: false,
           findDialogOpen: false,
           updaterBanner: null,
+          updaterProgress: null,
         },
         settings: {
           pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,

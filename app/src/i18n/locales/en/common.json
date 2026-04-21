@@ -25,7 +25,7 @@
   "actions": {
     "refresh": "Refresh",
     "add": "Add",
-    "add_repo": "Add repo",
+    "add_repo": "Add Repository",
     "remove": "Remove",
     "search": "Search",
     "search_placeholder": "Search repositories, branches, MRs…",
@@ -35,7 +35,8 @@
     "open_remote": "Open remote",
     "cancel": "Cancel",
     "save": "Save",
-    "delete": "Delete"
+    "delete": "Delete",
+    "clear": "Clear"
   },
   "states": {
     "loading": "Loading…",
@@ -89,9 +90,17 @@
       "title": "Quick actions",
       "fetch_all": "Fetch all",
       "clone": "Clone repo",
+      "clone_tooltip": "Clone from a URL or import from GitHub / GitLab / Bitbucket",
       "find": "Find across repos",
-      "workspace": "Open workspace"
+      "workspace": "Open workspace",
+      "workspace_tooltip": "Open a multi-root IDE workspace with all scanned repos"
     }
+  },
+  "titlebar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close"
   },
   "mrs": {
     "filter": { "open": "Open", "draft": "Draft", "merged": "Merged", "closed": "Closed" },
@@ -240,7 +249,8 @@
       "integrations": "Integrations",
       "shortcuts": "Shortcuts",
       "storage": "Storage",
-      "about": "About"
+      "about": "About",
+      "developer": "Developer"
     },
     "general": {
       "title": "General",
@@ -279,6 +289,37 @@
       "title": "About Recrest",
       "intro": "Version information, licenses, and credits.",
       "version": "Version"
+    },
+    "developer": {
+      "title": "Developer",
+      "intro": "Debug-only tools. These settings are hidden in production builds."
     }
+  },
+  "notifications": {
+    "new_pr": {
+      "title": "New merge request",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "ci_failed": {
+      "title": "CI failed",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "merge_ready": {
+      "title": "Ready to merge",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "generic": {
+      "title": "Recrest",
+      "clone_done": { "title": "Clone complete", "body": "{{repo}}" },
+      "update_available": { "title": "Update available", "body": "v{{version}}" },
+      "test_body": "Test notification from Recrest"
+    },
+    "burst": {
+      "new_pr": "{{count}} new merge requests",
+      "ci_failed": "{{count}} CI failures",
+      "merge_ready": "{{count}} merge requests are ready"
+    },
+    "test": "Test",
+    "test_sent": "Test notification sent"
   }
 }

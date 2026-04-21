@@ -72,6 +72,16 @@ export const TauriCommand = {
   GET_PLATFORM_INFO: "get_platform_info",
   CHECK_GIT: "check_git",
   UPDATE_TRAY_BADGE: "update_tray_badge",
+
+  // updater
+  CHECK_FOR_UPDATE: "check_for_update",
+  INSTALL_UPDATE: "install_update",
+
+  // dev (debug builds only — guarded on the Rust side and only invoked from
+  // the Developer settings tab which is stripped from production builds)
+  GET_DEV_PATHS: "get_dev_paths",
+  GET_BUILD_TRIPLE: "get_build_triple",
+  DEV_PANIC: "dev_panic",
 } as const;
 
 export type TauriCommandName = (typeof TauriCommand)[keyof typeof TauriCommand];

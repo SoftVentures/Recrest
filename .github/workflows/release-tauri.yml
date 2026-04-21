@@ -89,6 +89,14 @@ jobs:
           name: installer-assets-build
           path: app/src-tauri/installer-assets/build/
 
+      - name: Guard against unpopulated updater pubkey
+        shell: bash
+        run: |
+          if grep -q 'REPLACE_WITH_MINISIGN_PUBKEY' app/src-tauri/tauri.conf.json; then
+            echo "::error::tauri.conf.json still contains the updater pubkey placeholder."
+            exit 1
+          fi
+
       - name: Load release notes
         id: release_notes
         shell: bash
@@ -162,6 +170,8 @@ jobs:
             --pattern '*.deb' \
             --pattern '*.rpm' \
             --pattern '*.app.tar.gz' \
+            --pattern '*.sig' \
+            --pattern 'latest.json' \
             || true
           ls -la dl || true
 
@@ -220,9 +230,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # Preserve any asset the Tauri auto-updater resolves from latest.json:
+          #   *.msi          — Windows installer (updater downloads + swaps in place)
+          #   *.app.tar.gz   — macOS updater bundle
+          #   *.AppImage     — Linux updater payload
+          #   *.sig          — Minisign signatures that accompany each of the above
+          #   latest.json    — updater manifest itself
+          # Everything else (.dmg / .deb / .rpm / .exe) is manual-download only; the
+          # per-OS ZIP has a copy, so removing the single-asset version keeps the
+          # Release page uncluttered without starving the updater.
+          keep_patterns=("*.msi" "*.app.tar.gz" "*.AppImage" "*.sig" "latest.json")
           for f in dl/*; do
             [ -f "$f" ] || continue
             asset="$(basename "$f")"
+            keep=0
+            for p in "${keep_patterns[@]}"; do
+              case "$asset" in $p) keep=1;; esac
+            done
+            if [ "$keep" = 1 ]; then
+              echo "keep: $asset"
+              continue
+            fi
             echo "deleting old asset: $asset"
             gh release delete-asset "${{ github.ref_name }}" "$asset" \
               --repo "${{ github.repository }}" \

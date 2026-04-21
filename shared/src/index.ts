@@ -17,12 +17,14 @@ export * from "./types/errors.js";
 export * from "./types/git.js";
 export * from "./types/ide.js";
 export * from "./types/legal.js";
+export * from "./types/notifications.js";
 export * from "./types/pr.js";
 export * from "./types/provider.js";
 export * from "./types/remote.js";
 export * from "./types/repo.js";
 export * from "./types/settings.js";
 export * from "./types/tauri.js";
+export * from "./types/updater.js";
 
 export * from "./utils/formatting.js";
 export * from "./utils/languages.js";

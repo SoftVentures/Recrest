@@ -362,28 +362,40 @@ export function DashboardPage() {
               <Icon name="refresh" size={14} />
               <span>{fetching ? "…" : t("dash.quick.fetch_all")}</span>
             </button>
-            <button
-              type="button"
-              className="a-dash-qbtn"
-              onClick={onOpenImport}
-              title="Clone from a URL or import from GitHub / GitLab / Bitbucket"
-            >
-              <Icon name="plus" size={14} />
-              <span>{t("dash.quick.clone")}</span>
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="a-dash-qbtn"
+                  onClick={onOpenImport}
+                  aria-label={t("dash.quick.clone_tooltip")}
+                  data-testid="dash-qa-clone"
+                >
+                  <Icon name="plus" size={14} />
+                  <span>{t("dash.quick.clone")}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t("dash.quick.clone_tooltip")}</TooltipContent>
+            </Tooltip>
             <button type="button" className="a-dash-qbtn" onClick={onFindAcrossRepos}>
               <Icon name="search" size={14} />
               <span>{t("dash.quick.find")}</span>
             </button>
-            <button
-              type="button"
-              className="a-dash-qbtn"
-              onClick={() => void onOpenWorkspace()}
-              title="Open a multi-root IDE workspace with all scanned repos"
-            >
-              <Icon name="terminal" size={14} />
-              <span>{t("dash.quick.workspace")}</span>
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="a-dash-qbtn"
+                  onClick={() => void onOpenWorkspace()}
+                  aria-label={t("dash.quick.workspace_tooltip")}
+                  data-testid="dash-qa-workspace"
+                >
+                  <Icon name="terminal" size={14} />
+                  <span>{t("dash.quick.workspace")}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t("dash.quick.workspace_tooltip")}</TooltipContent>
+            </Tooltip>
           </div>
         </section>
 

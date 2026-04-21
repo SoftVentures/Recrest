@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/molecules/compounds/AlertDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
+import { TruncatedTooltip } from "@/components/molecules/compounds/TruncatedTooltip";
 import { SettingsSection } from "@/components/organisms/settings/SettingsSection";
 import { isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -145,9 +146,11 @@ export function RepoSources() {
             <div className="a-src-row-icon">
               <Icon name="folder" size={14} />
             </div>
-            <div className="a-set-row-l a-src-row-path" title={path}>
-              {path}
-            </div>
+            <TruncatedTooltip content={path}>
+              <div className="a-set-row-l a-src-row-path" data-testid="repo-sources-path">
+                {path}
+              </div>
+            </TruncatedTooltip>
             <div className="a-set-row-r">
               <AlertDialog>
                 <Tooltip>

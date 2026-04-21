@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -17,15 +17,47 @@ import { useAppDispatch } from "@/store/hooks";
 import { loadProviders } from "@/store/slices/providersSlice";
 import { loadSettings } from "@/store/slices/settingsSlice";
 
-type TabId = "general" | "accounts" | "integrations" | "shortcuts" | "storage" | "about";
+// Developer tab is a lazy import gated on `import.meta.env.DEV`. In
+// production the ternary resolves to a null component and Vite never emits
+// the dynamic-import chunk, so the whole module (including its direct
+// Tauri-plugin imports) drops out of the bundle.
+const DeveloperTab = import.meta.env.DEV
+  ? lazy(() => import("@/components/organisms/settings/tabs/DeveloperTab"))
+  : () => null;
 
-const TABS: { id: TabId; icon: IconName; labelKey: string }[] = [
+type TabId =
+  | "general"
+  | "accounts"
+  | "integrations"
+  | "shortcuts"
+  | "storage"
+  | "about"
+  | "developer";
+
+interface TabDescriptor {
+  id: TabId;
+  icon: IconName;
+  labelKey: string;
+}
+
+const TABS: TabDescriptor[] = [
   { id: "general", icon: "settings", labelKey: "settings.tab.general" },
   { id: "accounts", icon: "user", labelKey: "settings.tab.accounts" },
   { id: "integrations", icon: "code", labelKey: "settings.tab.integrations" },
   { id: "shortcuts", icon: "terminal", labelKey: "settings.tab.shortcuts" },
   { id: "storage", icon: "folder", labelKey: "settings.tab.storage" },
   { id: "about", icon: "box", labelKey: "settings.tab.about" },
+  // Developer tab is only present in dev builds — Vite drops the lazy chunk
+  // in production via the `import.meta.env.DEV` gate above.
+  ...(import.meta.env.DEV
+    ? [
+        {
+          id: "developer",
+          icon: "wrench",
+          labelKey: "settings.tab.developer",
+        } satisfies TabDescriptor,
+      ]
+    : []),
 ];
 
 export function SettingsView() {
@@ -64,7 +96,23 @@ export function SettingsView() {
         {tab === "shortcuts" && <SettingsShortcutsTab />}
         {tab === "storage" && <SettingsStorageTab />}
         {tab === "about" && <SettingsAboutTab />}
+        {tab === "developer" && <SettingsDeveloperTab />}
       </div>
+    </div>
+  );
+}
+
+function SettingsDeveloperTab() {
+  const { t } = useTranslation();
+  return (
+    <div className="a-set-page">
+      <div className="a-set-head">
+        <h2>{t("settings.developer.title")}</h2>
+        <p>{t("settings.developer.intro")}</p>
+      </div>
+      <Suspense fallback={null}>
+        <DeveloperTab />
+      </Suspense>
     </div>
   );
 }

@@ -164,9 +164,20 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
   ],
 };
 
-/** Count of PRs per state across the seed — handy for sidebar-count assertions. */
+/**
+ * Count of PRs per state across the seed — handy for sidebar-count assertions.
+ *
+ * `open` is the total number of open PRs across every seeded repo (8 = any
+ * state === "open", including the 2 drafts). `openVisible` is the subset
+ * that the Sidebar / MergeRequests list actually surfaces in the default
+ * seed — only repos whose provider is connected are polled, so pulse-ios
+ * (gitlab, disconnected) and signal-lab (bitbucket, disconnected) drop out,
+ * leaving 5. Use `openVisible` for live UI-count assertions and `open`
+ * when you need the raw seed total (e.g. provider-level integration tests).
+ */
 export const SEED_PR_COUNTS = {
   open: 8,
+  openVisible: 5,
   draft: 2,
   merged: 1,
   total: 9,

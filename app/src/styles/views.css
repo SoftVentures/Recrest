@@ -339,7 +339,21 @@
 .a-set-section h3 {
   font-size: 11px;
   color: var(--ink-3);
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+/* Secondary heading inside a section (e.g. the "Paths" sub-table in the
+ * Developer → Build section). Slightly more padding on top so it clearly
+ * separates from the previous card instead of hugging it. */
+.a-set-subhead {
+  margin: 18px 0 10px;
+}
+.a-set-subhead h3 {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 600;
@@ -2652,15 +2666,31 @@
 .a-act-rq-item {
   display: grid;
   grid-template-columns: 1fr auto;
+  align-items: center;
   gap: 10px;
   padding: 8px 10px;
   border-radius: 7px;
   background: var(--surface-2);
   cursor: pointer;
   transition: background 0.12s ease;
+  /* Button reset — the element is a real <button> for a11y, but visually it
+   * needs to behave like the previous div-based row. */
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  width: 100%;
 }
 .a-act-rq-item:hover {
   background: var(--surface-3);
+}
+.a-act-rq-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.a-act-rq-body {
+  display: block;
+  min-width: 0;
 }
 .a-act-rq-title {
   font-size: 12px;

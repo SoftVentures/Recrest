@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Icon } from "@/components/atoms/Icon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { openExternal } from "@/lib/tauri";
 
 interface ExternalLinkButtonProps {
@@ -30,15 +31,22 @@ export function ExternalLinkButton({
   className,
 }: ExternalLinkButtonProps) {
   const classes = ["r-btn", size === "sm" ? "sm" : "", className ?? ""].filter(Boolean).join(" ");
+  const tooltipText = title ?? (typeof label === "string" ? label : url);
   return (
-    <button
-      type="button"
-      className={classes}
-      title={title ?? (typeof label === "string" ? label : url)}
-      onClick={() => void openExternal(url)}
-    >
-      <Icon name="external" size={size === "sm" ? 11 : 12} />
-      {!iconOnly && label}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={classes}
+          aria-label={tooltipText}
+          data-testid="external-link-button"
+          onClick={() => void openExternal(url)}
+        >
+          <Icon name="external" size={size === "sm" ? 11 : 12} />
+          {!iconOnly && label}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltipText}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -21,16 +21,17 @@ function mount(onSelect = vi.fn(), selected = false) {
 describe("RepoRow", () => {
   it("renders the repo name", () => {
     mount();
-    expect(screen.getByText("recrest")).toBeInTheDocument();
+    // Repo name fixture is "recrest" — testid-based to avoid text coupling.
+    expect(screen.getByTestId("repo-row-name")).toHaveTextContent("recrest");
   });
 
-  it("marks the row with a .selected class when selected", () => {
-    const { container } = mount(vi.fn(), true);
-    expect(container.querySelector(".a-row.selected")).not.toBeNull();
+  it("marks the row as selected", () => {
+    mount(vi.fn(), true);
+    expect(screen.getByTestId("repo-row")).toHaveAttribute("data-selected", "true");
   });
 
-  it("does not carry the .selected class when not selected", () => {
-    const { container } = mount(vi.fn(), false);
-    expect(container.querySelector(".a-row.selected")).toBeNull();
+  it("does not mark the row as selected when unselected", () => {
+    mount(vi.fn(), false);
+    expect(screen.getByTestId("repo-row")).not.toHaveAttribute("data-selected");
   });
 });

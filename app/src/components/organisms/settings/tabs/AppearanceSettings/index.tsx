@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/molecules/compounds/Select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import i18n from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -141,7 +142,6 @@ export function AppearanceSettings() {
                         countryCode={LOCALE_FLAG.en!}
                         svg
                         aria-hidden
-                        title=""
                         style={{ width: "1.1em", height: "1.1em", borderRadius: 2 }}
                       />
                       English
@@ -153,7 +153,6 @@ export function AppearanceSettings() {
                         countryCode={LOCALE_FLAG.de!}
                         svg
                         aria-hidden
-                        title=""
                         style={{ width: "1.1em", height: "1.1em", borderRadius: 2 }}
                       />
                       Deutsch
@@ -170,18 +169,25 @@ export function AppearanceSettings() {
               <div className="a-set-row-sub">{t("fields.accent_sub")}</div>
             </div>
             <div className="a-set-row-r a-accent-row">
-              {ACCENTS.map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  className="a-accent-chip"
-                  data-active={s.accent === a ? "true" : undefined}
-                  onClick={() => dispatch(setAccent(a))}
-                  title={t(`accent.${a}`, { defaultValue: a })}
-                  style={{ background: accentSwatch(a) }}
-                  aria-label={a}
-                />
-              ))}
+              {ACCENTS.map((a) => {
+                const accentLabel = t(`accent.${a}`, { defaultValue: a });
+                return (
+                  <Tooltip key={a}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="a-accent-chip"
+                        data-active={s.accent === a ? "true" : undefined}
+                        onClick={() => dispatch(setAccent(a))}
+                        style={{ background: accentSwatch(a) }}
+                        aria-label={accentLabel}
+                        data-testid={`accent-chip-${a}`}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>{accentLabel}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
 

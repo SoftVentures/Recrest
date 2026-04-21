@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { describe, expect, it } from "vitest";
 
+import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
 import { Sidebar } from "@/components/organisms/layout/Sidebar";
 import "@/i18n";
 import { store } from "@/store";
@@ -31,14 +32,16 @@ describe("Sidebar", () => {
     render(
       <Provider store={store}>
         <MemoryRouter future={ROUTER_FUTURE}>
-          <Sidebar />
+          <TooltipProvider delayDuration={0}>
+            <Sidebar />
+          </TooltipProvider>
         </MemoryRouter>
       </Provider>,
     );
 
-    expect(screen.getByRole("navigation", { hidden: true })).toBeInTheDocument();
-    expect(screen.getByText(/dashboard/i)).toBeInTheDocument();
-    expect(screen.getByText(/repositories/i)).toBeInTheDocument();
-    expect(screen.getByText(/merge requests/i)).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-dashboard")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-repos")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-merge-requests")).toBeInTheDocument();
   });
 });

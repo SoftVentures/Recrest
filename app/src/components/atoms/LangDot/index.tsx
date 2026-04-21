@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { langMeta } from "@/lib/languages";
 
 interface LangDotProps {
@@ -8,5 +9,17 @@ interface LangDotProps {
  *  extension ("rs") or a canonical linguist name ("Rust"). */
 export function LangDot({ lang }: LangDotProps) {
   const meta = langMeta(lang);
-  return <span className="lang-dot" style={{ background: meta.color }} title={meta.label} />;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="lang-dot"
+          style={{ background: meta.color }}
+          aria-label={meta.label}
+          data-testid="lang-dot"
+        />
+      </TooltipTrigger>
+      <TooltipContent>{meta.label}</TooltipContent>
+    </Tooltip>
+  );
 }
