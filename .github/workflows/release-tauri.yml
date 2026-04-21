@@ -23,14 +23,14 @@ jobs:
     name: Generate installer assets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: yarn
       - uses: ./.github/actions/install-deps
       - run: yarn workspace @recrest/app gen:installer-assets
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: installer-assets-build
           path: app/src-tauri/installer-assets/build/
@@ -55,9 +55,9 @@ jobs:
     # manually (gh release upload) or by re-running the failed leg once fixed.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: yarn
@@ -84,7 +84,7 @@ jobs:
       - uses: ./.github/actions/install-deps
 
       - name: Download installer-asset bitmaps
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: installer-assets-build
           path: app/src-tauri/installer-assets/build/
