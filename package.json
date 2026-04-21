@@ -1,6 +1,6 @@
 {
   "name": "recrest",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "description": "Recrest — A lightweight developer dashboard built with Tauri.",
   "license": "MIT",
@@ -36,14 +36,6 @@
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx,cjs,mjs,json,css,html,md,svg,yml,yaml}": "prettier --write",
-    "app/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
-    "shared/src/**/*.ts": "eslint --fix --max-warnings=0",
-    "tests/src/**/*.ts": "eslint --fix --max-warnings=0",
-    "landingpage/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
-    "app/src-tauri/**/*.rs": "rustfmt --edition 2021"
   },
   "repository": {
     "type": "git",
