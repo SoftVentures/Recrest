@@ -78,7 +78,7 @@ export function SettingsView() {
             key={tb.id}
             type="button"
             role="tab"
-            aria-selected={tab === tb.id}
+            aria-selected={tab === tb.id ? "true" : "false"}
             className="a-settings-tab"
             data-active={tab === tb.id ? "true" : undefined}
             data-testid={`settings-tab-${tb.id}`}
@@ -190,7 +190,7 @@ function SettingsShortcutsTab() {
         <h2>{t("settings.shortcuts.title")}</h2>
         <p>
           {t("settings.shortcuts.intro")}{" "}
-          <span style={{ color: "var(--ink-3)" }}>
+          <span className="text-muted-foreground">
             ·{" "}
             {t("settings.shortcuts.os_hint", {
               os: platform === "mac" ? "macOS" : platform === "linux" ? "Linux" : "Windows",

@@ -56,7 +56,7 @@ function Section({
           type="button"
           className="a-dp-sec-hdr"
           onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
+          aria-expanded={open ? "true" : "false"}
           aria-label={`${open ? "Collapse" : "Expand"} ${title}`}
         >
           <span className="a-dp-sec-chev">
@@ -174,7 +174,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                 <input
                   type="file"
                   accept="image/*"
-                  style={{ display: "none" }}
+                  className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) onLogoUpload(f);
@@ -185,7 +185,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             </TooltipTrigger>
             <TooltipContent>{t("actions.avatar_upload_hint")}</TooltipContent>
           </Tooltip>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="min-w-0 flex-1">
             <div className="a-dp-name">{repo.name}</div>
             <div className="a-dp-path">{repo.path}</div>
             <div className="a-dp-lang">
@@ -195,13 +195,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           </div>
         </div>
         <div className="a-dp-hdr-ctrls">
-          <IconButton
-            tooltip="Expand to fullscreen view"
-            onClick={() => navigate(`/repo/${repo.id}`)}
-          >
-            <Icon name="expand" size={13} />
-          </IconButton>
-          <IconButton tooltip="Close" onClick={onClose}>
+          <IconButton tooltip={t("detail.close")} onClick={onClose}>
             <Icon name="x" size={14} />
           </IconButton>
         </div>
@@ -250,10 +244,10 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
         <div className="a-dp-branch-top">
           <BranchChip branch={repo.status.branch ?? repo.name} size="big" />
           <div className="a-dp-ab">
-            <span style={{ color: repo.status.ahead ? "var(--green)" : "var(--ink-4)" }}>
+            <span className={repo.status.ahead ? "text-(--green)" : "text-(--ink-4)"}>
               ↑{repo.status.ahead}
             </span>
-            <span style={{ color: repo.status.behind ? "var(--amber)" : "var(--ink-4)" }}>
+            <span className={repo.status.behind ? "text-(--amber)" : "text-(--ink-4)"}>
               ↓{repo.status.behind}
             </span>
           </div>
@@ -294,68 +288,83 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
       </div>
       <CreateBranchDialog open={branchOpen} repoId={repo.id} onClose={() => setBranchOpen(false)} />
 
-      {repo.status.dirty && (
+      <div className="a-dp-body">
+        {repo.status.dirty && (
+          <Section
+            title="Uncommitted"
+            meta={
+              <>
+                <DiffStat added={repo.added} removed={repo.removed} />
+                <span className="a-dp-sep">·</span>
+                <span>
+                  {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
+                </span>
+              </>
+            }
+          >
+            <div className="a-dp-files">
+              {repo.status.changedFiles.map((f) => {
+                const letter = kindLetter(f.kind);
+                return (
+                  <div key={f.path} className="a-dp-file">
+                    <span className={`a-dp-st a-dp-st-${letter}`}>{letter}</span>
+                    <span className="a-dp-file-path">{f.path}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
         <Section
-          title="Uncommitted"
+          title="Recent commits"
           meta={
-            <>
-              <DiffStat added={repo.added} removed={repo.removed} />
-              <span className="a-dp-sep">·</span>
-              <span>
-                {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
-              </span>
-            </>
+            <button
+              type="button"
+              className="a-dp-link"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToRepoActivity();
+              }}
+            >
+              Log →
+            </button>
           }
         >
-          <div className="a-dp-files">
-            {repo.status.changedFiles.slice(0, 8).map((f) => (
-              <div key={f.path} className="a-dp-file">
-                <span className={`a-dp-st a-dp-st-${statusLetter(f.status)}`}>
-                  {statusLetter(f.status)}
-                </span>
-                <span className="a-dp-file-path">{f.path}</span>
-              </div>
-            ))}
-          </div>
+          <RecentCommitsBody repo={repo} />
         </Section>
-      )}
 
-      <Section
-        title="Recent commits"
-        meta={
-          <button
-            type="button"
-            className="a-dp-link"
-            onClick={(e) => {
-              e.stopPropagation();
-              goToRepoActivity();
-            }}
-          >
-            Log →
-          </button>
-        }
-      >
-        <RecentCommitsBody repo={repo} />
-      </Section>
-
-      {repoPrs.length > 0 && (
-        <Section title="Open merge requests" meta={repoPrs.length} defaultOpen={false}>
-          <div className="a-dp-prs">
-            {repoPrs.map((p) => (
-              <div key={p.id} className="a-dp-pr">
-                <Icon name="pr" size={13} color={p.draft ? "var(--ink-3)" : "var(--green)"} />
-                <div className="a-dp-pr-body">
-                  <div className="a-dp-pr-title">{p.title}</div>
-                  <div className="a-dp-pr-meta">
-                    #{p.number} · {p.author}
+        {repoPrs.length > 0 && (
+          <Section title="Open merge requests" meta={repoPrs.length} defaultOpen={false}>
+            <div className="a-dp-prs">
+              {repoPrs.map((p) => (
+                <div key={p.id} className="a-dp-pr">
+                  <Icon name="pr" size={13} color={p.draft ? "var(--ink-3)" : "var(--green)"} />
+                  <div className="a-dp-pr-body">
+                    <div className="a-dp-pr-title">{p.title}</div>
+                    <div className="a-dp-pr-meta">
+                      #{p.number} · {p.author}
+                    </div>
                   </div>
+                  <CiDot state={ciToDot(p.ciStatus)} />
                 </div>
-                <CiDot state={ciToDot(p.ciStatus)} />
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
+              ))}
+            </div>
+          </Section>
+        )}
+      </div>
+
+      <div className="a-dp-footer">
+        <button
+          type="button"
+          className="r-btn primary a-dp-open-full"
+          onClick={() => navigate(`/repo/${repo.id}`)}
+          data-testid="detail-pane-open-full"
+        >
+          <Icon name="maximize" size={13} />
+          <span>{t("detail.open_full_view")}</span>
+        </button>
+      </div>
     </aside>
   );
 }
@@ -403,7 +412,7 @@ function RecentCommitsBody({ repo }: { repo: EnrichedRepo }) {
       </div>
     );
   }
-  return <div style={{ color: "var(--ink-3)", fontSize: 12 }}>No commits yet.</div>;
+  return <div className="text-xs text-muted-foreground">No commits yet.</div>;
 }
 
 function ciToDot(s: string | null): CiState {
@@ -413,10 +422,14 @@ function ciToDot(s: string | null): CiState {
   return null;
 }
 
-function statusLetter(s: string): "M" | "A" | "D" | "R" {
-  if (s === "staged") return "M";
-  if (s === "untracked") return "A";
-  if (s === "conflicted") return "R";
+/** Three semantic buckets, mapped to the `.a-dp-st-*` letter badges:
+ *  A=green (new files), M=amber (changes — modified, renamed, typechange),
+ *  D=red (deletions). Renamed collapses into "changes" because users
+ *  reading the list care about *what colour means risk*, not about the
+ *  nuance between a rename and an edit. */
+function kindLetter(kind: string): "M" | "A" | "D" {
+  if (kind === "added") return "A";
+  if (kind === "deleted") return "D";
   return "M";
 }
 

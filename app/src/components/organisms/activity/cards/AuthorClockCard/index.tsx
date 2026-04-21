@@ -82,7 +82,7 @@ export function AuthorClockCard({ hours, loading }: Props) {
           <div>
             <strong>{peakLabel}</strong>
           </div>
-          <div style={{ marginTop: 4 }}>{total} commits</div>
+          <div className="mt-1">{total} commits</div>
         </div>
       </div>
     </CardShell>

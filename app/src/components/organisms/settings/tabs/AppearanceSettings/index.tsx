@@ -142,7 +142,7 @@ export function AppearanceSettings() {
                         countryCode={LOCALE_FLAG.en!}
                         svg
                         aria-hidden
-                        style={{ width: "1.1em", height: "1.1em", borderRadius: 2 }}
+                        className="h-[1.1em] w-[1.1em] rounded-[2px]"
                       />
                       English
                     </span>
@@ -153,7 +153,7 @@ export function AppearanceSettings() {
                         countryCode={LOCALE_FLAG.de!}
                         svg
                         aria-hidden
-                        style={{ width: "1.1em", height: "1.1em", borderRadius: 2 }}
+                        className="h-[1.1em] w-[1.1em] rounded-[2px]"
                       />
                       Deutsch
                     </span>
@@ -199,8 +199,7 @@ export function AppearanceSettings() {
             <div className="a-set-row-r">
               <Select value={s.font} onValueChange={(v) => dispatch(setFont(v as FontId))}>
                 <SelectTrigger
-                  className="a-set-trigger"
-                  style={{ minWidth: 180 }}
+                  className="a-set-trigger min-w-[180px]"
                   aria-label={t("fields.font")}
                 >
                   <SelectValue />
@@ -227,8 +226,7 @@ export function AppearanceSettings() {
                 onValueChange={(v) => dispatch(setFontSize(v as FontSizeId))}
               >
                 <SelectTrigger
-                  className="a-set-trigger"
-                  style={{ minWidth: 160 }}
+                  className="a-set-trigger min-w-[160px]"
                   aria-label={t("fields.font_size")}
                 >
                   <SelectValue />

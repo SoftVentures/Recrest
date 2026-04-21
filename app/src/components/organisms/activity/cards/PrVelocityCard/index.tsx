@@ -57,11 +57,11 @@ export function PrVelocityCard({ rows, loading }: Props) {
       </div>
       <div className="a-act-line-legend">
         <span>
-          <span className="a-act-line-dot" style={{ background: "var(--accent)" }} />
+          <span className="a-act-line-dot bg-(--accent)" />
           {t("activity.cards.pr_velocity_opened")}
         </span>
         <span>
-          <span className="a-act-line-dot" style={{ background: "var(--green)" }} />
+          <span className="a-act-line-dot bg-(--green)" />
           {t("activity.cards.pr_velocity_merged")}
         </span>
       </div>

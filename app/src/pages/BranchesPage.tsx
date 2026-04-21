@@ -505,7 +505,7 @@ function BFilter({
     <button
       type="button"
       role="tab"
-      aria-selected={active}
+      aria-selected={active ? "true" : "false"}
       className={`a-br-filter-pill${active ? " active" : ""}`}
       onClick={onClick}
     >

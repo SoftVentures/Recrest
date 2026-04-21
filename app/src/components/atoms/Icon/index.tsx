@@ -1,5 +1,7 @@
 import type { ReactElement, SVGProps } from "react";
 
+import { cn } from "@/lib/utils";
+
 export type IconName =
   | "search"
   | "plus"
@@ -33,6 +35,7 @@ export type IconName =
   | "settings"
   | "collapse"
   | "expand"
+  | "maximize"
   | "camera"
   | "inbox"
   | "star"
@@ -187,6 +190,16 @@ const PATHS: Record<IconName, ReactElement> = {
       <polyline points="6 17 11 12 6 7" />
     </>
   ),
+  /** Classic "enter fullscreen" glyph: four corner brackets pointing
+   *  outward. Used by the DetailPane's Open-full-view CTA. */
+  maximize: (
+    <>
+      <polyline points="4 9 4 4 9 4" />
+      <polyline points="20 9 20 4 15 4" />
+      <polyline points="4 15 4 20 9 20" />
+      <polyline points="20 15 20 20 15 20" />
+    </>
+  ),
   camera: (
     <>
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -264,7 +277,7 @@ const PATHS: Record<IconName, ReactElement> = {
   ),
 };
 
-export function Icon({ name, size = 16, color = "currentColor", ...rest }: IconProps) {
+export function Icon({ name, size = 16, color = "currentColor", className, ...rest }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -276,7 +289,7 @@ export function Icon({ name, size = 16, color = "currentColor", ...rest }: IconP
       strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ flexShrink: 0 }}
+      className={cn("shrink-0", className)}
       {...rest}
     >
       {PATHS[name]}

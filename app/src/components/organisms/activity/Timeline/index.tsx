@@ -260,7 +260,7 @@ function FilterPill({ active, label, count, onClick }: FilterPillProps) {
     <button
       type="button"
       role="tab"
-      aria-selected={active}
+      aria-selected={active ? "true" : "false"}
       className={`a-act-tl-pill${active ? " active" : ""}`}
       onClick={onClick}
     >

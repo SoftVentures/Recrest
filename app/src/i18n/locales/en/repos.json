@@ -29,6 +29,8 @@
     "branch": "Branch",
     "changes": "Changes",
     "clean": "clean",
+    "close": "Close",
+    "open_full_view": "Open full view",
     "files": "{{count}} file",
     "files_other": "{{count}} files",
     "last_commit": "Last commit",

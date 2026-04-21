@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 
-import { GitPullRequest } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/molecules/EmptyState";
@@ -27,8 +26,8 @@ export function PrList() {
 
   if (rows.length === 0) {
     return (
-      <div data-testid="mr-list-empty">
-        <EmptyState icon={GitPullRequest} title={t("empty")} description={t("empty_desc")} />
+      <div className="flex h-full w-full" data-testid="mr-list-empty">
+        <EmptyState mascot="snoozing" title={t("empty")} description={t("empty_desc")} />
       </div>
     );
   }

@@ -136,11 +136,7 @@ function BuildSection() {
               <div className="a-set-row-lbl">{r.label}</div>
             </div>
             <div
-              className="a-set-row-r flex items-center gap-2"
-              style={{
-                fontFamily: r.mono ? "var(--font-mono)" : undefined,
-                fontSize: 12.5,
-              }}
+              className={`a-set-row-r flex items-center gap-2 text-[12.5px] ${r.mono ? "font-mono" : ""}`}
             >
               <span>{r.value}</span>
               {r.copyable && (
@@ -229,9 +225,7 @@ function PathRow({
     <div className="a-set-row">
       <div className="a-set-row-l">
         <div className="a-set-row-lbl">{label}</div>
-        <div className="a-set-row-sub" style={{ fontFamily: "var(--font-mono)" }}>
-          {path ?? "—"}
-        </div>
+        <div className="a-set-row-sub font-mono">{path ?? "—"}</div>
       </div>
       <div className="a-set-row-r flex items-center gap-2">
         <button
@@ -333,12 +327,11 @@ function UpdaterPlaygroundSection() {
           <div className="a-set-row-r">
             <input
               type="text"
-              className="r-input"
+              className="r-input min-w-[260px]"
               placeholder={t("developer.updater.endpoint_override_placeholder")}
               value={endpointOverride}
               onChange={(e) => setEndpointOverride(e.target.value)}
               data-testid="dev-updater-endpoint-override"
-              style={{ minWidth: 260 }}
             />
           </div>
         </div>
@@ -350,11 +343,10 @@ function UpdaterPlaygroundSection() {
           <div className="a-set-row-r flex items-center gap-2">
             <input
               type="text"
-              className="r-input"
+              className="r-input w-[120px]"
               value={simVersion}
               onChange={(e) => setSimVersion(e.target.value)}
               placeholder="99.99.99"
-              style={{ width: 120 }}
               data-testid="dev-updater-sim-version"
             />
             <label className="flex items-center gap-1.5 text-xs">
@@ -989,9 +981,7 @@ function FeatureFlagsSection() {
             <div key={f.name} className="a-set-row">
               <div className="a-set-row-l">
                 <div className="a-set-row-lbl">{t(f.labelKey)}</div>
-                <div className="a-set-row-sub" style={{ fontFamily: "var(--font-mono)" }}>
-                  {f.name}
-                </div>
+                <div className="a-set-row-sub font-mono">{f.name}</div>
               </div>
               <div className="a-set-row-r">
                 {f.kind === "boolean" ? (
@@ -1027,21 +1017,19 @@ function FeatureFlagsSection() {
           <div className="a-set-row-r flex flex-wrap items-center gap-2">
             <input
               type="text"
-              className="r-input"
+              className="r-input w-[160px]"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               placeholder={t("developer.flags.custom_name_placeholder")}
               data-testid="dev-flag-custom-name"
-              style={{ width: 160 }}
             />
             <input
               type="text"
-              className="r-input"
+              className="r-input w-[160px]"
               value={customValue}
               onChange={(e) => setCustomValue(e.target.value)}
               placeholder={t("developer.flags.custom_value_placeholder")}
               data-testid="dev-flag-custom-value"
-              style={{ width: 160 }}
             />
             <button type="button" className="r-btn" onClick={addCustom} data-testid="dev-flag-add">
               {t("developer.flags.add")}

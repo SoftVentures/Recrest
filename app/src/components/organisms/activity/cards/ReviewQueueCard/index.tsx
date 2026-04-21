@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { EmptyState } from "@/components/molecules/EmptyState";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { CardShell } from "@/components/organisms/activity/cards/CardShell";
 import type { ReviewQueueEntry } from "@/lib/activityAggregates";
@@ -20,8 +21,13 @@ export function ReviewQueueCard({ entries, loading }: Props) {
       skeleton="rows"
     >
       {entries.length === 0 ? (
-        <div className="a-act-card-empty" data-testid="activity-card-review-queue-empty">
-          {t("activity.cards.review_queue_empty")}
+        <div className="flex h-full w-full" data-testid="activity-card-review-queue-empty">
+          <EmptyState
+            mascot="snoozing"
+            mascotSize={88}
+            title={t("activity.cards.review_queue_empty")}
+            className="min-h-[140px] py-4"
+          />
         </div>
       ) : (
         <div className="a-act-rq" data-testid="activity-card-review-queue-list">

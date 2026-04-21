@@ -12,6 +12,7 @@ import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { Icon } from "@/components/atoms/Icon";
 import { Kbd } from "@/components/atoms/Kbd";
 import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
+import { EmptyState } from "@/components/molecules/EmptyState";
 import { IconButton, IconLink } from "@/components/molecules/IconButton";
 import {
   DropdownMenu,
@@ -163,14 +164,11 @@ export function MergeRequestsPage() {
               </button>
             ))}
             {filtered.length === 0 && (
-              <div
-                style={{ padding: 24, textAlign: "center", color: "var(--ink-3)", fontSize: 12 }}
-              >
-                {t("states.empty")}
-                <div style={{ marginTop: 6 }}>
-                  <Kbd>⌘K</Kbd>
-                </div>
-              </div>
+              <EmptyState
+                mascot={rows.length === 0 ? "snoozing" : "searching"}
+                title={t("states.empty")}
+                description={<Kbd>⌘K</Kbd>}
+              />
             )}
           </div>
         )}

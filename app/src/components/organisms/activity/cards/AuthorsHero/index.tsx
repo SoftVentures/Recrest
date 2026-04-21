@@ -30,7 +30,7 @@ export function AuthorsHero({ authors, topAuthors }: Props) {
             <AuthorAvatar key={a.name} name={a.name} email={a.email} size={22} />
           ))}
         </div>
-        <div className="a-act-kpi-delta" style={{ marginLeft: "auto" }}>
+        <div className="a-act-kpi-delta ml-auto">
           {dir === "up" && <Icon name="arrowUp" size={11} />}
           {dir === "down" && <Icon name="arrowDown" size={11} />}
           <span>{deltaLabel}</span>

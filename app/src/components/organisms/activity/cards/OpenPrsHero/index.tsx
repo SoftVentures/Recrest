@@ -30,12 +30,12 @@ export function OpenPrsHero({ prsByRepo }: Props) {
       <div className="a-act-kpi-label">{t("activity.hero.open_prs")}</div>
       <div className="a-act-kpi-value">{open}</div>
       <div className="a-act-segbar" aria-hidden>
-        <span style={{ flex: pctReview, background: "var(--accent)" }} />
-        <span style={{ flex: pctDraft, background: "var(--ink-4)" }} />
+        <span className="bg-(--accent)" style={{ flex: pctReview }} />
+        <span className="bg-(--ink-4)" style={{ flex: pctDraft }} />
       </div>
       <div className="a-act-segbar-legend">
         <span>
-          <span className="a-act-segbar-legend-dot" style={{ background: "var(--accent)" }} />
+          <span className="a-act-segbar-legend-dot bg-(--accent)" />
           {t("activity.hero.open_prs_sub", { review, draft })}
         </span>
       </div>

@@ -128,7 +128,7 @@ export function Sidebar() {
 
       <nav className="a-side-nav">
         {nav.map((item) => (
-          <NavLink key={item.to} to={item.to} style={{ textDecoration: "none", color: "inherit" }}>
+          <NavLink key={item.to} to={item.to} className="text-inherit no-underline">
             {({ isActive }) => (
               <SideItem
                 icon={item.icon}
@@ -161,10 +161,7 @@ export function Sidebar() {
       </Tooltip>
 
       <div className="a-side-foot">
-        <NavLink
-          to={AppRoute.SETTINGS}
-          style={{ textDecoration: "none", color: "inherit", minWidth: 0 }}
-        >
+        <NavLink to={AppRoute.SETTINGS} className="min-w-0 text-inherit no-underline">
           {({ isActive }) => (
             <SideItem
               icon="settings"

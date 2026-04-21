@@ -27,7 +27,7 @@ export function CardShell({
   return (
     <div className={`a-act-card${className ? ` ${className}` : ""}`}>
       <div className="a-act-card-h">
-        <div style={{ minWidth: 0 }}>
+        <div className="min-w-0">
           <h3>{title}</h3>
           {sub && <div className="a-act-card-sub">{sub}</div>}
         </div>

@@ -9,6 +9,7 @@ import { AppRoute, TauriCommand } from "@recrest/shared";
 import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { Icon } from "@/components/atoms/Icon";
 import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
+import { EmptyState } from "@/components/molecules/EmptyState";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { ActivityBarsSkeleton } from "@/components/molecules/skeletons/ActivityBarsSkeleton";
@@ -257,7 +258,12 @@ export function DashboardPage() {
               <AttentionRow key={r.id + "-b"} repo={r} kind="behind" onClick={() => goto(r.id)} />
             ))}
             {dirtyRepos.length === 0 && behindRepos.length === 0 && (
-              <div className="a-dash-empty">{t("dash.attention.empty")}</div>
+              <EmptyState
+                mascot="celebrating"
+                mascotSize={72}
+                title={t("dash.attention.empty")}
+                className="px-2 py-2"
+              />
             )}
           </div>
         </section>
@@ -292,7 +298,14 @@ export function DashboardPage() {
                   <CiDot state={ciToDot(p.ciStatus)} />
                 </button>
               ))}
-              {openPRs.length === 0 && <div className="a-dash-empty">{t("dash.mrs.empty")}</div>}
+              {openPRs.length === 0 && (
+                <EmptyState
+                  mascot="snoozing"
+                  mascotSize={72}
+                  title={t("dash.mrs.empty")}
+                  className="px-2 py-2"
+                />
+              )}
             </div>
           </section>
         )}

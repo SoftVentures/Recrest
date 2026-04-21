@@ -24,6 +24,7 @@ import {
 import { RemoteRepoListSkeleton } from "@/components/molecules/skeletons/RemoteRepoListSkeleton";
 import { invoke, isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { upsertConnection } from "@/store/slices/providersSlice";
 import {
@@ -64,32 +65,16 @@ export function ImportFromProviderDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => dispatch(setImportDialogOpen(v))}>
-      <DialogContent
-        className="max-w-3xl gap-0 overflow-hidden border-0 p-0 sm:max-w-4xl"
-        style={{
-          background: "var(--surface)",
-          boxShadow: "var(--shadow-pop)",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <DialogHeader
-          className="flex-row items-start gap-4 px-6 py-5 text-left"
-          style={{ borderBottom: "1px solid var(--border)" }}
-        >
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-            style={{
-              background: "var(--accent-weak)",
-              color: "var(--accent-ink)",
-            }}
-          >
+      <DialogContent className="max-w-3xl gap-0 overflow-hidden border border-border bg-card p-0 shadow-(--shadow-pop) sm:max-w-4xl">
+        <DialogHeader className="flex-row items-start gap-4 border-b border-border px-6 py-5 text-left">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
             <Icon name="plus" size={20} />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <DialogTitle style={{ color: "var(--ink-0)" }}>
+            <DialogTitle className="text-foreground">
               {t("import.title", { defaultValue: "Add repositories" })}
             </DialogTitle>
-            <DialogDescription style={{ color: "var(--ink-3)" }}>
+            <DialogDescription className="text-muted-foreground">
               {t("import.desc", {
                 defaultValue:
                   "Import from a connected provider or clone from any URL into a folder of your choice.",
@@ -98,7 +83,7 @@ export function ImportFromProviderDialog() {
           </div>
         </DialogHeader>
 
-        <div className="flex gap-1 px-5 pt-3" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="flex gap-1 border-b border-border px-5 pt-3">
           <TabButton
             active={tab === "providers"}
             onClick={() => setTab("providers")}
@@ -114,7 +99,7 @@ export function ImportFromProviderDialog() {
           />
         </div>
 
-        <div className="h-[560px] overflow-hidden" style={{ background: "var(--surface)" }}>
+        <div className="h-[560px] overflow-hidden bg-card">
           {tab === "providers" ? (
             <ProvidersPanel connectedProviders={connectedProviders} />
           ) : (
@@ -143,29 +128,25 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className="relative inline-flex items-center gap-2 px-3 py-2.5 text-xs font-medium transition-colors"
-      style={{
-        color: active ? "var(--ink-0)" : "var(--ink-3)",
-      }}
+      className={cn(
+        "relative inline-flex items-center gap-2 px-3 py-2.5 text-xs font-medium transition-colors",
+        active ? "text-foreground" : "text-muted-foreground",
+      )}
     >
       <Icon name={icon} size={13} color={active ? "var(--accent)" : "currentColor"} />
       <span>{label}</span>
       {badge != null && badge > 0 ? (
         <span
-          className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold"
-          style={{
-            background: active ? "var(--accent-weak)" : "var(--surface-3)",
-            color: active ? "var(--accent-ink)" : "var(--ink-2)",
-          }}
+          className={cn(
+            "inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+            active ? "bg-accent text-accent-foreground" : "bg-(--surface-3) text-(--ink-2)",
+          )}
         >
           {badge}
         </span>
       ) : null}
       {active && (
-        <span
-          className="absolute -bottom-px left-0 right-0 h-[2px] rounded-t-full"
-          style={{ background: "var(--accent)" }}
-        />
+        <span className="absolute -bottom-px left-0 right-0 h-[2px] rounded-t-full bg-(--accent)" />
       )}
     </button>
   );
@@ -300,10 +281,7 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
   if (connectedProviders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-14 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{ background: "var(--accent-weak)" }}
-        >
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent">
           <Icon name="key" size={24} color="var(--accent-ink)" />
         </div>
         <div className="flex items-center gap-3">
@@ -311,7 +289,7 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
           <BrandIcon slug="gitlab" size={22} color={brandColor("gitlab")} />
           <BrandIcon slug="bitbucket" size={22} color={brandColor("bitbucket")} />
         </div>
-        <p className="max-w-sm text-sm" style={{ color: "var(--ink-3)" }}>
+        <p className="max-w-sm text-sm text-muted-foreground">
           {t("import.connect_first", {
             defaultValue:
               "Connect GitHub, GitLab or Bitbucket in Settings to browse your remote repositories here.",
@@ -325,14 +303,8 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
 
   return (
     <div className="grid h-full grid-cols-[232px_1fr] gap-0">
-      <aside
-        className="flex flex-col gap-0.5 overflow-y-auto p-3 text-sm"
-        style={{ borderRight: "1px solid var(--border)" }}
-      >
-        <div
-          className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider"
-          style={{ color: "var(--ink-4)" }}
-        >
+      <aside className="flex flex-col gap-0.5 overflow-y-auto border-r border-border p-3 text-sm">
+        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-(--ink-4)">
           {t("import.providers_heading", { defaultValue: "Providers" })}
         </div>
         {connectedProviders.map((id) => (
@@ -365,38 +337,17 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
       </aside>
 
       <section className="flex min-h-0 flex-col overflow-hidden">
-        <div
-          className="flex items-center gap-3 p-3"
-          style={{ borderBottom: "1px solid var(--border)" }}
-        >
+        <div className="flex items-center gap-3 border-b border-border p-3">
           <div className="relative flex-1">
             <Icon
               name="search"
               size={12}
               color="var(--ink-3)"
-              style={{
-                position: "absolute",
-                left: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-              }}
+              className="absolute left-[10px] top-1/2 -translate-y-1/2"
             />
             <input
               type="text"
-              className="w-full rounded-md px-8 py-2 text-xs outline-none transition-colors"
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                color: "var(--ink-1)",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "var(--accent)";
-                e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-weak)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "var(--border)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              className="w-full rounded-md border border-input bg-muted px-8 py-2 text-xs text-foreground outline-none transition-[box-shadow,border-color] focus:border-(--accent) focus:shadow-[0_0_0_3px_var(--accent-weak)]"
               placeholder={t("import.search_placeholder", {
                 defaultValue: "Search repositories…",
               })}
@@ -405,13 +356,7 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
             />
           </div>
           {selected.size > 0 && (
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold"
-              style={{
-                background: "var(--accent-weak)",
-                color: "var(--accent-ink)",
-              }}
-            >
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold text-accent-foreground">
               <Icon name="check" size={11} />
               {t("import.selected_count", {
                 count: selected.size,
@@ -425,10 +370,7 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
           {loading && filtered.length === 0 ? (
             <RemoteRepoListSkeleton rows={8} />
           ) : filtered.length === 0 ? (
-            <div
-              className="flex flex-col items-center justify-center gap-2 p-10 text-center text-xs"
-              style={{ color: "var(--ink-3)" }}
-            >
+            <div className="flex flex-col items-center justify-center gap-2 p-10 text-center text-xs text-muted-foreground">
               <Icon name="inbox" size={24} color="var(--ink-4)" />
               {t("import.no_results", { defaultValue: "No repositories." })}
             </div>
@@ -476,19 +418,16 @@ function ProvidersPanel({ connectedProviders }: { connectedProviders: ProviderId
           )}
         </div>
 
-        <div
-          className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderTop: "1px solid var(--border)" }}
-        >
+        <div className="flex flex-col gap-2 border-t border-border p-3 sm:flex-row sm:items-center sm:justify-between">
           <DestinationField value={destination} onPick={() => void pickDestination()} />
           <Button
             size="sm"
             onClick={() => void onImport()}
             loading={cloning}
             disabled={!canImport}
-            style={
+            className={
               canImport
-                ? { background: "var(--accent)", color: "#fff", borderColor: "var(--accent)" }
+                ? "border-(--accent) bg-(--accent) text-white hover:bg-(--accent)/90"
                 : undefined
             }
           >
@@ -541,19 +480,9 @@ function SidebarItem({
 
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div
-      className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
-      style={{
-        background: "var(--surface)",
-        color: "var(--ink-4)",
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
+    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-(--ink-4)">
       <span>{label}</span>
-      <span
-        className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px]"
-        style={{ background: "var(--surface-3)", color: "var(--ink-3)" }}
-      >
+      <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-(--surface-3) px-1 text-[10px] text-muted-foreground">
         {count}
       </span>
     </div>
@@ -569,20 +498,14 @@ function OrgAvatar({ url, name }: { url: string | null; name: string }) {
         alt=""
         width={16}
         height={16}
-        className="h-4 w-4 shrink-0 rounded-[4px] object-cover"
-        style={{ border: "1px solid var(--border)" }}
+        className="h-4 w-4 shrink-0 rounded-[4px] border border-border object-cover"
       />
     );
   }
   return (
     <span
       aria-hidden
-      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] text-[8px] font-semibold"
-      style={{
-        background: "var(--surface-3)",
-        color: "var(--ink-2)",
-        border: "1px solid var(--border)",
-      }}
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border border-border bg-(--surface-3) text-[8px] font-semibold text-(--ink-2)"
     >
       {initials}
     </span>
@@ -630,20 +553,14 @@ function DestinationField({ value, onPick }: { value: string; onPick: () => void
 function MetaBadge({ tone, children }: { tone: "neutral" | "success"; children: ReactNode }) {
   if (tone === "success") {
     return (
-      <span
-        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium"
-        style={{ background: "var(--green-weak)", color: "var(--green)" }}
-      >
+      <span className="inline-flex items-center gap-1 rounded bg-(--green-weak) px-1.5 py-0.5 text-[10px] font-medium text-(--green)">
         <Icon name="check" size={9} />
         {children}
       </span>
     );
   }
   return (
-    <span
-      className="rounded px-1.5 py-0.5 text-[10px] font-medium"
-      style={{ background: "var(--surface-3)", color: "var(--ink-3)" }}
-    >
+    <span className="rounded bg-(--surface-3) px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
       {children}
     </span>
   );
@@ -678,11 +595,7 @@ function RepoCard({
       }}
     >
       {selected && (
-        <span
-          aria-hidden
-          className="absolute left-0 top-0 h-full w-[2px]"
-          style={{ background: "var(--accent)" }}
-        />
+        <span aria-hidden className="absolute left-0 top-0 h-full w-[2px] bg-(--accent)" />
       )}
       <Checkbox
         checked={selected}
@@ -691,23 +604,16 @@ function RepoCard({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium" style={{ color: "var(--ink-1)" }}>
-            {repo.fullName}
-          </span>
+          <span className="truncate text-sm font-medium text-foreground">{repo.fullName}</span>
           {repo.isPrivate && <MetaBadge tone="neutral">private</MetaBadge>}
           {repo.isFork && <MetaBadge tone="neutral">fork</MetaBadge>}
           {repo.isArchived && <MetaBadge tone="neutral">archived</MetaBadge>}
           {alreadyLocal && <MetaBadge tone="success">on system</MetaBadge>}
         </div>
         {repo.description && (
-          <div className="truncate text-xs" style={{ color: "var(--ink-3)" }}>
-            {repo.description}
-          </div>
+          <div className="truncate text-xs text-muted-foreground">{repo.description}</div>
         )}
-        <div
-          className="mt-0.5 flex items-center gap-2 text-[10px]"
-          style={{ color: "var(--ink-4)" }}
-        >
+        <div className="mt-0.5 flex items-center gap-2 text-[10px] text-(--ink-4)">
           {repo.language && (
             <span className="inline-flex items-center gap-1">
               <LangDot lang={repo.language} />
@@ -719,28 +625,19 @@ function RepoCard({
         </div>
       </div>
       {progress === "cloning" && (
-        <span
-          className="inline-flex items-center gap-1 text-[11px]"
-          style={{ color: "var(--ink-3)" }}
-        >
+        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
           <Icon name="refresh" size={11} className="animate-spin" />
           cloning…
         </span>
       )}
       {progress === "done" && (
-        <span
-          className="inline-flex items-center gap-1 text-[11px] font-semibold"
-          style={{ color: "var(--green)" }}
-        >
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-(--green)">
           <Icon name="check" size={11} />
           done
         </span>
       )}
       {progress === "error" && (
-        <span
-          className="inline-flex items-center gap-1 text-[11px] font-semibold"
-          style={{ color: "var(--red)" }}
-        >
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-(--red)">
           <Icon name="x" size={11} />
           failed
         </span>
@@ -808,21 +705,7 @@ function UrlPanel() {
             autoFocus
             required
             placeholder="https://github.com/owner/repo.git"
-            className="w-full rounded-md px-3 py-2 text-sm outline-none transition-colors"
-            style={{
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              color: "var(--ink-1)",
-              fontFamily: "var(--font-mono)",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--accent)";
-              e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-weak)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
+            className="w-full rounded-md border border-input bg-muted px-3 py-2 font-mono text-sm text-foreground outline-none transition-[box-shadow,border-color] focus:border-(--accent) focus:shadow-[0_0_0_3px_var(--accent-weak)]"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
@@ -842,20 +725,7 @@ function UrlPanel() {
         >
           <input
             type="text"
-            className="w-full rounded-md px-3 py-2 text-sm outline-none transition-colors"
-            style={{
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              color: "var(--ink-1)",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--accent)";
-              e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-weak)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
+            className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground outline-none transition-[box-shadow,border-color] focus:border-(--accent) focus:shadow-[0_0_0_3px_var(--accent-weak)]"
             placeholder={t("import.subfolder_placeholder", {
               defaultValue: "e.g. my-fork",
             })}
@@ -865,10 +735,7 @@ function UrlPanel() {
         </FieldGroup>
       </div>
 
-      <div
-        className="flex items-center justify-end gap-2 p-4"
-        style={{ borderTop: "1px solid var(--border)" }}
-      >
+      <div className="flex items-center justify-end gap-2 border-t border-border p-4">
         <Button
           type="button"
           variant="outline"
@@ -882,9 +749,9 @@ function UrlPanel() {
           size="sm"
           loading={submitting}
           disabled={!canSubmit}
-          style={
+          className={
             canSubmit
-              ? { background: "var(--accent)", color: "#fff", borderColor: "var(--accent)" }
+              ? "border-(--accent) bg-(--accent) text-white hover:bg-(--accent)/90"
               : undefined
           }
         >
@@ -911,16 +778,10 @@ function FieldGroup({
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
         <Icon name={icon} size={12} color="var(--ink-3)" />
-        <label className="text-xs font-semibold" style={{ color: "var(--ink-1)" }}>
-          {label}
-        </label>
+        <label className="text-xs font-semibold text-foreground">{label}</label>
       </div>
       {children}
-      {hint && (
-        <p className="text-[11px]" style={{ color: "var(--ink-4)" }}>
-          {hint}
-        </p>
-      )}
+      {hint && <p className="text-[11px] text-(--ink-4)">{hint}</p>}
     </div>
   );
 }

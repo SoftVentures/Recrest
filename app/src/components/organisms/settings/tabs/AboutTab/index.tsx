@@ -120,12 +120,7 @@ export function AboutTabBody() {
                 <div className="a-set-row-lbl">{r.label}</div>
               </div>
               <div
-                className="a-set-row-r"
-                style={{
-                  fontFamily: r.mono ? "var(--font-mono)" : undefined,
-                  fontSize: 12.5,
-                  color: "var(--ink-1)",
-                }}
+                className={`a-set-row-r text-[12.5px] text-foreground ${r.mono ? "font-mono" : ""}`}
               >
                 {r.value}
               </div>
@@ -177,7 +172,7 @@ function AboutLinkRow({
   return (
     <div className="a-set-row">
       <div className="a-set-row-l">
-        <div className="a-set-row-lbl" style={{ gap: 8 }}>
+        <div className="a-set-row-lbl gap-2">
           {brand ? (
             <BrandIcon slug={brand} size={13} color="brand" />
           ) : iconName ? (
@@ -185,9 +180,7 @@ function AboutLinkRow({
           ) : null}
           {label}
         </div>
-        <div className="a-set-row-sub" style={{ fontFamily: "var(--font-mono)" }}>
-          {sub}
-        </div>
+        <div className="a-set-row-sub font-mono">{sub}</div>
       </div>
       <div className="a-set-row-r">
         <button type="button" className="r-btn" onClick={onOpen}>

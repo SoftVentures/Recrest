@@ -91,7 +91,7 @@ export function FindAcrossReposDialog() {
               name="search"
               size={14}
               color="var(--ink-3)"
-              style={{ position: "absolute", left: 10, top: 12 }}
+              className="absolute left-[10px] top-3"
             />
             <input
               type="text"

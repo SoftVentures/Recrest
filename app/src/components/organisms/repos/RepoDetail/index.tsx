@@ -87,6 +87,7 @@ export function RepoDetail({ repo }: RepoDetailProps) {
         <h3 className="mb-2 text-sm font-semibold">{t("detail.open_prs")}</h3>
         {prs.filter((p) => p.state === "open").length === 0 ? (
           <EmptyState
+            mascot="snoozing"
             title={t("empty", { ns: "prs" })}
             description={t("detail.open_prs_empty_desc")}
             className="py-6"
