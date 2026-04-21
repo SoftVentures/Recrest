@@ -29,12 +29,19 @@ interface RepoRowProps {
   repo: EnrichedRepo;
   selected?: boolean;
   onSelect: (id: string) => void;
+  /** Stagger index — feeds the CSS `--i` custom property so the page-level
+   *  entry animation can delay each row incrementally. `undefined` → no
+   *  stagger (row animates with default delay of 0). */
+  animIndex?: number;
 }
 
-export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
+export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
   const dispatch = useAppDispatch();
   const { confirm, node: confirmNode } = useConfirm();
-  const handleKey = (e: React.KeyboardEvent) => {
+  // Only react to Enter/Space when the row itself is focused, so keyboard
+  // events on inner action buttons don't double-fire.
+  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onSelect(repo.id);
@@ -87,25 +94,32 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
     }
   };
 
+  // Cap the stagger depth so very long repo lists don't drag the entry
+  // animation out past ~500ms. Rows beyond that share a single late delay.
+  const STAGGER_CAP = 12;
+  const effectiveIndex = animIndex == null ? 0 : Math.min(animIndex, STAGGER_CAP);
+
   return (
     <div
+      role="button"
+      tabIndex={0}
       className={`a-row d-comfy${selected ? " selected" : ""}`}
-      style={{ gridTemplateColumns: COL_TEMPLATE }}
+      style={
+        {
+          gridTemplateColumns: COL_TEMPLATE,
+          "--i": effectiveIndex,
+        } as React.CSSProperties
+      }
       data-testid="repo-row"
       data-repo-id={repo.id}
       data-repo-name={repo.name}
       data-selected={selected ? "true" : undefined}
       data-dirty={repo.status.dirty ? "true" : undefined}
+      aria-label={`Select repo: ${repo.name}`}
+      onClick={() => onSelect(repo.id)}
+      onKeyDown={handleKey}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        className="a-c-name"
-        aria-label={`Select repo: ${repo.name}`}
-        data-testid="repo-row-select"
-        onClick={() => onSelect(repo.id)}
-        onKeyDown={handleKey}
-      >
+      <div className="a-c-name">
         <RepoAvatar repo={repo} size={28} radius={6} />
         <div className="a-name-stack">
           <div className="a-name-line">

@@ -9,6 +9,7 @@ import { BrandIcon, brandFromUrl } from "@/components/atoms/BrandIcon";
 import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { DiffStat } from "@/components/atoms/DiffStat";
 import { Icon } from "@/components/atoms/Icon";
+import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 import { IconButton } from "@/components/molecules/IconButton";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar, setRepoLogo } from "@/components/molecules/RepoAvatar";
@@ -353,7 +354,7 @@ function RecentCommitsBody({ repo }: { repo: EnrichedRepo }) {
       <div className="a-dp-commits">
         {commits.slice(0, 15).map((c) => (
           <div key={c.sha} className="a-dp-commit">
-            <span className="avatar sm">{initials(c.author)}</span>
+            <AuthorAvatar name={c.author} email={c.authorEmail ?? null} size={24} />
             <div className="a-dp-commit-body">
               <div className="a-dp-commit-msg">{c.summary}</div>
               <div className="a-dp-commit-meta">
@@ -371,7 +372,7 @@ function RecentCommitsBody({ repo }: { repo: EnrichedRepo }) {
     return (
       <div className="a-dp-commits">
         <div className="a-dp-commit">
-          <span className="avatar sm">{initials(fallbackSingle.author)}</span>
+          <AuthorAvatar name={fallbackSingle.author} size={24} />
           <div className="a-dp-commit-body">
             <div className="a-dp-commit-msg">{fallbackSingle.summary}</div>
             <div className="a-dp-commit-meta">
@@ -399,16 +400,6 @@ function statusLetter(s: string): "M" | "A" | "D" | "R" {
   if (s === "untracked") return "A";
   if (s === "conflicted") return "R";
   return "M";
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 }
 
 function formatWhen(iso: string): string {

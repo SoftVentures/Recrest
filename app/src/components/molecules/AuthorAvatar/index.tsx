@@ -25,7 +25,13 @@ interface AuthorAvatarProps {
  *  leaves a blank hole and a 404 falls back cleanly via `onError`. */
 export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorAvatarProps) {
   const label = initialsFromName(name) || "?";
-  const resolvedSrc = src ?? (email ? gravatarUrl(email, size) : null);
+  // Bot accounts (Dependabot, Renovate, GitHub Actions, etc.) rarely have a
+  // real Gravatar; their commits and MRs all share one canonical GitHub
+  // avatar. Match by substring on the author name or email so a commit
+  // signed as "dependabot[bot]" or a PR fetched before `authorAvatarUrl`
+  // existed still picks up the right face.
+  const botSrc = src ?? resolveBotAvatar(name, email, size);
+  const resolvedSrc = botSrc ?? (email ? gravatarUrl(email, size) : null);
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => {
     // Reset the failure flag whenever the underlying URL changes — otherwise
@@ -99,6 +105,34 @@ export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorA
       />
     </span>
   );
+}
+
+/** Map a display name or commit-email to the canonical GitHub avatar URL
+ *  for well-known bots. Returns null for anything we don't recognise so the
+ *  caller can fall back to Gravatar-by-email. We query GitHub's
+ *  `/u/:login.png?size=N` endpoint because it handles both App accounts
+ *  (dependabot, renovate) and regular bot users uniformly, and it serves an
+ *  appropriately-sized asset without needing the GitHub API. */
+function resolveBotAvatar(
+  name: string | null | undefined,
+  email: string | null | undefined,
+  size: number,
+): string | null {
+  const sniff = ((name ?? "") + " " + (email ?? "")).toLowerCase();
+  // Retina boost: pull a 2x bitmap so the circular mask (object-fit: cover)
+  // stays crisp on HiDPI displays, mirroring what AuthorAvatar does for
+  // Gravatar URLs.
+  const px = Math.max(32, size * 2);
+  if (sniff.includes("dependabot")) {
+    return `https://github.com/dependabot.png?size=${px}`;
+  }
+  if (sniff.includes("renovate")) {
+    return `https://github.com/renovate-bot.png?size=${px}`;
+  }
+  if (sniff.includes("github-actions") || sniff.includes("github actions")) {
+    return `https://github.com/github-actions.png?size=${px}`;
+  }
+  return null;
 }
 
 const GRADIENTS = [

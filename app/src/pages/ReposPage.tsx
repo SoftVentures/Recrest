@@ -27,16 +27,18 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
 
   const pageTestId = dirtyOnly ? "changes-page" : "repos-page";
 
+  const pageClass = dirtyOnly ? "p-repos p-repos-dirty" : "p-repos";
+
   if (loading && repos.length === 0) {
     return (
-      <div data-testid={pageTestId}>
+      <div className={pageClass} data-testid={pageTestId}>
         <RepoListSkeleton rows={8} />
       </div>
     );
   }
 
   return (
-    <div data-testid={pageTestId}>
+    <div className={pageClass} data-testid={pageTestId}>
       {error && (
         <div
           role="alert"

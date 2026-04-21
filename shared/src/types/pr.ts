@@ -7,6 +7,12 @@ export interface PullRequest {
   title: string;
   url: string;
   author: string;
+  /** Author avatar URL as reported by the provider. `null`/omitted for bots
+   *  or users where the provider didn't return one; consumers fall back to
+   *  the initials chip via `<AuthorAvatar name=… src=…/>`. Optional so
+   *  existing test seeds and older snapshots stay valid without manual
+   *  migration. */
+  authorAvatarUrl?: string | null;
   state: PrState;
   draft: boolean;
   sourceBranch: string;

@@ -8,15 +8,18 @@ import { AppRoute, TauriCommand } from "@recrest/shared";
 
 import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { Icon } from "@/components/atoms/Icon";
+import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { ActivityBarsSkeleton } from "@/components/molecules/skeletons/ActivityBarsSkeleton";
 import { CardBlockSkeleton } from "@/components/molecules/skeletons/CardBlockSkeleton";
 import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
+import { HeatmapCard } from "@/components/organisms/activity/cards/HeatmapCard";
+import { LanguageDonutCard } from "@/components/organisms/activity/cards/LanguageDonutCard";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
-import { langMeta } from "@/lib/languages";
+import { computeHeatmap, computeLanguageMix } from "@/lib/activityAggregates";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -55,10 +58,12 @@ export function DashboardPage() {
   const totalCommits = agg.reduce((s, v) => s + v, 0);
   const maxDay = Math.max(...agg, 1);
 
-  // Real recent commits across all repos — Rust sorts newest-first, we take the top 6.
+  // Real recent commits across all repos — Rust sorts newest-first. The
+  // "Recent commits" card shows just the top 6, but the weekday×hour heatmap
+  // card below needs the full 14-day window to fill its 7×24 matrix — so
+  // leave the limit at the default (500) instead of clamping to 6.
   const { commits: recentCommits, loading: commitsLoading } = useRecentCommits({
     days: 14,
-    limit: 50,
   });
   const recent = useMemo(() => {
     const byRepo = new Map(repos.map((r) => [r.id, r] as const));
@@ -66,16 +71,29 @@ export function DashboardPage() {
   }, [recentCommits, repos]);
   const commitsInitialLoad = commitsLoading && recent.length === 0;
 
+  const heatmapToday = useMemo(() => new Date(), []);
+  const heatmap = useMemo(
+    () => computeHeatmap(recentCommits, heatmapToday),
+    [recentCommits, heatmapToday],
+  );
+
+  // Mirrors the Activity page: commit-weighted language mix using each repo's
+  // per-language share so the donut reflects actual contribution rather than
+  // a raw "primary language per repo" count.
+  const reposById = useMemo(() => {
+    const m = new Map<string, EnrichedRepo>();
+    for (const r of repos) m.set(r.id, r);
+    return m;
+  }, [repos]);
+  const languageMix = useMemo(
+    () => computeLanguageMix(recentCommits, reposById),
+    [recentCommits, reposById],
+  );
+
   // For the KPI grid: how many repos are fully in sync (no dirty tree, no
   // ahead/behind, no uncommitted). Complements `repositories_sub` which
   // counts dirty repos.
   const cleanReposCount = repos.filter((r) => r.clean).length;
-
-  const langs = useMemo(() => {
-    const c: Record<string, number> = {};
-    for (const r of repos) c[r.lang] = (c[r.lang] ?? 0) + 1;
-    return Object.entries(c).sort((a, b) => b[1] - a[1]);
-  }, [repos]);
 
   const goto = (repoId: string, path = "/repos") => {
     dispatch(setSelectedRepo(repoId));
@@ -117,7 +135,7 @@ export function DashboardPage() {
 
   if (reposLoading && repos.length === 0) {
     return (
-      <div className="a-dash" data-testid="dashboard-page" aria-busy>
+      <div className="a-dash p-dashboard" data-testid="dashboard-page" aria-busy>
         <div className="a-dash-kpis">
           <KpiSkeleton />
           <KpiSkeleton />
@@ -142,7 +160,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="a-dash" data-testid="dashboard-page">
+    <div className="a-dash p-dashboard" data-testid="dashboard-page">
       <div className="a-dash-kpis">
         <KPI
           label={t("dash.kpi.repositories")}
@@ -305,7 +323,10 @@ export function DashboardPage() {
                   className="a-dash-commit"
                   onClick={() => goto(c.repoId)}
                 >
-                  {c.repo && <RepoAvatar repo={c.repo} size={24} radius={5} />}
+                  {/* Author avatar is the primary signifier (matches the
+                      activity timeline), repo is still identifiable through
+                      the inline repo name in the meta row below. */}
+                  <AuthorAvatar name={c.author} email={c.authorEmail} size={24} />
                   <div className="a-dash-commit-body">
                     <div className="a-dash-commit-msg">{c.summary || "—"}</div>
                     <div className="a-dash-commit-meta">
@@ -322,34 +343,10 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <section className="a-dash-card a-dash-langs-card">
-          <div className="a-dash-card-h">
-            <h3>{t("dash.langs.title")}</h3>
-            <span className="a-dash-card-m">{repos.length} repos</span>
-          </div>
-          <div className="a-dash-langs-bar">
-            {langs.map(([l, n]) => (
-              <div
-                key={l}
-                className="a-dash-lang-seg"
-                style={{ flex: n, background: langMeta(l).color }}
-                title={`${langMeta(l).label}: ${n}`}
-              />
-            ))}
-          </div>
-          <div className="a-dash-langs-list">
-            {langs.map(([l, n]) => {
-              const meta = langMeta(l);
-              return (
-                <div key={l} className="a-dash-lang-item">
-                  <span className="lang-dot" style={{ background: meta.color }} />
-                  <span className="a-dash-lang-lbl">{meta.label}</span>
-                  <span className="a-dash-lang-n">{n}</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        {/* Reuse the Activity-page donut so the dashboard's language view
+            matches exactly — commit-weighted shares, tail collapsed into
+            "Other", same colours. Renders its own `a-act-card` shell. */}
+        <LanguageDonutCard mix={languageMix} loading={commitsInitialLoad} />
 
         <section className="a-dash-card a-dash-quick-card">
           <div className="a-dash-card-h">
@@ -389,6 +386,12 @@ export function DashboardPage() {
             </button>
           </div>
         </section>
+
+        {/* HeatmapCard renders its own <div class="a-act-card"> shell —
+            wrapping it in another `.a-dash-card` would double the border.
+            The className slots it into the dashboard grid and marks it so
+            page-level styles can reach it. */}
+        <HeatmapCard matrix={heatmap} loading={commitsInitialLoad} />
       </div>
     </div>
   );

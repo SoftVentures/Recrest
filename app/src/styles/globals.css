@@ -3,6 +3,7 @@
 @import "./tokens.css";
 @import "./layout.css";
 @import "./views.css";
+@import "./page-anim.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

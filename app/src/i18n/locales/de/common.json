@@ -111,6 +111,7 @@
   },
   "branches": {
     "filter": {
+      "label": "Branch-Filter",
       "all": "Alle",
       "ahead": "Voraus",
       "behind": "Zurück",
@@ -133,7 +134,13 @@
       "pull": "Pull",
       "push": "Push",
       "checkout": "Checkout",
-      "checkout_remote": "Checkout"
+      "checkout_remote": "Checkout",
+      "fetch": "Fetch",
+      "fetch_all": "Alle fetchen",
+      "fetch_tooltip": "Von allen Remotes fetchen",
+      "fetching": "Fetche…",
+      "fetched": "{{repo}} gefetcht",
+      "fetched_all": "Alle Repos gefetcht"
     },
     "row": {
       "upstream_tracking": "verfolgt {{upstream}}",
@@ -173,7 +180,7 @@
       "none": "—"
     },
     "hero": {
-      "open_prs": "Offene PRs",
+      "open_prs": "Offene MRs",
       "open_prs_sub": "{{review}} in Review · {{draft}} Entwurf",
       "ci_health": "CI-Health",
       "ci_failing_one": "{{count}} fehlerhaft",
@@ -192,15 +199,15 @@
       "language_sub": "gewichtet nach Commits",
       "churn_title": "Churn · Working Tree",
       "churn_sub": "hinzugefügte + entfernte Zeilen",
-      "pr_velocity_title": "PR-Velocity",
+      "pr_velocity_title": "MR-Velocity",
       "pr_velocity_sub": "geöffnet vs. gemerged · 14 Tage",
       "pr_velocity_opened": "Geöffnet",
       "pr_velocity_merged": "Gemerged",
       "time_to_merge_title": "Merge-Dauer",
       "time_to_merge_sub": "letzte 14 Tage",
       "review_queue_title": "Review-Queue",
-      "review_queue_sub": "älteste offene PRs",
-      "review_queue_empty": "Keine offenen PRs warten.",
+      "review_queue_sub": "älteste offene MRs",
+      "review_queue_empty": "Keine offenen MRs warten.",
       "ci_trend_title": "CI-Pass-Rate · 14 Tage",
       "ci_trend_sub": "tägliche Pass-Quote",
       "flaky_title": "Flakigste Repos",
@@ -218,15 +225,15 @@
       "filter_label": "Event-Typ",
       "filter_all": "Alle",
       "filter_commits": "Commits",
-      "filter_prs": "Pull Requests",
+      "filter_prs": "Merge Requests",
       "filter_checks": "CI-Checks",
       "empty_filter": "Kein Event passt zu diesem Filter.",
       "chip_commits_one": "{{count}} Commit",
       "chip_commits_other": "{{count}} Commits",
-      "chip_prs_merged_one": "{{count}} PR gemerged",
-      "chip_prs_merged_other": "{{count}} PRs gemerged",
-      "chip_prs_opened_one": "{{count}} PR geöffnet",
-      "chip_prs_opened_other": "{{count}} PRs geöffnet",
+      "chip_prs_merged_one": "{{count}} MR gemerged",
+      "chip_prs_merged_other": "{{count}} MRs gemerged",
+      "chip_prs_opened_one": "{{count}} MR geöffnet",
+      "chip_prs_opened_other": "{{count}} MRs geöffnet",
       "chip_checks_failed_one": "{{count}} Check fehlgeschlagen",
       "chip_checks_failed_other": "{{count}} Checks fehlgeschlagen"
     }

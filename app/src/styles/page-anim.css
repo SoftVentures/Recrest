@@ -1,0 +1,208 @@
+/**
+ * Shared mount-animation primitives used by every top-level page.
+ *
+ * Each page only needs to add one container class (`p-dashboard`, `p-repos`,
+ * `p-mrs`, `p-branches`, `p-settings`). The rules below reach into the page's
+ * existing BEM-ish classes so we don't have to wrap every section in a new
+ * div. Stagger is driven by an inline `--i` custom property on list items;
+ * a helper `.pg-stagger` can also be used on ad-hoc lists.
+ *
+ * `prefers-reduced-motion` disables every `pg-*` keyframe in one shot.
+ */
+
+:root {
+  --page-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --page-dur-sm: 320ms;
+  --page-dur-md: 440ms;
+  --page-dur-lg: 620ms;
+  --page-stagger: 60ms;
+}
+
+@keyframes pgRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pgFall {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pgSlideL {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pgSlideR {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pgZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pgStripe {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.pg-stagger > * {
+  animation-fill-mode: both;
+  animation-delay: calc(var(--i, 0) * var(--page-stagger));
+}
+
+/* ──────────────── Dashboard ──────────────── headline rising */
+.p-dashboard .a-dash-kpis > * {
+  animation: pgZoom var(--page-dur-md) var(--page-ease) both;
+}
+.p-dashboard .a-dash-kpis > :nth-child(1) {
+  animation-delay: 0ms;
+}
+.p-dashboard .a-dash-kpis > :nth-child(2) {
+  animation-delay: 50ms;
+}
+.p-dashboard .a-dash-kpis > :nth-child(3) {
+  animation-delay: 100ms;
+}
+.p-dashboard .a-dash-kpis > :nth-child(4) {
+  animation-delay: 150ms;
+}
+.p-dashboard .a-dash-grid > * {
+  animation: pgRise var(--page-dur-md) var(--page-ease) both;
+  animation-delay: 220ms;
+}
+.p-dashboard .a-dash-grid > :nth-child(2) {
+  animation-delay: 280ms;
+}
+.p-dashboard .a-dash-grid > :nth-child(3) {
+  animation-delay: 340ms;
+}
+.p-dashboard .a-dash-grid > :nth-child(4) {
+  animation-delay: 400ms;
+}
+.p-dashboard .a-dash-grid > :nth-child(5) {
+  animation-delay: 460ms;
+}
+.p-dashboard .a-dash-grid > :nth-child(6) {
+  animation-delay: 520ms;
+}
+.p-dashboard .a-dash-grid > :nth-child(n + 7) {
+  animation-delay: 580ms;
+}
+
+/* ──────────────── Repos / Changes ──────────────── list materialising */
+.p-repos .a-content > h1,
+.p-repos .a-content > .a-filters,
+.p-repos .a-content > [class*="toolbar"] {
+  animation: pgFall var(--page-dur-sm) var(--page-ease) both;
+}
+.p-repos .a-group {
+  animation: pgRise var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: calc(80ms + var(--gi, 0) * 40ms);
+}
+.p-repos .a-row {
+  animation: pgSlideL var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+/* Dirty view: same rows peel from the top instead of sliding from the left
+   so the two views of the same component stay visually distinct. */
+.p-repos.p-repos-dirty .a-row {
+  animation-name: pgStripe;
+}
+
+/* ──────────────── Merge requests ──────────────── quiet rise */
+/* SlideR turned out too dramatic — especially with an empty MR list where
+   a single "no results" row flying in from off-screen feels wrong. Swap to
+   a quieter pgRise with a tight stagger; the page still gets a distinct
+   entry thanks to the toolbar's pgFall + the drawer's slide. */
+.p-mrs .a-mr-toolbar,
+.p-mrs [class*="toolbar"] {
+  animation: pgFall var(--page-dur-sm) var(--page-ease) both;
+}
+.p-mrs .a-mr-row {
+  animation: pgRise var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+/* ──────────────── Branches ──────────────── groups unfurling, rows inside */
+.p-branches .a-br-toolbar {
+  animation: pgFall var(--page-dur-sm) var(--page-ease) both;
+}
+.p-branches .a-br-group {
+  animation: pgZoom var(--page-dur-md) var(--page-ease) both;
+  animation-delay: calc(var(--gi, 0) * 80ms);
+}
+.p-branches .a-br-row {
+  animation: pgRise var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: calc(var(--group-base, 0ms) + var(--i, 0) * 40ms);
+}
+
+/* ──────────────── Detail pane inner stagger ──────────────── */
+.a-detail .pg-stagger > * {
+  animation: pgRise var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: calc(120ms + var(--i, 0) * var(--page-stagger));
+}
+
+/* ──────────────── Settings ──────────────── quietest page */
+.p-settings {
+  --page-stagger: 30ms;
+}
+.p-settings .p-set-hdr,
+.p-settings h1,
+.p-settings h2 {
+  animation: pgFall var(--page-dur-sm) var(--page-ease) both;
+}
+.p-settings .p-set-panel > *,
+.p-settings [role="tabpanel"] > * {
+  animation: pgRise var(--page-dur-sm) var(--page-ease) both;
+  animation-delay: calc(80ms + var(--i, 0) * var(--page-stagger));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class^="p-"],
+  [class*=" p-"],
+  [class^="p-"] *,
+  [class*=" p-"] *,
+  .pg-stagger > * {
+    animation: none !important;
+  }
+}

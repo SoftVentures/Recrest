@@ -106,6 +106,7 @@
   },
   "branches": {
     "filter": {
+      "label": "Branch filter",
       "all": "All",
       "ahead": "Ahead",
       "behind": "Behind",
@@ -128,7 +129,13 @@
       "pull": "Pull",
       "push": "Push",
       "checkout": "Checkout",
-      "checkout_remote": "Checkout"
+      "checkout_remote": "Checkout",
+      "fetch": "Fetch",
+      "fetch_all": "Fetch all",
+      "fetch_tooltip": "Fetch from all remotes",
+      "fetching": "Fetching…",
+      "fetched": "Fetched {{repo}}",
+      "fetched_all": "Fetched all repos"
     },
     "row": {
       "upstream_tracking": "tracks {{upstream}}",
@@ -168,7 +175,7 @@
       "none": "—"
     },
     "hero": {
-      "open_prs": "Open PRs",
+      "open_prs": "Open MRs",
       "open_prs_sub": "{{review}} in review · {{draft}} draft",
       "ci_health": "CI health",
       "ci_failing_one": "{{count}} failing",
@@ -187,15 +194,15 @@
       "language_sub": "weighted by commits",
       "churn_title": "Churn · working tree",
       "churn_sub": "added + removed lines",
-      "pr_velocity_title": "PR velocity",
+      "pr_velocity_title": "MR velocity",
       "pr_velocity_sub": "opened vs merged · 14 days",
       "pr_velocity_opened": "Opened",
       "pr_velocity_merged": "Merged",
       "time_to_merge_title": "Time to merge",
       "time_to_merge_sub": "last 14 days",
       "review_queue_title": "Review queue",
-      "review_queue_sub": "oldest open PRs",
-      "review_queue_empty": "No open PRs waiting.",
+      "review_queue_sub": "oldest open MRs",
+      "review_queue_empty": "No open MRs waiting.",
       "ci_trend_title": "CI pass rate · 14 days",
       "ci_trend_sub": "daily % pass",
       "flaky_title": "Flakiest repos",
@@ -213,15 +220,15 @@
       "filter_label": "Event type",
       "filter_all": "All",
       "filter_commits": "Commits",
-      "filter_prs": "Pull requests",
+      "filter_prs": "Merge requests",
       "filter_checks": "CI checks",
       "empty_filter": "No events match this filter.",
       "chip_commits_one": "{{count}} commit",
       "chip_commits_other": "{{count}} commits",
-      "chip_prs_merged_one": "{{count}} PR merged",
-      "chip_prs_merged_other": "{{count}} PRs merged",
-      "chip_prs_opened_one": "{{count}} PR opened",
-      "chip_prs_opened_other": "{{count}} PRs opened",
+      "chip_prs_merged_one": "{{count}} MR merged",
+      "chip_prs_merged_other": "{{count}} MRs merged",
+      "chip_prs_opened_one": "{{count}} MR opened",
+      "chip_prs_opened_other": "{{count}} MRs opened",
       "chip_checks_failed_one": "{{count}} check failed",
       "chip_checks_failed_other": "{{count}} checks failed"
     }

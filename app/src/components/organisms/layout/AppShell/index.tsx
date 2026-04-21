@@ -24,6 +24,7 @@ import { useGlobalEvents } from "@/hooks/useGlobalEvents";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useNotificationTriggers } from "@/hooks/useNotificationTriggers";
 import { useWindowChrome } from "@/hooks/usePlatform";
+import { usePrPolling } from "@/hooks/useProviders";
 import { useSearchHotkey } from "@/hooks/useSearch";
 import { useTauri } from "@/hooks/useTauri";
 import { useThemeEffect } from "@/hooks/useTheme";
@@ -48,6 +49,7 @@ export function AppShell({ children }: AppShellProps) {
   useGlobalEvents();
   useNotificationTriggers();
   useChromeAttribute();
+  usePrPolling();
 
   const location = useLocation();
   const dispatch = useAppDispatch();

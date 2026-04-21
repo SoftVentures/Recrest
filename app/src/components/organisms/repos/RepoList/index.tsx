@@ -53,7 +53,7 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
       </div>
 
       {groups.map((g, gi) => (
-        <div key={g.label ?? gi}>
+        <div key={g.label ?? gi} style={{ "--gi": gi } as React.CSSProperties}>
           {g.label && (
             <button
               type="button"
@@ -74,8 +74,14 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
             </button>
           )}
           {!collapsedGroups.has(g.label ?? "") &&
-            g.items.map((r) => (
-              <RepoRow key={r.id} repo={r} selected={r.id === selectedId} onSelect={onSelect} />
+            g.items.map((r, i) => (
+              <RepoRow
+                key={r.id}
+                repo={r}
+                selected={r.id === selectedId}
+                onSelect={onSelect}
+                animIndex={i}
+              />
             ))}
         </div>
       ))}

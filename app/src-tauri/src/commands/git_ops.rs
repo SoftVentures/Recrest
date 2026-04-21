@@ -115,8 +115,7 @@ fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<
             if !has_recrest_token && !tried_helper {
                 tried_helper = true;
                 if let Ok(config) = git2::Config::open_default() {
-                    if let Ok(cred) =
-                        git2::Cred::credential_helper(&config, url, username_from_url)
+                    if let Ok(cred) = git2::Cred::credential_helper(&config, url, username_from_url)
                     {
                         return Ok(cred);
                     }
@@ -231,10 +230,9 @@ pub async fn git_fetch_all(state: State<'_, AppState>) -> Result<u32, CommandErr
 
     let mut ok = 0u32;
     for (path, provider_id) in repos {
-        let result = tokio::task::spawn_blocking(move || {
-            fetch_blocking(&path, provider_id.as_deref())
-        })
-        .await;
+        let result =
+            tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref()))
+                .await;
         match result {
             Ok(Ok(())) => ok += 1,
             Ok(Err(e)) => tracing::debug!("fetch_all: one repo skipped: {e:?}"),
@@ -385,9 +383,11 @@ pub async fn git_branch_create(
     }
     let path = resolve_repo_path(&state, &repo_id).await?;
     let name_clone = name.clone();
-    tokio::task::spawn_blocking(move || branch_create_blocking(&path, &name_clone, from.as_deref(), checkout))
-        .await
-        .map_err(|e| CommandError::internal(format!("branch_create task failed: {e}")))??;
+    tokio::task::spawn_blocking(move || {
+        branch_create_blocking(&path, &name_clone, from.as_deref(), checkout)
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("branch_create task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
     Ok(status::read_status(&path2)?)
 }
@@ -443,6 +443,10 @@ fn fetch_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandE
     install_credentials(&mut callbacks, effective);
     let mut opts = FetchOptions::new();
     opts.remote_callbacks(callbacks);
+    // Prune refs/remotes/origin/* for branches that were deleted upstream.
+    // Without this, merged Dependabot / feature branches keep showing up in
+    // the Branches view long after they were removed on the host.
+    opts.prune(git2::FetchPrune::On);
     remote
         .fetch(&[] as &[&str], Some(&mut opts), None)
         .map_err(|e| CommandError::internal(format!("fetch failed: {e}")))?;
@@ -473,14 +477,14 @@ fn merge_blocking(
     }
 
     if source == head_branch {
-        return Err(CommandError::bad_request("source and target are the same branch"));
+        return Err(CommandError::bad_request(
+            "source and target are the same branch",
+        ));
     }
 
     // Refuse to merge with a dirty working tree — mirrors git's own safety rail.
     let mut status_opts = git2::StatusOptions::new();
-    status_opts
-        .include_untracked(false)
-        .include_ignored(false);
+    status_opts.include_untracked(false).include_ignored(false);
     let dirty = repo
         .statuses(Some(&mut status_opts))
         .map(|s| s.iter().any(|e| e.status().bits() != 0))
@@ -595,7 +599,8 @@ fn is_valid_branch_name(name: &str) -> bool {
     if name.is_empty() || name.len() > 240 {
         return false;
     }
-    if name.starts_with('-') || name.starts_with('/') || name.ends_with('/') || name.ends_with('.') {
+    if name.starts_with('-') || name.starts_with('/') || name.ends_with('/') || name.ends_with('.')
+    {
         return false;
     }
     if name.contains("..") || name.contains("//") || name.contains("@{") {
@@ -655,11 +660,7 @@ fn branch_create_blocking(
     Ok(())
 }
 
-fn checkout_remote_blocking(
-    path: &Path,
-    remote: &str,
-    branch: &str,
-) -> Result<(), CommandError> {
+fn checkout_remote_blocking(path: &Path, remote: &str, branch: &str) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
 
@@ -669,9 +670,9 @@ fn checkout_remote_blocking(
     }
 
     let remote_ref = format!("refs/remotes/{remote}/{branch}");
-    let reference = repo
-        .find_reference(&remote_ref)
-        .map_err(|_| CommandError::bad_request(format!("remote branch '{remote}/{branch}' not found")))?;
+    let reference = repo.find_reference(&remote_ref).map_err(|_| {
+        CommandError::bad_request(format!("remote branch '{remote}/{branch}' not found"))
+    })?;
     let commit = reference
         .peel_to_commit()
         .map_err(|e| CommandError::internal(format!("peel remote ref failed: {e}")))?;
@@ -770,18 +771,18 @@ fn pull_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandEr
         .to_string();
 
     let upstream_ref = format!("refs/remotes/origin/{branch_shorthand}");
-    let upstream = repo
-        .find_reference(&upstream_ref)
-        .map_err(|e| CommandError::bad_request(format!("no upstream for {branch_shorthand}: {e}")))?;
+    let upstream = repo.find_reference(&upstream_ref).map_err(|e| {
+        CommandError::bad_request(format!("no upstream for {branch_shorthand}: {e}"))
+    })?;
     let upstream_oid = upstream
         .target()
         .ok_or_else(|| CommandError::internal("upstream ref has no target"))?;
 
     // Fast-forward only. If the merge-base isn't HEAD, we refuse.
     let (analysis, _) = repo
-        .merge_analysis(&[&repo.find_annotated_commit(upstream_oid).map_err(|e| {
-            CommandError::internal(format!("annotated commit failed: {e}"))
-        })?])
+        .merge_analysis(&[&repo
+            .find_annotated_commit(upstream_oid)
+            .map_err(|e| CommandError::internal(format!("annotated commit failed: {e}")))?])
         .map_err(|e| CommandError::internal(format!("merge analysis failed: {e}")))?;
 
     if analysis.is_up_to_date() {

@@ -82,7 +82,9 @@ impl GitProvider for GitlabProvider {
     }
 
     async fn username(&self) -> Result<Option<String>, CommandError> {
-        let Some(token) = self.token().await? else { return Ok(None) };
+        let Some(token) = self.token().await? else {
+            return Ok(None);
+        };
         let base = self.api_base();
         let res = self
             .http
@@ -123,8 +125,9 @@ impl GitProvider for GitlabProvider {
         remote_url: &str,
     ) -> Result<Vec<PullRequestDto>, CommandError> {
         let token = self.require_token().await?;
-        let project_path = parse_project_path(remote_url)
-            .ok_or_else(|| CommandError::bad_request("could not parse GitLab project from remote"))?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
         let encoded = urlencoding::encode(&project_path);
         let base = self.api_base();
 
@@ -150,18 +153,16 @@ impl GitProvider for GitlabProvider {
         pr_number: u64,
     ) -> Result<PullRequestDetailDto, CommandError> {
         let token = self.require_token().await?;
-        let project_path = parse_project_path(remote_url)
-            .ok_or_else(|| CommandError::bad_request("could not parse GitLab project from remote"))?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
         let encoded = urlencoding::encode(&project_path);
         let base = self.api_base();
 
         let mr_url = format!("{base}/projects/{encoded}/merge_requests/{pr_number}");
-        let changes_url = format!(
-            "{base}/projects/{encoded}/merge_requests/{pr_number}/changes"
-        );
-        let notes_url = format!(
-            "{base}/projects/{encoded}/merge_requests/{pr_number}/notes?sort=asc"
-        );
+        let changes_url = format!("{base}/projects/{encoded}/merge_requests/{pr_number}/changes");
+        let notes_url =
+            format!("{base}/projects/{encoded}/merge_requests/{pr_number}/notes?sort=asc");
 
         let (mr_res, changes_res, notes_res) = tokio::try_join!(
             gl_json::<GlMrDetail>(&self.http, &token, &mr_url),
@@ -175,7 +176,10 @@ impl GitProvider for GitlabProvider {
             .changes
             .into_iter()
             .map(|c| FileChangeDto {
-                path: c.new_path.clone().unwrap_or_else(|| c.old_path.unwrap_or_default()),
+                path: c
+                    .new_path
+                    .clone()
+                    .unwrap_or_else(|| c.old_path.unwrap_or_default()),
                 additions: 0,
                 deletions: 0,
                 status: if c.new_file.unwrap_or(false) {
@@ -221,7 +225,11 @@ impl GitProvider for GitlabProvider {
         Ok(PullRequestDetailDto {
             pr: base_pr,
             body: mr_res.base_mr.description,
-            mergeable: mr_res.base_mr.merge_status.as_deref().map(|s| s == "can_be_merged"),
+            mergeable: mr_res
+                .base_mr
+                .merge_status
+                .as_deref()
+                .map(|s| s == "can_be_merged"),
             reviewers,
             files,
             timeline,
@@ -272,11 +280,7 @@ impl GitProvider for GitlabProvider {
         OAUTH_CLIENT_ID.is_some() && OAUTH_CLIENT_SECRET.is_some()
     }
 
-    async fn authorize_url(
-        &self,
-        redirect_uri: &str,
-        state: &str,
-    ) -> Result<String, CommandError> {
+    async fn authorize_url(&self, redirect_uri: &str, state: &str) -> Result<String, CommandError> {
         let client_id = OAUTH_CLIENT_ID
             .ok_or_else(|| CommandError::bad_request("gitlab: OAuth client ID not configured"))?;
         let redirect = urlencoding::encode(redirect_uri);
@@ -363,18 +367,25 @@ fn map_mr(mr: GlMr) -> PullRequestDto {
         _ => Some(CiStatus::None),
     };
 
+    let (author, author_avatar_url) = match mr.author {
+        Some(a) => (a.username, a.avatar_url),
+        None => (String::new(), None),
+    };
     PullRequestDto {
         id: mr.id.to_string(),
         number: mr.iid,
         title: mr.title,
         url: mr.web_url,
-        author: mr.author.map(|a| a.username).unwrap_or_default(),
+        author,
+        author_avatar_url,
         state: match mr.state.as_str() {
             "merged" => PrState::Merged,
             "closed" => PrState::Closed,
             _ => PrState::Open,
         },
-        draft: mr.draft.unwrap_or_else(|| mr.work_in_progress.unwrap_or(false)),
+        draft: mr
+            .draft
+            .unwrap_or_else(|| mr.work_in_progress.unwrap_or(false)),
         source_branch: mr.source_branch,
         target_branch: mr.target_branch,
         created_at: mr.created_at,
@@ -403,7 +414,11 @@ fn map_project(p: GlProject) -> RemoteRepositoryDto {
         pushed_at: p.last_activity_at,
         size_kb: None,
         language: None,
-        owner_login: p.namespace.as_ref().map(|n| n.path.clone()).unwrap_or_default(),
+        owner_login: p
+            .namespace
+            .as_ref()
+            .map(|n| n.path.clone())
+            .unwrap_or_default(),
         owner_avatar_url: p.namespace.and_then(|n| n.avatar_url),
     }
 }
@@ -413,11 +428,7 @@ async fn gl_json<T: serde::de::DeserializeOwned>(
     token: &str,
     url: &str,
 ) -> Result<T, CommandError> {
-    let res = http
-        .get(url)
-        .header("PRIVATE-TOKEN", token)
-        .send()
-        .await?;
+    let res = http.get(url).header("PRIVATE-TOKEN", token).send().await?;
     if !res.status().is_success() {
         return Err(CommandError::internal(format!(
             "gitlab {}: {}",
@@ -432,7 +443,10 @@ async fn gl_json<T: serde::de::DeserializeOwned>(
 /// groups (`group/subgroup/project`) for both HTTPS and SSH forms.
 fn parse_project_path(remote_url: &str) -> Option<String> {
     let url = remote_url.trim();
-    let path = if let Some(rest) = url.strip_prefix("git@").and_then(|s| s.split_once(':').map(|(_, r)| r)) {
+    let path = if let Some(rest) = url
+        .strip_prefix("git@")
+        .and_then(|s| s.split_once(':').map(|(_, r)| r))
+    {
         rest
     } else {
         let after_scheme = url.split("://").nth(1).unwrap_or(url);

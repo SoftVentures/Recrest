@@ -39,7 +39,7 @@ export function SettingsView() {
   }, [dispatch]);
 
   return (
-    <div className="a-settings" data-testid="settings-view">
+    <div className="a-settings p-settings" data-testid="settings-view">
       <aside className="a-settings-nav" role="tablist" data-testid="settings-tabs">
         {TABS.map((tb) => (
           <button

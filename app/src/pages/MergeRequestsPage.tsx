@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/atoms/Checkbox";
 import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { Icon } from "@/components/atoms/Icon";
 import { Kbd } from "@/components/atoms/Kbd";
+import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 import { IconButton, IconLink } from "@/components/molecules/IconButton";
 import {
   DropdownMenu,
@@ -24,7 +25,6 @@ import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChange
 import { MrListSkeleton } from "@/components/molecules/skeletons/MrListSkeleton";
 import { ReviewerChipsSkeleton } from "@/components/molecules/skeletons/ReviewerChipsSkeleton";
 import { TimelineEventsSkeleton } from "@/components/molecules/skeletons/TimelineEventsSkeleton";
-import { usePrPolling } from "@/hooks/useProviders";
 import { invoke } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -42,7 +42,6 @@ interface Row {
 
 export function MergeRequestsPage() {
   const { t } = useTranslation();
-  usePrPolling();
 
   const prsItems = useAppSelector((s) => s.prs.items);
   const repos = useAppSelector((s) => s.repos.items);
@@ -96,7 +95,7 @@ export function MergeRequestsPage() {
   const current = filtered.find((r) => r.pr.id === selectedId) ?? filtered[0] ?? null;
 
   return (
-    <div className={`a-mr${current ? " with-drawer" : ""}`} data-testid="merge-requests-page">
+    <div className={`a-mr p-mrs${current ? " with-drawer" : ""}`} data-testid="merge-requests-page">
       <div className="a-mr-list">
         <div className="a-mr-filter-bar">
           <Chip active={tab === "open"} onClick={() => setTab("open")}>
@@ -118,11 +117,12 @@ export function MergeRequestsPage() {
           <MrListSkeleton rows={6} />
         ) : (
           <div className="a-mr-rows scroll">
-            {filtered.map(({ pr, repoName }) => (
+            {filtered.map(({ pr, repoName }, i) => (
               <button
                 type="button"
                 key={pr.id}
                 className={`a-mr-row${pr.id === current?.pr.id ? " selected" : ""}`}
+                style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
                 data-testid="mr-row"
                 data-mr-id={pr.id}
                 data-mr-number={pr.number}
@@ -142,7 +142,10 @@ export function MergeRequestsPage() {
                     <span className="a-mr-sep">·</span>
                     <span>#{pr.number}</span>
                     <span className="a-mr-sep">·</span>
-                    <span>{pr.author}</span>
+                    <span className="a-mr-author">
+                      <AuthorAvatar name={pr.author} src={pr.authorAvatarUrl} size={16} />
+                      <span>{pr.author}</span>
+                    </span>
                     {pr.additions != null && pr.deletions != null && (
                       <>
                         <span className="a-mr-sep">·</span>

@@ -55,15 +55,19 @@ impl BitbucketProvider {
     }
 
     async fn credentials(&self) -> Result<Option<(String, String)>, CommandError> {
-        let Some(token) = self.tokens.read(PROVIDER_ID)? else { return Ok(None) };
-        let Some(username) = self.tokens.read(USERNAME_KEY)? else { return Ok(None) };
+        let Some(token) = self.tokens.read(PROVIDER_ID)? else {
+            return Ok(None);
+        };
+        let Some(username) = self.tokens.read(USERNAME_KEY)? else {
+            return Ok(None);
+        };
         Ok(Some((username, token)))
     }
 
     async fn require_credentials(&self) -> Result<(String, String), CommandError> {
-        self.credentials()
-            .await?
-            .ok_or_else(|| CommandError::Unauthorized("bitbucket credentials not configured".into()))
+        self.credentials().await?.ok_or_else(|| {
+            CommandError::Unauthorized("bitbucket credentials not configured".into())
+        })
     }
 }
 
@@ -129,7 +133,9 @@ impl GitProvider for BitbucketProvider {
 
         let res = self
             .http
-            .get(format!("{base}/repositories/{workspace}/{repo}/pullrequests"))
+            .get(format!(
+                "{base}/repositories/{workspace}/{repo}/pullrequests"
+            ))
             .basic_auth(&username, Some(&password))
             .query(&[("state", "OPEN"), ("pagelen", "50")])
             .send()
@@ -153,13 +159,7 @@ impl GitProvider for BitbucketProvider {
             let ci = match sha {
                 Some(sha) => Some(
                     fetch_bb_ci_status(
-                        &self.http,
-                        &username,
-                        &password,
-                        &base,
-                        &workspace,
-                        &repo,
-                        &sha,
+                        &self.http, &username, &password, &base, &workspace, &repo, &sha,
                     )
                     .await,
                 ),
@@ -237,7 +237,10 @@ impl GitProvider for BitbucketProvider {
             .unwrap_or_default()
             .into_iter()
             .map(|u| ReviewerDto {
-                login: u.nickname.clone().unwrap_or_else(|| u.display_name.clone().unwrap_or_default()),
+                login: u
+                    .nickname
+                    .clone()
+                    .unwrap_or_else(|| u.display_name.clone().unwrap_or_default()),
                 name: u.display_name.clone(),
                 avatar_url: u.links.and_then(|l| l.avatar).map(|a| a.href),
                 state: ReviewState::Pending,
@@ -296,9 +299,7 @@ impl GitProvider for BitbucketProvider {
         let (username, password) = self.require_credentials().await?;
         let base = self.api_base();
         let mut out = Vec::new();
-        let mut url = format!(
-            "{base}/repositories?role=member&pagelen={PAGELEN}&sort=-updated_on"
-        );
+        let mut url = format!("{base}/repositories?role=member&pagelen={PAGELEN}&sort=-updated_on");
         for _ in 0..MAX_PAGES {
             let page: BbPage<BbRepo> = bb_json(&self.http, &username, &password, &url).await?;
             for r in page.values {
@@ -339,8 +340,9 @@ impl GitProvider for BitbucketProvider {
         _redirect_uri: &str,
         state: &str,
     ) -> Result<String, CommandError> {
-        let client_id = OAUTH_CLIENT_ID
-            .ok_or_else(|| CommandError::bad_request("bitbucket: OAuth client ID not configured"))?;
+        let client_id = OAUTH_CLIENT_ID.ok_or_else(|| {
+            CommandError::bad_request("bitbucket: OAuth client ID not configured")
+        })?;
         let state_enc = urlencoding::encode(state);
         // Bitbucket ignores `redirect_uri` in the request — the callback must
         // be configured on the OAuth consumer. Scopes come from the consumer
@@ -407,9 +409,7 @@ impl GitProvider for BitbucketProvider {
         let (username, password) = self.require_credentials().await?;
         let base = self.api_base();
         let mut out = Vec::new();
-        let mut url = format!(
-            "{base}/repositories/{org_slug}?pagelen={PAGELEN}&sort=-updated_on"
-        );
+        let mut url = format!("{base}/repositories/{org_slug}?pagelen={PAGELEN}&sort=-updated_on");
         for _ in 0..MAX_PAGES {
             let page: BbPage<BbRepo> = bb_json(&self.http, &username, &password, &url).await?;
             for r in page.values {
@@ -425,16 +425,28 @@ impl GitProvider for BitbucketProvider {
 }
 
 fn map_pr(pr: BbPr, ci: Option<CiStatus>) -> PullRequestDto {
+    let author_avatar_url = pr
+        .author
+        .as_ref()
+        .and_then(|a| a.links.as_ref())
+        .and_then(|l| l.avatar.as_ref())
+        .map(|h| h.href.clone());
     PullRequestDto {
         id: pr.id.to_string(),
         number: pr.id,
         title: pr.title,
-        url: pr.links.as_ref().and_then(|l| l.html.as_ref()).map(|h| h.href.clone()).unwrap_or_default(),
+        url: pr
+            .links
+            .as_ref()
+            .and_then(|l| l.html.as_ref())
+            .map(|h| h.href.clone())
+            .unwrap_or_default(),
         author: pr
             .author
             .as_ref()
             .and_then(|a| a.display_name.clone())
             .unwrap_or_default(),
+        author_avatar_url,
         state: match pr.state.as_str() {
             "MERGED" => PrState::Merged,
             "DECLINED" | "SUPERSEDED" => PrState::Closed,
@@ -484,7 +496,9 @@ async fn fetch_bb_ci_status(
     if !res.status().is_success() {
         return CiStatus::None;
     }
-    let Ok(body) = res.json::<BbPage<BbStatus>>().await else { return CiStatus::None };
+    let Ok(body) = res.json::<BbPage<BbStatus>>().await else {
+        return CiStatus::None;
+    };
     aggregate_bb_statuses(&body.values)
 }
 
@@ -534,7 +548,11 @@ fn map_repo(r: BbRepo) -> RemoteRepositoryDto {
         .and_then(|l| l.html.as_ref())
         .map(|h| h.href.clone())
         .unwrap_or_default();
-    let owner_login = r.workspace.as_ref().map(|w| w.slug.clone()).unwrap_or_default();
+    let owner_login = r
+        .workspace
+        .as_ref()
+        .map(|w| w.slug.clone())
+        .unwrap_or_default();
     let owner_avatar = r
         .workspace
         .as_ref()
@@ -589,7 +607,10 @@ async fn bb_json<T: serde::de::DeserializeOwned>(
 
 fn parse_workspace_repo(remote_url: &str) -> Option<(String, String)> {
     let url = remote_url.trim();
-    let path = if let Some(rest) = url.strip_prefix("git@").and_then(|s| s.split_once(':').map(|(_, r)| r)) {
+    let path = if let Some(rest) = url
+        .strip_prefix("git@")
+        .and_then(|s| s.split_once(':').map(|(_, r)| r))
+    {
         rest.to_string()
     } else {
         let after_scheme = url.split("://").nth(1).unwrap_or(url);

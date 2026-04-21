@@ -2,12 +2,10 @@ import { useTranslation } from "react-i18next";
 
 import { Spinner } from "@/components/atoms/Spinner";
 import { PrList } from "@/components/organisms/prs/PrList";
-import { usePrPolling } from "@/hooks/useProviders";
 import { useAppSelector } from "@/store/hooks";
 
 export function PullRequestsPage() {
   const { t } = useTranslation("prs");
-  usePrPolling();
 
   const error = useAppSelector((s) => s.prs.error);
   const loading = useAppSelector((s) => s.prs.loading);

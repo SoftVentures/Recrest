@@ -788,7 +788,11 @@
     width: 320px;
   }
 }
-@media (max-width: 1060px) {
+/* Below ~1280px (MacBook 13"), the repo-row grid needs ≥724px to stay legible.
+ * With sidebar (208) + detail (320–360) in the grid, main would drop under 700px
+ * and action buttons would clip. Float the detail pane as an overlay instead so
+ * main keeps the full width available to the sidebar. */
+@media (max-width: 1280px) {
   .a-app:not(.pane-bottom):not(.pane-off) .a-detail {
     position: absolute;
     right: 0;
