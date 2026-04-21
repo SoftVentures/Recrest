@@ -142,8 +142,15 @@ jobs:
           VITE_IMPRINT_PHONE="+49 30 0000000"
           VITE_IMPRINT_RESPONSIBLE_PERSON="Max Mustermann"
           EOF
+      # Split install-deps from browser install: in Playwright 1.59 the
+      # `--with-deps` flag silently skips the apt-get step when the workspace
+      # is invoked via `yarn workspace`, leaving WebKit without its GTK-4 /
+      # flite / hyphen / manette bundle. Running install-deps directly under
+      # sudo fixes it for real.
+      - name: Install Playwright system deps
+        run: sudo yarn workspace @recrest/tests exec playwright install-deps
       - name: Install Playwright browsers
-        run: yarn workspace @recrest/tests exec playwright install --with-deps
+        run: yarn workspace @recrest/tests exec playwright install
       - run: yarn test:e2e
       - name: Upload Playwright report on failure
         if: failure()
