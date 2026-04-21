@@ -23,14 +23,21 @@ The config launches both dev servers (`yarn dev:web` on `:3000` for the app, `ya
 
 ## Project layout
 
-| Project | Viewport | Base URL | Specs |
-|---|---|---|---|
-| `landing-desktop` | 1440×900 | `$LANDING_URL` (`:4321`) | `src/e2e/landing/**` |
-| `landing-mobile`  | iPhone 14 preset | `$LANDING_URL` | `src/e2e/landing/**` |
-| `app-desktop`     | 1440×900 | `$APP_URL` (`:3000`) | `src/e2e/app/**` |
-| `app-mobile`      | Pixel 7 preset | `$APP_URL` | `src/e2e/app/**` |
+| Project           | Engine          | Viewport | Base URL                 | Specs                                                   |
+| ----------------- | --------------- | -------- | ------------------------ | ------------------------------------------------------- |
+| `infra`           | Chromium        | —        | `$APP_URL`               | `src/e2e/infra/**`                                      |
+| `landing-desktop` | Desktop Chrome  | 1440×900 | `$LANDING_URL` (`:4321`) | `src/e2e/landing/**`                                    |
+| `landing-firefox` | Desktop Firefox | 1440×900 | `$LANDING_URL`           | `src/e2e/landing/**` (skips `10-responsive`, `11-a11y`) |
+| `landing-webkit`  | Desktop Safari  | 1440×900 | `$LANDING_URL`           | `src/e2e/landing/**` (skips `10-responsive`, `11-a11y`) |
+| `landing-mobile`  | iPhone 14       | preset   | `$LANDING_URL`           | `src/e2e/landing/**`                                    |
+| `app-desktop`     | Desktop Chrome  | 1440×900 | `$APP_URL` (`:3000`)     | `src/e2e/app/**`                                        |
+| `app-firefox`     | Desktop Firefox | 1440×900 | `$APP_URL`               | `src/e2e/app/**` (skips `13-a11y`)                      |
+| `app-webkit`      | Desktop Safari  | 1440×900 | `$APP_URL`               | `src/e2e/app/**` (skips `13-a11y`)                      |
+| `app-mobile`      | Pixel 7         | preset   | `$APP_URL`               | `src/e2e/app/**`                                        |
 
-`testMatch` uses a path regex so cross-project leakage is impossible.
+`testMatch` uses a path regex so cross-project leakage is impossible. The WebKit + Firefox variants exist to catch browser-engine regressions (CSS, event models, JIT quirks); visual-regression and a11y specs stay Chromium-only because their baselines are pinned to that engine.
+
+The Playwright job runs on `ubuntu-24.04` — WebKit's system-lib bundle (GTK 4, libavif 13, libmanette, libhyphen) is no longer packaged on `ubuntu-22.04`, so `playwright install --with-deps` there leaves `browserType.launch` dead on arrival.
 
 ## Tauri IPC stub (app tests only)
 
@@ -43,7 +50,7 @@ Outside the Tauri runtime `invoke()` throws `tauri-ipc-unavailable`. In `dev:web
 ## Writing specs
 
 - Put specs under `src/e2e/landing/` or `src/e2e/app/`. One file per feature area, prefixed with a two-digit index so execution order (and the README's mental model) stays predictable.
-- **App specs (`src/e2e/app/**`) address every element via `data-testid`** (`page.getByTestId('nav-repos')` or `page.locator('[data-testid="repo-row"][data-repo-id="…"]')`). No `getByRole`, `getByText`, `getByLabel`, `getByTitle`, or CSS-class locators for interaction/assertion. The only exceptions are stable platform attributes (`html[data-theme]`) and masks in the visual spec. Add a testid to the component instead of loosening the test. Landing specs may still use role/text where the copy is part of the contract.
+- **App specs (`src/e2e/app/**`) address every element via `data-testid`** (`page.getByTestId('nav-repos')`or`page.locator('[data-testid="repo-row"][data-repo-id="…"]')`). No `getByRole`, `getByText`, `getByLabel`, `getByTitle`, or CSS-class locators for interaction/assertion. The only exceptions are stable platform attributes (`html[data-theme]`) and masks in the visual spec. Add a testid to the component instead of loosening the test. Landing specs may still use role/text where the copy is part of the contract.
 - **Locale**: Default is EN. Force a different locale via the fixture option (`test.use({ locale: "de" })`). The fixture writes both `i18nextLng` (app) and `recrest-landing-locale` (landing) to localStorage before navigation.
 - **Theme**: Same pattern — `test.use({ theme: "dark" })`.
 - **Mobile-specific assertions** should be guarded with `test.skip(project.name !== "landing-mobile", ...)` or similar.
