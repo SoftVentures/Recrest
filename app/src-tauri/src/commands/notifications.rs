@@ -17,10 +17,32 @@ pub enum NotificationKind {
     Generic,
 }
 
+impl NotificationKind {
+    fn as_str(&self) -> &'static str {
+        match self {
+            NotificationKind::NewPr => "new_pr",
+            NotificationKind::CiFailed => "ci_failed",
+            NotificationKind::MergeReady => "merge_ready",
+            NotificationKind::Generic => "generic",
+        }
+    }
+}
+
 /// Shows a desktop notification if both the master toggle and the per-kind
 /// toggle are enabled. A `Generic` kind is only gated on the master toggle —
 /// callers can use it for one-off user-driven notifications (e.g. "clone
 /// finished") without adding new settings.
+///
+/// The `url` field is accepted for forward compatibility: we'd like clicking
+/// the toast to open the related PR in the user's browser, but
+/// `tauri-plugin-notification` v2.3 only exposes click-through action
+/// handling (`Action` / `register_action_types`) on *mobile* targets
+/// (`src/mobile.rs`). The desktop impl in that crate calls through to
+/// `notify_rust::Notification::show()` with no callback and throws away the
+/// returned handle, so there's nowhere to attach an on-click today. We still
+/// ship `url` in the IPC payload (and re-emit it on the debug dev event
+/// below) so the dev preview UI and the eventual WebKit/Linux specific
+/// click plumbing have a stable contract to build on.
 #[tauri::command]
 pub async fn notify(
     app: AppHandle,
@@ -28,6 +50,11 @@ pub async fn notify(
     kind: NotificationKind,
     title: String,
     body: String,
+    // `url` is only consumed by the debug `dev://last-notification` emit below;
+    // in release builds the plugin has no desktop click hook, so it's genuinely
+    // unused. Silence the release-only warning here until the plugin grows an
+    // on-click API (see TODO(notification-click) below).
+    #[allow(unused_variables)] url: Option<String>,
 ) -> Result<(), CommandError> {
     let allowed = {
         let config = state.config.lock().await;
@@ -53,5 +80,33 @@ pub async fn notify(
         .body(&body)
         .show()
         .map_err(|e| CommandError::internal(format!("notification failed: {e}")))?;
+
+    // TODO(notification-click): once tauri-plugin-notification exposes
+    // desktop click/action callbacks, re-route them through
+    // `tauri_plugin_opener::OpenerExt::open_url(&url, None::<&str>)` so the
+    // toast jumps straight to the PR. Until then the URL lives in the
+    // payload for UI previews and the dev event below only.
+
+    // Debug-only: re-emit the full payload so `tests/` and the
+    // DevNotificationPreview panel can observe what *would* have surfaced
+    // natively, independent of OS-level notification permission state.
+    #[cfg(debug_assertions)]
+    {
+        use tauri::Emitter;
+        let _ = app.emit(
+            "dev://last-notification",
+            serde_json::json!({
+                "kind": kind.as_str(),
+                "title": title,
+                "body": body,
+                "url": url,
+            }),
+        );
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let _ = kind.as_str();
+    }
+
     Ok(())
 }

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Icon } from "@/components/atoms/Icon";
+import { EmptyState } from "@/components/molecules/EmptyState";
 import { COL_TEMPLATE, RepoRow } from "@/components/organisms/repos/RepoRow";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -53,7 +54,7 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
       </div>
 
       {groups.map((g, gi) => (
-        <div key={g.label ?? gi}>
+        <div key={g.label ?? gi} style={{ "--gi": gi } as React.CSSProperties}>
           {g.label && (
             <button
               type="button"
@@ -74,18 +75,21 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
             </button>
           )}
           {!collapsedGroups.has(g.label ?? "") &&
-            g.items.map((r) => (
-              <RepoRow key={r.id} repo={r} selected={r.id === selectedId} onSelect={onSelect} />
+            g.items.map((r, i) => (
+              <RepoRow
+                key={r.id}
+                repo={r}
+                selected={r.id === selectedId}
+                onSelect={onSelect}
+                animIndex={i}
+              />
             ))}
         </div>
       ))}
 
       {repos.length === 0 && (
-        <div
-          style={{ padding: "32px 20px", textAlign: "center", color: "var(--ink-3)" }}
-          data-testid="repo-list-empty"
-        >
-          {t("states.empty")}
+        <div className="flex h-full w-full" data-testid="repo-list-empty">
+          <EmptyState mascot="waving" title={t("states.empty")} />
         </div>
       )}
     </div>

@@ -29,17 +29,15 @@ interface RepoRowProps {
   repo: EnrichedRepo;
   selected?: boolean;
   onSelect: (id: string) => void;
+  /** Stagger index — feeds the CSS `--i` custom property so the page-level
+   *  entry animation can delay each row incrementally. `undefined` → no
+   *  stagger (row animates with default delay of 0). */
+  animIndex?: number;
 }
 
-export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
+export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
   const dispatch = useAppDispatch();
   const { confirm, node: confirmNode } = useConfirm();
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onSelect(repo.id);
-    }
-  };
 
   const runCommand = async (cmd: TauriCommandName, label: string) => {
     const id = toast.loading(`Opening ${label}…`);
@@ -87,25 +85,40 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
     }
   };
 
+  // Cap the stagger depth so very long repo lists don't drag the entry
+  // animation out past ~500ms. Rows beyond that share a single late delay.
+  const STAGGER_CAP = 12;
+  const effectiveIndex = animIndex == null ? 0 : Math.min(animIndex, STAGGER_CAP);
+
   return (
     <div
       className={`a-row d-comfy${selected ? " selected" : ""}`}
-      style={{ gridTemplateColumns: COL_TEMPLATE }}
+      style={
+        {
+          gridTemplateColumns: COL_TEMPLATE,
+          "--i": effectiveIndex,
+        } as React.CSSProperties
+      }
       data-testid="repo-row"
       data-repo-id={repo.id}
       data-repo-name={repo.name}
       data-selected={selected ? "true" : undefined}
       data-dirty={repo.status.dirty ? "true" : undefined}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        className="a-c-name"
+      {/* Transparent overlay sibling carries the row-selection interaction.
+       *  Keeping it as a sibling of `.a-c-actions` (rather than an ancestor)
+       *  means axe-core's `nested-interactive` rule is happy — real <button>
+       *  descendants in the actions column are not inside another interactive
+       *  element. CSS pins the overlay to fill the row behind the actions
+       *  column (z-index:0 vs actions z-index:1). */}
+      <button
+        type="button"
+        className="a-row-select"
         aria-label={`Select repo: ${repo.name}`}
-        data-testid="repo-row-select"
         onClick={() => onSelect(repo.id)}
-        onKeyDown={handleKey}
-      >
+        data-testid="repo-row-select"
+      />
+      <div className="a-c-name">
         <RepoAvatar repo={repo} size={28} radius={6} />
         <div className="a-name-stack">
           <div className="a-name-line">
@@ -143,7 +156,7 @@ export function RepoRow({ repo, selected, onSelect }: RepoRowProps) {
         <Sparkline data={repo.activity} active={repo.status.dirty} width={88} height={16} />
       </div>
 
-      <div className="a-c-actions" onClick={(e) => e.stopPropagation()}>
+      <div className="a-c-actions">
         {confirmNode}
         <OpenInIdeButton repoId={repo.id} variant="icon" />
         <IconButton

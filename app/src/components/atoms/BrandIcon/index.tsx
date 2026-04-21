@@ -2,6 +2,8 @@ import { type SVGProps } from "react";
 
 import { type SimpleIcon, siBitbucket, siGithub, siGitlab } from "simple-icons";
 
+import { cn } from "@/lib/utils";
+
 export type BrandSlug = "github" | "gitlab" | "bitbucket";
 
 const BRAND_ICONS: Record<BrandSlug, SimpleIcon> = {
@@ -24,6 +26,7 @@ export function BrandIcon({
   size = 16,
   color = "currentColor",
   title,
+  className,
   ...rest
 }: BrandIconProps) {
   const icon = BRAND_ICONS[slug];
@@ -37,7 +40,7 @@ export function BrandIcon({
       fill={fill}
       role="img"
       aria-label={title ?? icon.title}
-      style={{ flexShrink: 0 }}
+      className={cn("shrink-0", className)}
       {...rest}
     >
       <path d={icon.path} />

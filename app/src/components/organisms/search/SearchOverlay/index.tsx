@@ -83,7 +83,7 @@ export function SearchOverlay() {
       key={r.id}
       id={`search-result-${r.id}`}
       role="option"
-      aria-selected={globalIndex === cursor}
+      aria-selected={globalIndex === cursor ? "true" : "false"}
       className="a-search-row-li"
     >
       <button

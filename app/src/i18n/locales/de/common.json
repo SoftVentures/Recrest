@@ -25,7 +25,7 @@
   "actions": {
     "refresh": "Aktualisieren",
     "add": "Hinzufügen",
-    "add_repo": "Repo hinzufügen",
+    "add_repo": "Repository hinzufügen",
     "remove": "Entfernen",
     "search": "Suchen",
     "search_placeholder": "Repos, Branches, MRs durchsuchen…",
@@ -35,7 +35,8 @@
     "open_remote": "Remote öffnen",
     "cancel": "Abbrechen",
     "save": "Speichern",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "clear": "Leeren"
   },
   "states": {
     "loading": "Wird geladen…",
@@ -89,9 +90,17 @@
       "title": "Schnellaktionen",
       "fetch_all": "Alle fetchen",
       "clone": "Repo klonen",
+      "clone_tooltip": "Von URL klonen oder aus GitHub / GitLab / Bitbucket importieren",
       "find": "Repo-übergreifend suchen",
-      "workspace": "Workspace öffnen"
+      "workspace": "Workspace öffnen",
+      "workspace_tooltip": "Multi-Root-IDE-Workspace mit allen gescannten Repos öffnen"
     }
+  },
+  "titlebar": {
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restore": "Wiederherstellen",
+    "close": "Schließen"
   },
   "mrs": {
     "filter": {
@@ -111,6 +120,7 @@
   },
   "branches": {
     "filter": {
+      "label": "Branch-Filter",
       "all": "Alle",
       "ahead": "Voraus",
       "behind": "Zurück",
@@ -133,7 +143,13 @@
       "pull": "Pull",
       "push": "Push",
       "checkout": "Checkout",
-      "checkout_remote": "Checkout"
+      "checkout_remote": "Checkout",
+      "fetch": "Fetch",
+      "fetch_all": "Alle fetchen",
+      "fetch_tooltip": "Von allen Remotes fetchen",
+      "fetching": "Fetche…",
+      "fetched": "{{repo}} gefetcht",
+      "fetched_all": "Alle Repos gefetcht"
     },
     "row": {
       "upstream_tracking": "verfolgt {{upstream}}",
@@ -173,7 +189,7 @@
       "none": "—"
     },
     "hero": {
-      "open_prs": "Offene PRs",
+      "open_prs": "Offene MRs",
       "open_prs_sub": "{{review}} in Review · {{draft}} Entwurf",
       "ci_health": "CI-Health",
       "ci_failing_one": "{{count}} fehlerhaft",
@@ -192,15 +208,15 @@
       "language_sub": "gewichtet nach Commits",
       "churn_title": "Churn · Working Tree",
       "churn_sub": "hinzugefügte + entfernte Zeilen",
-      "pr_velocity_title": "PR-Velocity",
+      "pr_velocity_title": "MR-Velocity",
       "pr_velocity_sub": "geöffnet vs. gemerged · 14 Tage",
       "pr_velocity_opened": "Geöffnet",
       "pr_velocity_merged": "Gemerged",
       "time_to_merge_title": "Merge-Dauer",
       "time_to_merge_sub": "letzte 14 Tage",
       "review_queue_title": "Review-Queue",
-      "review_queue_sub": "älteste offene PRs",
-      "review_queue_empty": "Keine offenen PRs warten.",
+      "review_queue_sub": "älteste offene MRs",
+      "review_queue_empty": "Keine offenen MRs warten.",
       "ci_trend_title": "CI-Pass-Rate · 14 Tage",
       "ci_trend_sub": "tägliche Pass-Quote",
       "flaky_title": "Flakigste Repos",
@@ -218,15 +234,15 @@
       "filter_label": "Event-Typ",
       "filter_all": "Alle",
       "filter_commits": "Commits",
-      "filter_prs": "Pull Requests",
+      "filter_prs": "Merge Requests",
       "filter_checks": "CI-Checks",
       "empty_filter": "Kein Event passt zu diesem Filter.",
       "chip_commits_one": "{{count}} Commit",
       "chip_commits_other": "{{count}} Commits",
-      "chip_prs_merged_one": "{{count}} PR gemerged",
-      "chip_prs_merged_other": "{{count}} PRs gemerged",
-      "chip_prs_opened_one": "{{count}} PR geöffnet",
-      "chip_prs_opened_other": "{{count}} PRs geöffnet",
+      "chip_prs_merged_one": "{{count}} MR gemerged",
+      "chip_prs_merged_other": "{{count}} MRs gemerged",
+      "chip_prs_opened_one": "{{count}} MR geöffnet",
+      "chip_prs_opened_other": "{{count}} MRs geöffnet",
       "chip_checks_failed_one": "{{count}} Check fehlgeschlagen",
       "chip_checks_failed_other": "{{count}} Checks fehlgeschlagen"
     }
@@ -238,7 +254,8 @@
       "integrations": "Integrationen",
       "shortcuts": "Shortcuts",
       "storage": "Speicher",
-      "about": "Über"
+      "about": "Über",
+      "developer": "Entwickler"
     },
     "general": {
       "title": "Allgemein",
@@ -277,6 +294,37 @@
       "title": "Über Recrest",
       "intro": "Versionsinformationen, Lizenzen und Credits.",
       "version": "Version"
+    },
+    "developer": {
+      "title": "Entwickler",
+      "intro": "Nur in Debug-Builds sichtbar. Werkzeuge für Entwicklung und Debugging."
     }
+  },
+  "notifications": {
+    "new_pr": {
+      "title": "Neuer Merge Request",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "ci_failed": {
+      "title": "CI fehlgeschlagen",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "merge_ready": {
+      "title": "Bereit zum Mergen",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "generic": {
+      "title": "Recrest",
+      "clone_done": { "title": "Clone abgeschlossen", "body": "{{repo}}" },
+      "update_available": { "title": "Update verfügbar", "body": "v{{version}}" },
+      "test_body": "Test-Benachrichtigung von Recrest"
+    },
+    "burst": {
+      "new_pr": "{{count}} neue Merge Requests",
+      "ci_failed": "{{count}} CI-Fehlschläge",
+      "merge_ready": "{{count}} MRs sind merge-bereit"
+    },
+    "test": "Test",
+    "test_sent": "Test-Benachrichtigung gesendet"
   }
 }

@@ -24,10 +24,12 @@ import { useGlobalEvents } from "@/hooks/useGlobalEvents";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useNotificationTriggers } from "@/hooks/useNotificationTriggers";
 import { useWindowChrome } from "@/hooks/usePlatform";
+import { usePrPolling } from "@/hooks/useProviders";
 import { useSearchHotkey } from "@/hooks/useSearch";
 import { useTauri } from "@/hooks/useTauri";
 import { useThemeEffect } from "@/hooks/useTheme";
 import { useTrayBadgeSync } from "@/hooks/useTrayBadgeSync";
+import { isTauri } from "@/lib/tauri";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setLocale } from "@/store/slices/settingsSlice";
 import { setSidebarCollapsed } from "@/store/slices/uiSlice";
@@ -46,8 +48,9 @@ export function AppShell({ children }: AppShellProps) {
   useTauri();
   useTrayBadgeSync();
   useGlobalEvents();
-  useNotificationTriggers();
+  useNotificationTriggers(isTauri());
   useChromeAttribute();
+  usePrPolling();
 
   const location = useLocation();
   const dispatch = useAppDispatch();

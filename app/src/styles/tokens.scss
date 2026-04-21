@@ -1,3 +1,5 @@
+@use "sass:list";
+
 /* ─── Recrest — global tokens ─────────────────── */
 
 :root {
@@ -59,6 +61,8 @@
   --row-h-compact: 44px;
   --row-h-comfy: 60px;
   --row-h-spacious: 80px;
+
+  --font-scale: 1;
 }
 
 [data-theme="dark"],
@@ -106,79 +110,48 @@
   --shadow-row-hover: 0 1px 0 rgba(255, 255, 255, 0.03), 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
-/* Accent switch — vivid, saturated palette */
-[data-accent="blue"] {
-  --accent: #3d7bff;
-  --accent-weak: #e2ecff;
-  --accent-ink: #1a42b8;
+/* ─── Accent switch — vivid, saturated palette ─── */
+$accents-light: (
+  "blue": (#3d7bff, #e2ecff, #1a42b8),
+  "green": (#10b981, #d9f7ed, #0a7a56),
+  "purple": (#8b5cf6, #ece3ff, #5b21b6),
+  "pink": (#ec4899, #fde0ef, #a3185e),
+  "amber": (#f59e0b, #fdecc9, #9a5c04),
+);
+$accents-dark: (
+  "blue": (#7ba7ff, rgba(123, 167, 255, 0.2), #a8c5ff),
+  "green": (#4ae38a, rgba(74, 227, 138, 0.2), #86f2ad),
+  "purple": (#c4a8ff, rgba(196, 168, 255, 0.2), #d8c4ff),
+  "pink": (#ff78b9, rgba(255, 120, 185, 0.2), #ffa4d0),
+  "amber": (#ffb347, rgba(255, 179, 71, 0.2), #ffc97a),
+);
+@each $name, $c in $accents-light {
+  [data-accent="#{$name}"] {
+    --accent: #{list.nth($c, 1)};
+    --accent-weak: #{list.nth($c, 2)};
+    --accent-ink: #{list.nth($c, 3)};
+  }
 }
-[data-accent="green"] {
-  --accent: #10b981;
-  --accent-weak: #d9f7ed;
-  --accent-ink: #0a7a56;
-}
-[data-accent="purple"] {
-  --accent: #8b5cf6;
-  --accent-weak: #ece3ff;
-  --accent-ink: #5b21b6;
-}
-[data-accent="pink"] {
-  --accent: #ec4899;
-  --accent-weak: #fde0ef;
-  --accent-ink: #a3185e;
-}
-[data-accent="amber"] {
-  --accent: #f59e0b;
-  --accent-weak: #fdecc9;
-  --accent-ink: #9a5c04;
-}
-
-[data-theme="dark"][data-accent="blue"],
-.dark[data-accent="blue"] {
-  --accent: #7ba7ff;
-  --accent-weak: rgba(123, 167, 255, 0.2);
-  --accent-ink: #a8c5ff;
-}
-[data-theme="dark"][data-accent="green"],
-.dark[data-accent="green"] {
-  --accent: #4ae38a;
-  --accent-weak: rgba(74, 227, 138, 0.2);
-  --accent-ink: #86f2ad;
-}
-[data-theme="dark"][data-accent="purple"],
-.dark[data-accent="purple"] {
-  --accent: #c4a8ff;
-  --accent-weak: rgba(196, 168, 255, 0.2);
-  --accent-ink: #d8c4ff;
-}
-[data-theme="dark"][data-accent="pink"],
-.dark[data-accent="pink"] {
-  --accent: #ff78b9;
-  --accent-weak: rgba(255, 120, 185, 0.2);
-  --accent-ink: #ffa4d0;
-}
-[data-theme="dark"][data-accent="amber"],
-.dark[data-accent="amber"] {
-  --accent: #ffb347;
-  --accent-weak: rgba(255, 179, 71, 0.2);
-  --accent-ink: #ffc97a;
+@each $name, $c in $accents-dark {
+  [data-theme="dark"][data-accent="#{$name}"],
+  .dark[data-accent="#{$name}"] {
+    --accent: #{list.nth($c, 1)};
+    --accent-weak: #{list.nth($c, 2)};
+    --accent-ink: #{list.nth($c, 3)};
+  }
 }
 
 /* ─── Font family switch ─── */
-:root {
-  --font-scale: 1;
-}
-html[data-font="manrope"] {
-  --font-sans: "Manrope", -apple-system, "Segoe UI", system-ui, sans-serif;
-}
-html[data-font="plex"] {
-  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
-}
-html[data-font="system"] {
-  --font-sans: -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
-}
-html[data-font="opendyslexic"] {
-  --font-sans: "OpenDyslexic", -apple-system, "Segoe UI", system-ui, sans-serif;
+$font-families: (
+  "manrope": ("Manrope", -apple-system, "Segoe UI", system-ui, sans-serif),
+  "plex": ("IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif),
+  "system": (-apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif),
+  "opendyslexic": ("OpenDyslexic", -apple-system, "Segoe UI", system-ui, sans-serif),
+);
+@each $name, $stack in $font-families {
+  html[data-font="#{$name}"] {
+    --font-sans: #{$stack};
+  }
 }
 
 /* ─── Font-size / interface scale ─── */
@@ -189,17 +162,11 @@ html[data-font="opendyslexic"] {
  * visual position and popovers don't drift to the wrong coords when the user
  * changes the size. `zoom` has the opposite behaviour (scales everything
  * including portals) and breaks Radix. */
-html[data-font-size="sm"] {
-  --ui-scale: 0.9;
-}
-html[data-font-size="md"] {
-  --ui-scale: 1;
-}
-html[data-font-size="lg"] {
-  --ui-scale: 1.12;
-}
-html[data-font-size="xl"] {
-  --ui-scale: 1.25;
+$ui-scales: ("sm": 0.9, "md": 1, "lg": 1.12, "xl": 1.25);
+@each $name, $value in $ui-scales {
+  html[data-font-size="#{$name}"] {
+    --ui-scale: #{$value};
+  }
 }
 #root {
   transform: scale(var(--ui-scale, 1));
@@ -210,13 +177,15 @@ html[data-font-size="xl"] {
 }
 
 /* ─── Accessibility ─── */
-html[data-reduced-motion="true"] *,
-html[data-reduced-motion="true"] *::before,
-html[data-reduced-motion="true"] *::after {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  scroll-behavior: auto !important;
+html[data-reduced-motion="true"] {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 html[data-high-contrast="true"] {
   --border: var(--ink-3);
@@ -225,14 +194,15 @@ html[data-high-contrast="true"] {
   --ink-3: var(--ink-1);
   --ink-4: var(--ink-2);
 }
-html[data-underline-links="true"] a,
-html[data-underline-links="true"] .a-link {
-  text-decoration: underline;
-  text-underline-offset: 2px;
+html[data-underline-links="true"] {
+  a,
+  .a-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 /* ─── Shared primitives (body/app shell) ─── */
-
 html,
 body {
   margin: 0;
@@ -253,7 +223,6 @@ body {
   height: 100vh;
 }
 
-/* App shell */
 .app {
   display: flex;
   flex-direction: column;
@@ -280,34 +249,36 @@ body {
   user-select: none;
   position: relative;
   z-index: 200;
-}
-.chrome .t-title {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.chrome .t-title .t-name {
-  color: var(--ink-0);
-  font-weight: 500;
-  font-size: 12.5px;
-}
-.chrome .t-title .t-version {
-  color: var(--ink-3);
-  font-weight: 500;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-.chrome .t-title .t-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #0f1115;
-  border: 1px solid #0f1115;
-  color: #ffffff;
+
+  .t-title {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    .t-name {
+      color: var(--ink-0);
+      font-weight: 500;
+      font-size: 12.5px;
+    }
+    .t-version {
+      color: var(--ink-3);
+      font-weight: 500;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .t-mark {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f1115;
+      border: 1px solid #0f1115;
+      color: #ffffff;
+    }
+  }
 }
 
 /* macOS overlay: traffic lights are drawn by the OS at trafficLightPosition,
@@ -324,30 +295,32 @@ body {
   height: 32px;
   flex: 0 0 32px;
   padding: 0 0 0 12px;
-}
-.chrome-win11 .t-ctrls {
-  display: flex;
-  gap: 0;
-  -webkit-app-region: no-drag;
-}
-.chrome-win11 .t-btn {
-  width: 46px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: var(--ink-2);
-  cursor: pointer;
-}
-.chrome-win11 .t-btn:hover {
-  background: var(--surface-hover);
-  color: var(--ink-0);
-}
-.chrome-win11 .t-btn.close:hover {
-  background: #c42b1c;
-  color: #fff;
+
+  .t-ctrls {
+    display: flex;
+    gap: 0;
+    -webkit-app-region: no-drag;
+  }
+  .t-btn {
+    width: 46px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface-hover);
+      color: var(--ink-0);
+    }
+    &.close:hover {
+      background: #c42b1c;
+      color: #fff;
+    }
+  }
 }
 
 /* GNOME/libadwaita: taller bar, single round close pill on the right. */
@@ -355,23 +328,25 @@ body {
   height: 42px;
   flex: 0 0 42px;
   padding: 0 12px;
-}
-.chrome-gnome .t-close-pill {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: var(--surface-hover);
-  color: var(--ink-2);
-  cursor: pointer;
-  -webkit-app-region: no-drag;
-}
-.chrome-gnome .t-close-pill:hover {
-  background: #e01b24;
-  color: #fff;
+
+  .t-close-pill {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: var(--surface-hover);
+    color: var(--ink-2);
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+
+    &:hover {
+      background: #e01b24;
+      color: #fff;
+    }
+  }
 }
 
 /* Rounded window corners on OSes where the compositor doesn't round a
@@ -420,37 +395,32 @@ html,
 }
 
 /* WebKit / Blink — applies to every scrollable surface in the app. */
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-  background: transparent;
+html,
+body,
+* {
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    background: transparent;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--ink-4);
+    border-radius: 4px;
+    min-height: 24px;
+    transition: background 0.15s ease;
+
+    &:hover { background: var(--ink-3); }
+    &:active { background: var(--ink-2); }
+  }
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
-html::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track,
-*::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
-}
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-  background: var(--ink-4);
-  border-radius: 4px;
-  min-height: 24px;
-  transition: background 0.15s ease;
-}
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover,
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--ink-3);
-}
-html::-webkit-scrollbar-thumb:active,
-body::-webkit-scrollbar-thumb:active,
-*::-webkit-scrollbar-thumb:active {
-  background: var(--ink-2);
-}
+
 /* Kill the tiny arrow buttons on top/bottom (and corner) that WebView2 still
  * renders by default under Windows. Target every variant explicitly — some
  * Chromium builds ignore the generic selector and only respect the directional
@@ -471,11 +441,6 @@ body::-webkit-scrollbar-thumb:active,
   -webkit-appearance: none !important;
   appearance: none !important;
 }
-html::-webkit-scrollbar-corner,
-body::-webkit-scrollbar-corner,
-*::-webkit-scrollbar-corner {
-  background: transparent;
-}
 
 /* LangDot */
 .lang-dot {
@@ -495,15 +460,10 @@ body::-webkit-scrollbar-corner,
   font-weight: 600;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
-}
-.ab-chip .ab-up {
-  color: var(--green);
-}
-.ab-chip .ab-down {
-  color: var(--amber);
-}
-.ab-chip .ab-zero {
-  color: var(--ink-4);
+
+  .ab-up { color: var(--green); }
+  .ab-down { color: var(--amber); }
+  .ab-zero { color: var(--ink-4); }
 }
 
 /* Status dot */
@@ -513,15 +473,10 @@ body::-webkit-scrollbar-corner,
   border-radius: 50%;
   display: inline-block;
   box-shadow: 0 0 0 2px var(--canvas);
-}
-.status-dot.clean {
-  background: var(--green);
-}
-.status-dot.dirty {
-  background: var(--amber);
-}
-.status-dot.behind {
-  background: var(--blue);
+
+  &.clean { background: var(--green); }
+  &.dirty { background: var(--amber); }
+  &.behind { background: var(--blue); }
 }
 
 /* Avatar (author initials) */
@@ -538,16 +493,9 @@ body::-webkit-scrollbar-corner,
   font-weight: 700;
   letter-spacing: 0.02em;
   flex-shrink: 0;
-}
-.avatar.sm {
-  width: 16px;
-  height: 16px;
-  font-size: 8px;
-}
-.avatar.lg {
-  width: 28px;
-  height: 28px;
-  font-size: 11px;
+
+  &.sm { width: 16px; height: 16px; font-size: 8px; }
+  &.lg { width: 28px; height: 28px; font-size: 11px; }
 }
 
 /* Badge */
@@ -566,46 +514,30 @@ body::-webkit-scrollbar-corner,
   color: var(--ink-2);
   border: 1px solid var(--border);
   font-variant-numeric: tabular-nums;
-}
-.r-badge.plain {
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-}
-.r-badge.solid {
-  background: var(--ink-0);
-  color: var(--canvas);
-  border-color: transparent;
-}
-.r-badge.blue {
-  background: var(--blue-weak);
-  color: var(--blue);
-  border-color: transparent;
-}
-.r-badge.green {
-  background: var(--green-weak);
-  color: var(--green);
-  border-color: transparent;
-}
-.r-badge.amber {
-  background: var(--amber-weak);
-  color: var(--amber);
-  border-color: transparent;
-}
-.r-badge.red {
-  background: var(--red-weak);
-  color: var(--red);
-  border-color: transparent;
-}
-.r-badge.purple {
-  background: var(--purple-weak);
-  color: var(--purple);
-  border-color: transparent;
-}
-.r-badge.accent {
-  background: var(--accent-weak);
-  color: var(--accent-ink);
-  border-color: transparent;
+
+  &.plain {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+  &.solid {
+    background: var(--ink-0);
+    color: var(--canvas);
+    border-color: transparent;
+  }
+
+  @each $tone in ("blue", "green", "amber", "red", "purple") {
+    &.#{$tone} {
+      background: var(--#{$tone}-weak);
+      color: var(--#{$tone});
+      border-color: transparent;
+    }
+  }
+  &.accent {
+    background: var(--accent-weak);
+    color: var(--accent-ink);
+    border-color: transparent;
+  }
 }
 
 /* Icon button */
@@ -620,11 +552,12 @@ body::-webkit-scrollbar-corner,
   border-radius: 5px;
   cursor: pointer;
   color: var(--ink-2);
-}
-.icon-btn:hover {
-  background: var(--surface-hover);
-  color: var(--ink-0);
-  border-color: var(--border);
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--ink-0);
+    border-color: var(--border);
+  }
 }
 
 /* Primary button */
@@ -643,33 +576,53 @@ body::-webkit-scrollbar-corner,
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
+
+  &:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+
+  &.primary {
+    background: var(--ink-0);
+    color: var(--canvas);
+    border-color: var(--ink-0);
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--ink-1);
+    }
+  }
+
+  &.ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ink-2);
+
+    &:hover {
+      background: var(--surface-hover);
+      color: var(--ink-0);
+    }
+  }
+  &.sm {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+    border-radius: 5px;
+  }
 }
-.r-btn:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
-}
-.r-btn.primary {
-  background: var(--ink-0);
-  color: var(--canvas);
-  border-color: var(--ink-0);
-}
-.r-btn.primary:hover {
-  opacity: 0.9;
-}
-.r-btn.ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--ink-2);
-}
-.r-btn.ghost:hover {
-  background: var(--surface-hover);
-  color: var(--ink-0);
-}
-.r-btn.sm {
-  height: 24px;
-  padding: 0 8px;
-  font-size: 11px;
-  border-radius: 5px;
+
+/* In dark mode, `--ink-0` inverts to white — a light primary button feels out
+   of place next to neutral chrome. Pin to a fixed dark surface so the CTA
+   stays visually anchored (GitHub-style). */
+[data-theme="dark"] .r-btn.primary,
+.dark .r-btn.primary {
+  background: #0f1115;
+  color: #ffffff;
+  border-color: #0f1115;
+
+  &:hover {
+    background: #1a1d24;
+  }
 }
 
 /* Sparkline */
@@ -678,28 +631,26 @@ body::-webkit-scrollbar-corner,
   align-items: flex-end;
   gap: 2px;
   height: 18px;
-}
-.spark span {
-  width: 3px;
-  border-radius: 1px;
-  background: var(--ink-4);
-  min-height: 2px;
-  flex-shrink: 0;
-}
-.spark.active span {
-  background: var(--accent);
-}
-.spark span.zero {
-  background: var(--border-strong);
-  height: 2px !important;
+
+  span {
+    width: 3px;
+    border-radius: 1px;
+    background: var(--ink-4);
+    min-height: 2px;
+    flex-shrink: 0;
+
+    &.zero {
+      background: var(--border-strong);
+      height: 2px !important;
+    }
+  }
+
+  &.active span {
+    background: var(--accent);
+  }
 }
 
 @keyframes pulseDot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

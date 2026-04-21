@@ -1,18 +1,18 @@
 import { useEffect } from "react";
 
-import { type CloneProgressEvent, EventChannel, TauriCommand } from "@recrest/shared";
+import {
+  type CloneProgressEvent,
+  EventChannel,
+  TauriCommand,
+  type UpdaterAvailableEvent,
+  type UpdaterProgressEvent,
+} from "@recrest/shared";
 
 import { invoke, safeListen } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch } from "@/store/hooks";
 import { setProgress } from "@/store/slices/remoteImportSlice";
-import { setUpdaterBanner } from "@/store/slices/uiSlice";
-
-interface UpdaterPayload {
-  version: string;
-  currentVersion?: string;
-  body: string | null;
-}
+import { setUpdaterBanner, setUpdaterProgress } from "@/store/slices/uiSlice";
 
 interface OauthCallbackPayload {
   url: string;
@@ -30,11 +30,23 @@ export function useGlobalEvents(): void {
   useEffect(() => {
     const unlisteners: Array<() => void> = [];
 
-    void safeListen<UpdaterPayload>(EventChannel.UPDATER_AVAILABLE, (event) => {
+    void safeListen<UpdaterAvailableEvent>(EventChannel.UPDATER_AVAILABLE, (event) => {
       dispatch(
         setUpdaterBanner({
           version: event.payload.version,
+          currentVersion: event.payload.currentVersion,
           body: event.payload.body,
+          canAutoInstall: event.payload.canAutoInstall,
+          downloadUrl: event.payload.downloadUrl,
+        }),
+      );
+    }).then((fn) => unlisteners.push(fn));
+
+    void safeListen<UpdaterProgressEvent>(EventChannel.UPDATER_PROGRESS, (event) => {
+      dispatch(
+        setUpdaterProgress({
+          chunk: event.payload.chunk,
+          total: event.payload.total,
         }),
       );
     }).then((fn) => unlisteners.push(fn));

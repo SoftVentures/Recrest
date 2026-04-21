@@ -11,6 +11,9 @@ export const StorageKey = {
   UI_STATE: `${STORAGE_PREFIX}ui`,
   /** Boolean flag set once the onboarding wizard is dismissed. */
   ONBOARDING_DISMISSED: `${STORAGE_PREFIX}onboarding-dismissed`,
+  /** App version as last recorded on mount. Used by the developer "Reset
+   *  last-seen version" affordance and (future) "What's new" dialog. */
+  LAST_SEEN_VERSION: `${STORAGE_PREFIX}lastSeenVersion`,
 } as const;
 
 /** Prefix for per-confirmation skip flags. Full key:

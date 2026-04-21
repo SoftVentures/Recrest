@@ -17,6 +17,14 @@ import App from "@/App";
 import "@/i18n";
 import { store } from "@/store";
 import "@/styles/globals.css";
+import "@/styles/layout.scss";
+import "@/styles/page-anim.scss";
+// SCSS partials first — these declare the Recrest token layer that `globals.css`
+// then aliases into Tailwind's `@theme`. `@tailwindcss/vite` bypasses Vite's CSS
+// pipeline, so Sass files can't be `@import`ed from globals.css directly; we
+// bring them in here where each import goes through Vite's own preprocessor.
+import "@/styles/tokens.scss";
+import "@/styles/views.scss";
 
 // Opt into React Router v7 behaviour now so there's no surprise at upgrade
 // time — silences the dev warnings these flags print otherwise.

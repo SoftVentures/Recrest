@@ -1,57 +1,66 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "./tokens.css";
-@import "./layout.css";
-@import "./views.css";
+/* SCSS partials (tokens, layout, views, page-anim) are imported from
+ * `src/main.tsx`, not here. `@tailwindcss/vite` hijacks the CSS pipeline and
+ * would pass Sass through unprocessed, so they need to go through Vite's own
+ * preprocessor via a JS import. */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* ───────────────────────── Light palette ───────────────────────── */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
+  /* ───────────────────────── Palette ─────────────────────────
+     Shadcn-style Tailwind tokens are now thin aliases over the Recrest
+     design system defined in `tokens.css`. Those Recrest variables already
+     flip on `[data-theme="dark"]`/`.dark`, so a separate `.dark` block for
+     colours is no longer needed — the indirection does the theming.
+     Before: `bg-accent` was near-white grey in light, near-black grey in
+     dark. After: `bg-accent` is the brand accent-weak tone (warm-peach in
+     light, warm-orange-tinted in dark), consistent with the rest of the UI.
+  */
+  --color-background: var(--app-bg);
+  --color-foreground: var(--ink-1);
 
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--ink-3);
 
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink-1);
 
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
+  --color-popover: var(--canvas);
+  --color-popover-foreground: var(--ink-1);
 
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.556 0 0);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
 
-  --color-primary: oklch(0.205 0 0);
-  --color-primary-foreground: oklch(0.985 0 0);
+  --color-primary: var(--ink-0);
+  --color-primary-foreground: var(--canvas);
 
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink-1);
 
-  --color-accent: oklch(0.94 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
+  --color-accent: var(--accent-weak);
+  --color-accent-foreground: var(--accent-ink);
 
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
+  --color-destructive: var(--red);
+  --color-destructive-foreground: var(--canvas);
 
-  --color-success: oklch(0.723 0.219 149.579);
-  --color-success-foreground: oklch(0.985 0 0);
+  --color-success: var(--green);
+  --color-success-foreground: var(--canvas);
 
-  --color-warning: oklch(0.828 0.189 84.429);
-  --color-warning-foreground: oklch(0.145 0 0);
+  --color-warning: var(--amber);
+  --color-warning-foreground: var(--canvas);
 
-  --color-info: oklch(0.7 0.15 230);
-  --color-info-foreground: oklch(0.985 0 0);
+  --color-info: var(--blue);
+  --color-info-foreground: var(--canvas);
 
-  /* Status dots / badges — slightly more saturated than the *-foreground
-     swatches above, for list-items where the color itself carries meaning. */
-  --color-status-success: oklch(0.7 0.19 149);
-  --color-status-warning: oklch(0.78 0.18 84);
-  --color-status-error: oklch(0.6 0.22 27);
-  --color-status-info: oklch(0.7 0.15 230);
-  --color-status-neutral: oklch(0.65 0 0);
+  /* Status dots / badges — reuse the Recrest semantic colours, same tokens
+     the non-Tailwind `.r-badge.*` and `.status-dot.*` classes pull from. */
+  --color-status-success: var(--green);
+  --color-status-warning: var(--amber);
+  --color-status-error: var(--red);
+  --color-status-info: var(--blue);
+  --color-status-neutral: var(--ink-3);
 
   /* ───────────────────────── Radius scale ───────────────────────── */
   --radius: 0.5rem;
@@ -83,52 +92,9 @@
 }
 
 .dark {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-
-  --color-muted: oklch(0.23 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-
-  --color-card: oklch(0.17 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-
-  --color-popover: oklch(0.19 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.55 0 0);
-
-  --color-primary: oklch(0.985 0 0);
-  --color-primary-foreground: oklch(0.205 0 0);
-
-  /* Previously both `secondary` and `accent` were oklch(0.205 0 0) — visually
-     identical to `muted`. Now: secondary = neutral surface, accent = slightly
-     brighter hover surface. */
-  --color-secondary: oklch(0.23 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-
-  --color-accent: oklch(0.3 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-
-  --color-destructive: oklch(0.704 0.191 22.216);
-  --color-destructive-foreground: oklch(0.985 0 0);
-
-  --color-success: oklch(0.696 0.17 162.48);
-  --color-success-foreground: oklch(0.145 0 0);
-
-  --color-warning: oklch(0.769 0.188 70.08);
-  --color-warning-foreground: oklch(0.145 0 0);
-
-  --color-info: oklch(0.72 0.16 230);
-  --color-info-foreground: oklch(0.145 0 0);
-
-  --color-status-success: oklch(0.72 0.17 162);
-  --color-status-warning: oklch(0.77 0.19 70);
-  --color-status-error: oklch(0.7 0.19 22);
-  --color-status-info: oklch(0.72 0.16 230);
-  --color-status-neutral: oklch(0.55 0 0);
-
+  /* Color tokens are aliased to Recrest variables in `@theme` above — those
+     already switch automatically via `tokens.css`. Only shadows need an
+     explicit dark override (heavier alpha under dark chrome). */
   --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.4);
   --shadow-md: 0 2px 8px -1px oklch(0 0 0 / 0.5), 0 1px 3px -1px oklch(0 0 0 / 0.4);
   --shadow-lg: 0 8px 24px -4px oklch(0 0 0 / 0.55), 0 4px 8px -2px oklch(0 0 0 / 0.4);

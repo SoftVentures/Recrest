@@ -11,41 +11,44 @@
   min-height: 0;
   background: var(--app-bg);
   color: var(--ink-1);
-}
-.a-app > .a-sidebar {
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  min-height: 0;
-  /* Allow the fold button to straddle the right border; internal overflow
-     is controlled on `.a-side-nav` instead. */
-  overflow: visible;
-}
-.a-app > .a-top {
-  grid-column: 2 / -1;
-  grid-row: 1;
-}
-.a-app > .a-main {
-  grid-column: 2;
-  grid-row: 2;
-  min-height: 0;
-  min-width: 0;
-}
-.a-app > .a-detail {
-  grid-column: 3;
-  grid-row: 2;
-  min-height: 0;
-}
-.a-app.pane-bottom {
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr auto;
-}
-.a-app.pane-bottom > .a-detail {
-  grid-column: 2;
-  grid-row: 3;
-}
-.a-app.pane-off,
-.a-app.no-detail {
-  grid-template-columns: auto 1fr;
+
+  > .a-sidebar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-height: 0;
+    /* Allow the fold button to straddle the right border; internal overflow
+       is controlled on `.a-side-nav` instead. */
+    overflow: visible;
+  }
+  > .a-top {
+    grid-column: 2 / -1;
+    grid-row: 1;
+  }
+  > .a-main {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    min-width: 0;
+  }
+  > .a-detail {
+    grid-column: 3;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  &.pane-bottom {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr auto;
+
+    > .a-detail {
+      grid-column: 2;
+      grid-row: 3;
+    }
+  }
+  &.pane-off,
+  &.no-detail {
+    grid-template-columns: auto 1fr;
+  }
 }
 
 /* ─── Stand-alone detail window (popout) ─── */
@@ -55,12 +58,13 @@
   background: var(--app-bg);
   color: var(--ink-1);
   display: flex;
-}
-.a-standalone-detail > .a-detail {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  border-left: 0;
+
+  > .a-detail {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    border-left: 0;
+  }
 }
 .a-standalone-empty {
   flex: 1;
@@ -111,9 +115,10 @@
   color: var(--ink-0);
   font-size: 13.5px;
   font-family: inherit;
-}
-.a-search-input::placeholder {
-  color: var(--ink-3);
+
+  &::placeholder {
+    color: var(--ink-3);
+  }
 }
 .a-search-kbds {
   display: inline-flex;
@@ -156,10 +161,24 @@
   font-family: inherit;
   font-size: 13px;
   text-align: left;
-}
-.a-search-row[data-active="true"] {
-  background: var(--accent-weak);
-  color: var(--accent-ink);
+
+  &[data-active="true"] {
+    background: var(--accent-weak);
+    color: var(--accent-ink);
+
+    .a-search-row-icon,
+    .a-search-row-hint {
+      color: var(--accent-ink);
+    }
+    .a-search-row-hint {
+      opacity: 0.7;
+    }
+    .a-search-row-mini-icon {
+      background: var(--accent-weak);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+    }
+  }
 }
 .a-search-row-icon {
   width: 22px;
@@ -169,9 +188,6 @@
   justify-content: center;
   color: var(--ink-3);
   flex-shrink: 0;
-}
-.a-search-row[data-active="true"] .a-search-row-icon {
-  color: var(--accent-ink);
 }
 .a-search-row-mini {
   position: relative;
@@ -193,11 +209,6 @@
   border-radius: 50%;
   color: var(--ink-2);
 }
-.a-search-row[data-active="true"] .a-search-row-mini-icon {
-  background: var(--accent-weak);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
 .a-search-row-label {
   flex: 1;
   min-width: 0;
@@ -214,10 +225,6 @@
   text-overflow: ellipsis;
   max-width: 52%;
   font-family: var(--font-mono);
-}
-.a-search-row[data-active="true"] .a-search-row-hint {
-  color: var(--accent-ink);
-  opacity: 0.7;
 }
 .a-search-empty {
   padding: 28px 12px;
@@ -238,10 +245,29 @@
   min-height: 0;
   transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-}
-.a-sidebar.collapsed {
-  width: 48px;
-  padding: 8px 4px;
+
+  &.collapsed {
+    width: 48px;
+    padding: 8px 4px;
+
+    .a-brand-mark {
+      width: 32px;
+      height: 32px;
+    }
+    .a-side-nav {
+      align-items: center;
+    }
+    .a-side-item {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      justify-content: center;
+    }
+    .a-side-foot {
+      margin: auto -4px 0;
+      padding: 8px 4px 0;
+    }
+  }
 }
 
 .a-side-brand {
@@ -258,10 +284,6 @@
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-}
-.a-sidebar.collapsed .a-brand-mark {
-  width: 32px;
-  height: 32px;
 }
 .a-brand-name {
   font-family: "Space Grotesk", var(--font-sans, system-ui);
@@ -281,9 +303,6 @@
   flex: 1;
   min-height: 0;
 }
-.a-sidebar.collapsed .a-side-nav {
-  align-items: center;
-}
 
 .a-side-item {
   display: flex;
@@ -302,36 +321,33 @@
   width: 100%;
   position: relative;
   font-family: inherit;
-}
-.a-sidebar.collapsed .a-side-item {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  justify-content: center;
-}
-.a-side-item:hover {
-  background: color-mix(in srgb, var(--accent) 10%, var(--sidebar-bg));
-  color: var(--ink-0);
-}
-.a-side-item:hover .a-side-count {
-  color: var(--ink-1);
-}
-.a-side-item[data-active="true"] {
-  background: var(--canvas);
-  color: var(--ink-0);
-  font-weight: 600;
-  box-shadow:
-    0 1px 0 rgba(17, 17, 22, 0.04),
-    0 0 0 1px var(--border);
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 10%, var(--sidebar-bg));
+    color: var(--ink-0);
+
+    .a-side-count {
+      color: var(--ink-1);
+    }
+  }
+  &[data-active="true"] {
+    background: var(--canvas);
+    color: var(--ink-0);
+    font-weight: 600;
+    box-shadow:
+      0 1px 0 rgba(17, 17, 22, 0.04),
+      0 0 0 1px var(--border);
+  }
+  &[data-dim="true"] {
+    color: var(--ink-3);
+  }
 }
 [data-theme="dark"] .a-side-item[data-active="true"],
 .dark .a-side-item[data-active="true"] {
   background: var(--surface-hover);
   box-shadow: none;
 }
-.a-side-item[data-dim="true"] {
-  color: var(--ink-3);
-}
+
 .a-side-label {
   flex: 1;
 }
@@ -373,19 +389,16 @@
   border-top: 1px solid var(--border);
   position: relative;
   display: block;
-}
-.a-sidebar.collapsed .a-side-foot {
-  margin: auto -4px 0;
-  padding: 8px 4px 0;
-}
-.a-side-foot > a,
-.a-side-foot > .a-side-item {
-  display: block;
-  width: 100%;
-  min-width: 0;
-}
-.a-side-foot > a .a-side-item {
-  width: 100%;
+
+  > a,
+  > .a-side-item {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  > a .a-side-item {
+    width: 100%;
+  }
 }
 
 /* Fold button — sits on the intersection of the sidebar's vertical right
@@ -409,11 +422,12 @@
   font-family: inherit;
   box-shadow: 0 1px 2px rgba(17, 17, 22, 0.06);
   z-index: 3;
-}
-.a-side-fold:hover {
-  background: var(--surface-hover);
-  color: var(--ink-0);
-  border-color: var(--border-strong);
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--ink-0);
+    border-color: var(--border-strong);
+  }
 }
 
 /* ─── Main column ─── */
@@ -460,7 +474,6 @@
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
-
 .a-top-center {
   display: flex;
   justify-content: center;
@@ -473,6 +486,7 @@
   justify-content: flex-end;
   gap: 6px;
 }
+
 .a-search {
   display: flex;
   align-items: center;
@@ -487,38 +501,39 @@
   color: var(--ink-2);
   cursor: pointer;
   font-family: inherit;
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+  svg {
+    color: var(--ink-3);
+  }
+  input,
+  .a-search-placeholder {
+    border: 0;
+    background: transparent;
+    outline: none;
+    flex: 1;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    font-family: inherit;
+    text-align: left;
+  }
+  input::placeholder {
+    color: var(--ink-3);
+  }
 }
-.icon-btn[data-spinning="true"] svg {
-  animation: spin 0.8s linear infinite;
-}
+
 .icon-btn[data-spinning="true"] {
   opacity: 0.85;
   cursor: progress;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+
+  svg {
+    animation: spin 0.8s linear infinite;
   }
 }
-.a-search:hover {
-  border-color: var(--border-strong);
-}
-.a-search svg {
-  color: var(--ink-3);
-}
-.a-search input,
-.a-search .a-search-placeholder {
-  border: 0;
-  background: transparent;
-  outline: none;
-  flex: 1;
-  font-size: 12.5px;
-  color: var(--ink-3);
-  font-family: inherit;
-  text-align: left;
-}
-.a-search input::placeholder {
-  color: var(--ink-3);
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Content scroll */
@@ -554,9 +569,10 @@
   -webkit-user-select: none;
   user-select: none;
   cursor: pointer;
-}
-.a-th.r {
-  text-align: right;
+
+  &.r {
+    text-align: right;
+  }
 }
 
 /* Row */
@@ -577,27 +593,49 @@
   border-left: 0;
   border-right: 0;
   border-top: 0;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+  &.d-compact { min-height: 42px; }
+  &.d-comfy { min-height: 56px; }
+  &.d-spacious { min-height: 72px; }
+
+  &:hover {
+    background: var(--surface-2);
+  }
+  &.selected {
+    background: var(--accent-weak);
+
+    .a-name {
+      color: var(--accent-ink);
+    }
+  }
 }
-.a-row:last-child {
-  border-bottom: 0;
-}
-.a-row.d-compact {
-  min-height: 42px;
-}
-.a-row.d-comfy {
-  min-height: 56px;
-}
-.a-row.d-spacious {
-  min-height: 72px;
-}
-.a-row:hover {
-  background: var(--surface-2);
-}
-.a-row.selected {
-  background: var(--accent-weak);
-}
-.a-row.selected .a-name {
-  color: var(--accent-ink);
+
+/* Transparent button that absorbs clicks across the row without forcing the
+ * row itself to carry role=button (which would nest-interact with the action
+ * icons). The button is positioned absolute → stacks above non-positioned
+ * siblings (the text cells) by the default stacking rules. The actions
+ * column opts into z-index:1 below so its real <button> children stay on
+ * top of the overlay and remain clickable. Don't raise other cells — that
+ * would block the overlay from receiving row-level clicks. */
+.a-row-select {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 4px;
+  }
 }
 
 /* Row cells */
@@ -659,22 +697,23 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-.a-branch-chip.big {
-  height: 26px;
-  padding: 0 10px;
-  font-size: 12.5px;
-  max-width: none;
-}
-.a-branch-chip.sm {
-  font-size: 10.5px;
-  padding: 2px 6px;
-  gap: 4px;
-  height: auto;
-}
-.a-branch-chip svg {
-  color: var(--ink-3);
-  flex-shrink: 0;
+
+  &.big {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 12.5px;
+    max-width: none;
+  }
+  &.sm {
+    font-size: 10.5px;
+    padding: 2px 6px;
+    gap: 4px;
+    height: auto;
+  }
+  svg {
+    color: var(--ink-3);
+    flex-shrink: 0;
+  }
 }
 
 .a-c-status {
@@ -728,6 +767,10 @@
   display: flex;
   gap: 2px;
   justify-content: flex-end;
+  /* Raise above the .a-row-select overlay so the real action buttons inside
+   * stay clickable. */
+  position: relative;
+  z-index: 1;
 }
 
 /* Group header */
@@ -742,6 +785,13 @@
   width: 100%;
   font-family: inherit;
   color: inherit;
+
+  svg {
+    color: var(--ink-3);
+  }
+  &:hover svg {
+    color: var(--ink-0);
+  }
 }
 .a-group-label {
   font-size: 11px;
@@ -765,12 +815,6 @@
   background: var(--border);
   margin-left: 4px;
 }
-.a-group svg {
-  color: var(--ink-3);
-}
-.a-group:hover svg {
-  color: var(--ink-0);
-}
 
 /* ─── Detail pane ─── */
 .a-detail {
@@ -780,15 +824,26 @@
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   animation: slideIn 0.22s ease-out;
+
+  &.bottom {
+    width: auto;
+    max-height: 360px;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
 }
 @media (max-width: 1180px) {
   .a-detail {
     width: 320px;
   }
 }
-@media (max-width: 1060px) {
+/* Below ~1280px (MacBook 13"), the repo-row grid needs ≥724px to stay legible.
+ * With sidebar (208) + detail (320–360) in the grid, main would drop under 700px
+ * and action buttons would clip. Float the detail pane as an overlay instead so
+ * main keeps the full width available to the sidebar. */
+@media (max-width: 1280px) {
   .a-app:not(.pane-bottom):not(.pane-off) .a-detail {
     position: absolute;
     right: 0;
@@ -798,21 +853,9 @@
     box-shadow: var(--shadow-pop);
   }
 }
-.a-detail.bottom {
-  width: auto;
-  max-height: 360px;
-  border-left: 0;
-  border-top: 1px solid var(--border);
-}
 @keyframes slideIn {
-  from {
-    transform: translateX(16px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
 }
 
 .a-dp-hdr {
@@ -828,10 +871,11 @@
   gap: 10px;
   min-width: 0;
   flex: 1;
-}
-.a-dp-title .status-dot {
-  margin-top: 7px;
-  flex-shrink: 0;
+
+  .status-dot {
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
 }
 .a-dp-name {
   font-size: 17px;
@@ -866,6 +910,10 @@
   position: relative;
   cursor: pointer;
   display: inline-flex;
+
+  &:hover .a-dp-avatar-edit {
+    opacity: 1;
+  }
 }
 .a-dp-avatar-edit {
   position: absolute;
@@ -883,8 +931,34 @@
   opacity: 0;
   transition: opacity 0.12s;
 }
-.a-dp-avatar-wrap:hover .a-dp-avatar-edit {
-  opacity: 1;
+
+/* Middle content wrapper: holds the collapsible sections and absorbs all
+ * remaining vertical space. The drawer itself no longer scrolls as a
+ * whole — each open section manages its own internal scroll (see
+ * `.a-dp-sec-body` overrides below). This keeps the header, the branch
+ * card, and the footer CTA anchored regardless of commit-history length. */
+.a-dp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Footer row that anchors the Open-full-view CTA at the bottom of the
+ * drawer. The CTA uses `.r-btn.primary` so it matches the black-in-light
+ * / inverted-in-dark treatment of other primary CTAs in the app. */
+.a-dp-footer {
+  flex: 0 0 auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--canvas);
+}
+.a-dp-open-full {
+  width: 100%;
+  height: 36px;
+  justify-content: center;
+  font-size: 13px;
 }
 
 /* Primary actions */
@@ -892,9 +966,10 @@
   display: flex;
   gap: 5px;
   padding: 0 16px 14px;
-}
-.a-dp-actions .r-btn.primary {
-  flex: 1;
+
+  .r-btn.primary {
+    flex: 1;
+  }
 }
 
 /* Branch summary card */
@@ -904,6 +979,15 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 8px;
+
+  /* In dark mode the drawer canvas already sits on a muted panel, so
+   * `--surface-2` (lighter than canvas) made the branch card float too
+   * brightly. Drop to `--app-bg`, which is darker than the drawer — the
+   * card now recedes and the Pull/Fetch/Branch CTAs pop properly. */
+  [data-theme="dark"] &,
+  .dark & {
+    background: var(--app-bg);
+  }
 }
 .a-dp-branch-top {
   display: flex;
@@ -927,12 +1011,40 @@
 /* Collapsible sections */
 .a-dp-section {
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  /* Closed sections collapse to just the header row, taking no share of
+   * the remaining flex space. */
+  &.closed {
+    flex: 0 0 auto;
+  }
+  /* Open sections share whatever space is left in `.a-dp-body`. When only
+   * one is open it takes everything; when several are open they share
+   * proportionally. The body inside each then scrolls internally. */
+  &.open {
+    flex: 1 1 0;
+  }
+}
+/* Section header row: collapse button + optional meta as siblings so meta
+ * can hold interactive elements (e.g. the Log → link) without nesting
+ * them inside the collapse button. */
+.a-dp-sec-hdr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+
+  &:hover {
+    background: var(--surface-2);
+  }
 }
 .a-dp-sec-hdr {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 12px 0;
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
@@ -941,13 +1053,11 @@
   color: var(--ink-1);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   background: transparent;
   border: 0;
   font-family: inherit;
-}
-.a-dp-sec-hdr:hover {
-  background: var(--surface-2);
 }
 .a-dp-sec-chev {
   color: var(--ink-3);
@@ -969,6 +1079,9 @@
 }
 .a-dp-sec-body {
   padding: 0 16px 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .a-dp-link {
   color: var(--accent);
@@ -997,9 +1110,10 @@
   border-radius: 5px;
   font-size: 12px;
   cursor: pointer;
-}
-.a-dp-file:hover {
-  background: var(--surface-2);
+
+  &:hover {
+    background: var(--surface-2);
+  }
 }
 .a-dp-file-path {
   flex: 1;
@@ -1028,21 +1142,19 @@
   justify-content: center;
   font-family: var(--font-mono);
 }
-.a-dp-st-M {
-  background: var(--amber-weak);
-  color: var(--amber);
-}
-.a-dp-st-A {
-  background: var(--green-weak);
-  color: var(--green);
-}
-.a-dp-st-D {
-  background: var(--red-weak);
-  color: var(--red);
-}
-.a-dp-st-R {
-  background: var(--blue-weak);
-  color: var(--blue);
+/* File-status tone variants — three buckets:
+ *  A = added (green), M = modified/renamed/typechange (amber),
+ *  D = deleted (red). */
+$file-status-tones: (
+  "M": "amber",
+  "A": "green",
+  "D": "red",
+);
+@each $status, $tone in $file-status-tones {
+  .a-dp-st-#{$status} {
+    background: var(--#{$tone}-weak);
+    color: var(--#{$tone});
+  }
 }
 
 /* Commits */
@@ -1093,10 +1205,11 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 6px;
-}
-.a-dp-pr svg {
-  margin-top: 2px;
-  flex-shrink: 0;
+
+  svg {
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
 }
 .a-dp-pr-body {
   flex: 1;
@@ -1129,4 +1242,39 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Minimal "← Back to repositories" ghost link above the repo detail
+ * header card. Kept as a muted inline affordance instead of a sticky bar
+ * — the page's own header card already dominates the top of the page,
+ * and a second banner competed with it. ESC also navigates back, but
+ * the shortcut hint is dropped to keep the chrome out of the way. */
+.a-page-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 -4px -6px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ink-0);
+    background: var(--surface-2);
+  }
+  svg {
+    transition: transform 0.12s ease;
+  }
+  &:hover svg {
+    transform: translateX(-2px);
+  }
 }

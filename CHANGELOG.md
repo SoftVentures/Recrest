@@ -2,6 +2,45 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-04-22
+
+Third beta. Headline additions are the in-app auto-updater, the Developer tab, native OS notifications, and a page-transition animation pass. The stylesheet layer also migrated from flat CSS to SCSS.
+
+### Added
+
+- In-app auto-update system — background check against GitHub Releases with an `UpdaterBanner` prompt, manual "check for updates" action in Settings, version comparison that handles pre-release tags (`0.7.0-beta.1` > `0.6.9`), and `useLastSeenVersion` for what's-new indicators after an update.
+- `Developer` tab in Settings — feature-flag toggles, in-app state inspectors, diagnostics dumps, and a dev-only Redux slice (`uiDevFlagsSlice`) persisted separately from user settings. Gated by `useDevFlag`.
+- Native OS notifications (`commands/notifications.rs`) with per-trigger preferences in the new `NotificationSettings` tab. Triggers cover PR events, update availability, and scan completion; full suite of `useNotificationTriggers` tests.
+- Page mount/transition animations across Dashboard, Repos, Branches, MergeRequests, and RepoDetail. Full plan in `docs/plans/page-mount-animations.md`.
+- `Mascot` atom (animated brand character) with Storybook coverage; used on onboarding and empty-state screens.
+- `TruncatedTooltip` compound molecule — shows the full value on hover only when content is actually truncated.
+- Distinct dev-build app icon (white chevrons + orange `</>` badge) so `yarn dev` is visually distinguishable from the installed app in taskbar/dock. `tauri:dev` loads `tauri.dev.conf.json` to swap `bundle.icon` to `icons-dev/`; `tauri:build` keeps the production icon.
+- `README-signing.md` in `src-tauri/` documenting the code-signing approach (and why installers currently ship unsigned).
+- Installer-asset CI pipeline — regenerated installer assets land on `main` through a dedicated workflow.
+
+### Changed
+
+- Stylesheet layer migrated from plain CSS to SCSS (`tokens`, `layout`, `page-anim`, `views`) in both `app/` and `landingpage/`. No new build-step dependencies — Vite's built-in SCSS handling covers both.
+- `ImportFromProviderDialog` rewritten — clearer provider/org/repo selection flow, inline validation, and expanded keyboard navigation.
+- `DetailPane`, `Sidebar`, `Titlebar` (Win11 + GNOME), `RepoRow`, and `RepoList` refactored for faster initial render and smaller re-render surfaces.
+- `UpdaterBanner` redesigned around the new updater command surface; dismiss/install states persist across sessions.
+- `notify` bumped to 8.2 and `notify-debouncer-full` to 0.7 for more reliable filesystem event coalescing under Windows.
+- Provider API surface (`providers/api.rs`, `github.rs`, `gitlab.rs`, `bitbucket.rs`) aligned around a shared typed error path to prepare for the GitLab/Bitbucket rollout.
+- Dependabot sweeps: `@types/node` → 25.6.0, actions-all group (7 updates), npm-all group across 3 workspaces (6 updates).
+
+### Fixed
+
+- Playwright E2E stabilised on `ubuntu-24.04` — WebKit system libs reinstated (the older 22.04 runner no longer packages GTK 4 / libavif 13 / libmanette / libhyphen). Download-button spec realigned with the current DOM.
+- Subpage navigation edge cases (blank transitions, scroll position loss) on Branches, MergeRequests, and RepoDetail.
+- Loading-time regressions on Dashboard and RepoDetail — async work now runs in parallel instead of sequencing through the store.
+- `RepoWatcher` documentation updated to reflect that it is already wired into `lib.rs::run()`.
+
+### Known gaps
+
+- GitLab and Bitbucket providers still return "not yet implemented".
+- OAuth remains scaffolded; PAT-only auth for now.
+- Installers are unsigned (Apple Developer ID / Windows EV certs pending).
+
 ## [0.6.0] — 2026-04-21
 
 Second beta. Headline additions are the Activity dashboard, native window chrome per OS, a guided onboarding flow, and IDE integration.
@@ -64,5 +103,6 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.7.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.7.0
 [0.6.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.6.0
 [0.5.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.5.1

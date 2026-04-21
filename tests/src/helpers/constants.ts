@@ -13,7 +13,16 @@ export const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`;
  *  (`__APP_VERSION__`). We hard-code the expected value so a bump must update
  *  both sides consciously — drift between `package.json` and the rendered text
  *  becomes a failing test. */
-export const EXPECTED_APP_VERSION = "0.6.0";
+export const EXPECTED_APP_VERSION = "0.7.0";
+
+/** Mirrors `landingpage/src/components/DownloadButton.tsx::directDownloadUrl`.
+ *  For a known OS the button links directly to the asset zip; only the
+ *  `unknown`-UA case falls back to `RELEASES_LATEST_URL`. Kept here so specs
+ *  assert against the real production contract instead of a stale alias. */
+export function expectedDownloadUrl(os: "macos" | "windows" | "linux" | "unknown"): string {
+  if (os === "unknown") return RELEASES_LATEST_URL;
+  return `${RELEASES_LATEST_URL}/download/recrest-v${EXPECTED_APP_VERSION}-${os}.zip`;
+}
 
 export const LANDING_LOCALE_STORAGE_KEY = "recrest-landing-locale";
 export const LANDING_THEME_STORAGE_KEY = "recrest-landing-theme";

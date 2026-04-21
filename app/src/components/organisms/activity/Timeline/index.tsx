@@ -193,11 +193,13 @@ export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Pro
       right={filterChips}
     >
       {filteredGroups.length === 0 ? (
-        <div className="a-act-card-empty">{t("activity.timeline.empty_filter")}</div>
+        <div className="a-act-card-empty" data-testid="activity-timeline-empty">
+          {t("activity.timeline.empty_filter")}
+        </div>
       ) : (
         <div className="a-act-timeline">
           {filteredGroups.map((g) => (
-            <div key={g.day} className="a-act-day-card">
+            <div key={g.day} className="a-act-day-card" data-testid="activity-timeline-day">
               <div className="a-act-day-card-h">
                 <div className="a-act-day-card-title">{dayLabel(g.day)}</div>
                 <div className="a-act-day-card-chips">
@@ -258,7 +260,7 @@ function FilterPill({ active, label, count, onClick }: FilterPillProps) {
     <button
       type="button"
       role="tab"
-      aria-selected={active}
+      aria-selected={active ? "true" : "false"}
       className={`a-act-tl-pill${active ? " active" : ""}`}
       onClick={onClick}
     >

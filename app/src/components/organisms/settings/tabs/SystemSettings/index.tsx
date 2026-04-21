@@ -65,7 +65,7 @@ export function SystemSettings() {
           </div>
           <div className="a-set-row-r">
             <input
-              className="a-set-input"
+              className="a-set-input w-24"
               type="number"
               aria-label={t("fields.polling_interval")}
               min={POLLING_INTERVAL_MIN_MS / 60_000}
@@ -81,7 +81,6 @@ export function SystemSettings() {
                 );
                 void update({ pollingIntervalMs: clamped });
               }}
-              style={{ width: 96 }}
             />
           </div>
         </div>
@@ -99,8 +98,7 @@ export function SystemSettings() {
               }
             >
               <SelectTrigger
-                className="a-set-trigger"
-                style={{ minWidth: 240 }}
+                className="a-set-trigger min-w-[240px]"
                 aria-label={t("fields.default_ide")}
               >
                 <SelectValue />

@@ -8,6 +8,7 @@ import IntellijIdeaLogo from "@/components/atoms/IdeIcon/logos/intellij-idea.svg
 import JetbrainsLogo from "@/components/atoms/IdeIcon/logos/jetbrains.svg?react";
 import VSCodeLogo from "@/components/atoms/IdeIcon/logos/visual-studio-code.svg?react";
 import WebstormLogo from "@/components/atoms/IdeIcon/logos/webstorm.svg?react";
+import { cn } from "@/lib/utils";
 
 /**
  * Official IDE logos inlined from the Iconify `logos` set (committed as
@@ -94,8 +95,8 @@ function CursorGlyph({
       viewBox="0 0 24 24"
       role="img"
       aria-label={title ?? siCursor.title}
-      className={className}
-      style={{ flexShrink: 0, opacity: mono ? 0.55 : 1, ...style }}
+      className={cn("shrink-0", mono ? "opacity-[0.55]" : "opacity-100", className)}
+      style={style}
     >
       <path d={siCursor.path} fill={fill} />
     </svg>

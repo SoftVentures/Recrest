@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -16,9 +16,11 @@ import { Skeleton } from "@/components/atoms/Skeleton";
 // Sparkline import removed — the activity card no longer renders a redundant
 // mini-sparkline under the bar chart.
 import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
+import { EmptyState } from "@/components/molecules/EmptyState";
 import { IconButton } from "@/components/molecules/IconButton";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListSkeleton";
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
 import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
@@ -73,6 +75,22 @@ export function RepoDetailPage() {
   useEffect(() => {
     if (repo) document.title = `${repo.name} — Recrest`;
   }, [repo]);
+
+  const goBackToList = useCallback(() => {
+    if (repoId) navigate(`/repos/${repoId}`);
+    else navigate(AppRoute.REPOS);
+  }, [navigate, repoId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tgt = e.target as HTMLElement | null;
+      if (tgt?.closest("input, textarea, [contenteditable='true'], [role='dialog']")) return;
+      goBackToList();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goBackToList]);
 
   // Distinguish "repos haven't loaded yet" (show skeleton) from "we have
   // repos but this id doesn't match" (show not-found).
@@ -148,6 +166,17 @@ export function RepoDetailPage() {
   return (
     <div className="flex flex-col gap-4 pb-10">
       <CreateBranchDialog open={branchOpen} repoId={repo.id} onClose={() => setBranchOpen(false)} />
+
+      <button
+        type="button"
+        className="a-page-back"
+        onClick={goBackToList}
+        data-testid="repo-detail-back"
+        aria-label={t("repo_detail.back_aria", { defaultValue: "Back to repositories" })}
+      >
+        <Icon name="chevLeft" size={12} />
+        <span>{t("repo_detail.back_to_list", { defaultValue: "Back to repositories" })}</span>
+      </button>
 
       {/* Header */}
       <header className="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
@@ -246,13 +275,6 @@ export function RepoDetailPage() {
             <Icon name="plus" size={13} />
             Branch
           </button>
-          <IconButton
-            tooltip="Shrink to sidebar"
-            className="r-btn"
-            onClick={() => navigate(`/repos/${repo.id}`)}
-          >
-            <Icon name="collapse" size={13} />
-          </IconButton>
         </div>
       </header>
 
@@ -309,26 +331,33 @@ export function RepoDetailPage() {
             </span>
           }
         >
-          {/* Direkte flex-children mit inline `height` — kein wrappender
-              flex-col, dessen eigene Höhe sich sonst dem %-Wert entzieht. */}
-          <div className="flex h-32 w-full items-end gap-1.5">
-            {repo.activity.map((v, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm"
-                style={{
-                  minWidth: 6,
-                  height: v > 0 ? `${Math.max(6, (v / maxBucket) * 100)}%` : "4px",
-                  background:
-                    v === 0
-                      ? "rgba(127,127,127,0.18)"
-                      : v >= maxBucket * 0.66
-                        ? "var(--accent, #4f8cff)"
-                        : "rgba(79,140,255,0.55)",
-                }}
-                title={`${v} commit${v === 1 ? "" : "s"} · ${13 - i} day${13 - i === 1 ? "" : "s"} ago`}
-              />
-            ))}
+          <div className="mt-auto flex h-32 w-full items-end gap-1.5">
+            {repo.activity.map((v, i) => {
+              const label = `${v} commit${v === 1 ? "" : "s"} · ${13 - i} day${13 - i === 1 ? "" : "s"} ago`;
+              return (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="flex-1 rounded-sm"
+                      style={{
+                        minWidth: 6,
+                        height: v > 0 ? `${Math.max(6, (v / maxBucket) * 100)}%` : "4px",
+                        background:
+                          v === 0
+                            ? "rgba(127,127,127,0.18)"
+                            : v >= maxBucket * 0.66
+                              ? "var(--accent, #4f8cff)"
+                              : "rgba(79,140,255,0.55)",
+                      }}
+                      aria-label={label}
+                      data-testid="repo-detail-spark-cell"
+                      data-index={i}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{label}</TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
           <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
             <span>14d ago</span>
@@ -356,20 +385,29 @@ export function RepoDetailPage() {
         >
           {repo.status.dirty ? (
             <div className="max-h-64 space-y-1 overflow-y-auto font-mono text-xs">
-              {repo.status.changedFiles.map((f) => (
-                <div
-                  key={f.path}
-                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1 last:border-b-0"
-                >
-                  <span className="truncate">{f.path}</span>
-                  <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] capitalize ${fileKindClasses(f.kind)}`}
-                    title={`${f.kind} · ${f.status}`}
+              {repo.status.changedFiles.map((f) => {
+                const statusLabel = `${f.kind} · ${f.status}`;
+                return (
+                  <div
+                    key={f.path}
+                    className="flex items-center justify-between gap-2 border-b border-border/40 py-1 last:border-b-0"
                   >
-                    {f.kind}
-                  </span>
-                </div>
-              ))}
+                    <span className="truncate">{f.path}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] capitalize ${fileKindClasses(f.kind)}`}
+                          aria-label={statusLabel}
+                          data-testid="repo-detail-file-status"
+                        >
+                          {f.kind}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{statusLabel}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                );
+              })}
               {repo.status.changedFilesTruncated && (
                 <div className="pt-2 text-center text-[11px] text-muted-foreground">
                   …more files truncated
@@ -377,9 +415,12 @@ export function RepoDetailPage() {
               )}
             </div>
           ) : (
-            <div className="py-8 text-center text-xs text-muted-foreground">
-              {t("repo_detail.all_clean", { defaultValue: "Nothing to commit." })}
-            </div>
+            <EmptyState
+              mascot="celebrating"
+              mascotSize={88}
+              title={t("repo_detail.all_clean", { defaultValue: "Nothing to commit." })}
+              className="py-4"
+            />
           )}
         </Card>
       </section>
@@ -407,9 +448,12 @@ export function RepoDetailPage() {
                 ))}
               </div>
             ) : prs.length === 0 ? (
-              <div className="py-8 text-center text-xs text-muted-foreground">
-                {t("repo_detail.no_prs", { defaultValue: "No merge requests fetched." })}
-              </div>
+              <EmptyState
+                mascot="snoozing"
+                mascotSize={88}
+                title={t("repo_detail.no_prs", { defaultValue: "No merge requests fetched." })}
+                className="py-4"
+              />
             ) : (
               <div className="max-h-80 space-y-1 overflow-y-auto">
                 {prs.map((pr) => (
@@ -505,12 +549,12 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="flex h-full flex-col rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <h3 className="text-sm font-medium">{title}</h3>
         {meta && <div className="text-xs text-muted-foreground">{meta}</div>}
       </div>
-      <div className="p-4">{children}</div>
+      <div className="flex flex-1 flex-col p-4">{children}</div>
     </div>
   );
 }

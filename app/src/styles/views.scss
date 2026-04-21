@@ -122,6 +122,11 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+.a-mr-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 .a-mr-sep {
   color: var(--ink-4);
 }
@@ -334,7 +339,21 @@
 .a-set-section h3 {
   font-size: 11px;
   color: var(--ink-3);
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+/* Secondary heading inside a section (e.g. the "Paths" sub-table in the
+ * Developer → Build section). Slightly more padding on top so it clearly
+ * separates from the previous card instead of hugging it. */
+.a-set-subhead {
+  margin: 18px 0 10px;
+}
+.a-set-subhead h3 {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 600;
@@ -1147,43 +1166,66 @@
   gap: 20px;
   padding-bottom: 60px;
 }
-.a-br-filters {
+/* Filter strip mirrors the Activity timeline's segmented pill control so
+   the two main lists in the app share the same affordance for "choose a
+   slice of what you're looking at". The right-aligned Fetch-all button
+   sits next to the strip so the whole toolbar stays a single horizontal
+   row. */
+.a-br-toolbar {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
   padding: 4px 0;
 }
-.a-br-chip {
+.a-br-filters {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: var(--surface-2);
+  padding: 3px;
+  border-radius: 100px;
+}
+.a-br-filter-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 28px;
-  padding: 0 12px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
   border-radius: 100px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
-  color: var(--ink-1);
   cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
-.a-br-chip:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
+.a-br-filter-pill:hover {
+  color: var(--ink-0);
 }
-.a-br-chip.active {
-  background: var(--accent-weak);
-  border-color: transparent;
-  color: var(--accent-ink);
+.a-br-filter-pill.active {
+  background: var(--surface-1);
+  color: var(--ink-0);
+  box-shadow: 0 0 0 1px var(--border);
 }
-.a-br-chip span {
-  font-variant-numeric: tabular-nums;
+.a-br-filter-count {
+  font-size: 10.5px;
   color: var(--ink-3);
-  font-weight: 600;
-  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
-.a-br-chip.active span {
-  color: var(--accent-ink);
+.a-br-filter-pill.active .a-br-filter-count {
+  color: var(--accent-ink, var(--ink-2));
+}
+.a-br-fetch-all {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.a-br-fetch-all svg {
+  color: inherit;
 }
 
 .a-br-groups {
@@ -1222,18 +1264,49 @@
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
+.a-br-grouph-fetch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.a-br-grouph-fetch svg {
+  color: inherit;
+}
+
+/* Checkout buttons sit in every branch row and are the most frequent action
+   on this page — promote from ghost to a primary-tinted style so they read
+   as the call-to-action instead of blending with secondary metadata. */
+.a-br-checkout {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.a-br-checkout svg {
+  color: inherit;
+}
 
 .a-br-list {
   display: flex;
   flex-direction: column;
 }
+/* Each row is its own grid, but the tail slot reserves a fixed min-width
+   (buttons + chips) so the auto-sized column resolves to the *same* width
+   across rows regardless of how many action buttons a given row has. This
+   keeps `tracks …` / `by …` in the meta column on one vertical axis. */
 .a-br-row {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  grid-template-columns: 8px minmax(0, 1fr) minmax(0, 1.2fr) 280px;
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
+}
+.a-br-tail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
 }
 .a-br-empty {
   padding: 24px;
@@ -1318,11 +1391,16 @@
   color: var(--ink-3);
   min-width: 0;
 }
+/* Both spans render on every row (even when empty) so the two-line meta
+   block keeps a constant height — otherwise a row with no upstream or no
+   last-commit shifts the neighbouring rows' `by …` line up, breaking the
+   vertical alignment across the list. */
 .a-br-upstream,
 .a-br-lastcommit {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-height: 14px;
 }
 
 .a-br-track {
@@ -1344,14 +1422,17 @@
   color: var(--ink-3);
 }
 
+/* Buttons always take their slot so the row layout stays pixel-stable —
+   meta text ("tracks …", "by …") and the track indicator don't reflow
+   when the user hovers. Only visibility flips; the occupied width stays
+   the same whether or not the pointer is over the row. */
 .a-br-acts {
   display: flex;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.1s ease;
+  visibility: hidden;
 }
 .a-br-row:hover .a-br-acts {
-  opacity: 1;
+  visibility: visible;
 }
 
 /* ─── Activity view ─── */
@@ -2095,6 +2176,18 @@
   gap: 14px;
   align-items: start;
 }
+/* On the Dashboard the donut card lives in the narrow right column, so
+   stack the legend (with its percentages) on top and put the cake diagram
+   underneath it. Activity-page layout stays side-by-side. */
+.p-dashboard .a-act-donut-wrap {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 12px;
+}
+.p-dashboard .a-act-donut-legend {
+  width: 100%;
+}
 .a-act-donut-svg {
   width: 120px;
   height: 120px;
@@ -2573,15 +2666,31 @@
 .a-act-rq-item {
   display: grid;
   grid-template-columns: 1fr auto;
+  align-items: center;
   gap: 10px;
   padding: 8px 10px;
   border-radius: 7px;
   background: var(--surface-2);
   cursor: pointer;
   transition: background 0.12s ease;
+  /* Button reset — the element is a real <button> for a11y, but visually it
+   * needs to behave like the previous div-based row. */
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  width: 100%;
 }
 .a-act-rq-item:hover {
   background: var(--surface-3);
+}
+.a-act-rq-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.a-act-rq-body {
+  display: block;
+  min-width: 0;
 }
 .a-act-rq-title {
   font-size: 12px;

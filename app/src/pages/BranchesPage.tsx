@@ -6,6 +6,7 @@ import { type BranchInfo, EventChannel, TauriCommand } from "@recrest/shared";
 
 import { Icon } from "@/components/atoms/Icon";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { BranchRowSkeleton } from "@/components/molecules/skeletons/BranchRowSkeleton";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -22,22 +23,70 @@ interface BranchesByRepo {
   branches: BranchInfo[];
 }
 
+/** localStorage key for the branch cache. Values are keyed by repoId so a
+ *  repo's cache survives add/remove of other repos. Stale-while-revalidate:
+ *  the cached payload paints immediately on reload, the fresh invoke
+ *  replaces it once the Rust side has finished scanning. */
+const BRANCH_CACHE_KEY = "recrest:branches-cache";
+
+type BranchCache = Record<string, BranchInfo[]>;
+
+function loadBranchCache(): BranchCache {
+  try {
+    const raw = window.localStorage.getItem(BRANCH_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as BranchCache) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveBranchCache(cache: BranchCache): void {
+  try {
+    window.localStorage.setItem(BRANCH_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Quota / disabled storage — silent; next invoke still populates the UI.
+  }
+}
+
 /** Loads the real branch list for each repo via the Rust `git_list_branches`
  *  command. Failures on individual repos are swallowed so one broken remote
- *  doesn't empty the whole view. */
+ *  doesn't empty the whole view. Seeds `data` from the localStorage cache
+ *  on mount so reloads feel instant. */
 function useBranchesByRepo(repos: EnrichedRepo[]): {
   data: BranchesByRepo[];
   loading: boolean;
   reload: () => void;
 } {
-  const [data, setData] = useState<BranchesByRepo[]>([]);
+  // Hydrate synchronously from cache so the very first paint already shows
+  // the last-known branch list — the subsequent invoke still runs below and
+  // replaces the data with fresh values.
+  const [data, setData] = useState<BranchesByRepo[]>(() => {
+    const cache = loadBranchCache();
+    return repos.map((repo) => ({ repo, branches: cache[repo.id] ?? [] }));
+  });
   const [loading, setLoading] = useState(false);
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
+  // `useRepos` returns `Object.values(items)` — a fresh array on every render
+  // even when the repo set is unchanged. Depending on that reference would
+  // re-run the effect every render and, combined with setData, loop forever.
+  // Collapse the relevant identity to a stable string (sorted ids) so the
+  // effect only re-runs when the repo set actually changes.
+  const repoIdsKey = useMemo(() => {
+    return repos
+      .map((r) => r.id)
+      .sort()
+      .join("|");
+  }, [repos]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    const cache = loadBranchCache();
+
     void (async () => {
       const results = await Promise.all(
         repos.map(async (repo) => {
@@ -47,18 +96,26 @@ function useBranchesByRepo(repos: EnrichedRepo[]): {
             });
             return { repo, branches };
           } catch {
-            return { repo, branches: [] };
+            return { repo, branches: cache[repo.id] ?? [] };
           }
         }),
       );
       if (cancelled) return;
       setData(results);
       setLoading(false);
+      // Persist the successful reads — keyed by repoId so removing a repo
+      // from the workspace doesn't wipe other entries.
+      const next: BranchCache = { ...cache };
+      for (const { repo, branches } of results) {
+        next[repo.id] = branches;
+      }
+      saveBranchCache(next);
     })();
     return () => {
       cancelled = true;
     };
-  }, [repos, nonce]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repoIdsKey, nonce]);
 
   // Rescan whenever the backend emits a live status update for any repo the
   // page cares about — matches the hook used by DashboardPage so the counts
@@ -144,27 +201,64 @@ export function BranchesPage() {
   const showSkeleton =
     (reposLoading || branchesLoading) && byRepoAll.every((g) => g.branches.length === 0);
 
+  const fetchAllKey = "__all__:fetch";
+  const fetchAllBusy = busyKey === fetchAllKey;
+
   return (
-    <div className="a-branches" data-testid="branches-page">
-      <div className="a-br-filters">
-        <BChip active={filter === ""} onClick={() => setFilter("")}>
-          {t("branches.filter.all")} <span>{totals.all}</span>
-        </BChip>
-        <BChip active={filter === "ahead"} onClick={() => setFilter("ahead")}>
-          {t("branches.filter.ahead")} <span>{totals.ahead}</span>
-        </BChip>
-        <BChip active={filter === "behind"} onClick={() => setFilter("behind")}>
-          {t("branches.filter.behind")} <span>{totals.behind}</span>
-        </BChip>
-        <BChip active={filter === "clean"} onClick={() => setFilter("clean")}>
-          {t("branches.filter.clean")} <span>{totals.clean}</span>
-        </BChip>
-        <BChip active={filter === "local"} onClick={() => setFilter("local")}>
-          {t("branches.filter.local")} <span>{totals.local}</span>
-        </BChip>
-        <BChip active={filter === "remote"} onClick={() => setFilter("remote")}>
-          {t("branches.filter.remote")} <span>{totals.remote}</span>
-        </BChip>
+    <div className="a-branches p-branches" data-testid="branches-page">
+      <div className="a-br-toolbar">
+        <div className="a-br-filters" role="tablist" aria-label={t("branches.filter.label")}>
+          <BFilter
+            active={filter === ""}
+            label={t("branches.filter.all")}
+            count={totals.all}
+            onClick={() => setFilter("")}
+          />
+          <BFilter
+            active={filter === "ahead"}
+            label={t("branches.filter.ahead")}
+            count={totals.ahead}
+            onClick={() => setFilter("ahead")}
+          />
+          <BFilter
+            active={filter === "behind"}
+            label={t("branches.filter.behind")}
+            count={totals.behind}
+            onClick={() => setFilter("behind")}
+          />
+          <BFilter
+            active={filter === "clean"}
+            label={t("branches.filter.clean")}
+            count={totals.clean}
+            onClick={() => setFilter("clean")}
+          />
+          <BFilter
+            active={filter === "local"}
+            label={t("branches.filter.local")}
+            count={totals.local}
+            onClick={() => setFilter("local")}
+          />
+          <BFilter
+            active={filter === "remote"}
+            label={t("branches.filter.remote")}
+            count={totals.remote}
+            onClick={() => setFilter("remote")}
+          />
+        </div>
+        <button
+          type="button"
+          className="r-btn sm ghost a-br-fetch-all"
+          disabled={fetchAllBusy || repos.length === 0}
+          data-testid="branches-fetch-all"
+          onClick={() =>
+            void run(fetchAllKey, TauriCommand.GIT_FETCH_ALL, {}, t("branches.actions.fetched_all"))
+          }
+        >
+          <Icon name="refresh" size={12} />
+          <span>
+            {fetchAllBusy ? t("branches.actions.fetching") : t("branches.actions.fetch_all")}
+          </span>
+        </button>
       </div>
 
       <div className="a-br-groups">
@@ -182,30 +276,74 @@ export function BranchesPage() {
           </div>
         )}
 
-        {byRepo.map((g) => (
-          <div key={g.repo.id} className="a-br-group">
-            <div className="a-br-grouph">
-              <RepoAvatar repo={g.repo} size={22} radius={5} />
-              <div className="a-br-grouph-name">{g.repo.name}</div>
-              <div className="a-br-grouph-remote">{g.repo.remoteUrl ?? ""}</div>
-              <div className="a-br-grouph-count">
-                {g.branches.length} {t("branches.branches")}
+        {byRepo.map((g, gi) => {
+          const fetchKey = `${g.repo.id}:fetch`;
+          // `--group-base` delays the row stagger so the group itself has
+          // popped in (pgZoom, ~80ms * gi) before its rows start rising.
+          const groupBaseMs = 200 + gi * 80;
+          return (
+            <div
+              key={g.repo.id}
+              className="a-br-group"
+              style={
+                {
+                  "--gi": gi,
+                  "--group-base": `${groupBaseMs}ms`,
+                } as React.CSSProperties
+              }
+            >
+              <div className="a-br-grouph">
+                <RepoAvatar repo={g.repo} size={22} radius={5} />
+                <div className="a-br-grouph-name">{g.repo.name}</div>
+                <div className="a-br-grouph-remote">{g.repo.remoteUrl ?? ""}</div>
+                <div className="a-br-grouph-count">
+                  {g.branches.length} {t("branches.branches")}
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="r-btn sm ghost a-br-grouph-fetch"
+                      disabled={busyKey === fetchKey}
+                      aria-label={t("branches.actions.fetch_tooltip")}
+                      data-testid="branches-fetch-all"
+                      data-repo-id={g.repo.id}
+                      onClick={() =>
+                        void run(
+                          fetchKey,
+                          TauriCommand.GIT_FETCH,
+                          { repoId: g.repo.id },
+                          t("branches.actions.fetched", { repo: g.repo.name }),
+                        )
+                      }
+                    >
+                      <Icon name="refresh" size={12} />
+                      <span>
+                        {busyKey === fetchKey
+                          ? t("branches.actions.fetching")
+                          : t("branches.actions.fetch")}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("branches.actions.fetch_tooltip")}</TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="a-br-list">
+                {g.branches.map((b, i) => (
+                  <BranchRow
+                    key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
+                    repo={g.repo}
+                    branch={b}
+                    busyKey={busyKey}
+                    t={t}
+                    run={run}
+                    animIndex={Math.min(i, 10)}
+                  />
+                ))}
               </div>
             </div>
-            <div className="a-br-list">
-              {g.branches.map((b) => (
-                <BranchRow
-                  key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
-                  repo={g.repo}
-                  branch={b}
-                  busyKey={busyKey}
-                  t={t}
-                  run={run}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -217,19 +355,24 @@ function BranchRow({
   busyKey,
   t,
   run,
+  animIndex,
 }: {
   repo: EnrichedRepo;
   branch: BranchInfo;
   busyKey: string | null;
   t: (k: string, p?: Record<string, unknown>) => string;
   run: (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => Promise<void>;
+  animIndex?: number;
 }) {
   const keyPrefix = `${repo.id}:${b.isRemote ? `${b.remote}/${b.name}` : b.name}`;
   const lastCommitLabel = b.lastCommit
     ? t("branches.last_commit_by", { author: b.lastCommit.author })
     : null;
   return (
-    <div className={`a-br-row${b.isCurrent ? " current" : ""}`}>
+    <div
+      className={`a-br-row${b.isCurrent ? " current" : ""}`}
+      style={{ "--i": animIndex ?? 0 } as React.CSSProperties}
+    >
       <div
         className="a-br-dot"
         data-current={b.isCurrent || undefined}
@@ -247,108 +390,127 @@ function BranchRow({
         {b.clean && <span className="a-br-tag t-clean">{t("branches.tag.clean")}</span>}
       </div>
       <div className="a-br-meta">
-        {!b.isRemote && (
-          <span className="a-br-upstream">
-            {b.upstream
+        <span className="a-br-upstream">
+          {b.isRemote
+            ? " "
+            : b.upstream
               ? t("branches.row.upstream_tracking", { upstream: b.upstream })
               : t("branches.row.no_upstream")}
-          </span>
-        )}
-        {lastCommitLabel && <span className="a-br-lastcommit">{lastCommitLabel}</span>}
+        </span>
+        <span className="a-br-lastcommit">{lastCommitLabel ?? " "}</span>
       </div>
-      <div className="a-br-track">
-        {b.ahead > 0 && <span className="a-br-trk t-ahead">↑{b.ahead}</span>}
-        {b.behind > 0 && <span className="a-br-trk t-behind">↓{b.behind}</span>}
-        {b.ahead === 0 && b.behind === 0 && !b.isRemote && (
-          <span className="a-br-trk t-even">even</span>
-        )}
-      </div>
-      <div className="a-br-acts">
-        {!b.isRemote && b.isCurrent && b.behind > 0 && (
-          <button
-            type="button"
-            className="r-btn sm ghost"
-            disabled={busyKey === `${keyPrefix}:pull`}
-            onClick={() =>
-              void run(
-                `${keyPrefix}:pull`,
-                "git_pull",
-                { repoId: repo.id },
-                t("branches.actions.pull"),
-              )
-            }
-          >
-            {t("branches.actions.pull")}
-          </button>
-        )}
-        {!b.isRemote && b.isCurrent && b.ahead > 0 && (
-          <button
-            type="button"
-            className="r-btn sm ghost"
-            disabled={busyKey === `${keyPrefix}:push`}
-            onClick={() =>
-              void run(
-                `${keyPrefix}:push`,
-                "git_push",
-                { repoId: repo.id },
-                t("branches.actions.push"),
-              )
-            }
-          >
-            {t("branches.actions.push")}
-          </button>
-        )}
-        {!b.isCurrent && !b.isRemote && (
-          <button
-            type="button"
-            className="r-btn sm ghost"
-            disabled={busyKey === `${keyPrefix}:checkout`}
-            onClick={() =>
-              void run(
-                `${keyPrefix}:checkout`,
-                "git_checkout",
-                { repoId: repo.id, branch: b.name },
-                t("branches.actions.checkout"),
-              )
-            }
-          >
-            {t("branches.actions.checkout")}
-          </button>
-        )}
-        {b.isRemote && b.remote && (
-          <button
-            type="button"
-            className="r-btn sm ghost"
-            disabled={busyKey === `${keyPrefix}:checkout-remote`}
-            onClick={() =>
-              void run(
-                `${keyPrefix}:checkout-remote`,
-                "git_checkout_remote",
-                { repoId: repo.id, remote: b.remote, branch: b.name },
-                t("branches.actions.checkout_remote"),
-              )
-            }
-          >
-            {t("branches.actions.checkout_remote")}
-          </button>
-        )}
+      <div className="a-br-tail">
+        <div className="a-br-acts">
+          {/* Hidden until row hover so the row stays visually calm; placed
+              before the track indicator so once revealed it sits inline
+              next to the branch metadata rather than floating at the far
+              right. */}
+          {!b.isRemote && b.isCurrent && b.behind > 0 && (
+            <button
+              type="button"
+              className="r-btn sm ghost"
+              disabled={busyKey === `${keyPrefix}:pull`}
+              onClick={() =>
+                void run(
+                  `${keyPrefix}:pull`,
+                  "git_pull",
+                  { repoId: repo.id },
+                  t("branches.actions.pull"),
+                )
+              }
+            >
+              {t("branches.actions.pull")}
+            </button>
+          )}
+          {!b.isRemote && b.isCurrent && b.ahead > 0 && (
+            <button
+              type="button"
+              className="r-btn sm ghost"
+              disabled={busyKey === `${keyPrefix}:push`}
+              onClick={() =>
+                void run(
+                  `${keyPrefix}:push`,
+                  "git_push",
+                  { repoId: repo.id },
+                  t("branches.actions.push"),
+                )
+              }
+            >
+              {t("branches.actions.push")}
+            </button>
+          )}
+          {!b.isCurrent && !b.isRemote && (
+            <button
+              type="button"
+              className="r-btn sm primary a-br-checkout"
+              disabled={busyKey === `${keyPrefix}:checkout`}
+              data-testid="branch-checkout"
+              onClick={() =>
+                void run(
+                  `${keyPrefix}:checkout`,
+                  "git_checkout",
+                  { repoId: repo.id, branch: b.name },
+                  t("branches.actions.checkout"),
+                )
+              }
+            >
+              <Icon name="branch" size={11} />
+              <span>{t("branches.actions.checkout")}</span>
+            </button>
+          )}
+          {b.isRemote && b.remote && (
+            <button
+              type="button"
+              className="r-btn sm primary a-br-checkout"
+              disabled={busyKey === `${keyPrefix}:checkout-remote`}
+              data-testid="branch-checkout-remote"
+              onClick={() =>
+                void run(
+                  `${keyPrefix}:checkout-remote`,
+                  "git_checkout_remote",
+                  { repoId: repo.id, remote: b.remote, branch: b.name },
+                  t("branches.actions.checkout_remote"),
+                )
+              }
+            >
+              <Icon name="branch" size={11} />
+              <span>{t("branches.actions.checkout_remote")}</span>
+            </button>
+          )}
+        </div>
+        <div className="a-br-track">
+          {b.ahead > 0 && <span className="a-br-trk t-ahead">↑{b.ahead}</span>}
+          {b.behind > 0 && <span className="a-br-trk t-behind">↓{b.behind}</span>}
+          {b.ahead === 0 && b.behind === 0 && !b.isRemote && (
+            <span className="a-br-trk t-even">even</span>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function BChip({
+function BFilter({
   active,
+  label,
+  count,
   onClick,
-  children,
 }: {
   active: boolean;
+  label: string;
+  count: number;
   onClick: () => void;
-  children: React.ReactNode;
 }) {
   return (
-    <button type="button" className={`a-br-chip${active ? " active" : ""}`} onClick={onClick}>
-      {children}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active ? "true" : "false"}
+      className={`a-br-filter-pill${active ? " active" : ""}`}
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      <span className="a-br-filter-count">{count}</span>
     </button>
   );
 }

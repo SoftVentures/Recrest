@@ -15,6 +15,7 @@ import {
 import { BrandIcon, type BrandSlug } from "@/components/atoms/BrandIcon";
 import { Icon } from "@/components/atoms/Icon";
 import { useConfirm } from "@/components/molecules/compounds/ConfirmDialog";
+import { TruncatedTooltip } from "@/components/molecules/compounds/TruncatedTooltip";
 import { SettingsSection } from "@/components/organisms/settings/SettingsSection";
 import { invoke, openExternal } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
@@ -140,9 +141,9 @@ function ProviderRow({ providerId }: { providerId: ProviderId }) {
             {connected ? t("providers.status_connected") : t("providers.status_disconnected")}
           </span>
           {isSelfHosted && (
-            <span className="a-prov-selfhosted" title={effectiveBaseUrl}>
-              {t("providers.self_hosted")}
-            </span>
+            <TruncatedTooltip content={effectiveBaseUrl}>
+              <span className="a-prov-selfhosted">{t("providers.self_hosted")}</span>
+            </TruncatedTooltip>
           )}
         </div>
         {connected && connection?.username && (

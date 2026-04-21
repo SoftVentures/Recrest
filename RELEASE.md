@@ -1,43 +1,60 @@
-# Recrest 0.6.0 — Activity insights, atomic UI, native window chrome
+# Recrest 0.7.0 — Auto-updater, Developer tab, native notifications
 
-Second beta of Recrest. The big story is the new **Activity** dashboard and a full UI refactor into atomic-design layers (atoms / molecules / organisms) with Storybook coverage across the board. Under the hood, the shell gained OS-native titlebars, a guided onboarding flow, and a lot of CI / platform polish.
+Third beta of Recrest. The headline additions are a working **in-app auto-updater**, a new **Developer** tab for power users, **native OS notifications**, and a page-transition animation pass that makes the whole shell feel less static. Under the hood, stylesheets migrated from flat CSS to SCSS and the dev build now carries its own icon so you can tell `yarn dev` apart from the installed app.
 
 Still a beta — treat it as "use it, tell us what's broken" rather than "rely on it in your daily loop".
 
 ## What's new
 
-### Activity dashboard
+### In-app auto-updater
 
-A new route that turns your local repos into insight cards — no cloud, everything computed from your own git data:
+Recrest now checks GitHub Releases on startup (after a short delay) and again every four hours:
 
-- **Heroes**: commits, authors, open PRs, CI health.
-- **Contributor cards**: leaderboard, author-clock, streak.
-- **Code cards**: churn, language donut, heatmap, stacked activity chart.
-- **Pull-request cards**: PR velocity, time-to-merge, review queue.
-- **CI cards**: pass rate, flaky repos, quietest repos, busiest peak.
+- An `UpdaterBanner` appears when a newer tag is available, with install / dismiss / remind-me states persisted across sessions.
+- Manual "check for updates" action lives in Settings → Updates.
+- Version comparison handles pre-release tags correctly (`0.7.0-beta.1` > `0.6.9`), so shipping betas alongside stable doesn't confuse users running either channel.
+- `useLastSeenVersion` remembers the version the user last opened, so "what's new" cues can appear after an update.
 
-Each card is independent — filter by repo or time window and the dashboard reshapes.
+### Developer tab
 
-### Native window chrome
+A new Settings tab for people who want to poke at the app:
 
-The titlebar adapts to the host OS instead of forcing one look everywhere:
+- Feature-flag toggles persisted in a dedicated Redux slice (`uiDevFlagsSlice`) — separate from user settings so toggling doesn't pollute your real preferences.
+- In-app inspectors for Redux state, IPC traffic, and environment details.
+- Diagnostics dump for bug reports.
 
-- **Windows 11** — custom titlebar with snap-layouts affordance.
-- **GNOME / Linux** — CSD-style titlebar matching Adwaita conventions.
-- **macOS** — transparent overlay respecting traffic-light spacing.
+The tab is gated by `useDevFlag`, so the surface area is zero for regular users.
 
-### Onboarding wizard
+### Native OS notifications
 
-First-run flow walks new users through: welcome → basics → pick folder → connect provider (optional) → initial scan → done. Skippable per step.
+System-level notifications for the events that matter:
 
-### IDE integration
+- PR events, update availability, scan completion.
+- Per-trigger toggles in the new `NotificationSettings` tab — nothing is on by default that you didn't ask for.
+- Backed by `commands/notifications.rs` on the Rust side with a full test suite on `useNotificationTriggers`.
 
-- **Open in IDE** button on repo and PR rows, with live detection of installed IDEs (VS Code, JetBrains family, Zed, Sublime, Xcode, Android Studio).
-- Branded icons for each IDE in the picker.
+### Page transitions
 
-### UI refactor
+Dashboard, Repositories, Branches, Merge Requests, and Repo Detail now animate on mount and on route change. Timing and easing are documented in `docs/plans/page-mount-animations.md`.
 
-Every component was moved into an atomic-design hierarchy (`atoms/ molecules/ organisms/`) with colocated Storybook stories and Vitest tests. The impact on day-to-day usage is small, but the codebase is now consistent from top to bottom and much easier to contribute to.
+### Mascot & empty states
+
+New `Mascot` atom (animated brand character) appears on onboarding and empty-state screens. `EmptyState` itself got a friendlier layout.
+
+### Dev-build icon
+
+`yarn dev` and the installed app no longer share a taskbar icon. The dev build renders with a white-chevron + orange `</>` badge variant. `tauri:dev` loads a minimal `tauri.dev.conf.json` overlay that swaps `bundle.icon` to `icons-dev/`; `tauri:build` ignores the overlay.
+
+### Stylesheets moved to SCSS
+
+`tokens`, `layout`, `page-anim`, and `views` now live as `.scss` in both `app/` and `landingpage/`. No new dependencies — Vite handles SCSS natively. Day-to-day usage is identical; nesting and mixins are now available to contributors.
+
+### Under-the-hood polish
+
+- `ImportFromProviderDialog` rewritten — clearer provider/org/repo flow, inline validation, full keyboard navigation.
+- `DetailPane`, `Sidebar`, `Titlebar`, `RepoRow`, and `RepoList` refactored for faster initial render.
+- `TruncatedTooltip` shows full text on hover only when the content is actually truncated.
+- `notify` → 8.2 and `notify-debouncer-full` → 0.7 for more reliable filesystem event coalescing on Windows.
 
 ## Install
 
@@ -55,25 +72,19 @@ shasum -a 256 -c SHA256SUMS.txt       # macOS
 Get-FileHash <file> -Algorithm SHA256 # Windows PowerShell
 ```
 
-## Platform & build improvements
+## Upgrading from 0.6.0
 
-- **Beta build workflow** — `release-tauri-beta.yml` produces unsigned installers from any ref without creating a release, useful for dogfooding before cutting a tag.
-- **Linux build fix** — webkit / gtk / appindicator dependencies pinned; AppImage / deb / rpm now build cleanly on `ubuntu-22.04`.
-- **macOS config split** — `tauri.macos.conf.json` isolates mac-specific entitlements so base config stays lean.
-- **Refined installer assets** — DMG background, NSIS header / sidebar regenerated from SVG sources.
-- **Pre-push hook** — husky gates every push with typecheck + lint + format before the network leaves your machine.
+If you already run 0.6.0, the new updater will pick up this release automatically on next launch. No manual migration needed — settings and the keychain-stored tokens are preserved.
 
 ## Known limitations
 
 - GitLab and Bitbucket providers still return "not yet implemented" — arriving in a later release.
 - Auth is PAT-only; OAuth is scaffolded but not user-facing yet.
 - Installers remain **unsigned** — macOS Gatekeeper / Windows SmartScreen will warn on first launch. Verify via the `SHA256SUMS.txt` above.
-- `RepoWatcher` is wired on the Rust side but not yet hooked into the runtime — repo status refreshes on explicit reload.
-- Activity cards currently read from local git only; PR / CI metrics populate once a provider token is connected.
 
 ## Why unsigned?
 
-Recrest is an open-source project without a paid code-signing cert. Apple Developer ID runs at $99/year, Windows EV certs start around $300/year. Installers are built straight from this tag by GitHub Actions — the build log is public, and the checksums above let you verify what you ran matches what was built.
+Recrest is an open-source project without a paid code-signing cert. Apple Developer ID runs at $99/year, Windows EV certs start around $300/year. Installers are built straight from this tag by GitHub Actions — the build log is public, and the checksums above let you verify what you ran matches what was built. See `app/src-tauri/README-signing.md` for the full rationale.
 
 ## Feedback
 

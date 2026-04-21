@@ -82,10 +82,33 @@ pub async fn scan_repos(
 
 #[tauri::command]
 pub async fn list_repos(state: State<'_, AppState>) -> Result<Vec<RepoDto>, CommandError> {
-    let config = state.config.lock().await;
-    let mut out = Vec::new();
-    for record in config.settings().repos.values() {
-        let status = status::read_status(&record.path).unwrap_or_else(|_| status::RepoStatusDto::unknown());
+    // Snapshot the repo records and drop the config lock before hitting
+    // git2 — read_status is I/O-heavy and serializing here would keep every
+    // other command waiting on the same mutex.
+    let records: Vec<_> = {
+        let config = state.config.lock().await;
+        config.settings().repos.values().cloned().collect()
+    };
+
+    // git2 is synchronous, so each read_status used to run serially on the
+    // async executor thread — 8 repos × ~2s dominated app boot time. Fan
+    // out to the blocking pool so statuses are computed concurrently; we
+    // still preserve the original order when zipping the results back.
+    let handles: Vec<_> = records
+        .iter()
+        .map(|r| {
+            let path = r.path.clone();
+            tokio::task::spawn_blocking(move || {
+                status::read_status(&path).unwrap_or_else(|_| status::RepoStatusDto::unknown())
+            })
+        })
+        .collect();
+
+    let mut out = Vec::with_capacity(records.len());
+    for (record, handle) in records.iter().zip(handles) {
+        let status = handle
+            .await
+            .unwrap_or_else(|_| status::RepoStatusDto::unknown());
         out.push(RepoDto::from_record(record, status));
     }
     Ok(out)
@@ -116,7 +139,10 @@ pub async fn add_repo(
     let mut config = state.config.lock().await;
     let mut record = config.upsert_scanned_repo(std::path::Path::new(&path))?;
     record.group_id = group_id.clone();
-    config.settings_mut().repos.insert(record.id.clone(), record.clone());
+    config
+        .settings_mut()
+        .repos
+        .insert(record.id.clone(), record.clone());
     config.save(&app)?;
     drop(config);
     let status = status::read_status(&record.path)?;
@@ -192,7 +218,9 @@ fn collect_recent_commits(
         Ok(h) => h,
         Err(_) => return Ok(()),
     };
-    let Some(head_oid) = head.target() else { return Ok(()) };
+    let Some(head_oid) = head.target() else {
+        return Ok(());
+    };
 
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(git2::Sort::TIME)?;
@@ -200,13 +228,19 @@ fn collect_recent_commits(
 
     for oid in revwalk {
         let Ok(oid) = oid else { continue };
-        let Ok(commit) = repo.find_commit(oid) else { continue };
+        let Ok(commit) = repo.find_commit(oid) else {
+            continue;
+        };
         let ts = commit.time().seconds();
-        let Some(local_dt) = Local.timestamp_opt(ts, 0).single() else { continue };
+        let Some(local_dt) = Local.timestamp_opt(ts, 0).single() else {
+            continue;
+        };
         if local_dt.date_naive() < cutoff_date {
             break; // TIME-sorted: the rest is older
         }
-        let Some(utc_ts) = Utc.timestamp_opt(ts, 0).single() else { continue };
+        let Some(utc_ts) = Utc.timestamp_opt(ts, 0).single() else {
+            continue;
+        };
         let author = commit.author();
         let email = author
             .email()
@@ -255,7 +289,9 @@ pub async fn load_logo_bytes(
     });
     drop(config);
     if !allowed {
-        return Err(CommandError::bad_request("logo path outside any registered repo"));
+        return Err(CommandError::bad_request(
+            "logo path outside any registered repo",
+        ));
     }
 
     let meta = std::fs::metadata(&canonical)

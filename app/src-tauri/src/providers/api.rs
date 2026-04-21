@@ -9,6 +9,7 @@ pub struct PullRequestDto {
     pub title: String,
     pub url: String,
     pub author: String,
+    pub author_avatar_url: Option<String>,
     pub state: PrState,
     pub draft: bool,
     pub source_branch: String,
@@ -176,12 +177,18 @@ pub struct CheckRunSummaryDto {
 pub fn parse_owner_repo(remote_url: &str) -> Option<(String, String)> {
     let url = remote_url.trim();
     // SSH: git@host:owner/repo(.git)
-    if let Some(rest) = url.strip_prefix("git@").and_then(|s| s.split_once(':').map(|(_, r)| r)) {
+    if let Some(rest) = url
+        .strip_prefix("git@")
+        .and_then(|s| s.split_once(':').map(|(_, r)| r))
+    {
         return split_owner_repo(rest);
     }
     // https://host/owner/repo(.git)
     let after_scheme = url.split("://").nth(1).unwrap_or(url);
-    let without_host = after_scheme.split_once('/').map(|(_, r)| r).unwrap_or(after_scheme);
+    let without_host = after_scheme
+        .split_once('/')
+        .map(|(_, r)| r)
+        .unwrap_or(after_scheme);
     split_owner_repo(without_host)
 }
 

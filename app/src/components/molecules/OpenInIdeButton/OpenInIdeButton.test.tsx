@@ -20,10 +20,12 @@ describe("OpenInIdeButton", () => {
     seedDetected([]);
     render(
       <Provider store={store}>
-        <OpenInIdeButton repoId="r1" />
+        <TooltipProvider delayDuration={0}>
+          <OpenInIdeButton repoId="r1" />
+        </TooltipProvider>
       </Provider>,
     );
-    const btn = screen.getByRole("button");
+    const btn = screen.getByTestId("open-in-ide-button");
     expect(btn).toBeDisabled();
     expect(btn).toHaveTextContent(/open in ide/i);
   });
@@ -32,10 +34,12 @@ describe("OpenInIdeButton", () => {
     seedDetected(["cursor"]);
     render(
       <Provider store={store}>
-        <OpenInIdeButton repoId="r1" />
+        <TooltipProvider delayDuration={0}>
+          <OpenInIdeButton repoId="r1" />
+        </TooltipProvider>
       </Provider>,
     );
-    const btn = screen.getByRole("button");
+    const btn = screen.getByTestId("open-in-ide-button");
     expect(btn).toBeEnabled();
     expect(btn).toHaveTextContent(/open in cursor/i);
   });

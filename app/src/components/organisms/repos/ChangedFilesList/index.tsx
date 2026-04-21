@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import type { ChangedFile, ChangedFileStatus } from "@recrest/shared";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { cn } from "@/lib/utils";
 
 interface ChangedFilesListProps {
@@ -36,28 +37,40 @@ export function ChangedFilesList({ files, truncated }: ChangedFilesListProps) {
       <ul className="max-h-64 divide-y divide-border overflow-y-auto">
         {files.map((file, i) => {
           const marker = MARKER[file.status];
+          const markerLabel = t(`detail.marker.${file.status}`);
           return (
             <li key={`${file.path}-${i}`} className="flex items-center gap-2 px-2.5 py-1.5 text-xs">
-              <span
-                aria-label={t(`detail.marker.${file.status}`)}
-                title={t(`detail.marker.${file.status}`)}
-                className={cn(
-                  "inline-flex h-5 min-w-[1.75rem] shrink-0 items-center justify-center rounded-sm px-1 font-mono text-[10px] font-bold",
-                  marker.tone,
-                )}
-              >
-                {marker.label}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    aria-label={markerLabel}
+                    data-testid="changed-files-marker"
+                    className={cn(
+                      "inline-flex h-5 min-w-[1.75rem] shrink-0 items-center justify-center rounded-sm px-1 font-mono text-[10px] font-bold",
+                      marker.tone,
+                    )}
+                  >
+                    {marker.label}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{markerLabel}</TooltipContent>
+              </Tooltip>
               <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
                 {file.path}
               </span>
               {file.hasUnstagedChanges && (
-                <span
-                  title={t("detail.also_unstaged")}
-                  className="shrink-0 rounded-sm bg-status-warning/15 px-1 py-0.5 font-mono text-[9px] font-bold text-status-warning"
-                >
-                  M
-                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      aria-label={t("detail.also_unstaged")}
+                      data-testid="changed-files-also-unstaged"
+                      className="shrink-0 rounded-sm bg-status-warning/15 px-1 py-0.5 font-mono text-[9px] font-bold text-status-warning"
+                    >
+                      M
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("detail.also_unstaged")}</TooltipContent>
+                </Tooltip>
               )}
             </li>
           );

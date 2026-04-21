@@ -6,11 +6,16 @@ import { Provider } from "react-redux";
 import { describe, expect, it } from "vitest";
 
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
 import { settingsReducer } from "@/store/slices/settingsSlice";
 
 function renderWithStore(ui: ReactElement) {
   const store = configureStore({ reducer: { settings: settingsReducer } });
-  return render(<Provider store={store}>{ui}</Provider>);
+  return render(
+    <Provider store={store}>
+      <TooltipProvider>{ui}</TooltipProvider>
+    </Provider>,
+  );
 }
 
 describe("RepoAvatar", () => {
@@ -19,9 +24,9 @@ describe("RepoAvatar", () => {
     expect(screen.getByText("R")).toBeInTheDocument();
   });
 
-  it("nutzt den Namen als title-Attribut", () => {
-    const { container } = renderWithStore(<RepoAvatar repo={{ id: "r2", name: "MyRepo" }} />);
-    expect(container.querySelector('[title="MyRepo"]')).not.toBeNull();
+  it("nutzt den Namen als aria-label-Attribut", () => {
+    renderWithStore(<RepoAvatar repo={{ id: "r2", name: "MyRepo" }} />);
+    expect(screen.getByTestId("repo-avatar")).toHaveAttribute("aria-label", "MyRepo");
   });
 
   it("respektiert die size-Prop", () => {

@@ -1,8 +1,17 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
 import { Titlebar } from "@/components/organisms/layout/Titlebar";
 import { useWindowChrome } from "@/hooks/usePlatform";
+
+function renderTitlebar() {
+  return render(
+    <TooltipProvider delayDuration={0}>
+      <Titlebar />
+    </TooltipProvider>,
+  );
+}
 
 // The Titlebar dispatcher picks a platform-specific chrome via `useWindowChrome`.
 // Default (no Tauri) → "none" → component renders nothing. Mock the hook so we
@@ -20,25 +29,25 @@ const mockedUseWindowChrome = vi.mocked(useWindowChrome);
 describe("Titlebar", () => {
   it("renders nothing in pure web mode", () => {
     mockedUseWindowChrome.mockReturnValue("none");
-    const { container } = render(<Titlebar />);
+    const { container } = renderTitlebar();
     expect(container.firstChild).toBeNull();
   });
 
   it("renders the macOS overlay chrome", () => {
     mockedUseWindowChrome.mockReturnValue("macos-overlay");
-    const { container } = render(<Titlebar />);
+    const { container } = renderTitlebar();
     expect(container.firstChild).not.toBeNull();
   });
 
   it("renders the GNOME chrome", () => {
     mockedUseWindowChrome.mockReturnValue("gnome");
-    const { container } = render(<Titlebar />);
+    const { container } = renderTitlebar();
     expect(container.firstChild).not.toBeNull();
   });
 
   it("renders the Win11 chrome", () => {
     mockedUseWindowChrome.mockReturnValue("win11");
-    const { container } = render(<Titlebar />);
+    const { container } = renderTitlebar();
     expect(container.firstChild).not.toBeNull();
   });
 });

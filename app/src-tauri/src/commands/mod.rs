@@ -15,4 +15,7 @@ pub mod settings;
 pub mod system;
 pub mod terminal;
 pub mod tray;
+pub mod update;
+#[cfg(debug_assertions)]
+pub mod dev;
 pub mod window;

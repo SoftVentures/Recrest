@@ -40,3 +40,20 @@ export function formatBranchName(branch: string | null | undefined, fallback = "
 export function pluralize(count: number, singular: string, plural?: string): string {
   return count === 1 ? singular : (plural ?? `${singular}s`);
 }
+
+/**
+ * Format a raw byte count as a human-readable string using binary units
+ * (KiB/MiB/GiB). Negative values are treated as zero.
+ */
+export function formatBytes(bytes: number, fractionDigits = 1): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let value = bytes;
+  let unitIdx = 0;
+  while (value >= 1024 && unitIdx < units.length - 1) {
+    value /= 1024;
+    unitIdx += 1;
+  }
+  const digits = unitIdx === 0 ? 0 : fractionDigits;
+  return `${value.toFixed(digits)} ${units[unitIdx]}`;
+}

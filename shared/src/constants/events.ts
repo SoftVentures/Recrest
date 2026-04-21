@@ -11,6 +11,10 @@ import { REPO_STATUS_EVENT } from "./git.js";
 /** Emitted once at startup when the updater plugin finds a newer release. */
 export const UPDATER_AVAILABLE_EVENT = "updater://available";
 
+/** Emitted periodically while the signed plugin path downloads the installer.
+ *  Payload: `{ chunk: number, total: number | null }`. */
+export const UPDATER_PROGRESS_EVENT = "updater://progress";
+
 /** Re-emitted from the Tauri deep-link listener when the OS hands us an
  *  `recrest://oauth/callback?...` URL. The renderer parses the URL and
  *  completes the exchange via `complete_oauth`. */
@@ -23,6 +27,7 @@ export const CLONE_PROGRESS_EVENT = "clone://progress";
 export const EventChannel = {
   REPO_STATUS: REPO_STATUS_EVENT,
   UPDATER_AVAILABLE: UPDATER_AVAILABLE_EVENT,
+  UPDATER_PROGRESS: UPDATER_PROGRESS_EVENT,
   OAUTH_CALLBACK: OAUTH_CALLBACK_EVENT,
   CLONE_PROGRESS: CLONE_PROGRESS_EVENT,
 } as const;

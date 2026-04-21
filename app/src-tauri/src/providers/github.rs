@@ -90,7 +90,9 @@ impl GitProvider for GithubProvider {
     }
 
     async fn username(&self) -> Result<Option<String>, CommandError> {
-        let Some(token) = self.token().await? else { return Ok(None) };
+        let Some(token) = self.token().await? else {
+            return Ok(None);
+        };
         let base = self.api_base();
         let res = self
             .http
@@ -127,7 +129,10 @@ impl GitProvider for GithubProvider {
         Some(self.api_base())
     }
 
-    async fn list_pull_requests(&self, remote_url: &str) -> Result<Vec<PullRequestDto>, CommandError> {
+    async fn list_pull_requests(
+        &self,
+        remote_url: &str,
+    ) -> Result<Vec<PullRequestDto>, CommandError> {
         let token = self.require_token().await?;
         let (owner, repo) = parse_owner_repo(remote_url)
             .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
@@ -143,17 +148,14 @@ impl GitProvider for GithubProvider {
             .await?;
 
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "github: {}",
-                res.status()
-            )));
+            return Err(CommandError::internal(format!("github: {}", res.status())));
         }
 
         let items: Vec<GhPull> = res.json().await?;
         let mut out = Vec::with_capacity(items.len());
         for pr in items {
-            let ci = fetch_combined_status(&self.http, &token, &base, &owner, &repo, &pr.head.sha)
-                .await;
+            let ci =
+                fetch_combined_status(&self.http, &token, &base, &owner, &repo, &pr.head.sha).await;
             out.push(map_pr(pr, Some(ci)));
         }
         Ok(out)
@@ -298,7 +300,11 @@ impl GitProvider for GithubProvider {
                     continue;
                 }
                 any_in_window = true;
-                let author = pr.user.as_ref().map(|u| u.login.clone()).unwrap_or_default();
+                let author = pr
+                    .user
+                    .as_ref()
+                    .map(|u| u.login.clone())
+                    .unwrap_or_default();
                 let url = pr.html_url.clone();
                 if pr.created_at >= cutoff {
                     out.push(PrEventDto {
@@ -367,9 +373,8 @@ impl GitProvider for GithubProvider {
         let (owner, repo) = parse_owner_repo(remote_url)
             .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
         let base = self.api_base();
-        let tz = FixedOffset::east_opt(local_tz_offset_minutes * 60).unwrap_or_else(|| {
-            FixedOffset::east_opt(0).expect("zero offset is always valid")
-        });
+        let tz = FixedOffset::east_opt(local_tz_offset_minutes * 60)
+            .unwrap_or_else(|| FixedOffset::east_opt(0).expect("zero offset is always valid"));
 
         // Bucket per local YYYY-MM-DD → (total, passed, failed, failing-shas).
         let mut buckets: std::collections::HashMap<String, (u32, u32, u32, Vec<String>)> =
@@ -380,9 +385,8 @@ impl GitProvider for GithubProvider {
         for chunk in shas.chunks(chunk_size) {
             let mut tasks = Vec::with_capacity(chunk.len());
             for sha in chunk {
-                let url = format!(
-                    "{base}/repos/{owner}/{repo}/commits/{sha}/check-runs?per_page=50"
-                );
+                let url =
+                    format!("{base}/repos/{owner}/{repo}/commits/{sha}/check-runs?per_page=50");
                 let http = self.http.clone();
                 let token = token.clone();
                 let sha = sha.clone();
@@ -409,7 +413,9 @@ impl GitProvider for GithubProvider {
                     entry.0 += 1;
                     match run.conclusion.as_deref() {
                         Some("success") => entry.1 += 1,
-                        Some("failure") | Some("timed_out") | Some("action_required")
+                        Some("failure")
+                        | Some("timed_out")
+                        | Some("action_required")
                         | Some("startup_failure") => {
                             entry.2 += 1;
                             if entry.3.len() < 3 && !entry.3.contains(&sha) {
@@ -424,15 +430,17 @@ impl GitProvider for GithubProvider {
 
         let mut out: Vec<CheckRunSummaryDto> = buckets
             .into_iter()
-            .map(|(day, (total, passed, failed, sha_samples))| CheckRunSummaryDto {
-                repo_id: repo_id.to_string(),
-                repo_name: repo_name.to_string(),
-                day,
-                total,
-                passed,
-                failed,
-                sha_samples,
-            })
+            .map(
+                |(day, (total, passed, failed, sha_samples))| CheckRunSummaryDto {
+                    repo_id: repo_id.to_string(),
+                    repo_name: repo_name.to_string(),
+                    day,
+                    total,
+                    passed,
+                    failed,
+                    sha_samples,
+                },
+            )
             .collect();
         out.sort_by(|a, b| a.day.cmp(&b.day));
         Ok(out)
@@ -482,11 +490,7 @@ impl GitProvider for GithubProvider {
         OAUTH_CLIENT_ID.is_some() && OAUTH_CLIENT_SECRET.is_some()
     }
 
-    async fn authorize_url(
-        &self,
-        redirect_uri: &str,
-        state: &str,
-    ) -> Result<String, CommandError> {
+    async fn authorize_url(&self, redirect_uri: &str, state: &str) -> Result<String, CommandError> {
         let client_id = OAUTH_CLIENT_ID
             .ok_or_else(|| CommandError::bad_request("github: OAuth client ID not configured"))?;
         let scopes = urlencoding::encode(OAUTH_SCOPES);
@@ -555,12 +559,17 @@ impl GitProvider for GithubProvider {
 }
 
 fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
+    let (author, author_avatar_url) = match pr.user {
+        Some(u) => (u.login, u.avatar_url),
+        None => (String::new(), None),
+    };
     PullRequestDto {
         id: pr.id.to_string(),
         number: pr.number,
         title: pr.title,
         url: pr.html_url,
-        author: pr.user.map(|u| u.login).unwrap_or_default(),
+        author,
+        author_avatar_url,
         state: if pr.merged_at.is_some() {
             PrState::Merged
         } else if pr.state == "closed" {
@@ -597,7 +606,11 @@ fn map_repo(r: GhRepo) -> RemoteRepositoryDto {
         pushed_at: r.pushed_at,
         size_kb: r.size,
         language: r.language,
-        owner_login: r.owner.as_ref().map(|o| o.login.clone()).unwrap_or_default(),
+        owner_login: r
+            .owner
+            .as_ref()
+            .map(|o| o.login.clone())
+            .unwrap_or_default(),
         owner_avatar_url: r.owner.and_then(|o| o.avatar_url),
     }
 }
@@ -643,7 +656,9 @@ async fn fetch_combined_status(
     if !res.status().is_success() {
         return CiStatus::None;
     }
-    let Ok(body) = res.json::<GhCombinedStatus>().await else { return CiStatus::None };
+    let Ok(body) = res.json::<GhCombinedStatus>().await else {
+        return CiStatus::None;
+    };
     match body.state.as_str() {
         "success" => CiStatus::Success,
         "failure" | "error" => CiStatus::Failure,

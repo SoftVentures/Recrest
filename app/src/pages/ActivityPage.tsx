@@ -33,7 +33,6 @@ import { TimeToMergeCard } from "@/components/organisms/activity/cards/TimeToMer
 import { useCheckRuns } from "@/hooks/useCheckRuns";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { usePrEvents } from "@/hooks/usePrEvents";
-import { usePrPolling } from "@/hooks/useProviders";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import {
   computeAuthorClock,
@@ -57,7 +56,6 @@ import { useAppSelector } from "@/store/hooks";
 
 export function ActivityPage() {
   const { t } = useTranslation();
-  usePrPolling();
   const repos = useEnrichedRepos();
   const { commits, loading: commitsLoading } = useRecentCommits({ days: ACTIVITY_DAYS });
   const { events: prEvents, loading: prEventsLoading } = usePrEvents({

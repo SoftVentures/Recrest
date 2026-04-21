@@ -9,6 +9,19 @@ export type ActiveView =
   | "activity"
   | "settings";
 
+export interface UpdaterBannerState {
+  version: string;
+  currentVersion?: string;
+  body: string | null;
+  canAutoInstall: boolean;
+  downloadUrl: string | null;
+}
+
+export interface UpdaterProgressState {
+  chunk: number;
+  total: number | null;
+}
+
 export interface UiState {
   sidebarCollapsed: boolean;
   searchOpen: boolean;
@@ -21,7 +34,8 @@ export interface UiState {
   refreshNonce: number;
   importDialogOpen: boolean;
   findDialogOpen: boolean;
-  updaterBanner: { version: string; body: string | null } | null;
+  updaterBanner: UpdaterBannerState | null;
+  updaterProgress: UpdaterProgressState | null;
 }
 
 const initialState: UiState = {
@@ -34,6 +48,7 @@ const initialState: UiState = {
   importDialogOpen: false,
   findDialogOpen: false,
   updaterBanner: null,
+  updaterProgress: null,
 };
 
 const uiSlice = createSlice({
@@ -69,11 +84,11 @@ const uiSlice = createSlice({
     setFindDialogOpen(state, action: PayloadAction<boolean>) {
       state.findDialogOpen = action.payload;
     },
-    setUpdaterBanner(
-      state,
-      action: PayloadAction<{ version: string; body: string | null } | null>,
-    ) {
+    setUpdaterBanner(state, action: PayloadAction<UpdaterBannerState | null>) {
       state.updaterBanner = action.payload;
+    },
+    setUpdaterProgress(state, action: PayloadAction<UpdaterProgressState | null>) {
+      state.updaterProgress = action.payload;
     },
   },
 });
@@ -89,5 +104,6 @@ export const {
   setImportDialogOpen,
   setFindDialogOpen,
   setUpdaterBanner,
+  setUpdaterProgress,
 } = uiSlice.actions;
 export const uiReducer = uiSlice.reducer;

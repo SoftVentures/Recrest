@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { describe, expect, it } from "vitest";
 
+import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
 import { Timeline } from "@/components/organisms/activity/Timeline";
 import {
   fakeCheckRun,
@@ -23,21 +24,23 @@ describe("Timeline", () => {
         <Timeline commits={[]} prEvents={[]} checkRuns={[]} today={today} reposById={reposById} />
       </Provider>,
     );
-    expect(screen.getByText(/No events match/i)).toBeInTheDocument();
+    expect(screen.getByTestId("activity-timeline-empty")).toBeInTheDocument();
   });
 
   it("renders a day card when there is at least one commit", () => {
-    const { container } = render(
+    render(
       <Provider store={store}>
-        <Timeline
-          commits={[fakeCommit("sha1", "r1", "alice", today.toISOString())]}
-          prEvents={[fakePrEvent("merged", { timestamp: today.toISOString() })]}
-          checkRuns={[fakeCheckRun()]}
-          today={today}
-          reposById={reposById}
-        />
+        <TooltipProvider delayDuration={0}>
+          <Timeline
+            commits={[fakeCommit("sha1", "r1", "alice", today.toISOString())]}
+            prEvents={[fakePrEvent("merged", { timestamp: today.toISOString() })]}
+            checkRuns={[fakeCheckRun()]}
+            today={today}
+            reposById={reposById}
+          />
+        </TooltipProvider>
       </Provider>,
     );
-    expect(container.querySelector(".a-act-day-card")).not.toBeNull();
+    expect(screen.getAllByTestId("activity-timeline-day").length).toBeGreaterThan(0);
   });
 });

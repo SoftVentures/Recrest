@@ -297,6 +297,23 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "update_tray_badge":
         return undefined;
 
+      // --- updater hybrid (Part 2)
+      case "check_for_update":
+        return undefined;
+      case "install_update":
+        return undefined;
+
+      // --- dev commands (Part 3, debug builds only — but the handler list
+      // in lib.rs registers them under #[cfg(debug_assertions)], and the
+      // drift spec greps the whole generate_handler! block including the
+      // debug arm, so the stub must carry them too).
+      case "get_dev_paths":
+        return { configDir: null, dataDir: null, cacheDir: null, logDir: null };
+      case "get_build_triple":
+        return "windows-x86_64";
+      case "dev_panic":
+        return undefined;
+
       // --- Tauri plugin: event
       case "plugin:event|listen":
         return nextId++;

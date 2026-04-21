@@ -3,6 +3,7 @@ export interface PlatformInfo {
   arch: string;
   version: string;
   family: string;
+  debugAssertions: boolean;
 }
 
 export interface WindowState {

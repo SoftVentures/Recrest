@@ -8,11 +8,7 @@ test.describe("app / repo detail pane", () => {
     const target = SEED_REPOS[3]!;
     await page.goto(AppRoute.REPOS);
 
-    await page
-      .locator(
-        `[data-testid="repo-row"][data-repo-id="${target.id}"] [data-testid="repo-row-select"]`,
-      )
-      .click();
+    await page.locator(`[data-testid="repo-row"][data-repo-id="${target.id}"]`).click();
 
     const detail = page.getByTestId("detail-pane");
     await expect(detail).toBeVisible({ timeout: 10_000 });
