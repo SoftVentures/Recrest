@@ -15,6 +15,15 @@ export const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`;
  *  becomes a failing test. */
 export const EXPECTED_APP_VERSION = "0.6.0";
 
+/** Mirrors `landingpage/src/components/DownloadButton.tsx::directDownloadUrl`.
+ *  For a known OS the button links directly to the asset zip; only the
+ *  `unknown`-UA case falls back to `RELEASES_LATEST_URL`. Kept here so specs
+ *  assert against the real production contract instead of a stale alias. */
+export function expectedDownloadUrl(os: "macos" | "windows" | "linux" | "unknown"): string {
+  if (os === "unknown") return RELEASES_LATEST_URL;
+  return `${RELEASES_LATEST_URL}/download/recrest-v${EXPECTED_APP_VERSION}-${os}.zip`;
+}
+
 export const LANDING_LOCALE_STORAGE_KEY = "recrest-landing-locale";
 export const LANDING_THEME_STORAGE_KEY = "recrest-landing-theme";
 export const APP_I18N_STORAGE_KEY = "i18nextLng";

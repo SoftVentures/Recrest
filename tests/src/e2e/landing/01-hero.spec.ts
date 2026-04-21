@@ -3,6 +3,11 @@ import { EXPECTED_APP_VERSION, RELEASES_LATEST_URL, REPO_URL } from "../../helpe
 import { LANDING_COPY } from "../../helpers/selectors.js";
 
 test.describe("landing / hero", () => {
+  // Pin the UA so the primary CTA stays on the fallback release URL across
+  // every landing project (desktop Chrome → Linux, mobile → Mac, etc.). The
+  // OS-specific asset-URL branches are exercised in 05-download-button.
+  test.use({ fakeUserAgent: "Mozilla/5.0 (PlayStation 5) AppleWebKit/605" });
+
   test("renders EN title, version + both primary CTAs", async ({ page }) => {
     await page.goto("/");
 
