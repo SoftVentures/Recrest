@@ -94,19 +94,13 @@ jobs:
           name: installer-assets-build
           path: app/src-tauri/installer-assets/build/
 
-      - name: Build Tauri app (unsigned)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        with:
-          args: ${{ matrix.args }}
-          projectPath: ./app
-
-      - name: Build Tauri app (signed)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      # Single build step. Step-level `env:` is not visible to the step's own
+      # `if:` condition, so the previous two-step "unsigned / signed" split
+      # always took the unsigned branch and forwarded the private key without
+      # the matching password — causing Tauri to fail decoding it. Passing
+      # both key and password here lets Tauri skip signing if the key is
+      # empty and sign correctly when both are populated.
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

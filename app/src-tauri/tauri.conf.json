@@ -38,10 +38,8 @@
     },
     "updater": {
       "active": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5Qjk3NzVGQUQ0OTdCQkEKUldTNmUwbXRYM2U1cVpQT0hvRWRBeUhRL0hybzE4WXQxZlNyL1haTjJmTkR1NkgxRTVOWVFIdUQK",
-      "endpoints": [
-        "https://github.com/SoftVentures/Recrest/releases/latest/download/latest.json"
-      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEExM0IyNkU2QjkxMjI1RjUKUldUMUpSSzU1aVk3b1M5RDMyWHcrY092VGZhNk96Z1BpYU9PMmE0cnZXMFNvN3RnTXJ1V0tHOUQK",
+      "endpoints": ["https://github.com/SoftVentures/Recrest/releases/latest/download/latest.json"],
       "dialog": false
     }
   },

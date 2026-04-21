@@ -1,3 +1,9 @@
+# Tauri updater signing keys — private key MUST never be committed; pubkey
+# lives in app/src-tauri/tauri.conf.json so the standalone .pub file is also
+# just a local artefact.
+.tauri-key
+.tauri-key.pub
+
 # Logs
 logs
 *.log

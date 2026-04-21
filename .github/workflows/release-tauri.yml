@@ -107,24 +107,15 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build Tauri app (unsigned)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Recrest ${{ github.ref_name }}"
-          releaseBody: ${{ steps.release_notes.outputs.body }}
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
-          projectPath: ./app
-
-      - name: Build Tauri app (signed)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      # One build step for signed + unsigned. The previous two-step split
+      # routed via `if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}`, but a
+      # step-level `env:` block is not visible to that step's own `if:`
+      # condition — so the "unsigned" branch always ran, and it forwarded the
+      # signing key without the matching password. Tauri then tried to decode
+      # the encrypted key with no password and failed. Passing both secrets
+      # through a single step lets Tauri skip signing cleanly when the key is
+      # absent, and sign correctly when both are present.
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
