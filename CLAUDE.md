@@ -76,5 +76,4 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 ## Known scope gaps (not bugs)
 
 - OAuth is scaffolded; MVP ships PAT-only auth.
-- Tauri icon PNGs are not in `app/src-tauri/icons/` yet — `yarn build` will fail until they're added. `yarn dev:web` works without them.
 - GitLab/Bitbucket providers return `not yet implemented` errors from `list_pull_requests`.

@@ -47,6 +47,15 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 - `providers/r#trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`.
 - Add a crate: `cargo add <name>` inside `src-tauri/`. Watch that it works under `vendored-libgit2` linking; avoid crates that pull in a second libgit2.
 
+## App icons (production vs dev)
+
+Two icon sets live under `src-tauri/`:
+
+- `icons/` — production build icon (dark chevrons on a white square). Sources aren't regenerated routinely; if you need to refresh them, feed `src/assets/recrest-icon-light.svg` to `tauri icon`.
+- `icons-dev/` — dev build icon (white chevrons with an orange `</>` badge bottom-right), so `yarn dev` is visually distinct from the installed app in the taskbar/dock. Regenerate with `yarn workspace @recrest/app gen:dev-icons` whenever you edit `src/assets/recrest-icon-dev.svg`.
+
+`tauri:dev` passes `--config src-tauri/tauri.dev.conf.json`, a minimal overlay that swaps `bundle.icon` to point at `icons-dev/`. Only `tauri dev` picks it up; `tauri build` ignores the overlay and keeps the production icon. Do not duplicate other fields in the overlay — keep it strictly about the icon swap so production config stays the single source of truth.
+
 ## Redux + i18n
 
 - Five slices in `src/store/slices/`. Async thunks inside each slice own the `invoke` calls — components dispatch, they don't call IPC directly.
