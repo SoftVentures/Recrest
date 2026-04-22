@@ -94,31 +94,58 @@ jobs:
           name: installer-assets-build
           path: app/src-tauri/installer-assets/build/
 
-      - name: Build Tauri app (unsigned)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}
-        uses: tauri-apps/tauri-action@v0
+      # Forward signing secrets only when populated. Tauri's bundler reads the
+      # signing env vars via `std::env::var`, which returns `Ok("")` for set-
+      # but-empty — not `Err(NotPresent)`. Piping `${{ secrets.FOO }}` directly
+      # into `env:` therefore triggers sign/notarize paths even when FOO is
+      # unset in the repo, failing e.g. `security import` with an empty .p12.
+      # This step writes each secret to $GITHUB_ENV only if non-empty, so
+      # missing secrets stay genuinely unset and Tauri skips the feature.
+      - name: Forward signing secrets (when configured)
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        with:
-          args: ${{ matrix.args }}
-          projectPath: ./app
-
-      - name: Build Tauri app (signed)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -eu
+          forward() {
+            local name="$1"
+            local val="${!name-}"
+            if [ -n "$val" ]; then
+              {
+                printf '%s<<__RECREST_EOF__\n' "$name"
+                printf '%s\n' "$val"
+                printf '__RECREST_EOF__\n'
+              } >> "$GITHUB_ENV"
+              echo "forwarded: $name"
+            else
+              echo "skipped (empty): $name"
+            fi
+          }
+          forward APPLE_CERTIFICATE
+          forward APPLE_CERTIFICATE_PASSWORD
+          forward APPLE_SIGNING_IDENTITY
+          forward APPLE_ID
+          forward APPLE_PASSWORD
+          forward APPLE_TEAM_ID
+          forward WINDOWS_CERTIFICATE
+          forward WINDOWS_CERTIFICATE_PASSWORD
+          forward TAURI_SIGNING_PRIVATE_KEY
+          forward TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         with:
           args: ${{ matrix.args }}
           projectPath: ./app
