@@ -317,29 +317,46 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          xargs -a zips.list gh release upload "$TAG" \
-            --repo "${{ github.repository }}" \
-            --clobber
+          set -euo pipefail
+          # Explicit per-file loop with visible logging. An earlier `xargs -a
+          # zips.list gh release upload ...` version occasionally completed
+          # silently without actually publishing the zips, leaving 404s on
+          # the release page. This loop makes each upload observable and fails
+          # loudly on any individual upload error.
+          while IFS= read -r zipfile; do
+            [ -n "$zipfile" ] || continue
+            echo "uploading: $zipfile"
+            gh release upload "$TAG" "$zipfile" \
+              --repo "${{ github.repository }}" \
+              --clobber
+          done < zips.list
 
-      - name: Remove original single-installer assets
+      - name: Prune single-installer assets (keep updater + zip + checksums)
         if: steps.zip.outputs.uploaded == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Preserve any asset the Tauri auto-updater resolves from latest.json:
-          #   *.msi          — Windows installer (updater downloads + swaps in place)
-          #   *.app.tar.gz   — macOS updater bundle
+          # Iterate over the actual release assets (not dl/, which was drained
+          # by the zip step) and keep only what the updater / download flow
+          # still needs:
+          #   *.msi          — Windows updater payload (tauri-action updater bundle)
+          #   *.app.tar.gz   — macOS updater payload
           #   *.AppImage     — Linux updater payload
-          #   *.sig          — Minisign signatures that accompany each of the above
-          #   latest.json    — updater manifest itself
-          # Everything else (.dmg / .deb / .rpm / .exe) is manual-download only; the
-          # per-OS ZIP has a copy, so removing the single-asset version keeps the
-          # Release page uncluttered without starving the updater.
-          keep_patterns=("*.msi" "*.app.tar.gz" "*.AppImage" "*.sig" "latest.json")
-          for f in dl/*; do
-            [ -f "$f" ] || continue
-            asset="$(basename "$f")"
+          #   *.sig          — Minisign signatures for updater payloads
+          #   latest.json    — updater manifest
+          #   *.zip          — per-OS packages users actually download
+          #   SHA256SUMS.txt — checksums file added by the `checksums` job
+          # Everything else (.dmg / .deb / .rpm / .exe) is bundled inside the
+          # per-OS ZIP and duplicates the download list — remove to keep the
+          # release page focused.
+          keep_patterns=("*.msi" "*.app.tar.gz" "*.AppImage" "*.sig" "latest.json" "*.zip" "SHA256SUMS.txt")
+          assets="$(gh release view "$TAG" \
+            --repo "${{ github.repository }}" \
+            --json assets \
+            --jq '.assets[].name')"
+          while IFS= read -r asset; do
+            [ -n "$asset" ] || continue
             keep=0
             for p in "${keep_patterns[@]}"; do
               case "$asset" in $p) keep=1;; esac
@@ -348,11 +365,11 @@ jobs:
               echo "keep: $asset"
               continue
             fi
-            echo "deleting old asset: $asset"
+            echo "deleting: $asset"
             gh release delete-asset "$TAG" "$asset" \
               --repo "${{ github.repository }}" \
-              --yes || true
-          done
+              --yes
+          done <<< "$assets"
 
   checksums:
     name: Checksums
