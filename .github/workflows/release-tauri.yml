@@ -1,29 +1,101 @@
-# Triggered by the tag that release-please creates when its Release PR is merged.
+# Triggered automatically by the tag that release-please creates when its
+# Release PR is merged. Can also be re-run manually against an existing tag
+# (defaults to the latest release) — the manual path deletes the current
+# release but keeps the git tag, so assets get rebuilt from scratch without
+# having to bump the version or rewrite the tag.
+#
 # Builds Tauri installers for Linux / Windows / macOS, bündelt sie pro OS in
 # ein ZIP (`recrest-<tag>-windows.zip` / `-macos.zip` / `-linux.zip`) und lädt
-# diese als GitHub-Release-Assets hoch. Runs unsigned until
-# TAURI_SIGNING_PRIVATE_KEY is populated — signing secrets are passed through
-# only when they exist.
+# diese als GitHub-Release-Assets hoch. Signing/notarization features activate
+# automatically when the matching secrets are populated.
 name: Release (Tauri)
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to rebuild (e.g. v0.7.0). Leave empty to rebuild the latest release."
+        required: false
+        default: ""
 
 permissions:
   contents: write
 
 jobs:
+  # Resolve the target tag once and share it with every downstream job. For a
+  # `push` trigger this is `github.ref_name`; for `workflow_dispatch` it's the
+  # input (when set) or the most recent release tag (draft or published).
+  # Downstream jobs must use `needs.resolve.outputs.tag` instead of
+  # `github.ref_name`, because on manual dispatch from a branch the ref is the
+  # branch (e.g. `main`), not the release tag.
+  resolve:
+    name: Resolve target tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.r.outputs.tag }}
+    steps:
+      - id: r
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -eu
+          if [ "$EVENT" = "push" ]; then
+            resolved="$REF_NAME"
+            echo "Resolved from push tag: $resolved"
+          elif [ -n "${INPUT_TAG:-}" ]; then
+            resolved="$INPUT_TAG"
+            echo "Resolved from dispatch input: $resolved"
+          else
+            resolved="$(gh release list --repo "$REPO" --limit 1 --json tagName --jq '.[0].tagName' || true)"
+            if [ -z "$resolved" ]; then
+              echo "::error::No existing release found and no tag input provided."
+              exit 1
+            fi
+            echo "Resolved from latest release: $resolved"
+          fi
+          echo "tag=$resolved" >> "$GITHUB_OUTPUT"
+
   # Generates the NSIS / DMG branding bitmaps from the SVG sources once on
   # Linux and passes them to every platform build via an artifact. The
   # `tauri.conf.json` references these files directly; without them, the
   # Windows NSIS bundler fails with `os error 3` and the macOS DMG bundler
   # aborts in `bundle_dmg.sh`.
+  #
+  # For a manual re-run this job also resets the existing release so
+  # `tauri-action` can recreate it cleanly (otherwise it would collide on
+  # asset names and leave stale files behind). The git tag is preserved.
   prepare-assets:
     name: Generate installer assets
+    needs: resolve
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+
+      - name: Reset existing release (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -eu
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Deleting existing release $TAG (git tag is preserved via --cleanup-tag=false)"
+            gh release delete "$TAG" --repo "$REPO" --yes --cleanup-tag=false
+          else
+            echo "No existing release for $TAG — nothing to reset"
+          fi
+
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -38,7 +110,7 @@ jobs:
           if-no-files-found: error
 
   build:
-    needs: prepare-assets
+    needs: [resolve, prepare-assets]
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +128,8 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
 
       - uses: actions/setup-node@v6
         with:
@@ -107,30 +181,61 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-      # One build step for signed + unsigned. The previous two-step split
-      # routed via `if: ${{ env.TAURI_SIGNING_PRIVATE_KEY == '' }}`, but a
-      # step-level `env:` block is not visible to that step's own `if:`
-      # condition — so the "unsigned" branch always ran, and it forwarded the
-      # signing key without the matching password. Tauri then tried to decode
-      # the encrypted key with no password and failed. Passing both secrets
-      # through a single step lets Tauri skip signing cleanly when the key is
-      # absent, and sign correctly when both are present.
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      # Forward signing secrets only when populated. Tauri's bundler reads the
+      # signing env vars via `std::env::var`, which returns `Ok("")` for set-
+      # but-empty — not `Err(NotPresent)`. Piping `${{ secrets.FOO }}` directly
+      # into `env:` therefore triggers sign/notarize paths even when FOO is
+      # unset in the repo, failing e.g. `security import` with an empty .p12.
+      # This step writes each secret to $GITHUB_ENV only if non-empty, so
+      # missing secrets stay genuinely unset and Tauri skips the feature.
+      - name: Forward signing secrets (when configured)
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -eu
+          forward() {
+            local name="$1"
+            local val="${!name-}"
+            if [ -n "$val" ]; then
+              {
+                printf '%s<<__RECREST_EOF__\n' "$name"
+                printf '%s\n' "$val"
+                printf '__RECREST_EOF__\n'
+              } >> "$GITHUB_ENV"
+              echo "forwarded: $name"
+            else
+              echo "skipped (empty): $name"
+            fi
+          }
+          forward APPLE_CERTIFICATE
+          forward APPLE_CERTIFICATE_PASSWORD
+          forward APPLE_SIGNING_IDENTITY
+          forward APPLE_ID
+          forward APPLE_PASSWORD
+          forward APPLE_TEAM_ID
+          forward WINDOWS_CERTIFICATE
+          forward WINDOWS_CERTIFICATE_PASSWORD
+          forward TAURI_SIGNING_PRIVATE_KEY
+          forward TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Recrest ${{ github.ref_name }}"
+          tagName: ${{ needs.resolve.outputs.tag }}
+          releaseName: "Recrest ${{ needs.resolve.outputs.tag }}"
           releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
@@ -143,15 +248,17 @@ jobs:
   # Download-Pakete statt einer langen Dateiliste zeigt.
   repackage:
     name: Repackage into per-OS ZIPs
-    needs: build
+    needs: [resolve, build]
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.resolve.outputs.tag }}
     steps:
       - name: Download release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dl
-          gh release download "${{ github.ref_name }}" \
+          gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --dir dl \
             --pattern '*.dmg' \
@@ -183,12 +290,11 @@ jobs:
             mv "$f" stage/linux/
           done
 
-          tag="${{ github.ref_name }}"
           mkdir -p out
           produced=()
           for os in windows macos linux; do
             if [ -n "$(ls -A "stage/$os" 2>/dev/null)" ]; then
-              zip_name="recrest-${tag}-${os}.zip"
+              zip_name="recrest-${TAG}-${os}.zip"
               (cd stage && zip -r "../out/$zip_name" "$os")
               produced+=("out/$zip_name")
               echo "built: $zip_name"
@@ -211,7 +317,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          xargs -a zips.list gh release upload "${{ github.ref_name }}" \
+          xargs -a zips.list gh release upload "$TAG" \
             --repo "${{ github.repository }}" \
             --clobber
 
@@ -243,22 +349,24 @@ jobs:
               continue
             fi
             echo "deleting old asset: $asset"
-            gh release delete-asset "${{ github.ref_name }}" "$asset" \
+            gh release delete-asset "$TAG" "$asset" \
               --repo "${{ github.repository }}" \
               --yes || true
           done
 
   checksums:
     name: Checksums
-    needs: repackage
+    needs: [resolve, repackage]
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.resolve.outputs.tag }}
     steps:
       - name: Download per-OS zips
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p assets
-          gh release download "${{ github.ref_name }}" \
+          gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --dir assets \
             --pattern '*.zip' \
@@ -278,7 +386,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.ref_name }}" \
+          gh release upload "$TAG" \
             assets/SHA256SUMS.txt \
             --repo "${{ github.repository }}" \
             --clobber
