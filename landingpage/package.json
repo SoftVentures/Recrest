@@ -25,7 +25,7 @@
     "react-country-flag": "^3.1.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.0.3",
-    "simple-icons": "^16.17.0"
+    "simple-icons": "^16.18.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.5.0",
