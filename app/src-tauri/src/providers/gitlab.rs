@@ -393,6 +393,12 @@ fn map_mr(mr: GlMr) -> PullRequestDto {
         additions: None,
         deletions: None,
         ci_status: ci,
+        // Plan 1 §A.2: GitLab assignee/reviewer mapping not implemented yet
+        // (Plan 2 §D.1). Empty Vecs make the notification gating fail-closed
+        // — no GitLab MR notifies anyone until the user is recognised as
+        // assignee/reviewer, which matches the user's stated preference.
+        assignees: Vec::new(),
+        requested_reviewers: Vec::new(),
     }
 }
 

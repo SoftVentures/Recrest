@@ -59,6 +59,9 @@
       "status": "Status",
       "activity": "Aktivität · 14T",
       "actions": "Aktionen"
+    },
+    "group": {
+      "pinned": "Angepinnt"
     }
   },
   "dash": {
@@ -307,7 +310,19 @@
     },
     "ci_failed": {
       "title": "CI fehlgeschlagen",
-      "body": "{{repo}} · #{{number}} {{pr_title}}"
+      "body": "{{repo}} · #{{number}} {{pr_title}}",
+      "github": {
+        "title": "Checks fehlgeschlagen",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "gitlab": {
+        "title": "Pipelines fehlgeschlagen",
+        "body": "{{repo}} · !{{number}} {{pr_title}}"
+      },
+      "bitbucket": {
+        "title": "Pipelines fehlgeschlagen",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      }
     },
     "merge_ready": {
       "title": "Bereit zum Mergen",

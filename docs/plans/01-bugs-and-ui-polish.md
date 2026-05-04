@@ -137,7 +137,7 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
   5. **Identity-Race auf Cold-Start:** Wenn `state.providers.<id>.user` noch `undefined` ist (Provider lädt async), darf der Hook **nicht** alle PRs als "nicht meine" filtern und damit Notifications komplett unterdrücken. Lösung: Solange Identity unbekannt → Trigger-Hook gibt früh zurück und merkt sich den letzten gesehenen `prs`-Snapshot **nicht** (nächster Tick läuft erneut, sobald Identity da ist).
   6. **Anzeige bleibt unangetastet** — UI listet weiterhin alle PRs.
 - **Test:**
-  - Unit `isAssigneeOrReviewer`: 8 Cases — (a) Assignee match, (b) Reviewer match, (c) weder, (d) leere Listen, (e) Casing `Roehle` vs `roehle`, (f) Provider-Mismatch (gleicher Login auf zwei Providern), (g) Identity null → returns false, (h) PR ohne Felder (legacy DTO).
+  - Unit `isAssigneeOrReviewer`: 8 Cases — (a) Assignee match, (b) Reviewer match, (c) weder, (d) leere Listen, (e) Casing `Mueller` vs `mueller`, (f) Provider-Mismatch (gleicher Login auf zwei Providern), (g) Identity null → returns false, (h) PR ohne Felder (legacy DTO).
   - Slice-Test `useNotificationTriggers`: identity null → keine emits; identity gesetzt + PR ohne Self → keine emits; identity gesetzt + PR mit Self-Assignment → emits.
   - Manuell: PR ohne Self-Assignment → keine Notification; mit Self-Assignment → Notification.
 
@@ -156,7 +156,7 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
   - Visuell: Review-Queue mit überlangen Repo-Namen.
   - Story/Snapshot mit langen Strings (für jede gefixte Stelle eine).
 
-### A.4 Author-Dedup (Röhle ↔ Roehle)
+### A.4 Author-Dedup (Müller ↔ Mueller)
 
 - **Symptom:** Derselbe Autor wird durch Umlaut-Variante als zwei Autoren gezählt.
 - **Betroffene Dateien:**
@@ -179,10 +179,10 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
 
   | input name + email                            | erwarteter `signatureKey`                                                       |
   | --------------------------------------------- | ------------------------------------------------------------------------------- |
-  | `Röhle <oe@x>`                                | `roehle\|oe`                                                                    |
-  | `Roehle <oe@x>`                               | `roehle\|oe`                                                                    |
-  | `Valentin Röhle <v.roehle@benova.eu>`         | `valentinroehle\|vroehle`                                                       |
-  | `Valentin Roehle <valentin.roehle@benova.eu>` | `valentinroehle\|valentinroehle` (zwei Einträge — durch `authorAliases` mergen) |
+  | `Müller <ue@x>`                          | `mueller\|ue`                                                                  |
+  | `Mueller <ue@x>`                         | `mueller\|ue`                                                                  |
+  | `Anna Müller <a.mueller@example.com>`    | `annamueller\|amueller`                                                        |
+  | `Anna Mueller <anna.mueller@example.com>`| `annamueller\|annamueller` (zwei Einträge — durch `authorAliases` mergen)     |
   | `François Müller <f@x>`                       | `francoismueller\|f`                                                            |
   | `Łukasz Słoń <l@x>`                           | `lukaszslon\|l`                                                                 |
   | `İlhan Şahin <i@x>`                           | `ilhansahin\|i`                                                                 |
@@ -192,7 +192,7 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
   | gleicher Name doppelte Spaces                 | identisch (Trim+Collapse)                                                       |
   | name in Großbuchstaben                        | identisch zu Kleinbuchstaben                                                    |
   - TS-Unit für `computeLeaderboard` mit gemischten Author-Namen + Override über `authorAliases`.
-  - E2E: Repo mit Commits "Röhle" + "Roehle" → eine Zeile in der Leaderboard-Card.
+  - E2E: Repo mit Commits "Müller" + "Mueller" → eine Zeile in der Leaderboard-Card.
 
 ### A.5 Pinned Repos oben
 
@@ -506,4 +506,4 @@ Manuelle Smokes:
 - macOS: C.1 + Drawer-Vergleich + Notifications.
 - Windows: C.2/C.3/C.4 + Drawer-Vergleich.
 - Linux (Arch+Wayland+dunst): C.5/C.6/C.7 + dunst-Icon.
-- Cross: A.4 mit Test-Repo "Röhle/Roehle"-Commits, A.6 mit failing CI-Run.
+- Cross: A.4 mit Test-Repo "Müller/Mueller"-Commits, A.6 mit failing CI-Run.

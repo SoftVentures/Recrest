@@ -63,6 +63,11 @@ export interface RecentCommit {
    *  Null when git2 couldn't read an email (e.g. for signed-off commits
    *  with a redacted author). */
   authorEmail: string | null;
+  /** Plan 1 §A.4: Unicode-folded dedup key produced by Rust
+   *  `git::author_normalize::signature_key`. Optional so existing test
+   *  fixtures don't need migration; consumers fall back to recomputing it
+   *  client-side from `author` + `authorEmail` when missing. */
+  signatureKey?: string;
   timestamp: string; // ISO-8601
   repoId: RepositoryId;
   repoName: string;

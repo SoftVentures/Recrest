@@ -16,6 +16,8 @@ interface RepoListProps {
 
 const GROUP_ORDER = ["SoftVentures", "Personal", "Tools", "Projects", "Recycle Bin"];
 
+const PINNED_GROUP = "__pinned__";
+
 export function RepoList({ repos, grouped = true }: RepoListProps) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -23,23 +25,41 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => {
-    if (!grouped) return [{ label: null as string | null, items: repos }];
+    // Pinned repos float to the top in their own group regardless of which
+    // folder they belong to. Plan 1 §A.5: "wenn repo pinned, nicht oben" —
+    // before this, the pinned flag had no impact on ordering.
+    const pinned = repos.filter((r) => r.pinned);
+
+    if (!grouped) {
+      const rest = repos.filter((r) => !r.pinned);
+      const out: { label: string | null; items: EnrichedRepo[]; key: string }[] = [];
+      if (pinned.length > 0) {
+        out.push({ label: t("repos.group.pinned"), items: pinned, key: PINNED_GROUP });
+      }
+      if (rest.length > 0) out.push({ label: null, items: rest, key: "all" });
+      return out;
+    }
+
     const map = new Map<string, EnrichedRepo[]>();
     for (const r of repos) {
+      if (r.pinned) continue;
       const arr = map.get(r.group) ?? [];
       arr.push(r);
       map.set(r.group, arr);
     }
-    const ordered: { label: string; items: EnrichedRepo[] }[] = [];
+    const ordered: { label: string; items: EnrichedRepo[]; key: string }[] = [];
+    if (pinned.length > 0) {
+      ordered.push({ label: t("repos.group.pinned"), items: pinned, key: PINNED_GROUP });
+    }
     for (const g of GROUP_ORDER) {
       if (map.has(g)) {
-        ordered.push({ label: g, items: map.get(g)! });
+        ordered.push({ label: g, items: map.get(g)!, key: g });
         map.delete(g);
       }
     }
-    for (const [label, items] of map) ordered.push({ label, items });
+    for (const [label, items] of map) ordered.push({ label, items, key: label });
     return ordered;
-  }, [repos, grouped]);
+  }, [repos, grouped, t]);
 
   const onSelect = (id: string) => dispatch(setSelectedRepo(id));
 
@@ -54,7 +74,7 @@ export function RepoList({ repos, grouped = true }: RepoListProps) {
       </div>
 
       {groups.map((g, gi) => (
-        <div key={g.label ?? gi} style={{ "--gi": gi } as React.CSSProperties}>
+        <div key={g.key} style={{ "--gi": gi } as React.CSSProperties}>
           {g.label && (
             <button
               type="button"

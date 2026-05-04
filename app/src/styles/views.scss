@@ -144,15 +144,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Drawer */
+/* MR drawer — visually aligned with the repo DetailPane (`.a-detail`) so
+ * both views share the same right-side panel envelope (canvas background,
+ * single left border, slide-in animation). Outer shell only — the inside
+ * already shares the `a-dp-*` header/section classes from DetailPane. */
 .a-mr-drawer {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--canvas);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   min-height: 0;
+  animation: slideIn 0.22s ease-out;
 }
 .a-mr-drawer-icon {
   width: 36px;
@@ -2169,28 +2172,28 @@
   padding-left: 26px;
 }
 
-/* Language donut. */
+/* Language donut.
+ * Plan 1 §B.1: stack vertically by default — legend below, donut takes the
+ * full card width. Donut sized fluidly via `min(220px, 60%)` so it stays
+ * legible on narrow cards but doesn't dominate wide layouts. */
 .a-act-donut-wrap {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 14px;
-  align-items: start;
-}
-/* On the Dashboard the donut card lives in the narrow right column, so
-   stack the legend (with its percentages) on top and put the cake diagram
-   underneath it. Activity-page layout stays side-by-side. */
-.p-dashboard .a-act-donut-wrap {
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+}
+.p-dashboard .a-act-donut-wrap {
+  /* Inherits the new column layout — kept as a hook for future Dashboard-
+   * specific tweaks. */
+  flex-direction: column;
 }
 .p-dashboard .a-act-donut-legend {
   width: 100%;
 }
 .a-act-donut-svg {
-  width: 120px;
-  height: 120px;
+  width: clamp(140px, 60%, 220px);
+  height: auto;
+  aspect-ratio: 1 / 1;
 }
 .a-act-donut-centre {
   font-size: 20px;
@@ -2508,11 +2511,15 @@
 }
 .a-act-donut-legend {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 4px 14px;
+  /* Two-column legend with a graceful single-column fallback for narrow cards
+   * (Plan 1 §B.1). `auto-fit` collapses the second column when the card is
+   * too narrow to fit two ≥130px-wide entries. */
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 4px 12px;
   font-size: 11px;
   align-content: start;
   padding-top: 2px;
+  width: 100%;
 }
 .a-act-donut-legend li {
   display: grid;
@@ -2707,6 +2714,16 @@
   display: flex;
   gap: 6px;
   align-items: center;
+  min-width: 0;
+
+  /* Each meta-pill text-child can overflow with ellipsis. Without this,
+   * long branch / repo / author names blow past the card edge. */
+  > * {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 .a-act-rq-age {
   font-variant-numeric: tabular-nums;

@@ -448,7 +448,7 @@ export const SEED_REPOS: Repository[] = [
 /** Map author names to their commit email so Gravatar-based avatars work
  *  in the E2E stub the same way they do against real git data. */
 const AUTHOR_EMAILS: Record<string, string> = {
-  valentin: "valentin.roehle@benova.eu",
+  valentin: "valentin@example.com",
   maren: "maren@example.com",
   tomi: "tomi@example.com",
   lea: "lea@example.com",

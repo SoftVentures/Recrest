@@ -68,6 +68,7 @@ impl ConfigStore {
             group_id: None,
             remote_url,
             provider_id,
+            ssh_key_path: None,
         };
         self.settings.repos.insert(record.id.clone(), record.clone());
         Ok(record)

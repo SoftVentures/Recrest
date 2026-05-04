@@ -1,4 +1,6 @@
-import { type PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { type PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+
+import { loadSettings, saveSettings } from "@/store/slices/settingsSlice";
 
 export type ActiveView =
   | "dashboard"
@@ -51,6 +53,22 @@ const initialState: UiState = {
   updaterProgress: null,
 };
 
+/** Toggle a repo's pinned state and persist the new list to `settings.json`
+ *  via `saveSettings` (Plan 1 §A.5). The reducer flips the local state
+ *  optimistically; the thunk reflects the patched list back to disk. The
+ *  `extraReducers` below also re-hydrate from the save response, so the UI
+ *  stays in sync if the backend rejects or normalises the payload. */
+export const togglePinnedRepoPersisted = createAsyncThunk<void, string, { state: { ui: UiState } }>(
+  "ui/togglePinnedRepoPersisted",
+  async (repoId, { dispatch, getState }) => {
+    const current = getState().ui.pinnedRepoIds;
+    const next = current.includes(repoId)
+      ? current.filter((id) => id !== repoId)
+      : [...current, repoId];
+    await dispatch(saveSettings({ pinnedRepoIds: next })).unwrap();
+  },
+);
+
 const uiSlice = createSlice({
   name: "ui",
   initialState,
@@ -70,11 +88,6 @@ const uiSlice = createSlice({
     setSelectedRepo(state, action: PayloadAction<string | null>) {
       state.selectedRepoId = action.payload;
     },
-    togglePinnedRepo(state, action: PayloadAction<string>) {
-      const idx = state.pinnedRepoIds.indexOf(action.payload);
-      if (idx >= 0) state.pinnedRepoIds.splice(idx, 1);
-      else state.pinnedRepoIds.push(action.payload);
-    },
     bumpRefreshNonce(state) {
       state.refreshNonce += 1;
     },
@@ -91,6 +104,19 @@ const uiSlice = createSlice({
       state.updaterProgress = action.payload;
     },
   },
+  extraReducers: (builder) => {
+    // Hydrate pinned-repo state from persisted settings (Plan 1 §A.5). The
+    // settings slice is the source of truth on disk; the UI slice mirrors
+    // it so components can read pin state with one selector.
+    const hydrate = (state: UiState, payload: { pinnedRepoIds?: string[] }) => {
+      if (Array.isArray(payload.pinnedRepoIds)) {
+        state.pinnedRepoIds = [...payload.pinnedRepoIds];
+      }
+    };
+    builder
+      .addCase(loadSettings.fulfilled, (state, action) => hydrate(state, action.payload))
+      .addCase(saveSettings.fulfilled, (state, action) => hydrate(state, action.payload));
+  },
 });
 
 export const {
@@ -99,7 +125,6 @@ export const {
   setSearchOpen,
   setActiveView,
   setSelectedRepo,
-  togglePinnedRepo,
   bumpRefreshNonce,
   setImportDialogOpen,
   setFindDialogOpen,

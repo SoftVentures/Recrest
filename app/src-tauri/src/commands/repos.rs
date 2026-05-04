@@ -164,6 +164,11 @@ pub struct RecentCommitDto {
     /// Commit author email. Optional because signed-off commits sometimes
     /// redact the original author and git2 returns an empty string there.
     pub author_email: Option<String>,
+    /// Plan 1 §A.4: Unicode-folded dedup key. The frontend can re-derive
+    /// this from `author`/`authorEmail` for legacy commits but agreeing
+    /// with the backend means there's a single canonical answer per
+    /// commit. Computed via `git::author_normalize::signature_key`.
+    pub signature_key: String,
     pub timestamp: DateTime<Utc>,
     pub repo_id: String,
     pub repo_name: String,
@@ -246,11 +251,15 @@ fn collect_recent_commits(
             .email()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
+        let display_name = author.name().unwrap_or("unknown").to_string();
+        let signature_key =
+            crate::git::author_normalize::signature_key(&display_name, email.as_deref());
         out.push(RecentCommitDto {
             sha: commit.id().to_string(),
             summary: commit.summary().unwrap_or("").to_string(),
-            author: author.name().unwrap_or("unknown").to_string(),
+            author: display_name,
             author_email: email,
+            signature_key,
             timestamp: utc_ts,
             repo_id: id.to_string(),
             repo_name: name.to_string(),

@@ -21,7 +21,7 @@ import { invoke, openExternal } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch } from "@/store/hooks";
 import { removeRepo } from "@/store/slices/reposSlice";
-import { togglePinnedRepo } from "@/store/slices/uiSlice";
+import { togglePinnedRepoPersisted } from "@/store/slices/uiSlice";
 
 export const COL_TEMPLATE = "minmax(220px, 1.6fr) minmax(130px, 0.8fr) 110px 96px 120px";
 
@@ -192,7 +192,7 @@ export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
             </IconButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => dispatch(togglePinnedRepo(repo.id))}>
+            <DropdownMenuItem onSelect={() => void dispatch(togglePinnedRepoPersisted(repo.id))}>
               <Icon name="pin" size={12} />{" "}
               <span className="ml-2">{repo.pinned ? "Unpin" : "Pin"}</span>
             </DropdownMenuItem>

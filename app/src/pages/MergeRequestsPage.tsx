@@ -27,6 +27,7 @@ import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChange
 import { MrListSkeleton } from "@/components/molecules/skeletons/MrListSkeleton";
 import { ReviewerChipsSkeleton } from "@/components/molecules/skeletons/ReviewerChipsSkeleton";
 import { TimelineEventsSkeleton } from "@/components/molecules/skeletons/TimelineEventsSkeleton";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { invoke } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -44,6 +45,7 @@ interface Row {
 
 export function MergeRequestsPage() {
   const { t } = useTranslation();
+  useScrollRestoration("merge-requests");
 
   const prsItems = useAppSelector((s) => s.prs.items);
   const repos = useAppSelector((s) => s.repos.items);

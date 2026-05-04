@@ -10,7 +10,7 @@ const meta: Meta<typeof AuthorAvatar> = {
 export default meta;
 
 export const Initials: StoryObj<typeof AuthorAvatar> = {
-  args: { name: "Valentin Röhle" },
+  args: { name: "Anna Müller" },
 };
 
 export const Single: StoryObj<typeof AuthorAvatar> = { args: { name: "octocat" } };

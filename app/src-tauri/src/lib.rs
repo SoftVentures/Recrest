@@ -8,7 +8,7 @@ mod update;
 use std::sync::Arc;
 
 use tauri::{
-    Manager,
+    AppHandle, Manager,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
@@ -48,6 +48,21 @@ fn set_app_user_model_id() {
     }
 }
 
+/// Bring the main window forward — show, unminimize, focus. Used by the
+/// tray click handler, the Show menu item, and the macOS Reopen handler
+/// (Spotlight relaunch on a tray-hidden app). Also clears `skip_taskbar`
+/// because Plan 1 §C.4 sets it on a tray-hidden boot to keep the app off
+/// the Windows taskbar; once the user opens the window we want a normal
+/// taskbar entry again.
+fn show_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.set_skip_taskbar(false);
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
@@ -74,11 +89,7 @@ pub fn run() {
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.show();
-                let _ = w.unminimize();
-                let _ = w.set_focus();
-            }
+            show_main_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -197,6 +208,7 @@ pub fn run() {
             }
 
             let start_minimized = config.settings().start_minimized;
+            let close_to_tray = config.settings().close_to_tray;
 
             // Hydrate each provider with any persisted self-hosted base URL so
             // the first API call after startup already targets the right
@@ -243,9 +255,23 @@ pub fn run() {
 
             // Honour the "Start minimized" preference — hide the main window to
             // the tray instead of showing it on boot.
+            // Plan 1 §C.4: "Start minimized" needs to honour `closeToTray`.
+            //   - both on  → hide to the tray (no taskbar entry).
+            //   - start_minimized + close_to_tray=false → minimize into the
+            //     taskbar (still visible, just collapsed).
+            //   - start_minimized=false → leave the window visible (default).
             if start_minimized {
                 if let Some(w) = handle.get_webview_window("main") {
-                    let _ = w.hide();
+                    if close_to_tray {
+                        // Hide entirely; user surfaces it via tray icon or
+                        // (on macOS) Spotlight reopen — see §C.1.
+                        let _ = w.set_skip_taskbar(true);
+                        let _ = w.hide();
+                    } else {
+                        // Real "minimize to taskbar" so user has a Windows-
+                        // standard reentry point.
+                        let _ = w.minimize();
+                    }
                 }
             }
 
@@ -262,13 +288,7 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
-                    "show" => {
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.show();
-                            let _ = w.unminimize();
-                            let _ = w.set_focus();
-                        }
-                    }
+                    "show" => show_main_window(app),
                     "hide" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.hide();
@@ -286,12 +306,7 @@ pub fn run() {
                         ..
                     } = event
                     {
-                        let app = tray.app_handle();
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.show();
-                            let _ = w.unminimize();
-                            let _ = w.set_focus();
-                        }
+                        show_main_window(tray.app_handle());
                     }
                 })
                 .build(app)?;
@@ -459,7 +474,24 @@ pub fn run() {
         commands::dev::dev_panic,
     ]);
 
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running recrest application");
+    let app = builder
+        .build(tauri::generate_context!())
+        .expect("error while building recrest application");
+
+    app.run(|_app_handle, _event| {
+        // Plan 1 §C.1: macOS dispatches Spotlight / Dock launches against an
+        // already-running app as `Reopen`, NOT `single_instance`. When the
+        // user has closed the window to the tray (`hide()`), we'd otherwise
+        // sit silent on relaunch. Bring the window forward instead so
+        // cmd-space → "Recrest" → Enter actually surfaces the app.
+        // Gated to macOS because `RunEvent::Reopen` only exists there.
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Reopen {
+            has_visible_windows: false,
+            ..
+        } = _event
+        {
+            show_main_window(_app_handle);
+        }
+    });
 }

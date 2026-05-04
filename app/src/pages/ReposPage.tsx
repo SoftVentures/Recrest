@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { RepoListSkeleton } from "@/components/molecules/skeletons/RepoListSkeleton";
 import { RepoList } from "@/components/organisms/repos/RepoList";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setSelectedRepo } from "@/store/slices/uiSlice";
 
@@ -13,6 +14,7 @@ interface ReposPageProps {
 }
 
 export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
+  useScrollRestoration(dirtyOnly ? "dirty" : "repos");
   const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
   const loading = useAppSelector((s) => s.repos.loading);

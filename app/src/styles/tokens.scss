@@ -168,11 +168,16 @@ $ui-scales: ("sm": 0.9, "md": 1, "lg": 1.12, "xl": 1.25);
     --ui-scale: #{$value};
   }
 }
+/* Plan 1 §D.6: a second, user-driven scale knob set via the Cmd+/-/0
+ * hotkeys (and a future Settings slider) that multiplies on top of the
+ * `data-font-size` selector above. `useThemeEffect` writes
+ * `--ui-scale-pref` on `<html>` from `settings.uiScale`. Default 1 so a
+ * fresh install with no preference is identical to before. */
 #root {
-  transform: scale(var(--ui-scale, 1));
+  transform: scale(calc(var(--ui-scale, 1) * var(--ui-scale-pref, 1)));
   transform-origin: top left;
-  width: calc(100vw / var(--ui-scale, 1));
-  height: calc(100vh / var(--ui-scale, 1));
+  width: calc(100vw / (var(--ui-scale, 1) * var(--ui-scale-pref, 1)));
+  height: calc(100vh / (var(--ui-scale, 1) * var(--ui-scale-pref, 1)));
   overflow: hidden;
 }
 

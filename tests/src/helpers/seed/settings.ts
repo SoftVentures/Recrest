@@ -17,6 +17,17 @@ export const SEED_SETTINGS: AppSettings = {
     mergeReady: true,
   },
   crashReporting: false,
+  // Phase 0.1 additive defaults — keep aligned with `app/src/store/index.ts`.
+  pinnedRepoIds: [],
+  authorAliases: {},
+  uiScale: 1.0,
+  repoListViewMode: "grouped",
+  repoListSort: { field: "", direction: "asc" },
+  repoImportDefaults: { groupId: null, providerId: null },
+  defaultScanPath: null,
+  terminal: { id: null, profile: null, customCommand: null },
+  commitMessageTemplate: "{{author}}: {{date}}",
+  privacy: { fetchFavicons: false },
 };
 
 export const SEED_SETTINGS_DARK: AppSettings = {

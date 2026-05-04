@@ -34,6 +34,7 @@ import { useCheckRuns } from "@/hooks/useCheckRuns";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { usePrEvents } from "@/hooks/usePrEvents";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   computeAuthorClock,
   computeChurn,
@@ -54,8 +55,13 @@ import {
 } from "@/lib/activityStats";
 import { useAppSelector } from "@/store/hooks";
 
+/** Stable empty-aliases reference so `useAppSelector` doesn't return a new
+ *  literal `{}` on every render when the field is absent. */
+const EMPTY_ALIASES: Record<string, string> = {};
+
 export function ActivityPage() {
   const { t } = useTranslation();
+  useScrollRestoration("activity");
   const repos = useEnrichedRepos();
   const { commits, loading: commitsLoading } = useRecentCommits({ days: ACTIVITY_DAYS });
   const { events: prEvents, loading: prEventsLoading } = usePrEvents({
@@ -132,9 +138,10 @@ export function ActivityPage() {
     () => computeStackedChart(filteredCommits, today),
     [filteredCommits, today],
   );
+  const authorAliases = useAppSelector((s) => s.settings.authorAliases) ?? EMPTY_ALIASES;
   const leaderboard = useMemo(
-    () => computeLeaderboard(filteredCommits, today),
-    [filteredCommits, today],
+    () => computeLeaderboard(filteredCommits, today, 5, authorAliases),
+    [filteredCommits, today, authorAliases],
   );
 
   const sparkline = useMemo(() => {

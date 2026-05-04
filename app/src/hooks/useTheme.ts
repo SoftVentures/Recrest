@@ -60,4 +60,14 @@ export function useThemeEffect(): void {
     root.setAttribute("data-reduced-motion", reducedMotion ? "true" : "false");
     root.setAttribute("data-underline-links", underlineLinks ? "true" : "false");
   }, [highContrast, reducedMotion, underlineLinks]);
+
+  // Plan 1 §D.6: writes the user's UI-scale preference under
+  // `--ui-scale-pref` so it multiplies cleanly with the existing
+  // `--ui-scale` knob driven by `data-font-size` (sm/md/lg/xl). The
+  // combined transform happens in tokens.scss on `#root`. Defaults to 1.0
+  // when the setting is missing.
+  const uiScale = useAppSelector((s) => s.settings.uiScale ?? 1.0);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--ui-scale-pref", String(uiScale));
+  }, [uiScale]);
 }

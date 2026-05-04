@@ -64,6 +64,18 @@ export const store = configureStore({
             mergeReady: true,
           },
           crashReporting: false,
+          // Phase 0.1 additive defaults — keep in sync with settingsSlice and
+          // Rust `AppSettings::default()`.
+          pinnedRepoIds: [],
+          authorAliases: {},
+          uiScale: 1.0,
+          repoListViewMode: "grouped",
+          repoListSort: { field: "", direction: "asc" },
+          repoImportDefaults: { groupId: null, providerId: null },
+          defaultScanPath: null,
+          terminal: { id: null, profile: null, customCommand: null },
+          commitMessageTemplate: "{{author}}: {{date}}",
+          privacy: { fetchFavicons: false },
           accent: persisted.accent ?? DEFAULT_ACCENT,
           font: persisted.font ?? DEFAULT_FONT,
           fontSize: persisted.fontSize ?? DEFAULT_FONT_SIZE,

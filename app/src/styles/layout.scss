@@ -858,6 +858,95 @@
   to   { transform: translateX(0); opacity: 1; }
 }
 
+/* ─── Shared Drawer primitive (Phase 0.2) ───
+ * Used by `MergeRequestsPage`'s MR drawer and the repo detail PR drawer.
+ * Visual envelope mirrors `.a-detail` (canvas background, single border,
+ * slide-in animation). Inside content uses the `a-dp-*` header/section
+ * classes so the body looks identical to DetailPane.
+ *
+ * Default placement is "fixed to the right edge of the viewport" (overlay
+ * mode) so callers don't need to reserve grid space. Pages that already
+ * place a side panel inside their grid can override `position` to `static`
+ * via a wrapping class. */
+.a-drawer {
+  position: fixed;
+  top: 32px; /* leaves the titlebar area visible */
+  bottom: 0;
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideIn 0.22s ease-out;
+  z-index: 30;
+  box-shadow: var(--shadow-pop);
+}
+.a-drawer.a-drawer-side-right {
+  right: 0;
+}
+.a-drawer.a-drawer-side-left {
+  left: 0;
+}
+.a-drawer-side-right {
+  border-left: 1px solid var(--border);
+}
+.a-drawer-side-left {
+  border-right: 1px solid var(--border);
+  animation-name: slideInLeft;
+}
+.a-drawer-hdr {
+  flex-shrink: 0;
+}
+.a-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.a-drawer-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+}
+.a-drawer-tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.a-drawer-tabbar {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.a-drawer-tab {
+  background: transparent;
+  border: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+
+  &:hover { color: var(--ink-1); }
+  &.active {
+    color: var(--ink-0);
+    border-bottom-color: var(--accent);
+  }
+}
+.a-drawer-tabpanel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+@keyframes slideInLeft {
+  from { transform: translateX(-16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
 .a-dp-hdr {
   display: flex;
   align-items: flex-start;

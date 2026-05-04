@@ -14,6 +14,7 @@ import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 
 import App from "@/App";
+import { ConfirmProvider } from "@/components/atoms/ConfirmDialog";
 import "@/i18n";
 import { store } from "@/store";
 import "@/styles/globals.css";
@@ -37,7 +38,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter future={ROUTER_FUTURE}>
-        <App />
+        <ConfirmProvider>
+          <App />
+        </ConfirmProvider>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>,

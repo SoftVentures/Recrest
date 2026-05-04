@@ -1,1 +1,20 @@
+#!/usr/bin/env sh
+# Two-stage pre-commit:
+#   1. `lint-staged` — auto-formats and lints just the staged files (fast).
+#   2. `yarn verify` — full typecheck, vitest suite, cargo check, cargo test,
+#      cargo clippy. Slower (~30–60s warm, longer cold) but catches
+#      cross-file regressions that lint-staged can't see (broken imports
+#      after a rename, a Rust DTO change that breaks a TS consumer, etc.).
+#
+# Bypass for emergencies (e.g. WIP commits on a feature branch):
+#   git commit --no-verify
+#
+# If `verify` becomes too slow on cold runs (Rust target/ cache wiped, cold
+# cargo test), drop to a faster subset:
+#   yarn typecheck && yarn rust:check
+# and run `yarn verify` manually before pushing.
+
+set -e
+
 yarn lint-staged
+yarn verify
