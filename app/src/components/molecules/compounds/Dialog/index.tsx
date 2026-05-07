@@ -5,10 +5,21 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export const Dialog = DialogPrimitive.Root;
-export const DialogTrigger = DialogPrimitive.Trigger;
-export const DialogClose = DialogPrimitive.Close;
-export const DialogPortal = DialogPrimitive.Portal;
+// Wrap the bare Radix primitives as function components instead of `const`
+// aliases so `react-refresh/only-export-components` recognises every export as
+// a component and Fast Refresh keeps working in this file.
+export function Dialog(props: ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root {...props} />;
+}
+export function DialogTrigger(props: ComponentProps<typeof DialogPrimitive.Trigger>) {
+  return <DialogPrimitive.Trigger {...props} />;
+}
+export function DialogClose(props: ComponentProps<typeof DialogPrimitive.Close>) {
+  return <DialogPrimitive.Close {...props} />;
+}
+export function DialogPortal(props: ComponentProps<typeof DialogPrimitive.Portal>) {
+  return <DialogPrimitive.Portal {...props} />;
+}
 
 export function DialogOverlay({
   className,

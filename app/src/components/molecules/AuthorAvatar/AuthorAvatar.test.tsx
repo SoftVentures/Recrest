@@ -30,9 +30,17 @@ describe("AuthorAvatar", () => {
   });
 
   it("baut eine Gravatar-URL aus einer E-Mail", () => {
-    const { container } = render(<AuthorAvatar name="Grav" email="alice@example.com" />);
+    // `@example.com` is suppressed on purpose (dev-seed convention — the
+    // domain always 404s on Gravatar so we skip the request entirely).
+    // Use a real-looking address here so the Gravatar fallback path runs.
+    const { container } = render(<AuthorAvatar name="Grav" email="alice@gmail.com" />);
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
     expect(img?.getAttribute("src")).toMatch(/^https:\/\/www\.gravatar\.com\/avatar\//);
+  });
+
+  it("überspringt Gravatar für Dev-Seed-Mails (.example.com)", () => {
+    const { container } = render(<AuthorAvatar name="Seed" email="alice@example.com" />);
+    expect(container.querySelector("img")).toBeNull();
   });
 });

@@ -44,4 +44,26 @@ describe("Sidebar", () => {
     expect(screen.getByTestId("nav-repos")).toBeInTheDocument();
     expect(screen.getByTestId("nav-merge-requests")).toBeInTheDocument();
   });
+
+  it("always renders the Settings entry pinned in the footer", () => {
+    render(
+      <Provider store={store}>
+        <MemoryRouter future={ROUTER_FUTURE}>
+          <TooltipProvider delayDuration={0}>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    const settings = screen.getByTestId("nav-settings");
+    expect(settings).toBeInTheDocument();
+
+    // The Settings entry must live inside `.a-side-foot` so it's pinned
+    // to the bottom of the sidebar regardless of how many nav items are
+    // above it. This guards against regressions where it could end up
+    // inside `.a-side-nav` and scroll out of view.
+    const foot = settings.closest(".a-side-foot");
+    expect(foot).not.toBeNull();
+  });
 });

@@ -224,14 +224,30 @@ body {
   font-feature-settings: "cv11", "ss01", "ss03";
   font-size: 13px;
 }
-#root {
-  height: 100vh;
-}
+/* `#root` height/width are owned by the UI-scale block above (line ~176)
+ * which sets them to `calc(100vh / scale)` so the post-scale layout box
+ * matches the viewport exactly. Re-declaring `height: 100vh` here would
+ * override that calc (later rule wins at equal specificity) and, for any
+ * `--ui-scale > 1`, leave the rendered `#root` taller than the viewport
+ * (e.g. at "lg" / 1.12 → 800 × 1.12 = 896px on an 800px viewport). The
+ * sidebar's footer (Settings) then sat below the viewport bottom even
+ * though the layout chain itself was bounded. */
 
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* `100%` of `#root`, NOT `100vh`. `#root` is sized to `100vh / ui-scale`
+   * so that after its `transform: scale(ui-scale)` the rendered box matches
+   * the viewport. Using `100vh` here would re-introduce the unscaled value
+   * (and post-scale would render at 100vh × ui-scale — e.g. 896px on an
+   * 800px viewport at "lg" / 1.12), pushing the sidebar's footer below the
+   * viewport. `max-height: 100%` + `overflow: hidden` defend against any
+   * child whose `min-height: auto` would otherwise grow this beyond the
+   * parent height. */
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: var(--app-bg);
   color: var(--ink-1);
 }
@@ -370,7 +386,15 @@ html[data-chrome="win11"] .app {
 .shell {
   flex: 1;
   display: flex;
+  /* `min-height: 0` lets this flex item shrink below its content's min-content
+   * size; without it the inner `.a-app` grid would push `.shell` (and the
+   * outer `.app`) past the viewport. `min-width: 0` mirrors this on the
+   * horizontal axis so children with intrinsic widths can't blow past 100vw.
+   * `overflow: hidden` is the final defence — anything that still escapes the
+   * grid bounds is clipped here instead of resizing the chain. */
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Keyboard kbd */
@@ -613,6 +637,30 @@ body,
     padding: 0 8px;
     font-size: 11px;
     border-radius: 5px;
+  }
+
+  /* M6: destructive tone for buttons that wipe state (factory reset,
+     remove repo, clear token). Driven by either the `.destructive`
+     modifier class OR `data-tone="destructive"` attribute so callers can
+     stay declarative without adding a class. Uses `--red` from the token
+     palette so light/dark themes get the right shade. */
+  &.destructive,
+  &[data-tone="destructive"] {
+    background: var(--red);
+    color: #ffffff;
+    border-color: var(--red);
+
+    &:hover {
+      /* Slightly darker on hover — `color-mix` keeps the math local to the
+         token without inventing a separate `--red-strong` variable. */
+      background: color-mix(in srgb, var(--red) 88%, #000);
+      border-color: color-mix(in srgb, var(--red) 88%, #000);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   }
 }
 

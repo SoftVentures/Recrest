@@ -1,13 +1,23 @@
 /* ─── Merge Requests (list + drawer) ─── */
+/* Page-level layout mirrors `.a-branches`: a flat top toolbar followed by
+ * a single rounded container for the rows. The drawer is the shared
+ * floating overlay primitive (`.a-drawer`) — it sits above the list, so
+ * the page no longer reserves a grid column for it. Keeping the page in
+ * normal block flow (no `height: 100%`) means short result sets don't
+ * leave the bottom of the page empty; long ones scroll via the parent
+ * `.a-content-scroll`, exactly like Branches/Activity. */
 .a-mr {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  min-height: 0;
-  height: 100%;
+  padding-bottom: 60px;
+  min-width: 0;
 }
-.a-mr.with-drawer {
-  grid-template-columns: 1fr minmax(360px, 420px);
+.a-mr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
 }
 .a-mr-list {
   display: flex;
@@ -15,16 +25,8 @@
   min-width: 0;
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
-}
-.a-mr-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
 }
 .chip {
   display: inline-flex;
@@ -56,9 +58,8 @@
 }
 
 .a-mr-rows {
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .a-mr-row {
   display: grid;
@@ -77,6 +78,9 @@
   text-align: left;
   font-family: inherit;
   color: inherit;
+}
+.a-mr-row:last-child {
+  border-bottom: 0;
 }
 .a-mr-row:hover {
   background: var(--surface-hover);
@@ -144,19 +148,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* MR drawer — visually aligned with the repo DetailPane (`.a-detail`) so
- * both views share the same right-side panel envelope (canvas background,
- * single left border, slide-in animation). Outer shell only — the inside
- * already shares the `a-dp-*` header/section classes from DetailPane. */
-.a-mr-drawer {
-  background: var(--canvas);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  min-height: 0;
-  animation: slideIn 0.22s ease-out;
-}
+/* MR drawer — outer envelope is now the shared `.a-drawer` primitive in
+ * `layout.scss`; the icon block below is reused by the body content
+ * (`MergeRequestDetailPanel`) so it stays here. */
 .a-mr-drawer-icon {
   width: 36px;
   height: 36px;
@@ -1149,6 +1143,13 @@
   border-color: var(--border-strong);
   color: var(--ink-0);
 }
+/* DA.5: aria-disabled buttons (e.g. "Pull all" with no behind branches)
+ * need a visible disabled affordance for sighted users. Pointer-events
+ * stay live so the underlying tooltip still shows on hover. */
+.a-dash-qbtn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .a-dash-qbtn svg {
   color: var(--accent);
 }
@@ -1498,6 +1499,12 @@
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
 }
+.a-act-kpi-sub {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
 .a-act-kpi.tone-up .a-act-kpi-delta,
 .a-act-kpi-delta.tone-up {
   color: var(--color-success, var(--green));
@@ -1798,14 +1805,24 @@
   display: grid;
   grid-template-columns: repeat(14, 1fr);
   gap: 5px;
-  height: 110px;
+  /* Card grew but the bars stayed pinned to a 110px strip — looked tiny next
+   * to the LanguageDonut beside it. Let the chart take the full vertical
+   * slack inside the card while keeping a sensible floor for short cards. */
+  flex: 1 1 auto;
+  min-height: 140px;
   align-items: end;
   padding-top: 4px;
+  /* Bars must clip at the top edge — without this the column-reverse stack
+   * can overflow the card when totals spike. */
+  overflow: hidden;
 }
 .a-act-chart-col {
   height: 100%;
   display: flex;
   align-items: end;
+  /* Each column is its own flex parent so the bar can size to a percentage
+   * of the column height without leaking past the grid track. */
+  min-width: 0;
 }
 .a-act-chart-bar {
   width: 100%;
@@ -2107,10 +2124,33 @@
 .a-act-ring-fill {
   fill: none;
   stroke-width: 8;
-  stroke-linecap: round;
+  /* Butt linecap so adjacent stacked segments meet cleanly without rounded
+   * caps overlapping into the next colour. Single-segment rings still read
+   * fine because the start/end of the ring are at the same point. */
+  stroke-linecap: butt;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
   transition: stroke-dashoffset 0.4s ease;
+}
+.a-act-ring-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+}
+.a-act-ring-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.a-act-ring-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 .a-act-ring-label {
   display: flex;
@@ -2696,13 +2736,17 @@
   outline-offset: 1px;
 }
 .a-act-rq-body {
-  display: block;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 .a-act-rq-title {
   font-size: 12px;
   color: var(--ink-0);
   font-weight: 500;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3267,4 +3311,328 @@
   .a-act-anim-barh {
     animation: none;
   }
+}
+
+/* ----------------------------------------------------------------------------
+ * D.1: RepoList view toggle + Card view
+ *
+ * The shell wraps RepoList contents and acts as a CSS container so the layout
+ * can collapse to card mode on narrow viewports independently of the user's
+ * stored preference. Containers below ~720px wide always render the card grid.
+ * --------------------------------------------------------------------------*/
+
+.repo-page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 3px;
+  width: fit-content;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.repo-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.repo-view-btn:hover {
+  color: var(--ink-1);
+  background: var(--surface-1);
+}
+
+.repo-view-btn.is-active {
+  color: var(--ink-1);
+  background: var(--surface-0, var(--background));
+  border-color: var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.repo-list-shell {
+  container-type: inline-size;
+}
+
+/* Layout selection — both .repo-list-table and .repo-card-grid are rendered;
+ * the wrapper's `data-view` attribute and the @container query below decide
+ * which one is visible. This keeps the @container fallback purely CSS. */
+.repo-list-shell[data-view="card"] .repo-list-table {
+  display: none;
+}
+
+.repo-list-shell[data-view="card"] .repo-card-grid {
+  display: grid;
+}
+
+.repo-list-shell:not([data-view="card"]) .repo-card-grid {
+  display: none;
+}
+
+.repo-card-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 4px;
+}
+
+.repo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  text-align: left;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    transform 120ms ease;
+  /* Stagger the entry animation in the same way RepoRow does. */
+  animation: repo-card-in 240ms ease both;
+  animation-delay: calc(var(--i, 0) * 24ms);
+}
+
+@keyframes repo-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .repo-card {
+    animation: none;
+  }
+}
+
+.repo-card:hover {
+  border-color: var(--accent, var(--border));
+  background: var(--surface-2);
+}
+
+.repo-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 79, 140, 255), 0.2);
+}
+
+.repo-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.repo-card-body {
+  min-width: 0;
+}
+
+.repo-card-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-card-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.repo-card-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.repo-card-status {
+  font-variant-numeric: tabular-nums;
+}
+
+/* R.1: Container-query fallback. The grouped layout puts wide table rows
+   into a column that doesn't fit below ~720px, so we collapse it to the
+   card grid. The flat layout already wraps cleanly at narrow widths
+   (single-column rows) so the user's explicit choice is respected — only
+   `data-view="grouped"` triggers the auto-card swap, matching the
+   ResizeObserver branch in RepoList. */
+@container (max-width: 720px) {
+  .repo-list-shell[data-view="grouped"] .repo-list-table {
+    display: none !important;
+  }
+  .repo-list-shell[data-view="grouped"] .repo-card-grid {
+    display: grid !important;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * R.2: ReposPage filter / sort bar
+ * --------------------------------------------------------------------------*/
+
+.p-repos {
+  .repo-page-toolbar-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .repo-page-toolbar {
+    /* The base styles still come from the original `.repo-page-toolbar`
+       block above; we just zero its margin so the new flex row controls
+       spacing instead. */
+    margin-bottom: 0;
+  }
+
+  .repo-page-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+
+  .repo-page-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .repo-page-chip {
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 1;
+    border-radius: 6px;
+    color: var(--ink-3);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .repo-page-chip:hover {
+    color: var(--ink-1);
+    background: var(--surface-1);
+  }
+
+  .repo-page-chip.is-active {
+    color: var(--ink-1);
+    background: var(--surface-0, var(--background));
+    border-color: var(--border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .repo-page-sort {
+    height: 32px;
+    min-width: 180px;
+    font-size: 12px;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * BR.1: Branches fold-state visuals
+ *
+ * The group used to be a native `<details>` / `<summary>`. The HTML spec
+ * forbids interactive content inside `<summary>`, so the fetch button has
+ * been split into a sibling within the header strip. The collapse handle is
+ * now a `<div role="button">` with the class `.a-br-fold-toggle`, which
+ * captures Enter/Space and click for parity with the native disclosure.
+ * --------------------------------------------------------------------------*/
+
+.p-branches {
+  .a-br-fold-toggle {
+    display: contents;
+    cursor: pointer;
+    outline: none;
+  }
+  .a-br-fold-toggle:focus-visible > .a-br-grouph-chev {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .a-br-grouph-chev {
+    flex: 0 0 auto;
+    color: var(--ink-3);
+    transition: transform 120ms ease;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * G.2: Topbar Local / Global scope toggle next to "Add repository"
+ * --------------------------------------------------------------------------*/
+
+.a-topbar-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.a-topbar-scope-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 6px;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.a-topbar-scope-btn > svg {
+  flex-shrink: 0;
+}
+
+.a-topbar-scope-btn:hover {
+  color: var(--ink-1);
+  background: var(--surface-1);
+}
+
+.a-topbar-scope-btn.is-active {
+  color: var(--ink-1);
+  background: var(--surface-0, var(--background));
+  border-color: var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }

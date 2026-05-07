@@ -6,6 +6,7 @@ import type { CheckRunSummary } from "@recrest/shared";
 
 import { CardShell } from "@/components/organisms/activity/cards/CardShell";
 import type { PassRateDay } from "@/lib/activityAggregates";
+import { monotoneCubic } from "@/lib/charts/smoothLine";
 
 interface Props {
   rows: PassRateDay[];
@@ -69,12 +70,13 @@ export function CiPassRateCard({ rows, summaries, loading }: Props) {
     const y = padT + (1 - r.rate) * plotH;
     return { x, y };
   });
-  const line = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(" ");
+  const line = monotoneCubic(points);
+  // Close the smoothed line to the baseline so the area fill picks up the
+  // same curve shape as the stroke (no straight-line bottom under a smooth
+  // top).
   const area =
     points.length > 0
-      ? `${line} L ${points[points.length - 1]!.x.toFixed(1)} ${padT + plotH} L ${points[0]!.x.toFixed(1)} ${padT + plotH} Z`
+      ? `${line} L${points[points.length - 1]!.x.toFixed(3)},${(padT + plotH).toFixed(3)} L${points[0]!.x.toFixed(3)},${(padT + plotH).toFixed(3)} Z`
       : "";
 
   const totalPassed = rows.reduce((a, r) => a + r.passed, 0);

@@ -62,6 +62,7 @@ export const TauriCommand = {
   // settings
   GET_SETTINGS: "get_settings",
   UPDATE_SETTINGS: "update_settings",
+  FACTORY_RESET: "factory_reset",
 
   // window
   SAVE_WINDOW_STATE: "save_window_state",

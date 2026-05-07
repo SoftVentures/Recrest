@@ -36,7 +36,18 @@
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
-    "clear": "Clear"
+    "clear": "Clear",
+    "add_scope_label": "Add scope",
+    "add_scope": {
+      "local": "Local",
+      "global": "Global"
+    }
+  },
+  "toast": {
+    "reload": {
+      "success": "Refreshed",
+      "error": "Refresh failed: {{detail}}"
+    }
   },
   "states": {
     "loading": "Loading…",
@@ -62,6 +73,29 @@
     },
     "group": {
       "pinned": "Pinned"
+    },
+    "view": {
+      "toggle_label": "View mode",
+      "grouped": "Grouped",
+      "flat": "Flat",
+      "card": "Card"
+    },
+    "filter": {
+      "label": "Status filter",
+      "dirty": "Dirty",
+      "clean": "Clean",
+      "ahead": "Ahead",
+      "behind": "Behind"
+    },
+    "sort": {
+      "label": "Sort by",
+      "options": {
+        "default": "Default",
+        "name_asc": "Name (A → Z)",
+        "name_desc": "Name (Z → A)",
+        "modified_desc": "Last modified",
+        "status": "Status"
+      }
     }
   },
   "dash": {
@@ -96,7 +130,14 @@
       "clone_tooltip": "Clone from a URL or import from GitHub / GitLab / Bitbucket",
       "find": "Find across repos",
       "workspace": "Open workspace",
-      "workspace_tooltip": "Open a multi-root IDE workspace with all scanned repos"
+      "workspace_tooltip": "Open a multi-root IDE workspace with all scanned repos",
+      "open_ide": "Open in IDE",
+      "open_ide_tooltip": "Open the most recently active repo in your default IDE",
+      "open_ide_error": "Could not open the repo in your IDE",
+      "recent_commits": "Recent commits",
+      "create_branch": "Create branch",
+      "pull_all": "Pull all",
+      "coming_soon": "Coming soon"
     }
   },
   "titlebar": {
@@ -192,7 +233,11 @@
       "ci_health": "CI health",
       "ci_failing_one": "{{count}} failing",
       "ci_failing_other": "{{count}} failing",
-      "ci_none": "no check runs yet"
+      "ci_none": "no check runs yet",
+      "ci_runs": "{{passed}} / {{total}} runs",
+      "ci_legend_passed": "{{count}} passed",
+      "ci_legend_failed": "{{count}} failed",
+      "ci_legend_other": "{{count}} other"
     },
     "cards": {
       "chart_title": "Commit activity · 14 days",
@@ -241,8 +286,24 @@
       "chip_prs_merged_other": "{{count}} MRs merged",
       "chip_prs_opened_one": "{{count}} MR opened",
       "chip_prs_opened_other": "{{count}} MRs opened",
-      "chip_checks_failed_one": "{{count}} check failed",
-      "chip_checks_failed_other": "{{count}} checks failed"
+      "chip_checks_failed": {
+        "github": {
+          "one": "{{count}} check failed",
+          "other": "{{count}} checks failed"
+        },
+        "gitlab": {
+          "one": "{{count}} pipeline failed",
+          "other": "{{count}} pipelines failed"
+        },
+        "bitbucket": {
+          "one": "{{count}} pipeline failed",
+          "other": "{{count}} pipelines failed"
+        },
+        "default": {
+          "one": "{{count}} check failed",
+          "other": "{{count}} checks failed"
+        }
+      }
     }
   },
   "settings": {
@@ -304,8 +365,6 @@
       "body": "{{repo}} · #{{number}} {{pr_title}}"
     },
     "ci_failed": {
-      "title": "CI failed",
-      "body": "{{repo}} · #{{number}} {{pr_title}}",
       "github": {
         "title": "Checks failed",
         "body": "{{repo}} · #{{number}} {{pr_title}}"
@@ -316,6 +375,10 @@
       },
       "bitbucket": {
         "title": "Pipelines failed",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "default": {
+        "title": "CI failed",
         "body": "{{repo}} · #{{number}} {{pr_title}}"
       }
     },

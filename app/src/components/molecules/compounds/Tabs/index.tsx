@@ -4,7 +4,12 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 import { cn } from "@/lib/utils";
 
-export const Tabs = TabsPrimitive.Root;
+// Wrap the bare Radix primitive as a function component instead of a `const`
+// alias so `react-refresh/only-export-components` recognises it as a component
+// and Fast Refresh keeps working in this file.
+export function Tabs(props: ComponentProps<typeof TabsPrimitive.Root>) {
+  return <TabsPrimitive.Root {...props} />;
+}
 
 export function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
   return (

@@ -67,6 +67,17 @@ export function OnboardingWizard() {
       >
         <StepIndicator current={idx} total={STEPS.length} />
 
+        {/*
+         * M7: history-stack contract for step authors.
+         *
+         * All step components must persist their inputs to settings/state on
+         * change (e.g. via `dispatch(saveSettings(...))` or a Tauri command).
+         * Local-only `useState()` will be lost on the Back button — the step
+         * remounts when `step` changes, so any in-component state reverts to
+         * its initial value.
+         *
+         * See history-stack contract docs in plan/01.
+         */}
         {step === "welcome" && <WelcomeStep onNext={() => goTo("basics")} />}
         {/* `goBack` is the same callback for every step; it pops the history
          * stack and is a no-op when the stack is empty. Passed unconditionally
@@ -75,7 +86,7 @@ export function OnboardingWizard() {
         {step === "folders" && <PickFolderStep onBack={goBack} onNext={() => goTo("provider")} />}
         {step === "provider" && <ConnectProviderStep onBack={goBack} onNext={() => goTo("scan")} />}
         {step === "scan" && <InitialScanStep onBack={goBack} onNext={() => goTo("done")} />}
-        {step === "done" && <DoneStep onFinish={finish} />}
+        {step === "done" && <DoneStep onBack={goBack} onFinish={finish} />}
       </DialogContent>
     </Dialog>
   );

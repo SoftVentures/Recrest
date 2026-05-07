@@ -2,6 +2,7 @@ mod auth;
 mod commands;
 mod config;
 mod git;
+mod platform;
 mod providers;
 mod update;
 
@@ -34,8 +35,11 @@ pub struct AppState {
 fn set_app_user_model_id() {
     // Must match `tauri.conf.json::identifier` so future Start-Menu entries
     // (installer-written shortcuts) and this runtime setting address the
-    // same notification channel.
-    use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+    // same notification channel. M4: routed through the high-level `windows`
+    // crate (PCWSTR + windows_core::Result) so we have a single Win32
+    // dependency instead of `windows` + `windows-sys` side-by-side.
+    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+    use windows::core::PCWSTR;
     let aumid: Vec<u16> = "eu.softventures.recrest"
         .encode_utf16()
         .chain(std::iter::once(0))
@@ -44,7 +48,7 @@ fn set_app_user_model_id() {
     // is non-fatal (notifications still work, just with the parent-process
     // name). Silently swallow so a weird Windows build doesn't crash boot.
     unsafe {
-        let _ = SetCurrentProcessExplicitAppUserModelID(aumid.as_ptr());
+        let _ = SetCurrentProcessExplicitAppUserModelID(PCWSTR(aumid.as_ptr()));
     }
 }
 
@@ -88,7 +92,18 @@ pub fn run() {
     }
 
     let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // I5: respect `--start-minimized` on a second-instance launch.
+            // The autostart plugin re-launches the binary with this arg on
+            // login; without this guard we'd surface the window every time
+            // a user logged in even though the whole point of autostart-
+            // with-tray is to stay quietly in the background. NOTE: this
+            // only applies to the single_instance callback path. The tray
+            // click and macOS Reopen handlers both call `show_main_window`
+            // directly because those *are* user-initiated surface actions.
+            if argv.iter().any(|a| a == "--start-minimized") {
+                return;
+            }
             show_main_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
@@ -98,7 +113,12 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            // Pass `--start-minimized` so the OS launches Recrest into the
+            // tray on login (paired with Plan 1 §C.4's start-minimized
+            // logic in the setup hook below). Without this arg the
+            // autostarted instance would pop the window forward, which is
+            // exactly what users disabling-on-startup don't want.
+            Some(vec!["--start-minimized".into()]),
         ))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -311,6 +331,24 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // Plan 1 §C.2: install the WM_NCHITTEST subclass on the main
+            // HWND so Windows 11 surfaces the Snap-Layouts flyout when the
+            // cursor hovers the maximize button. The frontend will push
+            // the actual button rectangles via `set_caption_button_bounds`
+            // once the React titlebar is mounted.
+            #[cfg(windows)]
+            {
+                if let Some(window) = handle.get_webview_window("main") {
+                    match window.hwnd() {
+                        Ok(hwnd) => {
+                            let raw = windows::Win32::Foundation::HWND(hwnd.0 as *mut _);
+                            platform::windows::install_subclass(raw);
+                        }
+                        Err(err) => tracing::warn!("could not get main HWND for subclass: {err}"),
+                    }
+                }
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -409,9 +447,11 @@ pub fn run() {
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
         commands::settings::update_settings,
+        commands::settings::factory_reset,
         commands::window::save_window_state,
         commands::window::load_window_state,
         commands::window::validate_window_position,
+        commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
@@ -461,9 +501,11 @@ pub fn run() {
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
         commands::settings::update_settings,
+        commands::settings::factory_reset,
         commands::window::save_window_state,
         commands::window::load_window_state,
         commands::window::validate_window_position,
+        commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
@@ -492,6 +534,15 @@ pub fn run() {
         } = _event
         {
             show_main_window(_app_handle);
+        }
+
+        // Plan 1 §C.2: tear down the WM_NCHITTEST subclass so Windows
+        // doesn't keep our function pointer alive past process exit. Most
+        // critical for `tauri dev` where the binary reloads — without
+        // this, the next launch would re-register over a dead pointer.
+        #[cfg(windows)]
+        if let tauri::RunEvent::Exit = _event {
+            platform::windows::uninstall_subclass();
         }
     });
 }

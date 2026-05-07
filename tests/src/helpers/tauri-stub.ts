@@ -434,6 +434,24 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
       callbacks,
       convertFileSrc: (path) => path,
+      unregisterListener: (_event, id) => { callbacks.delete(id); },
+      plugins: {
+        event: {
+          listen: (_event, _target, handler) => transformCallback(handler),
+          unlisten: (_event, id) => { callbacks.delete(id); },
+          unregisterListener: (_event, id) => { callbacks.delete(id); },
+        },
+      },
+    },
+  });
+  // \`@tauri-apps/api/event::_unlisten\` reaches for
+  // \`__TAURI_EVENT_PLUGIN_INTERNALS__.unregisterListener\` directly. Without
+  // this global, every component that calls \`listen()\` throws on cleanup.
+  Object.defineProperty(window, "__TAURI_EVENT_PLUGIN_INTERNALS__", {
+    configurable: true,
+    writable: false,
+    value: {
+      unregisterListener: (_event, id) => { callbacks.delete(id); },
     },
   });
   Object.defineProperty(window, "__TAURI_OS_PLUGIN_INTERNALS__", {

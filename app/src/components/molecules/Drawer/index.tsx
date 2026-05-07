@@ -1,4 +1,6 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+
+import { useDrawerSwipe } from "@/hooks/useDrawerSwipe";
 
 /**
  * Shared right-side panel envelope used by `MergeRequestsPage`'s MR drawer
@@ -24,6 +26,15 @@ type DrawerCommonProps = {
   className?: string;
   /** Optional `data-testid` so callers can target the outer aside in tests. */
   testId?: string;
+  /**
+   * When true, a transparent backdrop is rendered behind the drawer; clicking
+   * it dismisses the drawer (Plan 1 §A.1). Defaults to `true` for the
+   * floating overlay variant and to `false` for the inline variant
+   * (className contains `a-drawer-inline`) — inline drawers share their
+   * column with surrounding chrome and a click-outside dismissal would
+   * conflict with the host page. Pass an explicit value to override.
+   */
+  dismissOnBackdrop?: boolean;
 };
 
 type DrawerChildrenProps = DrawerCommonProps & {
@@ -50,7 +61,26 @@ function widthFor(size: DrawerProps["size"]): string | undefined {
 }
 
 export function Drawer(props: DrawerProps) {
-  const { open, side = "right", size, onClose, header, footer, className, testId } = props;
+  const {
+    open,
+    side = "right",
+    size,
+    onClose,
+    header,
+    footer,
+    className,
+    testId,
+    dismissOnBackdrop,
+  } = props;
+  const asideRef = useRef<HTMLElement | null>(null);
+
+  // Inline drawers ride inside the host grid (`a-drawer-inline` removes the
+  // fixed-overlay positioning), so a backdrop spanning the viewport would
+  // dismiss the drawer on completely unrelated clicks. Default the inline
+  // variant to opt-out and the floating variant to opt-in; callers can
+  // still override via the explicit prop.
+  const isInline = (className ?? "").includes("a-drawer-inline");
+  const backdropEnabled = dismissOnBackdrop ?? !isInline;
 
   // ESC closes the drawer. Bound only while the drawer is open so we don't
   // intercept Escape elsewhere.
@@ -63,6 +93,15 @@ export function Drawer(props: DrawerProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // D.5: swipe-to-dismiss on touch devices. Right-side drawers close on
+  // a rightward swipe (toward the screen edge); left-side mirrors that.
+  useDrawerSwipe({
+    ref: asideRef,
+    onClose,
+    enabled: open,
+    direction: side === "left" ? "left" : "right",
+  });
+
   if (!open) return null;
 
   const widthOverride = widthFor(size);
@@ -70,26 +109,37 @@ export function Drawer(props: DrawerProps) {
   const sideClass = side === "left" ? "a-drawer-side-left" : "a-drawer-side-right";
 
   return (
-    <aside
-      className={["a-drawer", sideClass, className].filter(Boolean).join(" ")}
-      style={widthOverride ? { width: widthOverride } : undefined}
-      data-testid={testId}
-      role="complementary"
-    >
-      {header && <div className="a-drawer-hdr">{header}</div>}
-      <div className="a-drawer-body">
-        {"tabs" in props && props.tabs ? (
-          <DrawerTabs
-            tabs={props.tabs}
-            defaultTabId={props.defaultTabId}
-            onTabChange={props.onTabChange}
-          />
-        ) : (
-          props.children
-        )}
-      </div>
-      {footer && <div className="a-drawer-footer">{footer}</div>}
-    </aside>
+    <>
+      {backdropEnabled && (
+        <div
+          className="a-drawer-backdrop"
+          onClick={onClose}
+          data-testid={testId ? `${testId}-backdrop` : undefined}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        ref={asideRef}
+        className={["a-drawer", sideClass, className].filter(Boolean).join(" ")}
+        style={widthOverride ? { width: widthOverride } : undefined}
+        data-testid={testId}
+        role="complementary"
+      >
+        {header && <div className="a-drawer-hdr">{header}</div>}
+        <div className="a-drawer-body">
+          {"tabs" in props && props.tabs ? (
+            <DrawerTabs
+              tabs={props.tabs}
+              defaultTabId={props.defaultTabId}
+              onTabChange={props.onTabChange}
+            />
+          ) : (
+            props.children
+          )}
+        </div>
+        {footer && <div className="a-drawer-footer">{footer}</div>}
+      </aside>
+    </>
   );
 }
 

@@ -31,7 +31,13 @@ export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorA
   // signed as "dependabot[bot]" or a PR fetched before `authorAvatarUrl`
   // existed still picks up the right face.
   const botSrc = src ?? resolveBotAvatar(name, email, size);
-  const resolvedSrc = botSrc ?? (email ? gravatarUrl(email, size) : null);
+  // Skip the Gravatar round-trip for the well-known dev-seed domains —
+  // they always 404 (because `?d=404` is the explicit fallback signal),
+  // which fills the console with noise during `yarn dev:web` and Playwright
+  // smoke runs. Falling straight through to the coloured initials chip
+  // matches what the user sees once the request has failed anyway.
+  const skipGravatar = !!email && isDevSeedEmail(email);
+  const resolvedSrc = botSrc ?? (email && !skipGravatar ? gravatarUrl(email, size) : null);
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => {
     // Reset the failure flag whenever the underlying URL changes — otherwise
@@ -105,6 +111,17 @@ export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorA
       />
     </span>
   );
+}
+
+/** Email domains used by the dev-mode seed (and the Playwright fixture seed).
+ *  These addresses don't map to real Gravatars, so issuing the request just
+ *  produces `404` log noise — the cheap avoid-it-up-front check below saves
+ *  a few network round-trips per page load. */
+const DEV_SEED_EMAIL_DOMAINS = ["@example.com", "@renovateapp.com"] as const;
+
+function isDevSeedEmail(email: string): boolean {
+  const lower = email.toLowerCase();
+  return DEV_SEED_EMAIL_DOMAINS.some((d) => lower.endsWith(d));
 }
 
 /** Map a display name or commit-email to the canonical GitHub avatar URL

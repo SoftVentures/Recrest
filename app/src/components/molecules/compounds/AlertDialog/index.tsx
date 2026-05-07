@@ -5,9 +5,18 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { buttonVariants } from "@/components/atoms/Button";
 import { cn } from "@/lib/utils";
 
-export const AlertDialog = AlertDialogPrimitive.Root;
-export const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
-export const AlertDialogPortal = AlertDialogPrimitive.Portal;
+// Wrap the bare Radix primitives as function components instead of `const`
+// aliases so `react-refresh/only-export-components` recognises every export as
+// a component and Fast Refresh keeps working in this file.
+export function AlertDialog(props: ComponentProps<typeof AlertDialogPrimitive.Root>) {
+  return <AlertDialogPrimitive.Root {...props} />;
+}
+export function AlertDialogTrigger(props: ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
+  return <AlertDialogPrimitive.Trigger {...props} />;
+}
+export function AlertDialogPortal(props: ComponentProps<typeof AlertDialogPrimitive.Portal>) {
+  return <AlertDialogPrimitive.Portal {...props} />;
+}
 
 export function AlertDialogOverlay({
   className,

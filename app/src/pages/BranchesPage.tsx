@@ -29,6 +29,35 @@ interface BranchesByRepo {
  *  replaces it once the Rust side has finished scanning. */
 const BRANCH_CACHE_KEY = "recrest:branches-cache";
 
+/** BR.1: per-section fold state. Stored in sessionStorage so reloads keep
+ *  the user's collapse choice within the session, but a fresh window opens
+ *  every group expanded — matches the `useScrollRestoration` pattern. */
+const FOLD_KEY_PREFIX = "recrest:branches:fold:";
+
+function readFoldState(sectionId: string): boolean {
+  try {
+    const raw = window.sessionStorage.getItem(FOLD_KEY_PREFIX + sectionId);
+    // The value is the *collapsed* flag; absence = expanded (the safe
+    // default so a never-touched group is fully visible on first load).
+    return raw === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeFoldState(sectionId: string, collapsed: boolean): void {
+  try {
+    if (collapsed) {
+      window.sessionStorage.setItem(FOLD_KEY_PREFIX + sectionId, "1");
+    } else {
+      window.sessionStorage.removeItem(FOLD_KEY_PREFIX + sectionId);
+    }
+  } catch {
+    // sessionStorage may be unavailable (private mode quota) — folding
+    // becomes session-only in-memory, which is acceptable.
+  }
+}
+
 type BranchCache = Record<string, BranchInfo[]>;
 
 function loadBranchCache(): BranchCache {
@@ -276,75 +305,137 @@ export function BranchesPage() {
           </div>
         )}
 
-        {byRepo.map((g, gi) => {
-          const fetchKey = `${g.repo.id}:fetch`;
-          // `--group-base` delays the row stagger so the group itself has
-          // popped in (pgZoom, ~80ms * gi) before its rows start rising.
-          const groupBaseMs = 200 + gi * 80;
-          return (
-            <div
-              key={g.repo.id}
-              className="a-br-group"
-              style={
-                {
-                  "--gi": gi,
-                  "--group-base": `${groupBaseMs}ms`,
-                } as React.CSSProperties
-              }
-            >
-              <div className="a-br-grouph">
-                <RepoAvatar repo={g.repo} size={22} radius={5} />
-                <div className="a-br-grouph-name">{g.repo.name}</div>
-                <div className="a-br-grouph-remote">{g.repo.remoteUrl ?? ""}</div>
-                <div className="a-br-grouph-count">
-                  {g.branches.length} {t("branches.branches")}
-                </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="r-btn sm ghost a-br-grouph-fetch"
-                      disabled={busyKey === fetchKey}
-                      aria-label={t("branches.actions.fetch_tooltip")}
-                      data-testid="branches-fetch-all"
-                      data-repo-id={g.repo.id}
-                      onClick={() =>
-                        void run(
-                          fetchKey,
-                          TauriCommand.GIT_FETCH,
-                          { repoId: g.repo.id },
-                          t("branches.actions.fetched", { repo: g.repo.name }),
-                        )
-                      }
-                    >
-                      <Icon name="refresh" size={12} />
-                      <span>
-                        {busyKey === fetchKey
-                          ? t("branches.actions.fetching")
-                          : t("branches.actions.fetch")}
-                      </span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("branches.actions.fetch_tooltip")}</TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="a-br-list">
-                {g.branches.map((b, i) => (
-                  <BranchRow
-                    key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
-                    repo={g.repo}
-                    branch={b}
-                    busyKey={busyKey}
-                    t={t}
-                    run={run}
-                    animIndex={Math.min(i, 10)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        {byRepo.map((g, gi) => (
+          <BranchGroup key={g.repo.id} group={g} gi={gi} busyKey={busyKey} t={t} run={run} />
+        ))}
       </div>
+    </div>
+  );
+}
+
+function BranchGroup({
+  group,
+  gi,
+  busyKey,
+  t,
+  run,
+}: {
+  group: BranchesByRepo;
+  gi: number;
+  busyKey: string | null;
+  t: (k: string, p?: Record<string, unknown>) => string;
+  run: (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => Promise<void>;
+}) {
+  const { repo, branches } = group;
+  const sectionId = repo.id;
+  const fetchKey = `${repo.id}:fetch`;
+  // `--group-base` delays the row stagger so the group itself has popped
+  // in (pgZoom, ~80ms * gi) before its rows start rising.
+  const groupBaseMs = 200 + gi * 80;
+
+  // BR.1: collapse state persisted per-section in sessionStorage. We use a
+  // plain `<div>` + `role="button"` toggle handle instead of `<details>` /
+  // `<summary>` so the fetch button can sit inside the header strip without
+  // nesting interactive elements (HTML spec forbids interactive content
+  // inside `<summary>`; Safari/iOS swallows inner clicks). Enter/Space on
+  // the handle toggle the fold to preserve keyboard parity with the native
+  // disclosure.
+  const [collapsed, setCollapsed] = useState<boolean>(() => readFoldState(sectionId));
+
+  const toggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      writeFoldState(sectionId, next);
+      return next;
+    });
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggle();
+    }
+  };
+
+  const open = !collapsed;
+  const listId = `a-br-list-${sectionId}`;
+
+  return (
+    <div
+      className="a-br-group"
+      data-testid="branches-group"
+      data-repo-id={sectionId}
+      data-open={open || undefined}
+      style={
+        {
+          "--gi": gi,
+          "--group-base": `${groupBaseMs}ms`,
+        } as React.CSSProperties
+      }
+    >
+      <div className="a-br-grouph" data-testid="branches-group-summary">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={open}
+          aria-controls={listId}
+          className="a-br-fold-toggle"
+          data-testid="branches-group-toggle"
+          onClick={toggle}
+          onKeyDown={onKeyDown}
+        >
+          <Icon name={collapsed ? "chev" : "chevDown"} size={12} className="a-br-grouph-chev" />
+          <RepoAvatar repo={repo} size={22} radius={5} />
+          <div className="a-br-grouph-name">{repo.name}</div>
+          <div className="a-br-grouph-remote">{repo.remoteUrl ?? ""}</div>
+          <div className="a-br-grouph-count">
+            {branches.length} {t("branches.branches")}
+          </div>
+        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="r-btn sm ghost a-br-grouph-fetch"
+              disabled={busyKey === fetchKey}
+              aria-label={t("branches.actions.fetch_tooltip")}
+              data-testid="branches-fetch-all"
+              data-repo-id={repo.id}
+              onClick={() => {
+                void run(
+                  fetchKey,
+                  TauriCommand.GIT_FETCH,
+                  { repoId: repo.id },
+                  t("branches.actions.fetched", { repo: repo.name }),
+                );
+              }}
+            >
+              <Icon name="refresh" size={12} />
+              <span>
+                {busyKey === fetchKey
+                  ? t("branches.actions.fetching")
+                  : t("branches.actions.fetch")}
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t("branches.actions.fetch_tooltip")}</TooltipContent>
+        </Tooltip>
+      </div>
+      {open && (
+        <div className="a-br-list" id={listId}>
+          {branches.map((b, i) => (
+            <BranchRow
+              key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
+              repo={repo}
+              branch={b}
+              busyKey={busyKey}
+              t={t}
+              run={run}
+              animIndex={Math.min(i, 10)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

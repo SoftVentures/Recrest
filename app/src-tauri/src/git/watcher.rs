@@ -63,6 +63,32 @@ impl RepoWatcher {
         self.watched.lock().await.remove(&git_dir);
         Ok(())
     }
+
+    /// Stop watching every repo currently subscribed to this watcher. Used
+    /// by `factory_reset` so the backend doesn't keep emitting
+    /// `repo://status` events for repos that no longer live in `settings.json`
+    /// after the reset. Failures on individual unwatches are logged but
+    /// don't abort the loop — a half-cleared subscription set is still
+    /// better than leaking handles, and any leftover `notify` watcher will
+    /// be garbage-collected when the next reload swaps the `RepoWatcher`.
+    pub async fn unsubscribe_all(&mut self) {
+        // Snapshot the keys before mutating so we don't iterate the map
+        // while removing from it. The values (repo ids) are dropped with
+        // the entries.
+        let paths: Vec<PathBuf> = {
+            let map = self.watched.lock().await;
+            map.keys().cloned().collect()
+        };
+        for git_dir in paths {
+            if let Err(err) = self.debouncer.unwatch(&git_dir) {
+                tracing::warn!(
+                    "RepoWatcher::unsubscribe_all: unwatch failed for {}: {err}",
+                    git_dir.display()
+                );
+            }
+        }
+        self.watched.lock().await.clear();
+    }
 }
 
 async fn handle_events(

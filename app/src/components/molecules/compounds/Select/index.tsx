@@ -5,9 +5,18 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export const Select = SelectPrimitive.Root;
-export const SelectGroup = SelectPrimitive.Group;
-export const SelectValue = SelectPrimitive.Value;
+// Wrap the bare Radix primitives as function components instead of `const`
+// aliases so `react-refresh/only-export-components` recognises every export as
+// a component and Fast Refresh keeps working in this file.
+export function Select(props: ComponentProps<typeof SelectPrimitive.Root>) {
+  return <SelectPrimitive.Root {...props} />;
+}
+export function SelectGroup(props: ComponentProps<typeof SelectPrimitive.Group>) {
+  return <SelectPrimitive.Group {...props} />;
+}
+export function SelectValue(props: ComponentProps<typeof SelectPrimitive.Value>) {
+  return <SelectPrimitive.Value {...props} />;
+}
 
 export function SelectTrigger({
   className,

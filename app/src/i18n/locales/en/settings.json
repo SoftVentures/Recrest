@@ -98,6 +98,7 @@
     "web_disabled": "These settings only apply when running the desktop app.",
     "auto_start": "Start with system",
     "auto_start_desc": "Launch Recrest when you log in.",
+    "auto_start_failed": "Couldn't update the system autostart entry. Please try again or check the OS autostart settings.",
     "start_minimized": "Start minimized",
     "start_minimized_desc": "Open silently to the system tray instead of a foreground window.",
     "close_to_tray": "Close to tray",
@@ -155,7 +156,16 @@
       "storage": "Storage & state",
       "ipc": "IPC & debug",
       "i18n": "i18n",
-      "flags": "Feature flags"
+      "flags": "Feature flags",
+      "factory_reset": "Factory reset"
+    },
+    "factoryReset": {
+      "title": "Reset to factory defaults",
+      "description": "Wipes every setting, all stored provider tokens, and any cached UI state. The onboarding wizard will appear again on next launch.",
+      "button": "Reset",
+      "confirmTitle": "Reset everything?",
+      "confirmBody": "This will delete all settings, tokens, and clear cached data. The onboarding wizard will start over. This action cannot be undone.",
+      "done": "Recrest reset to factory defaults"
     },
     "build": {
       "git_sha": "Git SHA",

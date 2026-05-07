@@ -23,6 +23,7 @@ import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useGlobalEvents } from "@/hooks/useGlobalEvents";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useNotificationTriggers } from "@/hooks/useNotificationTriggers";
+import { usePageSwipe } from "@/hooks/usePageSwipe";
 import { useWindowChrome } from "@/hooks/usePlatform";
 import { usePrPolling } from "@/hooks/useProviders";
 import { useSearchHotkey } from "@/hooks/useSearch";
@@ -51,6 +52,8 @@ export function AppShell({ children }: AppShellProps) {
   useNotificationTriggers(isTauri());
   useChromeAttribute();
   usePrPolling();
+  // D.5: horizontal touch swipes navigate Activity ↔ Repos ↔ MRs ↔ Branches.
+  usePageSwipe();
 
   const location = useLocation();
   const dispatch = useAppDispatch();

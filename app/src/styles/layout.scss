@@ -2,13 +2,30 @@
 
 .a-app {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  /* `minmax(0, 1fr)` instead of plain `1fr` — without it the implicit
+   * `auto` min-track size lets the centre column expand to its content's
+   * min-content, blowing past the viewport whenever a child (e.g. the
+   * dashboard cards) has a wide intrinsic size. The explicit `0` floor lets
+   * the column actually obey 100vw, so `.a-top` renders at the available
+   * width and its inner flex layout collapses the search column instead of
+   * pushing the right-hand cluster off-screen. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-rows: auto 1fr;
   height: 100%;
   width: 100%;
+  /* Cap to the parent (.shell, which is itself capped to 100vh) so the grid
+   * can never grow taller than the viewport. Without `max-height` the grid
+   * resolves its `1fr` row against the larger of (parent height, content min-
+   * content), and a row whose content min-content exceeds the parent height
+   * would silently overflow downward. The combination of `height: 100%` +
+   * `max-height: 100%` + `overflow: hidden` keeps the chain rigorously
+   * bounded; `min-height: 0` lets the grid itself shrink below its row tracks'
+   * intrinsic min sizes when needed. */
+  max-height: 100%;
   flex: 1;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   background: var(--app-bg);
   color: var(--ink-1);
 
@@ -37,7 +54,7 @@
   }
 
   &.pane-bottom {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
 
     > .a-detail {
@@ -47,7 +64,7 @@
   }
   &.pane-off,
   &.no-detail {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
   }
 }
 
@@ -242,7 +259,23 @@
   display: flex;
   flex-direction: column;
   padding: 8px 8px 8px;
+  /* Clamp to the parent column's height so the brand/nav/foot triplet can
+   * never spill below the viewport. The grid parent assigns a row height,
+   * but a grid item's default `min-height: auto` resolves to the content's
+   * min-content size — for the sidebar that's `brand + every nav item +
+   * footer`, which on short viewports exceeds the row track and pushes the
+   * grid (and its ancestors) past 100vh. Forcing `min-height: 0` plus
+   * `height: 100%` makes the sidebar honour the row track exactly, and
+   * `max-height: 100vh` is a final defensive clamp for transient states
+   * where the grid track is briefly undefined (chrome variant swaps).
+   * `overflow: visible` is retained so the fold button hanging off the
+   * right edge stays visible; the inner `.a-side-nav` owns the actual
+   * vertical scroll for the nav item list. The grid parent has its own
+   * `overflow: hidden`, so any vertical overflow gets clipped one level up
+   * without resizing the chain. */
   min-height: 0;
+  height: 100%;
+  max-height: 100vh;
   transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 
@@ -264,7 +297,7 @@
       justify-content: center;
     }
     .a-side-foot {
-      margin: auto -4px 0;
+      margin: 0 -4px;
       padding: 8px 4px 0;
     }
   }
@@ -299,8 +332,12 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* Scrollable middle zone: takes all leftover height between brand and
+   * footer, scrolls internally if the item list ever exceeds that space
+   * (rare on desktop, real on short mobile viewports). `min-height: 0`
+   * lets it actually shrink below content size inside the flex column. */
   overflow-y: auto;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
@@ -384,7 +421,14 @@
 }
 
 .a-side-foot {
-  margin: auto -8px 0;
+  /* Pinned footer zone — never shrinks, never gets pushed off-screen.
+   * `margin-top: auto` would only work if `.a-side-nav` weren't already
+   * `flex: 1`; here we rely on the column ordering instead and lock the
+   * foot to its intrinsic height with `flex: 0 0 auto`. The negative
+   * horizontal margin lets the top divider span the full sidebar width
+   * (matches the brand row's visual edge). */
+  flex: 0 0 auto;
+  margin: 0 -8px;
   padding: 8px 8px 0;
   border-top: 1px solid var(--border);
   position: relative;
@@ -440,8 +484,12 @@
 
 /* Top bar */
 .a-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 480px) minmax(0, 1fr);
+  /* H.3: Flex layout (was a 3-col grid) so the search column can absorb
+   * elasticity and the right-hand action cluster never wraps below the
+   * left-hand title. The grid form forced a 280px minimum on the search
+   * column, which crushed everything else under ~1100px. */
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   height: 52px;
   padding: 0 22px;
@@ -459,8 +507,10 @@
 .a-top-left {
   display: flex;
   align-items: baseline;
+  flex-wrap: nowrap;
   gap: 10px;
   min-width: 0;
+  flex: 0 1 auto;
 }
 .a-top-title {
   font-size: 18px;
@@ -468,16 +518,28 @@
   color: var(--ink-0);
   letter-spacing: -0.3px;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .a-top-meta {
   font-size: 11.5px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 .a-top-center {
+  /* H.2/H.3: this is the elastic column. `flex: 1 1 auto` lets it absorb the
+   * remaining row width; `min-width: 0` is required so the inner search
+   * trigger can actually shrink below its content size (otherwise the
+   * placeholder text would force the column to its intrinsic width and
+   * push the right-hand cluster off-screen). */
   display: flex;
   justify-content: center;
   align-items: center;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .a-top-right {
@@ -485,6 +547,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  flex: 0 0 auto;
 }
 
 .a-search {
@@ -493,7 +556,14 @@
   gap: 7px;
   height: 30px;
   width: 100%;
+  /* H.2: shrink-first behaviour. The search trigger is the elastic element
+   * in the topbar — it consumes leftover space up to 480px wide and yields
+   * down to 8rem before the placeholder gets ellipsized. `min-width: 0` is
+   * the magic that lets a flex item shrink below its intrinsic content
+   * size; the inner placeholder then handles its own truncation. */
+  min-width: 8rem;
   max-width: 480px;
+  flex: 1 1 auto;
   padding: 0 10px;
   background: var(--canvas);
   border: 1px solid var(--border);
@@ -507,17 +577,24 @@
   }
   svg {
     color: var(--ink-3);
+    flex: 0 0 auto;
   }
   input,
   .a-search-placeholder {
     border: 0;
     background: transparent;
     outline: none;
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 12.5px;
     color: var(--ink-3);
     font-family: inherit;
     text-align: left;
+    /* Ellipsize the placeholder span when the trigger is squished — better
+     * than letting the text spill past the rounded border. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   input::placeholder {
     color: var(--ink-3);
@@ -868,9 +945,53 @@
  * mode) so callers don't need to reserve grid space. Pages that already
  * place a side panel inside their grid can override `position` to `static`
  * via a wrapping class. */
+/* Drawer chrome offset: the titlebar (`.chrome`, z-index 200) and the
+ * top page header (`.a-top`, ~52px tall) must remain interactive while the
+ * drawer is open — the user has to be able to drag the OS window, hit the
+ * close button, and read the page header. Both the floating panel and its
+ * click-outside scrim therefore start *below* both bars. The offset is set
+ * per-OS in the `data-chrome` rules at the bottom of this block. */
+:root {
+  --chrome-h: 32px; /* default (Win11) — replaced per-OS by data-chrome rules below */
+  --top-h: 52px; /* `.a-top` height — kept in sync with the rule above */
+  --header-h: calc(var(--chrome-h) + var(--top-h));
+}
+/* `useChromeAttribute` writes `data-chrome` directly onto <html>, which is
+ * `:root`. Use the attribute selector on `:root` itself, not a descendant
+ * combinator (`[data-chrome] :root` matches nothing because <html> has no
+ * ancestor). */
+:root[data-chrome="mac"] {
+  --chrome-h: 36px;
+}
+:root[data-chrome="gnome"] {
+  --chrome-h: 42px;
+}
+/* Click-outside dismissal target for the floating Drawer variant. Sits one
+ * z-index below `.a-drawer` (30) so the drawer chrome stays interactive
+ * while clicks on the surrounding viewport bubble through this element to
+ * `onClose`. Transparent on purpose — we don't want a visual scrim, just a
+ * hit target (Plan 1 §A.1). The `top` offset keeps the OS titlebar
+ * draggable (a backdrop covering it would intercept the platform's
+ * `-webkit-app-region: drag` hit-test). */
+.a-drawer-backdrop {
+  position: fixed;
+  /* Mirror the drawer's `top` offset so neither the OS titlebar (drag
+   * region, window controls) nor the page header (search, refresh, add
+   * repo) get intercepted by the click-outside scrim. The user can still
+   * dismiss the drawer by clicking the empty page area to its left. */
+  top: var(--header-h);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 29;
+  background: transparent;
+}
 .a-drawer {
   position: fixed;
-  top: 32px; /* leaves the titlebar area visible */
+  /* Sit below the titlebar AND the top page header so the user can still
+   * read the page title, see the search box, and hit the title-bar window
+   * controls while the drawer is open. */
+  top: var(--header-h);
   bottom: 0;
   width: 360px;
   flex-shrink: 0;
@@ -888,6 +1009,20 @@
 .a-drawer.a-drawer-side-left {
   left: 0;
 }
+/* Inline mode — the host page already reserves grid space for the drawer
+ * (e.g. `.a-mr.with-drawer`). Drop the fixed-overlay positioning so the
+ * primitive flows into its column instead of floating above the layout. */
+.a-drawer.a-drawer-inline {
+  position: static;
+  width: auto;
+  height: 100%;
+  top: auto;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  z-index: auto;
+  box-shadow: none;
+}
 .a-drawer-side-right {
   border-left: 1px solid var(--border);
 }
@@ -902,6 +1037,18 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Default content padding — gives the body breathing room around the
+   * close button, headings, and section blocks. Pages that already pad
+   * their own panel content (e.g. `MergeRequestDetailPanel` via `.a-dp-hdr`
+   * which carries `padding: 16px 16px 14px`) can opt out via
+   * `.a-drawer-body--flush` to avoid double-padding. */
+  padding: 4px 0;
+}
+.a-drawer-body.a-drawer-body--flush,
+.a-drawer .a-mr-detail {
+  /* MR detail panel already pads its own header/sections; keep padding 0
+   * around it so we don't introduce a second indent. */
+  padding: 0;
 }
 .a-drawer-footer {
   flex-shrink: 0;

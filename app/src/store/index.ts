@@ -8,6 +8,7 @@ import {
 } from "@recrest/shared";
 
 import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
+import { registerSettingsResetListener } from "@/store/resetListener";
 import { providersReducer } from "@/store/slices/providersSlice";
 import { prsReducer } from "@/store/slices/prsSlice";
 import { remoteImportReducer } from "@/store/slices/remoteImportSlice";
@@ -90,6 +91,14 @@ export const store = configureStore({
     : undefined,
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistenceMiddleware),
 });
+
+// Wire the global `settings://reset` listener once at module load. The Rust
+// `factory_reset` command emits this event after wiping on-disk state, so
+// the renderer always mirrors the wipe (recrest:* storage + reload) even
+// when the IPC was triggered outside the Developer tab — e.g. from a CLI
+// flag in the future. `safeListen` no-ops outside the Tauri runtime, so
+// this is a free hook in pure-web dev / tests.
+void registerSettingsResetListener();
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

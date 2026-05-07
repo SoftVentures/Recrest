@@ -1,5 +1,10 @@
-import { type ReactNode, createContext, useCallback, useContext, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 
+import {
+  ConfirmContext,
+  type ConfirmFn,
+  type ConfirmOptions,
+} from "@/components/atoms/ConfirmDialog/useConfirm";
 import {
   Dialog,
   DialogContent,
@@ -14,30 +19,13 @@ import {
  *
  * Wraps the existing Dialog atoms with a promise-based API. Mount
  * `<ConfirmProvider>` near the app root, then call `useConfirm()` from any
- * component to open a modal and `await` the user's choice:
- *
- *   const confirm = useConfirm();
- *   if (!(await confirm({ title: "Delete repo?" }))) return;
+ * component to open a modal and `await` the user's choice. The hook and
+ * context live in `./useConfirm.ts` so this file stays component-only and
+ * Fast Refresh keeps working.
  *
  * The provider keeps a single dialog instance, so concurrent calls are
  * serialised — a second `confirm()` rejects the first one.
  */
-
-export interface ConfirmOptions {
-  title: ReactNode;
-  description?: ReactNode;
-  /** Label for the confirm button. Defaults to "Confirm". */
-  confirmLabel?: string;
-  /** Label for the cancel button. Defaults to "Cancel". */
-  cancelLabel?: string;
-  /** When true, styles the confirm button with the destructive accent.
-   *  Defaults to `false`. */
-  destructive?: boolean;
-}
-
-type ConfirmFn = (opts: ConfirmOptions) => Promise<boolean>;
-
-const ConfirmContext = createContext<ConfirmFn | null>(null);
 
 interface PendingState {
   opts: ConfirmOptions;
@@ -87,14 +75,21 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             )}
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <button type="button" className="r-btn ghost" onClick={() => close(false)}>
+            <button
+              type="button"
+              className="r-btn ghost"
+              onClick={() => close(false)}
+              data-testid="confirm-dialog-cancel"
+            >
               {pending?.opts.cancelLabel ?? "Cancel"}
             </button>
             <button
               type="button"
               className={`r-btn ${pending?.opts.destructive ? "destructive" : "primary"}`}
+              data-tone={pending?.opts.destructive ? "destructive" : undefined}
               onClick={() => close(true)}
               autoFocus
+              data-testid="confirm-dialog-confirm"
             >
               {pending?.opts.confirmLabel ?? "Confirm"}
             </button>
@@ -103,12 +98,4 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       </Dialog>
     </ConfirmContext.Provider>
   );
-}
-
-export function useConfirm(): ConfirmFn {
-  const fn = useContext(ConfirmContext);
-  if (!fn) {
-    throw new Error("useConfirm must be used inside <ConfirmProvider>");
-  }
-  return fn;
 }

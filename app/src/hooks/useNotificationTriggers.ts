@@ -55,7 +55,11 @@ interface InternalState {
 }
 
 /** Stable empty providers fallback so `useAppSelector` doesn't return a new
- *  object every render when the providers slice is missing (tests). */
+ *  object every render when the providers slice is missing (tests). The
+ *  identity is no longer used to detect the missing-slice case (we read a
+ *  separate boolean for that — see below) but the constant still backs
+ *  the `?? EMPTY_PROVIDERS` fallback to satisfy the hook's exhaustive deps
+ *  without churning identity. */
 const EMPTY_PROVIDERS: Record<string, never> = {};
 
 const RESET_LISTENERS = new Set<() => void>();
@@ -93,6 +97,13 @@ export function useNotificationTriggers(enabled: boolean): void {
   // providers slice. Using a stable empty-object reference avoids the
   // "selector returned a different value" warning that comes with `?? {}`.
   const providers = useAppSelector((s) => s.providers?.connections) ?? EMPTY_PROVIDERS;
+  // True when the providers slice is registered in the store. Tests that
+  // mount AppShell without preloading the slice deliberately omit it; we
+  // need that signal explicitly because `connections` is `{}` both when
+  // the slice is missing AND when it's loaded with no remembered
+  // connection — only the former should fall through to "trust ownership
+  // unconditionally".
+  const providersSliceLoaded = useAppSelector((s) => s.providers !== undefined);
   const { t } = useTranslation();
 
   // Only start emitting notifications once we've actually seen a non-empty
@@ -159,14 +170,15 @@ export function useNotificationTriggers(enabled: boolean): void {
     //
     //   (a) The providers slice is fully absent (test harness / preview).
     //       Fall through and notify like the pre-A.2 hook so existing
-    //       tests don't have to seed identity. Detected via the stable
-    //       `EMPTY_PROVIDERS` reference.
+    //       tests don't have to seed identity. Detected via the explicit
+    //       `providersSliceLoaded` selector — robust against the empty
+    //       fallback object being recreated or reused elsewhere.
     //   (b) A connection exists but its `username` is null — the slice
     //       loaded but the `/user` call hasn't resolved yet. Per plan §A.2
     //       step 5, early-return *without* baselining so the next tick
     //       re-runs once identity arrives, instead of silently locking in
     //       the snapshot and then firing a wave of `new_pr` later.
-    const providersUnknown = providers === EMPTY_PROVIDERS;
+    const providersUnknown = !providersSliceLoaded;
     if (!providersUnknown) {
       const seenProviders = new Set<string>();
       for (const snap of next.values()) {
@@ -213,10 +225,22 @@ export function useNotificationTriggers(enabled: boolean): void {
       const list = transitions[kind];
       if (list.length === 0) continue;
 
+      // Plan 1 §A.6: title resolution depends on provider for `ci_failed`.
+      // For burst we don't have a single provider (the burst aggregates
+      // across the whole tick) — use the `default` variant.
+      const titleForKind = (providerId: string | null): string => {
+        if (kind === "ci_failed") {
+          return t(`notifications.ci_failed.${providerId ?? "default"}.title`, {
+            defaultValue: t("notifications.ci_failed.default.title"),
+          });
+        }
+        return t(`notifications.${kind}.title`);
+      };
+
       if (list.length > BURST_THRESHOLD) {
         void emit({
           kind,
-          title: t(`notifications.${kind}.title`),
+          title: titleForKind(null),
           body: t(`notifications.burst.${kind}`, { count: list.length }),
           url: null,
         });
@@ -227,34 +251,34 @@ export function useNotificationTriggers(enabled: boolean): void {
         const repo = repos[snap.repoId];
         const repoName = repo?.name ?? snap.repoId;
         // Plan 1 §A.6: terminology depends on provider — GitHub calls them
-        // "Checks", GitLab/Bitbucket "Pipelines". Falls back to the generic
-        // `notifications.<kind>.title/body` if the provider-specific key is
-        // missing (i18next returns the key itself when missing).
+        // "Checks", GitLab/Bitbucket "Pipelines". The `default` variant is
+        // the safety-net for unknown / null providers and for kinds other
+        // than `ci_failed` (which keep their existing flat key).
         const providerId = repo?.providerId ?? null;
-        const providerKey =
-          kind === "ci_failed" && providerId ? `notifications.ci_failed.${providerId}` : null;
-        const title =
-          (providerKey && t(`${providerKey}.title`, { defaultValue: "" })) ||
-          t(`notifications.${kind}.title`);
+        const title = titleForKind(providerId);
         const body =
-          (providerKey &&
-            t(`${providerKey}.body`, {
-              defaultValue: "",
-              repo: repoName,
-              number: snap.number,
-              pr_title: snap.title,
-            })) ||
-          t(`notifications.${kind}.body`, {
-            repo: repoName,
-            number: snap.number,
-            pr_title: snap.title,
-          });
+          kind === "ci_failed"
+            ? t(`notifications.ci_failed.${providerId ?? "default"}.body`, {
+                defaultValue: t("notifications.ci_failed.default.body", {
+                  repo: repoName,
+                  number: snap.number,
+                  pr_title: snap.title,
+                }),
+                repo: repoName,
+                number: snap.number,
+                pr_title: snap.title,
+              })
+            : t(`notifications.${kind}.body`, {
+                repo: repoName,
+                number: snap.number,
+                pr_title: snap.title,
+              });
         void emit({ kind, title, body, url: snap.url });
       }
     }
 
     stateRef.current = { baselined: true, seen: next };
-  }, [enabled, items, details, repos, providers, t]);
+  }, [enabled, items, details, repos, providers, providersSliceLoaded, t]);
 }
 
 async function emit(payload: NotifyPayload): Promise<void> {

@@ -26,6 +26,7 @@ import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListS
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
 import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
 import { MrRowSkeleton } from "@/components/molecules/skeletons/MrRowSkeleton";
+import { MergeRequestDetailPanel } from "@/components/organisms/mergeRequests/MergeRequestDetailPanel";
 import { CreateBranchDialog } from "@/components/organisms/repos/CreateBranchDialog";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
@@ -468,6 +469,8 @@ export function RepoDetailPage() {
                     onClick={() => setSelectedPrId(pr.id)}
                     className="flex w-full items-start gap-2 rounded-md p-2 text-left text-xs transition-colors hover:bg-muted/40"
                     aria-pressed={selectedPrId === pr.id}
+                    data-testid="repo-detail-pr-row"
+                    data-pr-id={pr.id}
                   >
                     <Icon name="pr" size={13} color={pr.draft ? "var(--ink-3)" : "var(--green)"} />
                     <div className="min-w-0 flex-1">
@@ -526,97 +529,38 @@ export function RepoDetailPage() {
 
       {(() => {
         const selectedPr = selectedPrId ? prs.find((p) => p.id === selectedPrId) : null;
-        if (!selectedPr) return null;
+        // I6: the "Open in MR view" textual button used to render via
+        // `extraHeaderActions` inside the panel's icon strip — visually
+        // inconsistent with the 14px icon controls. Hoist it into the
+        // Drawer's `footer` slot so the action button stays distinct from
+        // the per-PR controls and matches the Phase 0.2 footer contract.
         return (
           <Drawer
-            open={true}
+            open={!!selectedPr}
             onClose={() => setSelectedPrId(null)}
+            size="lg"
             testId="repo-detail-pr-drawer"
-            header={
-              <div className="a-dp-hdr">
-                <div className="a-dp-title" style={{ gap: 10 }}>
-                  <Icon
-                    name="pr"
-                    size={18}
-                    color={selectedPr.draft ? "var(--ink-3)" : "var(--green)"}
-                  />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="a-dp-name">{selectedPr.title}</div>
-                    <div className="a-dp-path">
-                      <span>#{selectedPr.number}</span>
-                      <span className="a-dp-sep"> · </span>
-                      <span>{selectedPr.author}</span>
-                      {selectedPr.draft && (
-                        <>
-                          <span className="a-dp-sep"> · </span>
-                          <span className="r-badge">draft</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="a-dp-hdr-ctrls">
-                  <IconButton tooltip="Close" onClick={() => setSelectedPrId(null)}>
-                    <Icon name="x" size={14} />
-                  </IconButton>
-                </div>
-              </div>
-            }
             footer={
-              <div className="flex items-center justify-between gap-2">
+              selectedPr ? (
                 <button
                   type="button"
-                  className="r-btn sm ghost"
-                  onClick={() => void openExternal(selectedPr.url)}
-                >
-                  <Icon name="external" size={11} />{" "}
-                  {t("common.actions.open_on_host", { defaultValue: "Open on host" })}
-                </button>
-                <button
-                  type="button"
-                  className="r-btn sm primary"
+                  className="r-btn sm"
                   onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
+                  data-testid="repo-detail-pr-open-in-mrs"
                 >
                   {t("repo_detail.open_in_mrs", { defaultValue: "Open in MR view" })}
                 </button>
-              </div>
+              ) : undefined
             }
           >
-            <div className="a-dp-body" style={{ padding: "0 16px 16px" }}>
-              <div className="space-y-3 text-xs">
-                <div>
-                  <div className="text-muted-foreground">
-                    {t("repo_detail.pr.branches", { defaultValue: "Branches" })}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <BranchChip branch={selectedPr.sourceBranch} />
-                    <span aria-hidden>→</span>
-                    <BranchChip branch={selectedPr.targetBranch} />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">
-                    {t("repo_detail.pr.ci", { defaultValue: "CI" })}
-                  </div>
-                  <div className="mt-1">
-                    <CiDot state={ciToDot(selectedPr.ciStatus)} />
-                  </div>
-                </div>
-                {(selectedPr.additions != null || selectedPr.deletions != null) && (
-                  <div>
-                    <div className="text-muted-foreground">
-                      {t("repo_detail.pr.changes", { defaultValue: "Changes" })}
-                    </div>
-                    <div className="mt-1">
-                      <DiffStat
-                        added={selectedPr.additions ?? 0}
-                        removed={selectedPr.deletions ?? 0}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {selectedPr && (
+              <MergeRequestDetailPanel
+                pr={selectedPr}
+                repoId={repo.id}
+                repoName={repo.name}
+                onClose={() => setSelectedPrId(null)}
+              />
+            )}
           </Drawer>
         );
       })()}

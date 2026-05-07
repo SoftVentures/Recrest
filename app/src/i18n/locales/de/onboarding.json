@@ -40,6 +40,7 @@
     "connect": "Verbinden",
     "skip": "Überspringen",
     "skip_and_continue": "Ohne Verbindung fortfahren",
+    "continue": "Weiter",
     "next": "Weiter",
     "back": "Zurück",
     "connected": "{{name}} verbunden.",
@@ -57,6 +58,7 @@
   "done": {
     "title": "Alles bereit",
     "body": "Recrest ist einsatzbereit. Schau dir deine Repositories und Merge Requests in der Seitenleiste an.",
-    "cta": "Dashboard öffnen"
+    "cta": "Dashboard öffnen",
+    "back": "Zurück"
   }
 }

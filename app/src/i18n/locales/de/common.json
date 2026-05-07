@@ -36,7 +36,18 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "delete": "Löschen",
-    "clear": "Leeren"
+    "clear": "Leeren",
+    "add_scope_label": "Hinzufüge-Bereich",
+    "add_scope": {
+      "local": "Lokal",
+      "global": "Global"
+    }
+  },
+  "toast": {
+    "reload": {
+      "success": "Aktualisiert",
+      "error": "Aktualisieren fehlgeschlagen: {{detail}}"
+    }
   },
   "states": {
     "loading": "Wird geladen…",
@@ -62,6 +73,29 @@
     },
     "group": {
       "pinned": "Angepinnt"
+    },
+    "view": {
+      "toggle_label": "Ansicht",
+      "grouped": "Gruppiert",
+      "flat": "Liste",
+      "card": "Karten"
+    },
+    "filter": {
+      "label": "Status-Filter",
+      "dirty": "Geändert",
+      "clean": "Sauber",
+      "ahead": "Voraus",
+      "behind": "Zurück"
+    },
+    "sort": {
+      "label": "Sortieren nach",
+      "options": {
+        "default": "Standard",
+        "name_asc": "Name (A → Z)",
+        "name_desc": "Name (Z → A)",
+        "modified_desc": "Zuletzt geändert",
+        "status": "Status"
+      }
     }
   },
   "dash": {
@@ -96,7 +130,14 @@
       "clone_tooltip": "Von URL klonen oder aus GitHub / GitLab / Bitbucket importieren",
       "find": "Repo-übergreifend suchen",
       "workspace": "Workspace öffnen",
-      "workspace_tooltip": "Multi-Root-IDE-Workspace mit allen gescannten Repos öffnen"
+      "workspace_tooltip": "Multi-Root-IDE-Workspace mit allen gescannten Repos öffnen",
+      "open_ide": "In IDE öffnen",
+      "open_ide_tooltip": "Zuletzt aktives Repo in der Standard-IDE öffnen",
+      "open_ide_error": "Repo konnte nicht in der IDE geöffnet werden",
+      "recent_commits": "Letzte Commits",
+      "create_branch": "Branch erstellen",
+      "pull_all": "Alle pullen",
+      "coming_soon": "Demnächst verfügbar"
     }
   },
   "titlebar": {
@@ -197,7 +238,11 @@
       "ci_health": "CI-Health",
       "ci_failing_one": "{{count}} fehlerhaft",
       "ci_failing_other": "{{count}} fehlerhaft",
-      "ci_none": "Noch keine Check-Runs"
+      "ci_none": "Noch keine Check-Runs",
+      "ci_runs": "{{passed}} / {{total}} Runs",
+      "ci_legend_passed": "{{count}} grün",
+      "ci_legend_failed": "{{count}} rot",
+      "ci_legend_other": "{{count}} sonstige"
     },
     "cards": {
       "chart_title": "Commit-Aktivität · 14 Tage",
@@ -246,8 +291,24 @@
       "chip_prs_merged_other": "{{count}} MRs gemerged",
       "chip_prs_opened_one": "{{count}} MR geöffnet",
       "chip_prs_opened_other": "{{count}} MRs geöffnet",
-      "chip_checks_failed_one": "{{count}} Check fehlgeschlagen",
-      "chip_checks_failed_other": "{{count}} Checks fehlgeschlagen"
+      "chip_checks_failed": {
+        "github": {
+          "one": "{{count}} Check fehlgeschlagen",
+          "other": "{{count}} Checks fehlgeschlagen"
+        },
+        "gitlab": {
+          "one": "{{count}} Pipeline fehlgeschlagen",
+          "other": "{{count}} Pipelines fehlgeschlagen"
+        },
+        "bitbucket": {
+          "one": "{{count}} Pipeline fehlgeschlagen",
+          "other": "{{count}} Pipelines fehlgeschlagen"
+        },
+        "default": {
+          "one": "{{count}} Check fehlgeschlagen",
+          "other": "{{count}} Checks fehlgeschlagen"
+        }
+      }
     }
   },
   "settings": {
@@ -309,8 +370,6 @@
       "body": "{{repo}} · #{{number}} {{pr_title}}"
     },
     "ci_failed": {
-      "title": "CI fehlgeschlagen",
-      "body": "{{repo}} · #{{number}} {{pr_title}}",
       "github": {
         "title": "Checks fehlgeschlagen",
         "body": "{{repo}} · #{{number}} {{pr_title}}"
@@ -321,6 +380,10 @@
       },
       "bitbucket": {
         "title": "Pipelines fehlgeschlagen",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "default": {
+        "title": "CI fehlgeschlagen",
         "body": "{{repo}} · #{{number}} {{pr_title}}"
       }
     },

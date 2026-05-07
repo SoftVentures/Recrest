@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Recrest
+GenericName=Developer Dashboard
+Comment=Lightweight developer dashboard for local repos, PRs, and CI
+Exec=recrest-launcher %U
+Icon=recrest
+Terminal=false
+Categories=Development;
+StartupNotify=true
+StartupWMClass=Recrest
+MimeType=x-scheme-handler/recrest;
+Keywords=git;github;gitlab;bitbucket;pullrequest;ci;

@@ -1,4 +1,4 @@
-import type { Repository } from "@recrest/shared";
+import type { Repository, RepositoryGroup } from "@recrest/shared";
 
 /** Matches paths that live inside an OS trash/recycle-bin folder, across
  * Windows, macOS, and Linux conventions. Anchored to a path-separator on
@@ -44,8 +44,16 @@ function segmentBeforeName(path: string): string | null {
   return parts[parts.length - 2] ?? null;
 }
 
-export function enrichRepo(repo: Repository, pinnedIds: readonly string[] = []): EnrichedRepo {
-  const group = segmentBeforeName(repo.path) ?? "Projects";
+export function enrichRepo(
+  repo: Repository,
+  pinnedIds: readonly string[] = [],
+  groups: Record<string, RepositoryGroup> = {},
+): EnrichedRepo {
+  // Prefer the explicit group's display name (so the UI shows
+  // `Open Source` instead of the slugged `open-source` id) and fall back to
+  // the parent path segment for ungrouped repos that still want a label.
+  const group =
+    (repo.groupId && groups[repo.groupId]?.name) || segmentBeforeName(repo.path) || "Projects";
   const lang = repo.status.language ?? "mixed";
   // Use the *real* counts from git2 (not the `changedFiles` array, which is
   // capped at 100 server-side — a repo with 108 changes would else read "100").
@@ -86,6 +94,10 @@ export function enrichRepo(repo: Repository, pinnedIds: readonly string[] = []):
   };
 }
 
-export function enrichRepos(repos: Repository[], pinnedIds: readonly string[] = []) {
-  return repos.filter((r) => !isTrashPath(r.path)).map((r) => enrichRepo(r, pinnedIds));
+export function enrichRepos(
+  repos: Repository[],
+  pinnedIds: readonly string[] = [],
+  groups: Record<string, RepositoryGroup> = {},
+) {
+  return repos.filter((r) => !isTrashPath(r.path)).map((r) => enrichRepo(r, pinnedIds, groups));
 }

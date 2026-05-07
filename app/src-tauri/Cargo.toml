@@ -49,14 +49,25 @@ walkdir = "2.5"
 urlencoding = "2.1.3"
 base64 = "0.22.1"
 which = "8"
+deunicode = "1"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 
 [target.'cfg(windows)'.dependencies]
-# Only needed for setting the AppUserModelID so Windows Toast notifications
-# attribute to "Recrest" instead of the parent process (e.g. powershell.exe
-# in dev). `windows-sys` is ~150kb and compiles in ~2s, much lighter than
-# the full `windows` crate.
-windows-sys = { version = "0.59", features = ["Win32_UI_Shell", "Win32_Foundation"] }
+# Single Win32 dependency (M4 — was windows + windows-sys side-by-side).
+# Used by `platform::windows::snap` to subclass the main HWND so WM_NCHITTEST
+# can return HTMAXBUTTON over the maximize button — that's the trigger
+# Windows 11 needs to surface the Snap-Layouts flyout — and by `lib.rs::
+# set_app_user_model_id` so Toast notifications attribute to "Recrest"
+# instead of the parent process (e.g. powershell.exe in dev). The richer
+# `windows` crate is needed (vs `windows-sys`) because `SetWindowSubclass`
+# lives in the Win32 ABI helpers and we want safe HWND/LPARAM wrappers.
+windows = { version = "0.58", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Foundation", "Win32_Graphics_Gdi"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Direct notify-rust use on Linux so we can attach the Recrest icon name +
+# image-path hint that dunst/Plasma/GNOME need to display the app logo
+# on toasts. The Tauri notification plugin doesn't expose those fields.
+notify-rust = { version = "4", features = [] }
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

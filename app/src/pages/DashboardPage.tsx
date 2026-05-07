@@ -134,6 +134,31 @@ export function DashboardPage() {
     }
   };
 
+  // "Open in IDE" defaults to the repo with the newest recent commit so the
+  // shortcut lands on whatever the user was last editing. Falls back to the
+  // first repo when there is no commit history yet.
+  const mostRecentRepoId = useMemo(() => {
+    const fromCommit = recentCommits[0]?.repoId;
+    if (fromCommit && repos.some((r) => r.id === fromCommit)) return fromCommit;
+    return repos[0]?.id ?? null;
+  }, [recentCommits, repos]);
+
+  const onOpenInIde = async () => {
+    if (!mostRecentRepoId) return;
+    if (!isTauri()) {
+      navigate(AppRoute.REPOS);
+      return;
+    }
+    try {
+      await invoke(TauriCommand.OPEN_IN_IDE, { repoId: mostRecentRepoId });
+    } catch {
+      toast.error(t("dash.quick.open_ide_error"));
+    }
+  };
+
+  const onRecentCommits = () => navigate(AppRoute.ACTIVITY);
+  const onCreateBranch = () => navigate(AppRoute.BRANCHES);
+
   if (reposLoading && repos.length === 0) {
     return (
       <div className="a-dash p-dashboard" data-testid="dashboard-page" aria-busy>
@@ -150,9 +175,13 @@ export function DashboardPage() {
             </div>
             <ActivityBarsSkeleton />
           </section>
+          {/* Skeleton card slots mirror the loaded grid: Attention,
+              MRs (when any provider is connected), Recent commits,
+              Language donut, Quick actions, Heatmap. */}
           <CardBlockSkeleton rows={3} />
-          <CardBlockSkeleton rows={4} />
+          {anyProviderConnected && <CardBlockSkeleton rows={4} />}
           <CardBlockSkeleton rows={5} />
+          <CardBlockSkeleton rows={3} />
           <CardBlockSkeleton rows={3} />
           <CardBlockSkeleton rows={3} />
         </div>
@@ -222,19 +251,19 @@ export function DashboardPage() {
               const label =
                 daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
               return (
-                <Tooltip key={i}>
-                  <TooltipTrigger asChild>
-                    <div className="a-dash-bar-col">
+                <div className="a-dash-bar-col" key={i}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                       <div className="a-dash-bar" style={{ height: `${(v / maxDay) * 100}%` }} />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <div className="font-medium">
-                      {v} commit{v === 1 ? "" : "s"}
-                    </div>
-                    <div className="text-[10px] opacity-70">{label}</div>
-                  </TooltipContent>
-                </Tooltip>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      <div className="font-medium">
+                        {v} commit{v === 1 ? "" : "s"}
+                      </div>
+                      <div className="text-[10px] opacity-70">{label}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               );
             })}
           </div>
@@ -248,7 +277,9 @@ export function DashboardPage() {
         <section className="a-dash-card">
           <div className="a-dash-card-h">
             <h3>{t("dash.attention.title")}</h3>
-            <span className="a-dash-card-m">{dirtyRepos.length + behindRepos.length} items</span>
+            <span className="a-dash-card-m">
+              {Math.min(dirtyRepos.length, 3) + Math.min(behindRepos.length, 2)} items
+            </span>
           </div>
           <div className="a-dash-attn">
             {dirtyRepos.slice(0, 3).map((r) => (
@@ -295,7 +326,13 @@ export function DashboardPage() {
                       #{p.number} · {p.author}
                     </div>
                   </div>
-                  <CiDot state={ciToDot(p.ciStatus)} />
+                  <CiDot
+                    state={
+                      p.ciStatus === "running" || p.ciStatus === "pending"
+                        ? null
+                        : ciToDot(p.ciStatus)
+                    }
+                  />
                 </button>
               ))}
               {openPRs.length === 0 && (
@@ -408,6 +445,62 @@ export function DashboardPage() {
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t("dash.quick.workspace_tooltip")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="a-dash-qbtn"
+                  onClick={() => void onOpenInIde()}
+                  disabled={!mostRecentRepoId}
+                  aria-label={t("dash.quick.open_ide_tooltip")}
+                  data-testid="dash-qa-open-ide"
+                >
+                  <Icon name="code" size={14} />
+                  <span>{t("dash.quick.open_ide")}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t("dash.quick.open_ide_tooltip")}</TooltipContent>
+            </Tooltip>
+            <button
+              type="button"
+              className="a-dash-qbtn"
+              onClick={onRecentCommits}
+              data-testid="dash-qa-recent-commits"
+            >
+              <Icon name="activity" size={14} />
+              <span>{t("dash.quick.recent_commits")}</span>
+            </button>
+            <button
+              type="button"
+              className="a-dash-qbtn"
+              onClick={onCreateBranch}
+              data-testid="dash-qa-create-branch"
+            >
+              <Icon name="branch" size={14} />
+              <span>{t("dash.quick.create_branch")}</span>
+            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* `git pull` across all repos is unsafe without per-repo
+                    branch validation (would fast-forward random tracking
+                    branches). Surfaced here as a planned shortcut so it's
+                    discoverable once the backend lands a guarded
+                    `git_pull_all` command. `aria-disabled` (instead of
+                    native `disabled`) keeps pointer events alive so the
+                    "coming soon" tooltip still fires on hover. */}
+                <button
+                  type="button"
+                  className="a-dash-qbtn"
+                  aria-disabled="true"
+                  onClick={(e) => e.preventDefault()}
+                  data-testid="dash-qa-pull-all"
+                >
+                  <Icon name="pull" size={14} />
+                  <span>{t("dash.quick.pull_all")}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t("dash.quick.coming_soon")}</TooltipContent>
             </Tooltip>
           </div>
         </section>

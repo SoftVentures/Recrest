@@ -10,6 +10,7 @@ import {
   TauriCommand,
 } from "@recrest/shared";
 
+import { useConfirm } from "@/components/atoms/ConfirmDialog/useConfirm";
 import { Switch } from "@/components/atoms/Switch";
 import {
   AlertDialog,
@@ -32,6 +33,7 @@ import {
 import { systemService } from "@/lib/tauri/services";
 import { toast } from "@/lib/toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { clearRecrestStorage } from "@/store/resetListener";
 import { clearProviderToken } from "@/store/slices/providersSlice";
 import { setPrs } from "@/store/slices/prsSlice";
 import { upsertRepo } from "@/store/slices/reposSlice";
@@ -72,6 +74,7 @@ export function DeveloperTab() {
       <IpcSection />
       <I18nSection />
       <FeatureFlagsSection />
+      <FactoryResetSection />
     </div>
   );
 }
@@ -1049,6 +1052,101 @@ function FeatureFlagsSection() {
               data-testid="dev-flag-reset-all"
             >
               {t("developer.flags.reset_all")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- Factory reset */
+
+/**
+ * "Reset to factory defaults" affordance for DEV.1. Wipes every piece of
+ * persisted state Recrest owns:
+ *   - On-disk `settings.json` and any in-memory mirror (Rust `factory_reset`).
+ *   - All provider tokens stored in the OS keychain (Rust side).
+ *   - Every `recrest:*` key in `localStorage` and `sessionStorage`.
+ *   - The Redux store, by reloading the window so each slice rehydrates from
+ *     defaults — cheaper and far less error-prone than wiring a `RESET_ALL`
+ *     action through every reducer (slices like `prsSlice` already manage
+ *     their own resets via thunks; a hard reload guarantees they all start
+ *     clean without us having to track new ones manually).
+ *
+ * After the reload the onboarding wizard shows again because
+ * `recrest:onboarding-dismissed` is gone.
+ */
+function FactoryResetSection() {
+  const { t } = useTranslation("settings");
+  // I7: route through the shared `useConfirm()` layer instead of an inline
+  // AlertDialog. Plan §D.3 specifies a single confirmation primitive so
+  // every destructive prompt looks and behaves the same. Same i18n keys,
+  // same destructive tone, same data-testid contract for the trigger and
+  // confirm buttons.
+  const confirm = useConfirm();
+  const [running, setRunning] = useState(false);
+
+  const runReset = async () => {
+    setRunning(true);
+    try {
+      // Backend wipe first — if Tauri is unavailable (yarn dev:web) we still
+      // want the renderer-side cleanup to run, so swallow IPC failures.
+      try {
+        await safeInvoke(TauriCommand.FACTORY_RESET);
+      } catch (err) {
+        console.warn("[factory-reset] backend reset failed", err);
+      }
+
+      // Wipe any `recrest:*` key. The shared helper is idempotent — the
+      // backend will also emit `settings://reset`, which triggers another
+      // wipe, but that's harmless and keeps our UX immediate (don't wait
+      // for the listener to round-trip before clearing).
+      clearRecrestStorage();
+
+      toast.success(t("developer.factoryReset.done"));
+
+      // Tiny delay so the toast can render before the reload nukes the page.
+      // Reloading is intentional: it forces every slice to rehydrate from
+      // defaults and re-runs `useFirstRun`, which now sees a cleared
+      // localStorage and shows the wizard again.
+      setTimeout(() => window.location.reload(), 250);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const onTrigger = async () => {
+    const ok = await confirm({
+      title: t("developer.factoryReset.confirmTitle"),
+      description: t("developer.factoryReset.confirmBody"),
+      confirmLabel: t("developer.factoryReset.button"),
+      cancelLabel: t("actions.cancel", { ns: "common", defaultValue: "Cancel" }),
+      destructive: true,
+    });
+    if (ok) await runReset();
+  };
+
+  return (
+    <section className="a-set-section" data-testid="dev-section-factory-reset">
+      <h3>{t("developer.factoryReset.title")}</h3>
+      <div className="a-set-section-desc">{t("developer.factoryReset.description")}</div>
+      <div className="a-set-card">
+        <div className="a-set-row">
+          <div className="a-set-row-l">
+            <div className="a-set-row-lbl">{t("developer.factoryReset.title")}</div>
+            <div className="a-set-row-sub">{t("developer.factoryReset.description")}</div>
+          </div>
+          <div className="a-set-row-r">
+            <button
+              type="button"
+              className="r-btn"
+              data-tone="destructive"
+              onClick={() => void onTrigger()}
+              disabled={running}
+              data-testid="dev-factory-reset-button"
+            >
+              {t("developer.factoryReset.button")}
             </button>
           </div>
         </div>

@@ -98,6 +98,7 @@
     "web_disabled": "Diese Einstellungen greifen nur in der Desktop-App.",
     "auto_start": "Mit System starten",
     "auto_start_desc": "Recrest beim Login automatisch ausführen.",
+    "auto_start_failed": "Der Autostart-Eintrag konnte nicht aktualisiert werden. Bitte erneut versuchen oder die Autostart-Einstellungen des Systems prüfen.",
     "start_minimized": "Minimiert starten",
     "start_minimized_desc": "Still in den Systemtray starten statt ins Vordergrund.",
     "close_to_tray": "In Tray schließen",
@@ -155,7 +156,16 @@
       "storage": "Speicher & State",
       "ipc": "IPC & Debug",
       "i18n": "i18n",
-      "flags": "Feature-Flags"
+      "flags": "Feature-Flags",
+      "factory_reset": "Werkzustand"
+    },
+    "factoryReset": {
+      "title": "Werkzustand wiederherstellen",
+      "description": "Löscht alle Einstellungen, gespeicherte Provider-Tokens und zwischengespeicherten UI-Zustand. Beim nächsten Start erscheint der Onboarding-Assistent erneut.",
+      "button": "Zurücksetzen",
+      "confirmTitle": "Alles zurücksetzen?",
+      "confirmBody": "Alle Einstellungen, Tokens und Cache-Daten werden gelöscht. Der Onboarding-Assistent startet von vorn. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "done": "Recrest auf Werkseinstellungen zurückgesetzt"
     },
     "build": {
       "git_sha": "Git-SHA",

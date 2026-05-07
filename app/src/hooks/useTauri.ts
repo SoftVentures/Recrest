@@ -28,7 +28,12 @@ export function useTauri(): void {
 
   useWindowStateSync(tauri);
   useMinWindowSize(tauri);
-  useStartMinimized(tauri);
+  // C.4-FOLLOW-UP: `start_minimized` is a boot-time-only setting consumed by
+  // the Rust setup hook in `lib.rs`. A reactive JS hook here would re-fire the
+  // moment a user flips the toggle ON in Settings, minimizing the window as a
+  // side effect of saving the preference. The Rust side already does the
+  // right thing on launch — leaving this responsibility solely with the
+  // backend keeps the runtime toggle a pure persistence change.
   useTrayBadgeSync(tauri);
   useNotificationPermission(tauri);
   useAutostartSync(tauri);
@@ -137,17 +142,6 @@ function useMinWindowSize(enabled: boolean): void {
     if (!enabled) return;
     void windowService.setMinSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT);
   }, [enabled]);
-}
-
-function useStartMinimized(enabled: boolean): void {
-  const startMinimized = useAppSelector((s) => s.settings.startMinimized);
-  const minimizedOnce = useRef(false);
-
-  useEffect(() => {
-    if (!enabled || !startMinimized || minimizedOnce.current) return;
-    minimizedOnce.current = true;
-    void windowService.minimize();
-  }, [enabled, startMinimized]);
 }
 
 // ----------------------------------------------------------------- tray badge

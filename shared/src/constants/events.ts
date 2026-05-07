@@ -24,12 +24,18 @@ export const OAUTH_CALLBACK_EVENT = "oauth://callback";
  *  which repo is currently cloning + overall counts. */
 export const CLONE_PROGRESS_EVENT = "clone://progress";
 
+/** Emitted from `factory_reset` once the on-disk settings have been wiped and
+ *  every keychain token cleared. The renderer listens for this to clear its
+ *  own `localStorage`/`sessionStorage` and remount the onboarding wizard. */
+export const SETTINGS_RESET_EVENT = "settings://reset";
+
 export const EventChannel = {
   REPO_STATUS: REPO_STATUS_EVENT,
   UPDATER_AVAILABLE: UPDATER_AVAILABLE_EVENT,
   UPDATER_PROGRESS: UPDATER_PROGRESS_EVENT,
   OAUTH_CALLBACK: OAUTH_CALLBACK_EVENT,
   CLONE_PROGRESS: CLONE_PROGRESS_EVENT,
+  SETTINGS_RESET: SETTINGS_RESET_EVENT,
 } as const;
 
 export type EventChannelName = (typeof EventChannel)[keyof typeof EventChannel];

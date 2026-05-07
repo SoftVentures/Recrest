@@ -40,6 +40,7 @@
     "connect": "Connect",
     "skip": "Skip",
     "skip_and_continue": "Continue without connecting",
+    "continue": "Continue",
     "next": "Continue",
     "back": "Back",
     "connected": "{{name}} connected.",
@@ -57,6 +58,7 @@
   "done": {
     "title": "You're all set",
     "body": "Recrest is ready. Browse your repositories and merge requests from the sidebar.",
-    "cta": "Open dashboard"
+    "cta": "Open dashboard",
+    "back": "Back"
   }
 }

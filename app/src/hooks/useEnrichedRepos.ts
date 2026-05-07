@@ -8,5 +8,6 @@ import { useAppSelector } from "@/store/hooks";
 export function useEnrichedRepos(): EnrichedRepo[] {
   const repos = useRepos();
   const pinned = useAppSelector((s) => s.ui.pinnedRepoIds);
-  return useMemo(() => enrichRepos(repos, pinned), [repos, pinned]);
+  const groups = useAppSelector((s) => s.repos.groups);
+  return useMemo(() => enrichRepos(repos, pinned, groups), [repos, pinned, groups]);
 }

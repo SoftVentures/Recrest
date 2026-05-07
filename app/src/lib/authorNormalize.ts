@@ -74,8 +74,10 @@ function applyTransliterations(input: string): string {
 function stripDiacritics(input: string): string {
   // NFD splits accented characters into base + combining marks. The regex
   // then drops the combining marks (Unicode block U+0300–U+036F) so any
-  // residual accent (Latin or Cyrillic) becomes an ASCII letter.
-  return input.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // residual accent (Latin or Cyrillic) becomes an ASCII letter. Using
+  // the escape form keeps the source file ASCII-clean and easy to read
+  // (M1 — the literal `[\u0300-\u036f]` form was indistinguishable from a typo).
+  return input.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function normaliseFragment(input: string): string {

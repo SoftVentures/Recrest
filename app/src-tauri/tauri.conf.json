@@ -80,10 +80,24 @@
     "linux": {
       "deb": {
         "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
-        "section": "devel"
+        "section": "devel",
+        "files": {
+          "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
+          "/usr/share/applications/recrest.desktop": "resources/recrest.desktop",
+          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/64x64.png",
+          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/128x128@2x.png"
+        }
       },
       "appimage": {
-        "bundleMediaFramework": true
+        "bundleMediaFramework": true,
+        "files": {
+          "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
+          "/usr/share/applications/recrest.desktop": "resources/recrest.desktop",
+          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/64x64.png",
+          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/128x128@2x.png"
+        }
       }
     },
     "createUpdaterArtifacts": true

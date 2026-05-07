@@ -17,6 +17,7 @@ import App from "@/App";
 import { ConfirmProvider } from "@/components/atoms/ConfirmDialog";
 import "@/i18n";
 import { store } from "@/store";
+import { setGroups } from "@/store/slices/reposSlice";
 import "@/styles/globals.css";
 import "@/styles/layout.scss";
 import "@/styles/page-anim.scss";
@@ -34,14 +35,37 @@ const ROUTER_FUTURE = {
   v7_relativeSplatPath: true,
 } as const;
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <BrowserRouter future={ROUTER_FUTURE}>
-        <ConfirmProvider>
-          <App />
-        </ConfirmProvider>
-      </BrowserRouter>
-    </Provider>
-  </React.StrictMode>,
-);
+async function bootstrap(): Promise<void> {
+  // Dev-only: when running in pure-web mode (`yarn dev:web`) without the
+  // Tauri runtime, install a fake `__TAURI_INTERNALS__` so every IPC call
+  // resolves against seed data and the UI populates with realistic content.
+  // - `import.meta.env.DEV` is replaced at build time, so the dynamic
+  //   import is tree-shaken out of production bundles entirely.
+  // - The `!('__TAURI_INTERNALS__' in window)` guard skips installation
+  //   when Playwright (which sets up its own stub via `addInitScript`) or
+  //   the real Tauri shell is already present.
+  if (import.meta.env.DEV && !("__TAURI_INTERNALS__" in window)) {
+    const { installDevTauriStub } = await import("@/lib/dev/tauriStub");
+    installDevTauriStub();
+    // Seed the repos.groups slice so the Repos page shows the human-readable
+    // group names (`Open Source`, `Acme Labs`, …) instead of the slugged
+    // group IDs. There is no IPC for listing groups today, so the stub
+    // owns this hand-off.
+    const { DEFAULT_SEED } = await import("@/lib/dev/seed");
+    store.dispatch(setGroups(DEFAULT_SEED.groups));
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <Provider store={store}>
+        <BrowserRouter future={ROUTER_FUTURE}>
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
+        </BrowserRouter>
+      </Provider>
+    </React.StrictMode>,
+  );
+}
+
+void bootstrap();
