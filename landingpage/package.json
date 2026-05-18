@@ -21,19 +21,19 @@
     "device-type-detection": "^2.1.3",
     "i18next": "^23.16.0",
     "i18next-browser-languagedetector": "^8.0.0",
-    "react": "^19.0.0",
+    "react": "^19.2.6",
     "react-country-flag": "^3.1.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.6",
     "react-i18next": "^15.0.3",
-    "simple-icons": "^16.17.0"
+    "simple-icons": "^16.20.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.8.0",
-    "@typescript-eslint/parser": "^8.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
     "@vitejs/plugin-react-swc": "^3.7.1",
     "eslint": "^9.12.0",
     "eslint-plugin-react": "^7.37.1",
@@ -42,7 +42,7 @@
     "jsdom": "^25.0.1",
     "sass": "^1.83.0",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.8.0",
+    "typescript-eslint": "^8.59.3",
     "vite": "^5.4.8",
     "vitest": "^2.1.2"
   }
