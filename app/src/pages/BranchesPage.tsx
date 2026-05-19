@@ -170,6 +170,7 @@ export function BranchesPage() {
   const reposLoading = useAppSelector((s) => s.repos.loading);
   const dispatch = useAppDispatch();
   const [filter, setFilter] = useState<BranchFilter>("");
+  const [search, setSearch] = useState("");
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const { data: byRepoAll, loading: branchesLoading, reload } = useBranchesByRepo(repos);
@@ -214,7 +215,7 @@ export function BranchesPage() {
   }, [byRepoAll]);
 
   const byRepo = useMemo<BranchesByRepo[]>(() => {
-    const match = (b: BranchInfo) => {
+    const matchFilter = (b: BranchInfo) => {
       if (filter === "ahead") return b.ahead > 0;
       if (filter === "behind") return b.behind > 0;
       if (filter === "clean") return b.clean;
@@ -222,10 +223,19 @@ export function BranchesPage() {
       if (filter === "remote") return b.isRemote;
       return true;
     };
+    const q = search.trim().toLowerCase();
+    const matchSearch = (b: BranchInfo) => {
+      if (!q) return true;
+      const label = b.isRemote ? `${b.remote ?? ""}/${b.name}` : b.name;
+      return label.toLowerCase().includes(q);
+    };
     return byRepoAll
-      .map(({ repo, branches }) => ({ repo, branches: branches.filter(match) }))
+      .map(({ repo, branches }) => ({
+        repo,
+        branches: branches.filter((b) => matchFilter(b) && matchSearch(b)),
+      }))
       .filter(({ branches }) => branches.length > 0);
-  }, [byRepoAll, filter]);
+  }, [byRepoAll, filter, search]);
 
   const showSkeleton =
     (reposLoading || branchesLoading) && byRepoAll.every((g) => g.branches.length === 0);
@@ -236,7 +246,23 @@ export function BranchesPage() {
   return (
     <div className="a-branches p-branches" data-testid="branches-page">
       <div className="a-br-toolbar">
-        <div className="a-br-filters" role="tablist" aria-label={t("branches.filter.label")}>
+        <div className="a-br-search">
+          <Icon name="search" size={12} />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("branches.search_placeholder")}
+            aria-label={t("branches.search_aria")}
+            data-testid="branches-search"
+            className="a-br-search-input"
+          />
+        </div>
+        <div
+          className="a-br-filters seg-group"
+          role="tablist"
+          aria-label={t("branches.filter.label")}
+        >
           <BFilter
             active={filter === ""}
             label={t("branches.filter.all")}
@@ -389,7 +415,7 @@ function BranchGroup({
           <div className="a-br-grouph-name">{repo.name}</div>
           <div className="a-br-grouph-remote">{repo.remoteUrl ?? ""}</div>
           <div className="a-br-grouph-count">
-            {branches.length} {t("branches.branches")}
+            {t("branches.branches_count", { count: branches.length })}
           </div>
         </div>
         <Tooltip>
@@ -597,11 +623,11 @@ function BFilter({
       type="button"
       role="tab"
       aria-selected={active ? "true" : "false"}
-      className={`a-br-filter-pill${active ? " active" : ""}`}
+      className={`a-br-filter-pill seg-btn${active ? " active" : ""}`}
       onClick={onClick}
     >
       <span>{label}</span>
-      <span className="a-br-filter-count">{count}</span>
+      <span className="a-br-filter-count seg-count">{count}</span>
     </button>
   );
 }

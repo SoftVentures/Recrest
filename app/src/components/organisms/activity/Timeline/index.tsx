@@ -154,7 +154,7 @@ export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Pro
 
   const filterChips = (
     <div
-      className="a-act-tl-filter"
+      className="a-act-tl-filter seg-group"
       role="tablist"
       aria-label={t("activity.timeline.filter_label")}
     >
@@ -267,11 +267,11 @@ function FilterPill({ active, label, count, onClick }: FilterPillProps) {
       type="button"
       role="tab"
       aria-selected={active ? "true" : "false"}
-      className={`a-act-tl-pill${active ? " active" : ""}`}
+      className={`a-act-tl-pill seg-btn${active ? " active" : ""}`}
       onClick={onClick}
     >
       <span>{label}</span>
-      <span className="a-act-tl-pill-count">{count}</span>
+      <span className="a-act-tl-pill-count seg-count">{count}</span>
     </button>
   );
 }

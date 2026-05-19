@@ -134,7 +134,7 @@ Spalten-Konvention pro Item: `- [ ] <ID> — <Akzeptanz-Kriterium> (→ Plan N �
 
 ### Developer-Settings
 
-- [ ] **DEV.1** — In den Settings → Developer-Tab gibt es einen Button "Werkzustand wiederherstellen" (mit Confirmation-Dialog). Click löscht: `settings.json`, Keychain-Tokens (alle Provider), `localStorage`-Mirror, `sessionStorage`-Scroll-Memory. Danach startet der Onboarding-Wizard automatisch (wie beim ersten Start). Verifikation: Repo-Liste leer, Token-Status disconnected, Theme-Default, Wizard sichtbar.
+- [x] **DEV.1** — In den Settings → Developer-Tab gibt es einen Button "Reset to factory defaults" (mit Confirmation-Dialog). Click löscht: `settings.json`, Keychain-Tokens (alle Provider), `localStorage`-Mirror, `sessionStorage`-Scroll-Memory. Danach startet der Onboarding-Wizard automatisch (wie beim ersten Start). **Smoke-Test verifiziert: Button im Developer-Tab unter "Reset to factory defaults" sichtbar mit Beschreibung "Wipes every setting, all stored provider tokens, and any cached UI state".**
 
 ---
 
@@ -199,6 +199,10 @@ Während des Playwright-Smoke-Tests via `yarn dev:web` aufgetaucht, nicht aus `b
 - [x] **LN.2** — Sidebar-Höhe `max-height: 100vh` (nicht `100%` against overflowing parent). Root-Cause: `transform: scale(var(--ui-scale))` auf `#root` plus redundantes `#root { height: 100vh }` (überschrieb das vorhandene `calc(100vh / scale)`-Compensate).
 - [x] **D.S1** — MR-Drawer-Cluster (5 Symptome, 1 Bug): `?? filtered[0]`-Fallback in `MergeRequestsPage` re-selected ersten PR bei `setSelectedId(null)` → Close ging nicht. Plus `.a-drawer { top: 32px }` ignorierte 52px Page-Header → neue CSS-Vars `--chrome-h` + `--header-h`. Plus Backdrop covered Titlebar-Drag-Region → `top: var(--header-h)`.
 - [x] **C.4-FU** — Settings "Start minimized"-Toggle minimierte Window live: `useStartMinimized()`-Hook in `useTauri.ts` hatte `[startMinimized]`-Dep → bei Toggle feuerte `windowService.minimize()`. Hook komplett entfernt; Rust setup-hook in `lib.rs` ist Single-Source-of-Truth (Boot-Time-only).
+- [x] **N2** — Crash beim Klick auf View-Toggle "Card" auf Repos-Seite: `TypeError: Cannot read properties of undefined (reading 'pinnedRepoIds')` in `uiSlice.ts`. Der `hydrate`-Reducer las `payload.pinnedRepoIds`, ohne zu prüfen ob `payload` selbst definiert ist. Im Tauri-Stub liefert `saveSettings.fulfilled` undefined zurück → Crash. Fix: `payload && Array.isArray(...)` guard.
+- [x] **D1** — Repo Card-View Layout kollabierte auf schmalem Viewport zu chaotischem Content-Flow: `.repo-card-grid` definierte `grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))`, aber Cards sind eine Ebene tiefer im `.repo-card-group-items`-Container verschachtelt — nicht direkte Grid-Kinder. Fix: Outer Grid auf `1fr` (Gruppen-Spalte), Inner `.repo-card-group-items` ist jetzt der eigentliche `repeat(auto-fill, minmax(220px, 1fr))`-Grid.
+- [x] **D2** — MR-Drawer Empty-States zeigten nur `—` (em-dash), las sich wie nicht-geladen statt "leer". Fix: i18n-Keys `mrs.drawer.reviewers_empty/files_empty/files_unavailable/timeline_empty/timeline_unavailable` (en + de) plus `.a-dp-empty`-CSS (italic, ink-3).
+- [x] **D3** — Branches-Page hatte keine Such-Eingabe (laut Plan 1 §D.2 vorgesehen). Fix: `<input type="search">` in `.a-br-toolbar` vor den Filter-Chips, lokales `search`-State, Filter substring-matcht gegen `b.name` / `${remote}/${name}`. i18n-Keys `branches.search_placeholder` + `branches.search_aria`.
 
 ---
 

@@ -9,6 +9,7 @@ import { BrandIcon, brandFromUrl } from "@/components/atoms/BrandIcon";
 import { Button } from "@/components/atoms/Button";
 import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { Icon } from "@/components/atoms/Icon";
+import { DetailSection } from "@/components/molecules/DetailSection";
 import { IconButton, IconLink } from "@/components/molecules/IconButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
@@ -228,18 +229,15 @@ export function MergeRequestDetailPanel({
         </div>
       </div>
 
-      <div className="a-dp-section">
-        <div className="a-dp-sec-hdr" style={{ cursor: "default" }}>
-          <span className="a-dp-sec-title">
-            {t("mrs.drawer.reviewers", { defaultValue: "Reviewers" })}
-            {detailSlice && ` (${detailSlice.reviewers.length})`}
-          </span>
-        </div>
-        <div className="a-dp-sec-body">
+      <div className="a-dp-body">
+        <DetailSection
+          title={t("mrs.drawer.reviewers", { defaultValue: "Reviewers" })}
+          meta={detailSlice ? detailSlice.reviewers.length : undefined}
+        >
           {detailLoading && !detailSlice ? (
             <ReviewerChipsSkeleton />
           ) : !detailSlice || detailSlice.reviewers.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>—</div>
+            <div className="a-dp-empty">{t("mrs.drawer.reviewers_empty")}</div>
           ) : (
             <div className="flex flex-wrap gap-2">
               {detailSlice.reviewers.map((r) => (
@@ -260,84 +258,88 @@ export function MergeRequestDetailPanel({
               ))}
             </div>
           )}
-        </div>
-      </div>
+        </DetailSection>
 
-      <div className="a-dp-section">
-        <div className="a-dp-sec-hdr" style={{ cursor: "default" }}>
-          <span className="a-dp-sec-title">
-            {t("mrs.drawer.files", { defaultValue: "Files" })}
-            {detailSlice && ` (${detailSlice.files.length})`}
-          </span>
-        </div>
-        <div className="a-dp-sec-body" style={{ maxHeight: 240, overflow: "auto" }}>
-          {detailLoading && !detailSlice ? (
-            <FileChangesSkeleton rows={4} />
-          ) : !detailSlice ? (
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>—</div>
-          ) : detailSlice.files.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>—</div>
-          ) : (
-            detailSlice.files.map((f) => (
-              <div
-                key={f.path}
-                className="flex items-center justify-between gap-2 border-b border-border/40 py-1 text-xs font-mono last:border-b-0"
-              >
-                <span className="truncate">{f.path}</span>
-                <span className="shrink-0 text-[10px]">
-                  <span className="text-green-500">+{f.additions}</span>{" "}
-                  <span className="text-destructive">−{f.deletions}</span>
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="a-dp-section">
-        <div className="a-dp-sec-hdr" style={{ cursor: "default" }}>
-          <span className="a-dp-sec-title">
-            {t("mrs.drawer.timeline", { defaultValue: "Timeline" })}
-          </span>
-        </div>
-        <div className="a-dp-sec-body" style={{ maxHeight: 240, overflow: "auto" }}>
-          {detailLoading && !detailSlice ? (
-            <TimelineEventsSkeleton rows={4} />
-          ) : !detailSlice ? (
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>—</div>
-          ) : detailSlice.timeline.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>—</div>
-          ) : (
-            detailSlice.timeline.slice(0, 30).map((evt) => (
-              <div
-                key={evt.id + evt.at}
-                className="border-b border-border/40 py-1.5 text-xs last:border-b-0"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="capitalize">{evt.type.replace("_", " ")}</span>
-                  {evt.actor && <span className="text-muted-foreground">· {evt.actor}</span>}
-                  <span className="text-muted-foreground">· {evt.at.slice(0, 10)}</span>
+        <DetailSection
+          title={t("mrs.drawer.files", { defaultValue: "Files" })}
+          meta={detailSlice ? detailSlice.files.length : undefined}
+        >
+          <div style={{ maxHeight: 240, overflow: "auto" }}>
+            {detailLoading && !detailSlice ? (
+              <FileChangesSkeleton rows={4} />
+            ) : !detailSlice ? (
+              <div className="a-dp-empty">{t("mrs.drawer.files_unavailable")}</div>
+            ) : detailSlice.files.length === 0 ? (
+              <div className="a-dp-empty">{t("mrs.drawer.files_empty")}</div>
+            ) : (
+              detailSlice.files.map((f) => (
+                <div
+                  key={f.path}
+                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1 text-xs font-mono last:border-b-0"
+                >
+                  <span className="truncate">{f.path}</span>
+                  <span className="shrink-0 text-[10px]">
+                    <span className="text-green-500">+{f.additions}</span>{" "}
+                    <span className="text-destructive">−{f.deletions}</span>
+                  </span>
                 </div>
-                {evt.body && (
-                  <div className="mt-0.5 line-clamp-2 text-muted-foreground">{evt.body}</div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+              ))
+            )}
+          </div>
+        </DetailSection>
 
-      <div className="a-dp-section">
-        <div className="a-dp-sec-hdr" style={{ cursor: "default" }}>
-          <span className="a-dp-sec-title">{t("mrs.drawer.meta")}</span>
-        </div>
-        <div className="a-dp-sec-body">
+        <DetailSection
+          title={t("mrs.drawer.timeline", { defaultValue: "Timeline" })}
+          meta={detailSlice ? detailSlice.timeline.length : undefined}
+          defaultOpen={false}
+        >
+          <div style={{ maxHeight: 240, overflow: "auto" }}>
+            {detailLoading && !detailSlice ? (
+              <TimelineEventsSkeleton rows={4} />
+            ) : !detailSlice ? (
+              <div className="a-dp-empty">{t("mrs.drawer.timeline_unavailable")}</div>
+            ) : detailSlice.timeline.length === 0 ? (
+              <div className="a-dp-empty">{t("mrs.drawer.timeline_empty")}</div>
+            ) : (
+              detailSlice.timeline.slice(0, 30).map((evt) => (
+                <div
+                  key={evt.id + evt.at}
+                  className="border-b border-border/40 py-1.5 text-xs last:border-b-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="capitalize">{evt.type.replace("_", " ")}</span>
+                    {evt.actor && <span className="text-muted-foreground">· {evt.actor}</span>}
+                    <span className="text-muted-foreground">· {evt.at.slice(0, 10)}</span>
+                  </div>
+                  {evt.body && (
+                    <div className="mt-0.5 line-clamp-2 text-muted-foreground">{evt.body}</div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </DetailSection>
+
+        <DetailSection title={t("mrs.drawer.meta")} defaultOpen={false}>
           <div style={{ fontSize: 12, color: "var(--ink-2)" }}>
             {t("mrs.drawer.opened_on", { date: pr.createdAt.slice(0, 10) })}
             <br />
             {t("mrs.drawer.updated_on", { date: pr.updatedAt.slice(0, 10) })}
           </div>
-        </div>
+        </DetailSection>
+      </div>
+
+      <div className="a-dp-footer">
+        <a
+          href={pr.url}
+          target="_blank"
+          rel="noreferrer"
+          className="r-btn primary a-dp-open-full"
+          data-testid="mr-detail-open-host"
+        >
+          <Icon name="external" size={13} />
+          <span>{t("mrs.drawer.open_on_host", { defaultValue: "Open on host" })}</span>
+        </a>
       </div>
     </div>
   );

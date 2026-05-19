@@ -108,8 +108,13 @@ const uiSlice = createSlice({
     // Hydrate pinned-repo state from persisted settings (Plan 1 §A.5). The
     // settings slice is the source of truth on disk; the UI slice mirrors
     // it so components can read pin state with one selector.
-    const hydrate = (state: UiState, payload: { pinnedRepoIds?: string[] }) => {
-      if (Array.isArray(payload.pinnedRepoIds)) {
+    //
+    // `payload` is guarded because `saveSettings` may resolve with `undefined`
+    // when the backend stub (dev:web) or a future no-op Tauri command
+    // returns nothing — without the guard the reducer threw and froze the
+    // store on every settings write (e.g. clicking the Card view toggle).
+    const hydrate = (state: UiState, payload: { pinnedRepoIds?: string[] } | undefined) => {
+      if (payload && Array.isArray(payload.pinnedRepoIds)) {
         state.pinnedRepoIds = [...payload.pinnedRepoIds];
       }
     };

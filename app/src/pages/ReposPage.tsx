@@ -191,7 +191,7 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
        *  to card-mode on narrow viewports for the *grouped* preset only. */}
       <div className="repo-page-toolbar-row" data-testid="repos-toolbar">
         <div
-          className="repo-page-toolbar"
+          className="repo-page-toolbar seg-group seg-group--square"
           role="group"
           aria-label={t("repos.view.toggle_label", { defaultValue: "View mode" })}
         >
@@ -220,7 +220,7 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
 
         <div className="repo-page-filters" data-testid="repos-filter-bar">
           <div
-            className="repo-page-chips"
+            className="repo-page-chips seg-group seg-group--square"
             role="group"
             aria-label={t("repos.filter.label", { defaultValue: "Status filter" })}
           >
@@ -288,7 +288,7 @@ function ViewToggleButton({ mode, current, onSelect, icon, label }: ViewToggleBu
   return (
     <button
       type="button"
-      className={cn("repo-view-btn", active && "is-active")}
+      className={cn("repo-view-btn seg-btn", active && "is-active")}
       data-active={active ? "true" : undefined}
       data-testid={`repo-view-toggle-${mode}`}
       onClick={() => onSelect(mode)}
@@ -311,7 +311,7 @@ function StatusChipBtn({ chip, active, onToggle, label }: StatusChipBtnProps) {
   return (
     <button
       type="button"
-      className={cn("repo-page-chip", active && "is-active")}
+      className={cn("repo-page-chip seg-btn", active && "is-active")}
       data-testid={`repos-filter-chip-${chip}`}
       aria-pressed={active}
       onClick={() => onToggle(chip)}

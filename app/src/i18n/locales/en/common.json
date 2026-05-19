@@ -56,7 +56,7 @@
   },
   "view": {
     "dashboard": { "title": "Dashboard", "meta": "{{count}} repos" },
-    "repos": { "title": "Repositories", "meta": "{{count}} of {{total}}" },
+    "repos": { "title": "Repositories", "meta": "{{count}} repos" },
     "mrs": { "title": "Merge Requests", "meta": "{{count}} open" },
     "changes": { "title": "Changes", "meta": "{{count}} with uncommitted changes" },
     "branches": { "title": "Branches", "meta": "across {{count}} repos" },
@@ -154,7 +154,16 @@
     "drawer": {
       "meta": "Metadata",
       "opened_on": "Opened on {{date}}",
-      "updated_on": "Last updated {{date}}"
+      "updated_on": "Last updated {{date}}",
+      "reviewers_empty": "No reviewers requested",
+      "files_empty": "No file changes to show",
+      "files_unavailable": "Files unavailable for this PR",
+      "timeline_empty": "No activity yet",
+      "timeline_unavailable": "Timeline unavailable for this PR",
+      "reviewers": "Reviewers",
+      "files": "Files",
+      "timeline": "Timeline",
+      "open_on_host": "Open on host"
     }
   },
   "branches": {
@@ -168,8 +177,12 @@
       "remote": "Remote only"
     },
     "branches": "branches",
+    "branches_count_one": "{{count}} branch",
+    "branches_count_other": "{{count}} branches",
     "loading": "Loading branches…",
     "empty": "No branches match your filter.",
+    "search_placeholder": "Filter branches by name…",
+    "search_aria": "Filter branches by name",
     "no_repos": "No repositories yet — add one to see its branches.",
     "tag": {
       "current": "current",
@@ -331,7 +344,7 @@
     },
     "integrations": {
       "title": "Integrations",
-      "intro": "Editors, terminals, and external tools."
+      "intro": "Where Recrest looks for git repositories on your machine."
     },
     "shortcuts": {
       "title": "Shortcuts",

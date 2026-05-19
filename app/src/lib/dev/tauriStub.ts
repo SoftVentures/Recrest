@@ -260,25 +260,64 @@ function installStub(seed: Required_<AppSeed>): void {
         return resolveStatus(a.repoId);
       case "git_fetch_all":
         return SEED.repos.length;
-      case "git_list_branches":
+      case "git_list_branches": {
+        const repoId = (a.repoId as string) ?? "";
+        const repo = SEED.repos.find((r) => r.id === repoId);
+        const headBranch = repo?.status?.branch ?? "main";
+        const ahead = repo?.status?.ahead ?? 0;
+        const behind = repo?.status?.behind ?? 0;
+        const now = Date.now();
+        const cIso = (daysAgo: number) => new Date(now - daysAgo * 86400_000).toISOString();
+        const headCommit = {
+          sha: "abc1234",
+          shortSha: "abc1234",
+          subject: "feat: latest work on branch",
+          author: "Valentin",
+          authoredAt: cIso(1),
+        };
+        const altCommit = {
+          sha: "def5678",
+          shortSha: "def5678",
+          subject: "chore: keep develop in sync",
+          author: "Valentin",
+          authoredAt: cIso(3),
+        };
         return [
           {
-            name: "main",
+            name: headBranch,
+            isCurrent: true,
             isRemote: false,
-            isHead: true,
-            upstream: "origin/main",
-            ahead: 0,
-            behind: 0,
+            remote: null,
+            upstream: `origin/${headBranch}`,
+            ahead,
+            behind,
+            clean: ahead === 0 && behind === 0,
+            lastCommit: headCommit,
           },
           {
             name: "develop",
+            isCurrent: false,
             isRemote: false,
-            isHead: false,
+            remote: null,
             upstream: "origin/develop",
             ahead: 0,
-            behind: 1,
+            behind: 0,
+            clean: true,
+            lastCommit: altCommit,
+          },
+          {
+            name: "main",
+            isCurrent: false,
+            isRemote: true,
+            remote: "origin",
+            upstream: null,
+            ahead: 0,
+            behind: 0,
+            clean: true,
+            lastCommit: headCommit,
           },
         ];
+      }
       case "git_merge":
         return { status: resolveStatus(a.repoId), conflicts: [] };
       case "git_clone":
@@ -325,21 +364,35 @@ function installStub(seed: Required_<AppSeed>): void {
         return undefined;
       case "get_settings":
         return SEED.settings;
-      case "update_settings":
-        return undefined;
+      case "update_settings": {
+        // Real Tauri command returns the patched AppSettings. The stub used
+        // to return undefined, which silently no-op'd settings-slice updates
+        // (Object.assign(state, undefined) does nothing) — so toggling things
+        // like repoListViewMode never propagated in dev:web. Mirror prod
+        // semantics: apply the patch onto SEED.settings and return it.
+        const patch = (a.patch ?? {}) as Record<string, unknown>;
+        const current = (SEED.settings ?? {}) as Record<string, unknown>;
+        SEED.settings = { ...current, ...patch };
+        return SEED.settings;
+      }
       case "save_window_state":
         return undefined;
       case "load_window_state":
         return null;
       case "validate_window_position":
         return true;
-      case "get_platform_info":
+      case "get_platform_info": {
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+        const isMac = /Mac|iPhone|iPad/i.test(ua);
+        const isLinux = /Linux|X11/i.test(ua) && !/Win/i.test(ua);
         return {
-          platform: "windows",
-          osVersion: "10.0.22000",
+          os: isMac ? "macos" : isLinux ? "linux" : "windows",
           arch: "x86_64",
-          tauriVersion: "2.0.0",
+          version: isMac ? "15.0" : isLinux ? "6.5" : "11",
+          family: isMac || isLinux ? "unix" : "windows",
+          debugAssertions: true,
         };
+      }
       case "check_git":
         return { installed: true, version: "2.44.0" };
       case "update_tray_badge":
@@ -353,9 +406,19 @@ function installStub(seed: Required_<AppSeed>): void {
 
       // --- dev commands
       case "get_dev_paths":
-        return { configDir: null, dataDir: null, cacheDir: null, logDir: null };
-      case "get_build_triple":
-        return "windows-x86_64";
+        return {
+          configDir: "~/Library/Application Support/Recrest (dev)",
+          dataDir: "~/Library/Application Support/Recrest (dev)",
+          cacheDir: "~/Library/Caches/Recrest (dev)",
+          logDir: "~/Library/Logs/Recrest (dev)",
+        };
+      case "get_build_triple": {
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+        const isMac = /Mac|iPhone|iPad/i.test(ua);
+        const isLinux = /Linux|X11/i.test(ua) && !/Win/i.test(ua);
+        const os = isMac ? "darwin" : isLinux ? "linux" : "windows";
+        return `${os}-x86_64`;
+      }
       case "dev_panic":
         return undefined;
 
@@ -393,12 +456,20 @@ function installStub(seed: Required_<AppSeed>): void {
         return { x: 0, y: 0 };
 
       // --- Tauri plugin: os
-      case "plugin:os|platform":
+      case "plugin:os|platform": {
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+        if (/Mac|iPhone|iPad/i.test(ua)) return "macos";
+        if (/Linux|X11/i.test(ua) && !/Win/i.test(ua)) return "linux";
         return "windows";
-      case "plugin:os|type":
+      }
+      case "plugin:os|type": {
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+        if (/Mac|iPhone|iPad/i.test(ua)) return "Darwin";
+        if (/Linux|X11/i.test(ua) && !/Win/i.test(ua)) return "Linux";
         return "Windows_NT";
+      }
       case "plugin:os|version":
-        return "10.0.22000";
+        return "1.0.0";
       case "plugin:os|arch":
         return "x86_64";
       case "plugin:os|locale":
@@ -426,9 +497,11 @@ function installStub(seed: Required_<AppSeed>): void {
 
       // --- Tauri plugin: app
       case "plugin:app|version":
-        return "0.1.0";
+        return "0.7.0";
       case "plugin:app|name":
         return "Recrest";
+      case "plugin:app|tauri_version":
+        return "2.0.0";
 
       // --- Tauri plugin: notification / dialog / autostart / process / updater / deep-link
       case "plugin:notification|is_permission_granted":
@@ -453,6 +526,10 @@ function installStub(seed: Required_<AppSeed>): void {
         return null;
       case "plugin:deep-link|register":
       case "plugin:deep-link|unregister":
+        return undefined;
+      case "plugin:window|set_min_size":
+      case "plugin:window|set_max_size":
+      case "set_caption_button_bounds":
         return undefined;
 
       default:
@@ -523,13 +600,20 @@ function installStub(seed: Required_<AppSeed>): void {
       },
     },
   });
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const detectedPlatform = /Mac|iPhone|iPad/i.test(ua)
+    ? "macos"
+    : /Linux|X11/i.test(ua) && !/Win/i.test(ua)
+      ? "linux"
+      : "windows";
   Object.defineProperty(window, "__TAURI_OS_PLUGIN_INTERNALS__", {
     configurable: true,
     writable: false,
     value: {
-      platform: "windows",
-      version: "10.0.22000",
-      family: "windows",
+      platform: detectedPlatform,
+      version: "1.0.0",
+      family:
+        detectedPlatform === "windows" ? "windows" : detectedPlatform === "linux" ? "unix" : "unix",
       arch: "x86_64",
     },
   });

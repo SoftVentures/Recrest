@@ -56,7 +56,7 @@
   },
   "view": {
     "dashboard": { "title": "Dashboard", "meta": "{{count}} Repos" },
-    "repos": { "title": "Repositories", "meta": "{{count}} von {{total}}" },
+    "repos": { "title": "Repositories", "meta": "{{count}} Repos" },
     "mrs": { "title": "Merge Requests", "meta": "{{count}} offen" },
     "changes": { "title": "Änderungen", "meta": "{{count}} mit lokalen Änderungen" },
     "branches": { "title": "Branches", "meta": "über {{count}} Repos" },
@@ -159,7 +159,16 @@
     "drawer": {
       "meta": "Metadaten",
       "opened_on": "Geöffnet am {{date}}",
-      "updated_on": "Zuletzt aktualisiert {{date}}"
+      "updated_on": "Zuletzt aktualisiert {{date}}",
+      "reviewers_empty": "Keine Reviewer angefragt",
+      "files_empty": "Keine geänderten Dateien",
+      "files_unavailable": "Dateien für diesen PR nicht verfügbar",
+      "timeline_empty": "Noch keine Aktivität",
+      "timeline_unavailable": "Timeline für diesen PR nicht verfügbar",
+      "reviewers": "Reviewer",
+      "files": "Dateien",
+      "timeline": "Timeline",
+      "open_on_host": "Auf Host öffnen"
     }
   },
   "branches": {
@@ -173,8 +182,12 @@
       "remote": "Nur Remote"
     },
     "branches": "Branches",
+    "branches_count_one": "{{count}} Branch",
+    "branches_count_other": "{{count}} Branches",
     "loading": "Lade Branches…",
     "empty": "Keine Branches passen zum Filter.",
+    "search_placeholder": "Branches nach Namen filtern…",
+    "search_aria": "Branches nach Namen filtern",
     "no_repos": "Noch keine Repositories — füge eines hinzu, um seine Branches zu sehen.",
     "tag": {
       "current": "aktuell",
@@ -336,7 +349,7 @@
     },
     "integrations": {
       "title": "Integrationen",
-      "intro": "Editoren, Terminals und externe Tools."
+      "intro": "Wo Recrest auf deinem Rechner nach Git-Repositories sucht."
     },
     "shortcuts": {
       "title": "Shortcuts",

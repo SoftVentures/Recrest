@@ -1050,6 +1050,16 @@
    * around it so we don't introduce a second indent. */
   padding: 0;
 }
+.a-mr-detail {
+  /* Mirror `.a-detail`'s flex layout so collapsible `.a-dp-section`s can
+   * flex-grow into the remaining vertical space and the `.a-dp-footer`
+   * CTA anchors to the bottom — same pattern as the repo detail pane. */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 .a-drawer-footer {
   flex-shrink: 0;
   border-top: 1px solid var(--border);
@@ -1318,6 +1328,14 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+}
+/* D2: empty-state placeholder inside a drawer section. Replaces the bare
+ * em-dash that read as "data not loaded" rather than "nothing to show". */
+.a-dp-empty {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-3);
+  padding: 6px 0;
 }
 .a-dp-link {
   color: var(--accent);

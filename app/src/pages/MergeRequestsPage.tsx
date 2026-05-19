@@ -100,18 +100,24 @@ export function MergeRequestsPage() {
   return (
     <div className="a-mr p-mrs" data-testid="merge-requests-page">
       <div className="a-mr-toolbar">
-        <Chip active={tab === "open"} onClick={() => setTab("open")}>
-          {t("mrs.filter.open")} <span className="chip-c">{counts.open}</span>
-        </Chip>
-        <Chip active={tab === "draft"} onClick={() => setTab("draft")}>
-          {t("mrs.filter.draft")} <span className="chip-c">{counts.draft}</span>
-        </Chip>
-        <Chip active={tab === "merged"} onClick={() => setTab("merged")}>
-          {t("mrs.filter.merged")} <span className="chip-c">{counts.merged}</span>
-        </Chip>
-        <Chip active={tab === "closed"} onClick={() => setTab("closed")}>
-          {t("mrs.filter.closed")} <span className="chip-c">{counts.closed}</span>
-        </Chip>
+        <div
+          className="seg-group"
+          role="tablist"
+          aria-label={t("mrs.filter.label", { defaultValue: "State filter" })}
+        >
+          <Chip active={tab === "open"} onClick={() => setTab("open")}>
+            {t("mrs.filter.open")} <span className="seg-count">{counts.open}</span>
+          </Chip>
+          <Chip active={tab === "draft"} onClick={() => setTab("draft")}>
+            {t("mrs.filter.draft")} <span className="seg-count">{counts.draft}</span>
+          </Chip>
+          <Chip active={tab === "merged"} onClick={() => setTab("merged")}>
+            {t("mrs.filter.merged")} <span className="seg-count">{counts.merged}</span>
+          </Chip>
+          <Chip active={tab === "closed"} onClick={() => setTab("closed")}>
+            {t("mrs.filter.closed")} <span className="seg-count">{counts.closed}</span>
+          </Chip>
+        </div>
         <div style={{ flex: 1 }} />
         <FiltersDropdown />
       </div>
@@ -267,7 +273,13 @@ function Chip({
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" className={`chip${active ? " active" : ""}`} onClick={onClick}>
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active ? "true" : "false"}
+      className={`seg-btn${active ? " active" : ""}`}
+      onClick={onClick}
+    >
       {children}
     </button>
   );

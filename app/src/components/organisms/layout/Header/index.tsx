@@ -129,7 +129,7 @@ export function Header() {
           <TooltipContent side="bottom">{addRepoLabel}</TooltipContent>
         </Tooltip>
         <div
-          className="a-topbar-scope"
+          className="a-topbar-scope seg-group seg-group--square"
           role="group"
           aria-label={t("actions.add_scope_label", { defaultValue: "Add scope" })}
           data-testid="repo-add-scope"
@@ -142,7 +142,7 @@ export function Header() {
             <TooltipTrigger asChild>
               <button
                 type="button"
-                className={cn("a-topbar-scope-btn", addScope === "local" && "is-active")}
+                className={cn("a-topbar-scope-btn seg-btn", addScope === "local" && "is-active")}
                 data-testid="repo-add-scope-local"
                 aria-pressed={addScope === "local"}
                 aria-label={localLabel}
@@ -158,7 +158,7 @@ export function Header() {
             <TooltipTrigger asChild>
               <button
                 type="button"
-                className={cn("a-topbar-scope-btn", addScope === "global" && "is-active")}
+                className={cn("a-topbar-scope-btn seg-btn", addScope === "global" && "is-active")}
                 data-testid="repo-add-scope-global"
                 aria-pressed={addScope === "global"}
                 aria-label={globalLabel}
