@@ -1,0 +1,18 @@
+name: "Seed repo-root .env"
+description: "Writes a deterministic .env into the repo root so Playwright's legal-imprint tests find their inputs. Single source of truth for the CI env scaffold — referenced from ci.yml and visual-tester.yml so the two workflows can't drift."
+runs:
+  using: "composite"
+  steps:
+    - name: Write .env
+      shell: bash
+      run: |
+        cat > .env <<'EOF'
+        VITE_IMPRINT_NAME="Recrest Test Deployment"
+        VITE_IMPRINT_STREET="Teststraße 42"
+        VITE_IMPRINT_POSTAL_CODE="10115"
+        VITE_IMPRINT_CITY="Berlin"
+        VITE_IMPRINT_COUNTRY="Deutschland"
+        VITE_IMPRINT_EMAIL="legal@example.com"
+        VITE_IMPRINT_PHONE="+49 30 0000000"
+        VITE_IMPRINT_RESPONSIBLE_PERSON="Max Mustermann"
+        EOF

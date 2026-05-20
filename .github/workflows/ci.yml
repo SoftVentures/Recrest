@@ -1,4 +1,4 @@
-name: CI
+name: ✅ CI
 
 on:
   pull_request:
@@ -143,18 +143,7 @@ jobs:
           node-version-file: .nvmrc
           cache: yarn
       - uses: ./.github/actions/install-deps
-      - name: Seed .env for legal-imprint tests
-        run: |
-          cat > .env <<'EOF'
-          VITE_IMPRINT_NAME="Recrest Test Deployment"
-          VITE_IMPRINT_STREET="Teststraße 42"
-          VITE_IMPRINT_POSTAL_CODE="10115"
-          VITE_IMPRINT_CITY="Berlin"
-          VITE_IMPRINT_COUNTRY="Deutschland"
-          VITE_IMPRINT_EMAIL="legal@example.com"
-          VITE_IMPRINT_PHONE="+49 30 0000000"
-          VITE_IMPRINT_RESPONSIBLE_PERSON="Max Mustermann"
-          EOF
+      - uses: ./.github/actions/seed-env
       # Split install-deps from browser install: in Playwright 1.59 the
       # `--with-deps` flag silently skips the apt-get step when the workspace
       # is invoked via `yarn workspace`, leaving WebKit without its GTK-4 /
