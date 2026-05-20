@@ -1,0 +1,99 @@
+name: 📸 Visual Tester
+
+# Runs the Playwright suite on Linux, Windows and macOS and uploads
+# screenshots / video / trace artifacts per-OS so a reviewer can diff the
+# real cross-platform rendering. Test failures here do NOT block the build —
+# snapshot baselines in tests/src/e2e/landing/10-responsive.spec.ts are
+# pinned to Chromium-on-Linux (see app/CLAUDE.md), so font-rendering
+# diffs on Windows / macOS are expected. The point is the artifacts.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-tester-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Playwright (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ubuntu-24.04 is required: Playwright's WebKit bundle links against
+          # libgtk-4 / libavif.so.13 / libmanette / libhyphen, none of which
+          # ship on 22.04 — same reasoning as the e2e job in ci.yml.
+          - { os: ubuntu-24.04, label: linux }
+          - { os: windows-latest, label: windows }
+          - { os: macos-latest, label: macos }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - uses: ./.github/actions/install-deps
+
+      - uses: ./.github/actions/seed-env
+
+      # Browser cache survives across runs — Playwright pins exact versions
+      # per its package.json, so the path key includes the lockfile hash.
+      # Forward slashes everywhere; the Actions runner normalises the Windows
+      # path under the hood.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+            ~/AppData/Local/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      # Linux needs apt-get for WebKit's system libs — only that step needs
+      # sudo. Mirroring the split from ci.yml so --with-deps quirks under
+      # yarn workspace don't bite us.
+      - name: Install Playwright system deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo yarn workspace @recrest/tests exec playwright install-deps
+
+      - name: Install Playwright browsers
+        run: yarn workspace @recrest/tests exec playwright install
+
+      - name: Run Playwright tests
+        # Don't fail the workflow on assertion errors — visual diffs on
+        # Windows / macOS are expected (no pinned baselines for those OS).
+        # CI correctness gating lives in ci.yml::e2e (Linux-only).
+        continue-on-error: true
+        run: yarn test:e2e
+
+      - name: Upload screenshots (${{ matrix.label }})
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-${{ matrix.label }}
+          path: .screenshots/playwright/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload HTML report (${{ matrix.label }})
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.label }}
+          path: tests/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 30

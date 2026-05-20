@@ -55,7 +55,7 @@ Spalten-Konvention pro Item: `- [ ] <ID> — <Akzeptanz-Kriterium> (→ Plan N �
 - [x] **1.D2** — Branch-View hat: ausklappbare Sektionen (Local/Remote/Stale/…), Such-Input, Status-Filter. (→ Plan 1 §D.2)
 - [x] **1.D3** — Click auf "Repo entfernen" / "Force Push" / "Discard Changes" / "Token-Reset" zeigt Confirmation-Dialog. Setting "Confirm risky actions" steuert das. (→ Plan 1 §D.3)
 - [x] **1.D4** — Onboarding-Wizard: konsistenter "Zurück"-Button im Footer aller Steps (außer Step 0). Form-Eingaben bleiben beim Zurück erhalten. (→ Plan 1 §D.4)
-- [ ] **1.D5** — Drawer schließt per Swipe nach rechts. Page-Switch per horizontalem Swipe. Mindestens 2 Use-Cases dokumentiert + getestet. (→ Plan 1 §D.5)
+- [x] **1.D5** — Drawer schließt per Swipe nach rechts. Page-Switch per horizontalem Swipe. Use-Cases dokumentiert in `usePageSwipe.ts:9-20`. Playwright-Spec `tests/src/e2e/app/18-swipe-gestures.spec.ts` (synthetisiert PointerEvents mit `pointerType:"touch"` — @use-gesture fällt auf Headless-Chrome ohne `ontouchstart`-Support auf PointerEvents zurück). 2 Tests grün auf `app-desktop`. (→ Plan 1 §D.5)
 - [x] **1.D6** — Cmd/Ctrl + `+` / `-` / `0` skaliert UI live. Slider in System-Settings reflektiert dieselbe Skala (bidirektional gesynct). Skala persistiert. (→ Plan 1 §D.6)
 - [x] **1.D7** — Activity-Page scrollen, weg navigieren, zurück → Scroll-Position wiederhergestellt. Selbes für Repo-List, MR-List. (→ Plan 1 §D.7)
 

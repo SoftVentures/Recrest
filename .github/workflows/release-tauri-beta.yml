@@ -3,7 +3,7 @@
 # an. Matrix-Jobs liefern Installer in OS-spezifische Staging-Artifacts; der
 # collect-Job konsolidiert sie in EIN Artifact mit `windows/`, `macos/`,
 # `linux/`-Unterordnern.
-name: Release (Tauri Beta)
+name: 🧪 Release (Tauri Beta)
 
 on:
   workflow_dispatch:
