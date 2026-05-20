@@ -4,9 +4,20 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "@/lib/utils";
 
-export const TooltipProvider = TooltipPrimitive.Provider;
-export const Tooltip = TooltipPrimitive.Root;
-export const TooltipTrigger = TooltipPrimitive.Trigger;
+// Wrap the bare Radix primitives as function components rather than re-exporting
+// them as `const` aliases. The `const` form trips
+// `react-refresh/only-export-components`: the rule cannot tell that the value is
+// itself a component, so it bails out of Fast Refresh for the whole file.
+// Wrapping is a one-line cost and keeps every import site unchanged.
+export function TooltipProvider(props: ComponentProps<typeof TooltipPrimitive.Provider>) {
+  return <TooltipPrimitive.Provider {...props} />;
+}
+export function Tooltip(props: ComponentProps<typeof TooltipPrimitive.Root>) {
+  return <TooltipPrimitive.Root {...props} />;
+}
+export function TooltipTrigger(props: ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return <TooltipPrimitive.Trigger {...props} />;
+}
 
 export function TooltipContent({
   className,

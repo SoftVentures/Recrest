@@ -8,6 +8,7 @@ import {
 } from "@recrest/shared";
 
 import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
+import { registerSettingsResetListener } from "@/store/resetListener";
 import { providersReducer } from "@/store/slices/providersSlice";
 import { prsReducer } from "@/store/slices/prsSlice";
 import { remoteImportReducer } from "@/store/slices/remoteImportSlice";
@@ -40,12 +41,17 @@ export const store = configureStore({
           searchOpen: false,
           activeView: "dashboard" as const,
           selectedRepoId: null,
+          selectedPrKey: null,
           pinnedRepoIds: [],
           refreshNonce: 0,
           importDialogOpen: false,
           findDialogOpen: false,
           updaterBanner: null,
           updaterProgress: null,
+          repoFilters: {
+            repos: { sort: { field: "", direction: "asc" as const }, statusChips: [] },
+            changes: { sort: { field: "", direction: "asc" as const }, statusChips: [] },
+          },
         },
         settings: {
           pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,
@@ -56,7 +62,7 @@ export const store = configureStore({
           autoStart: false,
           autoUpdate: "manual",
           startMinimized: false,
-          closeToTray: true,
+          closeToTray: false,
           notifications: {
             enabled: false,
             newPr: true,
@@ -64,6 +70,18 @@ export const store = configureStore({
             mergeReady: true,
           },
           crashReporting: false,
+          // Phase 0.1 additive defaults — keep in sync with settingsSlice and
+          // Rust `AppSettings::default()`.
+          pinnedRepoIds: [],
+          authorAliases: {},
+          uiScale: 1.0,
+          repoListViewMode: "grouped",
+          repoListSort: { field: "", direction: "asc" },
+          repoImportDefaults: { groupId: null, providerId: null },
+          defaultScanPath: null,
+          terminal: { id: null, profile: null, customCommand: null },
+          commitMessageTemplate: "{{author}}: {{date}}",
+          privacy: { fetchFavicons: false },
           accent: persisted.accent ?? DEFAULT_ACCENT,
           font: persisted.font ?? DEFAULT_FONT,
           fontSize: persisted.fontSize ?? DEFAULT_FONT_SIZE,
@@ -78,6 +96,14 @@ export const store = configureStore({
     : undefined,
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistenceMiddleware),
 });
+
+// Wire the global `settings://reset` listener once at module load. The Rust
+// `factory_reset` command emits this event after wiping on-disk state, so
+// the renderer always mirrors the wipe (recrest:* storage + reload) even
+// when the IPC was triggered outside the Developer tab — e.g. from a CLI
+// flag in the future. `safeListen` no-ops outside the Tauri runtime, so
+// this is a free hook in pure-web dev / tests.
+void registerSettingsResetListener();
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

@@ -1,6 +1,6 @@
 /**
  * Returns up to two uppercase letters suitable for an avatar fallback.
- * `"Valentin Röhle"` → `"VR"`, `"recrest"` → `"R"`, `""` → `""`.
+ * `"Anna Müller"` → `"AM"`, `"recrest"` → `"R"`, `""` → `""`.
  */
 export function initialsFromName(name: string | null | undefined): string {
   if (!name) return "";

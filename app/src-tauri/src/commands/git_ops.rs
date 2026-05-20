@@ -5,6 +5,7 @@ use serde::Serialize;
 use tauri::State;
 
 use super::error::CommandError;
+#[cfg(target_os = "windows")]
 use super::process::configure as no_window;
 use crate::auth::token::TokenStore;
 use crate::git::{branches, status};

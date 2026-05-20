@@ -4,6 +4,7 @@ import { WindowEvent, storageKeyForLogo } from "@recrest/shared";
 
 import { BrandIcon, type BrandSlug } from "@/components/atoms/BrandIcon";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
+import { useRepoFavicon } from "@/hooks/useRepoFavicon";
 import { useRepoLogo } from "@/hooks/useRepoLogo";
 
 /** Curated, hand-picked two-stop gradients for repo avatars. Each pair is
@@ -60,6 +61,9 @@ interface RepoLike {
    *  for repo-like objects that don't carry the full Repository DTO. */
   logoPath?: string | null;
   logoDarkPath?: string | null;
+  /** Remote URL — used for the L.1 favicon fallback when no in-repo logo
+   *  was detected and the host doesn't match a Simple Icon brand. */
+  remoteUrl?: string | null;
 }
 
 interface RepoAvatarProps {
@@ -96,6 +100,11 @@ export function RepoAvatar({ repo, size = 24, radius = 6 }: RepoAvatarProps) {
     logoPath: repo.logoPath ?? null,
     logoDarkPath: repo.logoDarkPath ?? null,
   });
+  // L.1: only fall back to a fetched favicon when no local logo and no
+  // brand match are available. The hook itself respects the
+  // `privacy.fetchFavicons` setting and short-circuits otherwise.
+  const needsFavicon = !custom && !autoLogo && !detectSpecialIcon(repo.name);
+  const favicon = useRepoFavicon(needsFavicon ? (repo.remoteUrl ?? null) : null);
 
   useEffect(() => {
     setCustom(readStored(repo.id));
@@ -114,8 +123,9 @@ export function RepoAvatar({ repo, size = 24, radius = 6 }: RepoAvatarProps) {
     };
   }, [repo.id]);
 
-  // Priority ladder: user-uploaded override > repo-detected logo > letter tile.
-  const src = custom ?? autoLogo;
+  // Priority ladder: user-uploaded override > repo-detected logo >
+  // host favicon (privacy-gated) > brand glyph > letter tile.
+  const src = custom ?? autoLogo ?? favicon;
   if (src) {
     return (
       <Tooltip>

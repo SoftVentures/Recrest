@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use tauri::{AppHandle, State};
+#[cfg(not(target_os = "linux"))]
 use tauri_plugin_notification::NotificationExt;
 
 use super::error::CommandError;
@@ -74,12 +75,44 @@ pub async fn notify(
         return Ok(());
     }
 
-    app.notification()
-        .builder()
-        .title(&title)
-        .body(&body)
-        .show()
-        .map_err(|e| CommandError::internal(format!("notification failed: {e}")))?;
+    // Linux: bypass `tauri-plugin-notification` so we can attach the
+    // Recrest icon name + an explicit image-path hint that dunst/Plasma/
+    // GNOME use to render the app logo on the toast (Plan 1 §C.7). The
+    // plugin's desktop path doesn't expose those fields; calling
+    // `notify-rust` directly mirrors what the plugin does internally
+    // anyway. Keep the existing path on Windows/macOS where the plugin
+    // already does the right thing.
+    #[cfg(target_os = "linux")]
+    {
+        let _ = &app; // plugin handle unused on this branch
+        // On Linux, missing or broken notification daemons (sandbox containers,
+        // headless sessions, dunst not running, no D-Bus) cause `show()` to
+        // return Err. Surfacing that as a `CommandError::internal` would pop
+        // an error toast inside the app for trying to receive a notification
+        // — bad UX. Match macOS/Windows behaviour where missing toasts are
+        // silent: log + Ok(()).
+        if let Err(err) = notify_rust::Notification::new()
+            .appname("Recrest")
+            .icon("recrest")
+            .summary(&title)
+            .body(&body)
+            .hint(notify_rust::Hint::ImagePath(
+                "/usr/share/icons/hicolor/256x256/apps/recrest.png".into(),
+            ))
+            .show()
+        {
+            tracing::warn!("linux notification failed (no daemon? D-Bus unavailable?): {err}");
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        app.notification()
+            .builder()
+            .title(&title)
+            .body(&body)
+            .show()
+            .map_err(|e| CommandError::internal(format!("notification failed: {e}")))?;
+    }
 
     // TODO(notification-click): once tauri-plugin-notification exposes
     // desktop click/action callbacks, re-route them through

@@ -1,5 +1,12 @@
 import type { RecentCommit } from "@recrest/shared";
 
+import { signatureKey } from "@/lib/authorNormalize";
+import {
+  CHART_PALETTE,
+  buildRepoColorMap as buildRepoColorMapImpl,
+  colorForRepo as colorForRepoImpl,
+} from "@/lib/charts/palette";
+
 export const ACTIVITY_DAYS = 14;
 const WEEK = 7;
 
@@ -36,60 +43,14 @@ export function dayLabel(d: number): string {
   return `${d} days ago`;
 }
 
-/** Curated 14-swatch palette laid out so adjacent slots walk around the hue
- *  wheel — any sequential assignment lands on perceptually distinct neighbours
- *  even at small bar-segment sizes. We only keep one swatch per hue family
- *  (no indigo + sky + blue + cyan stack) so 3-blue collisions can't happen
- *  when the sequential walker picks the first N colors. */
-export const ACTIVITY_PALETTE = [
-  "#6366f1", // indigo
-  "#f97316", // orange
-  "#14b8a6", // teal
-  "#ec4899", // pink
-  "#eab308", // yellow
-  "#8b5cf6", // violet
-  "#10b981", // emerald
-  "#ef4444", // red
-  "#06b6d4", // cyan
-  "#a855f7", // purple
-  "#84cc16", // lime
-  "#f59e0b", // amber
-  "#0ea5e9", // sky
-  "#f43f5e", // rose
-] as const;
+/**
+ * @deprecated Import `CHART_PALETTE` from `@/lib/charts/palette` instead.
+ * Re-exported here under the legacy name so existing callers keep working.
+ */
+export const ACTIVITY_PALETTE = CHART_PALETTE;
 
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-/** Stable color for a repo id when no context is available. Still hash-based
- *  so the same id always resolves to the same swatch across unrelated UI
- *  surfaces (e.g. repo row accents). Prefer [`buildRepoColorMap`] inside a
- *  specific chart where you need guaranteed uniqueness. */
-export function colorForRepo(id: string): string {
-  return ACTIVITY_PALETTE[hashString(id) % ACTIVITY_PALETTE.length]!;
-}
-
-/** Build a collision-free color map for a specific chart context. Walks the
- *  unique repo set in deterministic order (sorted by id) and assigns palette
- *  entries one at a time, so two repos in the same chart never share a
- *  color — critical for stacked bars where adjacent segments must read as
- *  distinct. Falls back to the hash once repo count exceeds palette size. */
-export function buildRepoColorMap(ids: readonly string[]): Map<string, string> {
-  const unique = Array.from(new Set(ids)).sort();
-  const map = new Map<string, string>();
-  for (let i = 0; i < unique.length; i++) {
-    const id = unique[i]!;
-    if (i < ACTIVITY_PALETTE.length) {
-      map.set(id, ACTIVITY_PALETTE[i]!);
-    } else {
-      map.set(id, colorForRepo(id));
-    }
-  }
-  return map;
-}
+export const colorForRepo = colorForRepoImpl;
+export const buildRepoColorMap = buildRepoColorMapImpl;
 
 /** Consecutive-days-with-≥1-commit streak ending at `today`. */
 export function currentStreak(commits: readonly RecentCommit[], today: Date): number {
@@ -245,40 +206,72 @@ export interface AuthorBucket {
   sparkline: number[];
 }
 
-/** Top-N authors by commit count, with a per-author 14-day sparkline. */
+/** Top-N authors by commit count, with a per-author 14-day sparkline.
+ *
+ * Plan 1 §A.4: aggregation key is `signatureKey(name, email)` so Unicode
+ * variants of the same person collapse into one bucket
+ * (`Müller` ↔ `Mueller`). The displayed `author` is the most-frequent name
+ * variant we saw for that key — picking the first arbitrarily would let
+ * Unicode/ASCII swap depending on commit ordering. `authorAliases` from
+ * settings allows the user to manually merge two distinct keys (e.g.
+ * work + private email of the same person).
+ */
 export function computeLeaderboard(
   commits: readonly RecentCommit[],
   today: Date,
   limit = 5,
+  authorAliases: Readonly<Record<string, string>> = {},
 ): AuthorBucket[] {
-  const byAuthor = new Map<string, { email: string | null; count: number; spark: number[] }>();
+  const byKey = new Map<
+    string,
+    { email: string | null; count: number; spark: number[]; nameCounts: Map<string, number> }
+  >();
+  const resolveKey = (raw: string): string => authorAliases[raw] ?? raw;
+
   for (const c of commits) {
     const d = daysAgo(c.timestamp, today);
     if (d < 0) continue;
-    let bucket = byAuthor.get(c.author);
+    // Prefer the backend-computed `signatureKey` (canonical source); fall
+    // back to recomputing in JS for legacy fixtures or pre-A.4 caches that
+    // don't carry the field.
+    const rawKey = c.signatureKey ?? signatureKey(c.author, c.authorEmail ?? null);
+    const key = resolveKey(rawKey);
+    let bucket = byKey.get(key);
     if (!bucket) {
       bucket = {
         email: null,
         count: 0,
         spark: Array.from({ length: ACTIVITY_DAYS }, () => 0),
+        nameCounts: new Map(),
       };
-      byAuthor.set(c.author, bucket);
+      byKey.set(key, bucket);
     }
-    // First email sticks — the same author usually commits under one email,
-    // and we don't want the leaderboard row flipping avatars between days.
     if (!bucket.email && c.authorEmail) bucket.email = c.authorEmail;
     bucket.count += 1;
     bucket.spark[d] = (bucket.spark[d] ?? 0) + 1;
+    bucket.nameCounts.set(c.author, (bucket.nameCounts.get(c.author) ?? 0) + 1);
   }
-  const total = [...byAuthor.values()].reduce((a, b) => a + b.count, 0) || 1;
-  return [...byAuthor.entries()]
-    .map(([author, v]) => ({
-      author,
-      email: v.email,
-      count: v.count,
-      share: v.count / total,
-      sparkline: v.spark,
-    }))
+  const total = [...byKey.values()].reduce((a, b) => a + b.count, 0) || 1;
+  return [...byKey.values()]
+    .map((v) => {
+      // Pick the most common display name for this signature; ties broken
+      // by the first one seen (Map preserves insertion order).
+      let bestName = "";
+      let bestCount = -1;
+      for (const [name, count] of v.nameCounts) {
+        if (count > bestCount) {
+          bestCount = count;
+          bestName = name;
+        }
+      }
+      return {
+        author: bestName,
+        email: v.email,
+        count: v.count,
+        share: v.count / total,
+        sparkline: v.spark,
+      };
+    })
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 }

@@ -22,6 +22,13 @@ export interface PullRequest {
   additions: number | null;
   deletions: number | null;
   ciStatus: CiStatus | null;
+  /** Plan 1 §A.2: usernames the PR is assigned to. Used to gate
+   *  notifications so users only get pinged for PRs they own. Optional —
+   *  GitLab/Bitbucket providers may not populate it yet. */
+  assignees?: string[];
+  /** Plan 1 §A.2: usernames whose review has been requested on this PR.
+   *  Treated equivalently to assignees for notification purposes. */
+  requestedReviewers?: string[];
 }
 
 export type ReviewState = "pending" | "approved" | "changes_requested" | "commented" | "dismissed";

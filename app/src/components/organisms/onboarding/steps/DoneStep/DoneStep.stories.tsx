@@ -16,4 +16,6 @@ const meta: Meta<typeof DoneStep> = {
 };
 export default meta;
 
-export const Default: StoryObj<typeof DoneStep> = { args: { onFinish: () => {} } };
+export const Default: StoryObj<typeof DoneStep> = {
+  args: { onBack: () => {}, onFinish: () => {} },
+};

@@ -26,6 +26,14 @@
     "test:ts": "yarn workspace @recrest/shared test:ts && yarn workspace @recrest/app test:ts && yarn workspace @recrest/tests test:ts && yarn workspace @recrest/landingpage test:ts",
     "test:e2e": "yarn workspace @recrest/tests test:e2e",
     "typecheck": "yarn workspace @recrest/shared typecheck && yarn workspace @recrest/app typecheck && yarn workspace @recrest/tests typecheck && yarn workspace @recrest/landingpage typecheck",
+    "rust:check": "cargo check --manifest-path app/src-tauri/Cargo.toml",
+    "rust:check:release": "cargo check --manifest-path app/src-tauri/Cargo.toml --release",
+    "rust:test": "cargo test --manifest-path app/src-tauri/Cargo.toml",
+    "rust:test:release": "cargo test --manifest-path app/src-tauri/Cargo.toml --release",
+    "rust:clippy": "cargo clippy --manifest-path app/src-tauri/Cargo.toml --all-targets",
+    "rust:clippy:strict": "cargo clippy --manifest-path app/src-tauri/Cargo.toml --all-targets -- -D warnings",
+    "verify": "yarn typecheck && yarn lint && yarn test && yarn rust:check && yarn rust:test && yarn rust:clippy",
+    "verify:release": "yarn verify && yarn rust:check:release && yarn rust:test:release",
     "prepare": "husky"
   },
   "devDependencies": {

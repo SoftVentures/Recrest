@@ -8,10 +8,6 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { loadRepos } from "@/store/slices/reposSlice";
 import { bumpRefreshNonce, setSearchOpen } from "@/store/slices/uiSlice";
 
-/** Registers the app's keyboard shortcuts on window-level. Uses the standard
- *  `Cmd/Ctrl` bridge (`ev.metaKey || ev.ctrlKey`) so Mac, Windows, and Linux
- *  all get the same bindings without the user configuring anything. Mounted
- *  once from `AppShell`. */
 export function useGlobalShortcuts(): void {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();

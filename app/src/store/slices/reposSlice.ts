@@ -54,6 +54,20 @@ export const removeRepo = createAsyncThunk<RepositoryId, RepositoryId>(
   },
 );
 
+/** Move the repo's folder to the OS trash AND unregister it from Recrest.
+ *  Unlike `removeRepo` (which keeps the folder on disk), this is the
+ *  destructive counterpart to `gitCloneUrl` — if we can create the folder
+ *  from the UI, we can also send it to the trash from the UI. The Rust
+ *  command refuses near-root paths and anything that doesn't look like a
+ *  git repo so a typo'd settings entry can't nuke the user's home. */
+export const deleteRepo = createAsyncThunk<RepositoryId, RepositoryId>(
+  "repos/delete",
+  async (repoId) => {
+    await invoke<void>(TauriCommand.DELETE_REPO, { repoId });
+    return repoId;
+  },
+);
+
 export const gitFetch = createAsyncThunk<
   { repoId: RepositoryId; status: RepositoryStatus },
   RepositoryId
@@ -177,6 +191,9 @@ const reposSlice = createSlice({
         state.items[action.payload.id] = action.payload;
       })
       .addCase(removeRepo.fulfilled, (state, action) => {
+        delete state.items[action.payload];
+      })
+      .addCase(deleteRepo.fulfilled, (state, action) => {
         delete state.items[action.payload];
       })
       .addCase(gitFetch.fulfilled, (state, action) => {

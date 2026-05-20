@@ -8,7 +8,7 @@
 # ein ZIP (`recrest-<tag>-windows.zip` / `-macos.zip` / `-linux.zip`) und lädt
 # diese als GitHub-Release-Assets hoch. Signing/notarization features activate
 # automatically when the matching secrets are populated.
-name: Release (Tauri)
+name: 📦 Release (Tauri)
 
 on:
   push:

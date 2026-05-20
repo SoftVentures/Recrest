@@ -563,6 +563,18 @@ fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
         Some(u) => (u.login, u.avatar_url),
         None => (String::new(), None),
     };
+    let assignees = pr
+        .assignees
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| u.login)
+        .collect::<Vec<_>>();
+    let requested_reviewers = pr
+        .requested_reviewers
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| u.login)
+        .collect::<Vec<_>>();
     PullRequestDto {
         id: pr.id.to_string(),
         number: pr.number,
@@ -585,6 +597,8 @@ fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
         additions: pr.additions,
         deletions: pr.deletions,
         ci_status: ci,
+        assignees,
+        requested_reviewers,
     }
 }
 
@@ -692,6 +706,8 @@ struct GhPull {
     additions: Option<u64>,
     #[serde(default)]
     deletions: Option<u64>,
+    #[serde(default)]
+    assignees: Option<Vec<GhUser>>,
     #[serde(default)]
     requested_reviewers: Option<Vec<GhUser>>,
 }

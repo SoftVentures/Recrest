@@ -34,6 +34,7 @@ import { useCheckRuns } from "@/hooks/useCheckRuns";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { usePrEvents } from "@/hooks/usePrEvents";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   computeAuthorClock,
   computeChurn,
@@ -52,10 +53,16 @@ import {
   computeStackedChart,
   startOfLocalDay,
 } from "@/lib/activityStats";
+import { signatureKey } from "@/lib/authorNormalize";
 import { useAppSelector } from "@/store/hooks";
+
+/** Stable empty-aliases reference so `useAppSelector` doesn't return a new
+ *  literal `{}` on every render when the field is absent. */
+const EMPTY_ALIASES: Record<string, string> = {};
 
 export function ActivityPage() {
   const { t } = useTranslation();
+  useScrollRestoration("activity");
   const repos = useEnrichedRepos();
   const { commits, loading: commitsLoading } = useRecentCommits({ days: ACTIVITY_DAYS });
   const { events: prEvents, loading: prEventsLoading } = usePrEvents({
@@ -81,14 +88,30 @@ export function ActivityPage() {
     return m;
   }, [repos]);
 
+  const authorAliases = useAppSelector((s) => s.settings.authorAliases) ?? EMPTY_ALIASES;
+
+  // Author filter matches by `signatureKey(name, email)` so Unicode variants
+  // of the same person (Müller / Mueller) all pass through together. This
+  // mirrors how `computeLeaderboard` already groups authors and keeps the
+  // dropdown options in lockstep with leaderboard rows.
+  const resolveAuthorKey = useMemo(() => {
+    return (name: string, email: string | null | undefined, fallback?: string | null) => {
+      const raw = fallback ?? signatureKey(name, email ?? null);
+      return authorAliases[raw] ?? raw;
+    };
+  }, [authorAliases]);
+
   const filteredCommits = useMemo(
     () =>
       commits.filter((c) => {
         if (selectedRepo !== "all" && c.repoId !== selectedRepo) return false;
-        if (selectedAuthor !== "all" && c.author !== selectedAuthor) return false;
+        if (selectedAuthor !== "all") {
+          const key = resolveAuthorKey(c.author, c.authorEmail ?? null, c.signatureKey ?? null);
+          if (key !== selectedAuthor) return false;
+        }
         return true;
       }),
-    [commits, selectedRepo, selectedAuthor],
+    [commits, selectedRepo, selectedAuthor, resolveAuthorKey],
   );
 
   const filteredPrEvents = useMemo(
@@ -107,20 +130,37 @@ export function ActivityPage() {
     return p ? { [selectedRepo]: p } : {};
   }, [prsByRepo, selectedRepo]);
 
-  const authors = useMemo(() => {
-    const s = new Set<string>();
-    for (const c of commits) s.add(c.author);
-    return [...s];
-  }, [commits]);
-  // First email we see for each author — feeds Gravatar so filter pills and
-  // leaderboard chips match the avatars in the timeline feed.
-  const emailByAuthor = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const c of commits) {
-      if (!map.has(c.author) && c.authorEmail) map.set(c.author, c.authorEmail);
-    }
+  // Build the author dropdown options from a leaderboard over all commits in
+  // the (repo-scoped) window, *not* the author-filtered set. We rely on
+  // `computeLeaderboard` to dedupe by `signatureKey` so the dropdown shows
+  // each person exactly once, even when their git config emits the same
+  // identity under multiple Unicode/ASCII spellings (Plan 1 §A.4).
+  const authorScopeCommits = useMemo(
+    () => (selectedRepo === "all" ? commits : commits.filter((c) => c.repoId === selectedRepo)),
+    [commits, selectedRepo],
+  );
+  const authorOptions = useMemo(() => {
+    // Generous limit — we want every contributor in the dropdown, not the
+    // top-5 leaderboard. ACTIVITY_DAYS × repos is the realistic upper bound.
+    const buckets = computeLeaderboard(
+      authorScopeCommits,
+      today,
+      Number.POSITIVE_INFINITY,
+      authorAliases,
+    );
+    return buckets.map((b) => ({
+      key: resolveAuthorKey(b.author, b.email),
+      name: b.author,
+      email: b.email,
+    }));
+  }, [authorScopeCommits, today, authorAliases, resolveAuthorKey]);
+
+  // Lookup helpers used by the trigger pill and the alias-aware filtering.
+  const authorOptionByKey = useMemo(() => {
+    const map = new Map<string, (typeof authorOptions)[number]>();
+    for (const o of authorOptions) map.set(o.key, o);
     return map;
-  }, [commits]);
+  }, [authorOptions]);
 
   const allRepoIds = useMemo(() => repos.map((r) => r.id), [repos]);
 
@@ -133,8 +173,8 @@ export function ActivityPage() {
     [filteredCommits, today],
   );
   const leaderboard = useMemo(
-    () => computeLeaderboard(filteredCommits, today),
-    [filteredCommits, today],
+    () => computeLeaderboard(filteredCommits, today, 5, authorAliases),
+    [filteredCommits, today, authorAliases],
   );
 
   const sparkline = useMemo(() => {
@@ -153,9 +193,9 @@ export function ActivityPage() {
     () =>
       leaderboard.map((b) => ({
         name: b.author,
-        email: emailByAuthor.get(b.author) ?? null,
+        email: b.email,
       })),
-    [leaderboard, emailByAuthor],
+    [leaderboard],
   );
 
   const velocity = useMemo(
@@ -252,14 +292,19 @@ export function ActivityPage() {
                     <span className="truncate">{t("activity.filter.all_authors")}</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-2">
-                    <AuthorAvatar
-                      name={selectedAuthor}
-                      email={emailByAuthor.get(selectedAuthor) ?? null}
-                      size={16}
-                    />
-                    <span className="truncate">{selectedAuthor}</span>
-                  </span>
+                  (() => {
+                    const opt = authorOptionByKey.get(selectedAuthor);
+                    return (
+                      <span className="flex items-center gap-2">
+                        <AuthorAvatar
+                          name={opt?.name ?? selectedAuthor}
+                          email={opt?.email ?? null}
+                          size={16}
+                        />
+                        <span className="truncate">{opt?.name ?? selectedAuthor}</span>
+                      </span>
+                    );
+                  })()
                 )}
               </SelectValue>
             </SelectTrigger>
@@ -270,11 +315,11 @@ export function ActivityPage() {
                   <span>{t("activity.filter.all_authors")}</span>
                 </span>
               </SelectItem>
-              {authors.map((a) => (
-                <SelectItem key={a} value={a}>
+              {authorOptions.map((a) => (
+                <SelectItem key={a.key} value={a.key}>
                   <span className="flex items-center gap-2">
-                    <AuthorAvatar name={a} email={emailByAuthor.get(a) ?? null} size={16} />
-                    <span className="truncate">{a}</span>
+                    <AuthorAvatar name={a.name} email={a.email} size={16} />
+                    <span className="truncate">{a.name}</span>
                   </span>
                 </SelectItem>
               ))}

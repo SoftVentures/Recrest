@@ -4,7 +4,6 @@ import { CheckCircle2, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/atoms/Button";
-import { Spinner } from "@/components/atoms/Spinner";
 import {
   DialogDescription,
   DialogFooter,
@@ -59,12 +58,19 @@ export function InitialScanStep({ onBack, onNext }: Props) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col items-center justify-center gap-3 py-6">
+      <div
+        className="flex flex-col items-center justify-center gap-3 py-6"
+        data-testid="onboarding-scan-icon"
+      >
         {scanning ? (
-          <>
-            <Spinner size="lg" />
-            <Search className="h-10 w-10 text-muted-foreground" aria-hidden />
-          </>
+          // W.5: replace the previous Spinner+Search stack with a single
+          // animated Search icon. The bouncing skeleton box looked broken;
+          // a pulsing search glyph reads as "searching" without ambiguity.
+          <Search
+            className="h-10 w-10 text-primary motion-safe:animate-pulse"
+            aria-hidden
+            data-testid="onboarding-scan-spinner"
+          />
         ) : (
           <CheckCircle2
             className={

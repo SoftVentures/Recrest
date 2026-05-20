@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/atoms/Skeleton";
 // Sparkline import removed — the activity card no longer renders a redundant
 // mini-sparkline under the bar chart.
 import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
+import { Drawer } from "@/components/molecules/Drawer";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { IconButton } from "@/components/molecules/IconButton";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
@@ -25,6 +26,7 @@ import { CommitListSkeleton } from "@/components/molecules/skeletons/CommitListS
 import { FileChangesSkeleton } from "@/components/molecules/skeletons/FileChangesSkeleton";
 import { KpiSkeleton } from "@/components/molecules/skeletons/KpiSkeleton";
 import { MrRowSkeleton } from "@/components/molecules/skeletons/MrRowSkeleton";
+import { MergeRequestDetailPanel } from "@/components/organisms/mergeRequests/MergeRequestDetailPanel";
 import { CreateBranchDialog } from "@/components/organisms/repos/CreateBranchDialog";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
@@ -65,6 +67,10 @@ export function RepoDetailPage() {
   const [busy, setBusy] = useState<null | "pull" | "fetch">(null);
   const [cmdBusy, setCmdBusy] = useState<string | null>(null);
   const [branchOpen, setBranchOpen] = useState(false);
+  // Plan 1 §A.7: clicking a PR row used to navigate to the global MR view,
+  // ripping the user out of repo context. Now we open a small inline drawer
+  // with the PR's basics; "Open in MR view" remains as a deep-link out.
+  const [selectedPrId, setSelectedPrId] = useState<string | null>(null);
 
   const repoProviderConnected = !!repo?.providerId && !!connections[repo.providerId]?.connected;
 
@@ -460,8 +466,11 @@ export function RepoDetailPage() {
                   <button
                     key={pr.id}
                     type="button"
-                    onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
+                    onClick={() => setSelectedPrId(pr.id)}
                     className="flex w-full items-start gap-2 rounded-md p-2 text-left text-xs transition-colors hover:bg-muted/40"
+                    aria-pressed={selectedPrId === pr.id}
+                    data-testid="repo-detail-pr-row"
+                    data-pr-id={pr.id}
                   >
                     <Icon name="pr" size={13} color={pr.draft ? "var(--ink-3)" : "var(--green)"} />
                     <div className="min-w-0 flex-1">
@@ -517,6 +526,44 @@ export function RepoDetailPage() {
           )}
         </Card>
       </section>
+
+      {(() => {
+        const selectedPr = selectedPrId ? prs.find((p) => p.id === selectedPrId) : null;
+        // I6: the "Open in MR view" textual button used to render via
+        // `extraHeaderActions` inside the panel's icon strip — visually
+        // inconsistent with the 14px icon controls. Hoist it into the
+        // Drawer's `footer` slot so the action button stays distinct from
+        // the per-PR controls and matches the Phase 0.2 footer contract.
+        return (
+          <Drawer
+            open={!!selectedPr}
+            onClose={() => setSelectedPrId(null)}
+            size="lg"
+            testId="repo-detail-pr-drawer"
+            footer={
+              selectedPr ? (
+                <button
+                  type="button"
+                  className="r-btn sm"
+                  onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
+                  data-testid="repo-detail-pr-open-in-mrs"
+                >
+                  {t("repo_detail.open_in_mrs", { defaultValue: "Open in MR view" })}
+                </button>
+              ) : undefined
+            }
+          >
+            {selectedPr && (
+              <MergeRequestDetailPanel
+                pr={selectedPr}
+                repoId={repo.id}
+                repoName={repo.name}
+                onClose={() => setSelectedPrId(null)}
+              />
+            )}
+          </Drawer>
+        );
+      })()}
     </div>
   );
 }

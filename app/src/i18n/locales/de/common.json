@@ -36,7 +36,18 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "delete": "Löschen",
-    "clear": "Leeren"
+    "clear": "Leeren",
+    "add_scope_label": "Geltungsbereich",
+    "add_scope": {
+      "local": "Lokal",
+      "global": "Global"
+    }
+  },
+  "toast": {
+    "reload": {
+      "success": "Aktualisiert",
+      "error": "Aktualisieren fehlgeschlagen: {{detail}}"
+    }
   },
   "states": {
     "loading": "Wird geladen…",
@@ -45,7 +56,7 @@
   },
   "view": {
     "dashboard": { "title": "Dashboard", "meta": "{{count}} Repos" },
-    "repos": { "title": "Repositories", "meta": "{{count}} von {{total}}" },
+    "repos": { "title": "Repositories", "meta": "{{count}} Repos" },
     "mrs": { "title": "Merge Requests", "meta": "{{count}} offen" },
     "changes": { "title": "Änderungen", "meta": "{{count}} mit lokalen Änderungen" },
     "branches": { "title": "Branches", "meta": "über {{count}} Repos" },
@@ -59,6 +70,32 @@
       "status": "Status",
       "activity": "Aktivität · 14T",
       "actions": "Aktionen"
+    },
+    "group": {
+      "pinned": "Angepinnt"
+    },
+    "view": {
+      "toggle_label": "Ansicht",
+      "grouped": "Gruppiert",
+      "flat": "Liste",
+      "card": "Karten"
+    },
+    "filter": {
+      "label": "Status-Filter",
+      "dirty": "Geändert",
+      "clean": "Sauber",
+      "ahead": "Voraus",
+      "behind": "Zurück"
+    },
+    "sort": {
+      "label": "Sortieren nach",
+      "options": {
+        "default": "Standard",
+        "name_asc": "Name (A → Z)",
+        "name_desc": "Name (Z → A)",
+        "modified_desc": "Zuletzt geändert",
+        "status": "Status"
+      }
     }
   },
   "dash": {
@@ -93,7 +130,14 @@
       "clone_tooltip": "Von URL klonen oder aus GitHub / GitLab / Bitbucket importieren",
       "find": "Repo-übergreifend suchen",
       "workspace": "Workspace öffnen",
-      "workspace_tooltip": "Multi-Root-IDE-Workspace mit allen gescannten Repos öffnen"
+      "workspace_tooltip": "Multi-Root-IDE-Workspace mit allen gescannten Repos öffnen",
+      "open_ide": "In IDE öffnen",
+      "open_ide_tooltip": "Zuletzt aktives Repo in der Standard-IDE öffnen",
+      "open_ide_error": "Repo konnte nicht in der IDE geöffnet werden",
+      "recent_commits": "Letzte Commits",
+      "create_branch": "Branch erstellen",
+      "pull_all": "Alle pullen",
+      "coming_soon": "Demnächst verfügbar"
     }
   },
   "titlebar": {
@@ -115,7 +159,16 @@
     "drawer": {
       "meta": "Metadaten",
       "opened_on": "Geöffnet am {{date}}",
-      "updated_on": "Zuletzt aktualisiert {{date}}"
+      "updated_on": "Zuletzt aktualisiert {{date}}",
+      "reviewers_empty": "Keine Reviewer angefragt",
+      "files_empty": "Keine geänderten Dateien",
+      "files_unavailable": "Dateien für diesen PR nicht verfügbar",
+      "timeline_empty": "Noch keine Aktivität",
+      "timeline_unavailable": "Timeline für diesen PR nicht verfügbar",
+      "reviewers": "Reviewer",
+      "files": "Dateien",
+      "timeline": "Timeline",
+      "open_on_host": "Auf Host öffnen"
     }
   },
   "branches": {
@@ -129,8 +182,12 @@
       "remote": "Nur Remote"
     },
     "branches": "Branches",
+    "branches_count_one": "{{count}} Branch",
+    "branches_count_other": "{{count}} Branches",
     "loading": "Lade Branches…",
     "empty": "Keine Branches passen zum Filter.",
+    "search_placeholder": "Branches nach Namen filtern…",
+    "search_aria": "Branches nach Namen filtern",
     "no_repos": "Noch keine Repositories — füge eines hinzu, um seine Branches zu sehen.",
     "tag": {
       "current": "aktuell",
@@ -194,7 +251,11 @@
       "ci_health": "CI-Health",
       "ci_failing_one": "{{count}} fehlerhaft",
       "ci_failing_other": "{{count}} fehlerhaft",
-      "ci_none": "Noch keine Check-Runs"
+      "ci_none": "Noch keine Check-Runs",
+      "ci_runs": "{{passed}} / {{total}} Runs",
+      "ci_legend_passed": "{{count}} grün",
+      "ci_legend_failed": "{{count}} rot",
+      "ci_legend_other": "{{count}} sonstige"
     },
     "cards": {
       "chart_title": "Commit-Aktivität · 14 Tage",
@@ -243,8 +304,24 @@
       "chip_prs_merged_other": "{{count}} MRs gemerged",
       "chip_prs_opened_one": "{{count}} MR geöffnet",
       "chip_prs_opened_other": "{{count}} MRs geöffnet",
-      "chip_checks_failed_one": "{{count}} Check fehlgeschlagen",
-      "chip_checks_failed_other": "{{count}} Checks fehlgeschlagen"
+      "chip_checks_failed": {
+        "github": {
+          "one": "{{count}} Check fehlgeschlagen",
+          "other": "{{count}} Checks fehlgeschlagen"
+        },
+        "gitlab": {
+          "one": "{{count}} Pipeline fehlgeschlagen",
+          "other": "{{count}} Pipelines fehlgeschlagen"
+        },
+        "bitbucket": {
+          "one": "{{count}} Pipeline fehlgeschlagen",
+          "other": "{{count}} Pipelines fehlgeschlagen"
+        },
+        "default": {
+          "one": "{{count}} Check fehlgeschlagen",
+          "other": "{{count}} Checks fehlgeschlagen"
+        }
+      }
     }
   },
   "settings": {
@@ -272,7 +349,7 @@
     },
     "integrations": {
       "title": "Integrationen",
-      "intro": "Editoren, Terminals und externe Tools."
+      "intro": "Wo Recrest auf deinem Rechner nach Git-Repositories sucht."
     },
     "shortcuts": {
       "title": "Shortcuts",
@@ -306,8 +383,22 @@
       "body": "{{repo}} · #{{number}} {{pr_title}}"
     },
     "ci_failed": {
-      "title": "CI fehlgeschlagen",
-      "body": "{{repo}} · #{{number}} {{pr_title}}"
+      "github": {
+        "title": "Checks fehlgeschlagen",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "gitlab": {
+        "title": "Pipelines fehlgeschlagen",
+        "body": "{{repo}} · !{{number}} {{pr_title}}"
+      },
+      "bitbucket": {
+        "title": "Pipelines fehlgeschlagen",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "default": {
+        "title": "CI fehlgeschlagen",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      }
     },
     "merge_ready": {
       "title": "Bereit zum Mergen",

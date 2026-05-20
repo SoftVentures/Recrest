@@ -164,6 +164,11 @@ pub struct RecentCommitDto {
     /// Commit author email. Optional because signed-off commits sometimes
     /// redact the original author and git2 returns an empty string there.
     pub author_email: Option<String>,
+    /// Plan 1 §A.4: Unicode-folded dedup key. The frontend can re-derive
+    /// this from `author`/`authorEmail` for legacy commits but agreeing
+    /// with the backend means there's a single canonical answer per
+    /// commit. Computed via `git::author_normalize::signature_key`.
+    pub signature_key: String,
     pub timestamp: DateTime<Utc>,
     pub repo_id: String,
     pub repo_name: String,
@@ -246,11 +251,15 @@ fn collect_recent_commits(
             .email()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
+        let display_name = author.name().unwrap_or("unknown").to_string();
+        let signature_key =
+            crate::git::author_normalize::signature_key(&display_name, email.as_deref());
         out.push(RecentCommitDto {
             sha: commit.id().to_string(),
             summary: commit.summary().unwrap_or("").to_string(),
-            author: author.name().unwrap_or("unknown").to_string(),
+            author: display_name,
             author_email: email,
+            signature_key,
             timestamp: utc_ts,
             repo_id: id.to_string(),
             repo_name: name.to_string(),
@@ -328,13 +337,134 @@ pub async fn remove_repo(
         .repos
         .get(&repo_id)
         .map(|r| r.path.clone());
-    config.settings_mut().repos.remove(&repo_id);
+    let settings = config.settings_mut();
+    settings.repos.remove(&repo_id);
+    settings.pinned_repo_ids.retain(|id| id != &repo_id);
     config.save(&app)?;
     drop(config);
 
     if let (Some(path), Some(watcher)) = (removed_path, state.watcher.lock().await.as_mut()) {
         let _ = watcher.unwatch_repo(&path).await;
     }
+    Ok(())
+}
+
+/// Refuse to send "obviously dangerous" paths to the trash. The user can
+/// still pick *any* folder as a scan root, so a typo'd or hand-edited
+/// settings.json could point at `/`, `~`, or a top-level drive — those
+/// would be catastrophic to move to trash even though trash is reversible.
+///
+/// Rules (defense in depth, all must pass):
+///   1. Path must be absolute (canonicalize is best-effort; relative paths
+///      fail outright).
+///   2. Path must have at least 3 components after the root — protects
+///      `/`, `/Users`, `/Users/<name>`, `/home`, `/home/<name>`, and
+///      Windows drive roots like `C:\` / `C:\Users`.
+///   3. Path must not match the user's home directory.
+///   4. Path must currently exist and be a directory (deleting a file is
+///      not what the user clicked "Delete repo" for).
+///   5. Path must contain a `.git` entry — anything that doesn't look like
+///      a git repo right now is either already half-deleted or was never a
+///      repo, and we refuse to trash it from a UI labeled "delete repo".
+fn validate_trash_path(path: &std::path::Path) -> Result<(), CommandError> {
+    if !path.is_absolute() {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash non-absolute path {}",
+            path.display()
+        )));
+    }
+    let components: Vec<_> = path.components().collect();
+    // `Path::components` emits the root prefix as one component on every
+    // OS, so a safe interior path has at least 1 (root) + 3 (interior)
+    // entries. e.g. `/Users/x/projects/myrepo` → 4, `/Users/x` → 2.
+    if components.len() < 4 {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash near-root path {}",
+            path.display()
+        )));
+    }
+    if let Some(home) = dirs::home_dir() {
+        if path == home {
+            return Err(CommandError::bad_request(format!(
+                "refusing to trash home directory {}",
+                path.display()
+            )));
+        }
+    }
+    let meta = std::fs::metadata(path).map_err(|e| {
+        CommandError::not_found(format!(
+            "repo path {} cannot be read: {}",
+            path.display(),
+            e
+        ))
+    })?;
+    if !meta.is_dir() {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash non-directory {}",
+            path.display()
+        )));
+    }
+    if !path.join(".git").exists() {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash {} — no .git entry, doesn't look like a repository",
+            path.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Move a repository's folder to the OS trash (macOS Trash, Windows
+/// Recycle Bin, freedesktop Trash on Linux) and unregister it from
+/// settings. Sequencing matters:
+///   1. Validate the path (defensive — see `validate_trash_path`).
+///   2. Unsubscribe the watcher first, so the impending delete doesn't
+///      produce a flurry of spurious `repo://status` events.
+///   3. Move the folder to trash. If this fails we abort and leave the
+///      settings entry intact — the user shouldn't end up with a
+///      half-deleted state.
+///   4. Remove from settings + persist.
+///
+/// The operation is reversible from the OS file manager — we never
+/// permanently delete from this command. A separate "purge" affordance
+/// would have to be added explicitly if irrecoverable deletion is ever
+/// needed.
+#[tauri::command]
+pub async fn delete_repo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<(), CommandError> {
+    let config = state.config.lock().await;
+    let path = config
+        .settings()
+        .repos
+        .get(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
+        .path
+        .clone();
+    drop(config);
+
+    validate_trash_path(&path)?;
+
+    // Unwatch before deleting so the impending FS churn doesn't fan out
+    // through the debouncer as bogus status updates.
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        let _ = watcher.unwatch_repo(&path).await;
+    }
+
+    trash::delete(&path).map_err(|e| {
+        CommandError::internal(format!(
+            "failed to move {} to trash: {}",
+            path.display(),
+            e
+        ))
+    })?;
+
+    let mut config = state.config.lock().await;
+    let settings = config.settings_mut();
+    settings.repos.remove(&repo_id);
+    settings.pinned_repo_ids.retain(|id| id != &repo_id);
+    config.save(&app)?;
     Ok(())
 }
 

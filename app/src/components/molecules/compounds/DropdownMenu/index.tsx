@@ -5,12 +5,29 @@ import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export const DropdownMenu = DropdownMenuPrimitive.Root;
-export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
-export const DropdownMenuGroup = DropdownMenuPrimitive.Group;
-export const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
-export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
-export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+// Wrap the bare Radix primitives as function components instead of `const`
+// aliases so `react-refresh/only-export-components` recognises every export as
+// a component and Fast Refresh keeps working in this file.
+export function DropdownMenu(props: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  return <DropdownMenuPrimitive.Root {...props} />;
+}
+export function DropdownMenuTrigger(props: ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  return <DropdownMenuPrimitive.Trigger {...props} />;
+}
+export function DropdownMenuGroup(props: ComponentProps<typeof DropdownMenuPrimitive.Group>) {
+  return <DropdownMenuPrimitive.Group {...props} />;
+}
+export function DropdownMenuPortal(props: ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
+  return <DropdownMenuPrimitive.Portal {...props} />;
+}
+export function DropdownMenuSub(props: ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
+  return <DropdownMenuPrimitive.Sub {...props} />;
+}
+export function DropdownMenuRadioGroup(
+  props: ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>,
+) {
+  return <DropdownMenuPrimitive.RadioGroup {...props} />;
+}
 
 export function DropdownMenuContent({
   className,

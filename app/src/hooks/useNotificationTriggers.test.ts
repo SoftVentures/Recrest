@@ -6,11 +6,12 @@ import { act, renderHook } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PullRequest, PullRequestDetail, Repository } from "@recrest/shared";
+import type { ProviderId, PullRequest, PullRequestDetail, Repository } from "@recrest/shared";
 
 // Must be imported *after* the mocks above so the hook picks them up.
 import { useNotificationTriggers } from "@/hooks/useNotificationTriggers";
 import { invoke } from "@/lib/tauri";
+import { providersReducer } from "@/store/slices/providersSlice";
 import { prsReducer, setPrs } from "@/store/slices/prsSlice";
 import { reposReducer } from "@/store/slices/reposSlice";
 
@@ -31,10 +32,13 @@ vi.mock("@/lib/tauri", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => {
-      if (!params || Object.keys(params).length === 0) return key;
-      const parts = Object.entries(params)
-        .map(([k, v]) => `${k}=${String(v)}`)
-        .join(",");
+      if (!params) return key;
+      // i18next treats `defaultValue` as a reserved control param — it's
+      // not interpolated into the output. Mirror that here so the stub
+      // doesn't leak the default-key hint into the assertion strings.
+      const interpolated = Object.entries(params).filter(([k]) => k !== "defaultValue");
+      if (interpolated.length === 0) return key;
+      const parts = interpolated.map(([k, v]) => `${k}=${String(v)}`).join(",");
       return `${key}|${parts}`;
     },
   }),
@@ -42,7 +46,7 @@ vi.mock("react-i18next", () => ({
 
 type TestStore = ReturnType<typeof makeStore>;
 
-function makeStore() {
+function makeStore(providerId: ProviderId | null = null) {
   return configureStore({
     reducer: {
       prs: prsReducer,
@@ -51,7 +55,7 @@ function makeStore() {
     preloadedState: {
       repos: {
         items: {
-          "repo-1": makeRepo("repo-1", "acme/recrest"),
+          "repo-1": makeRepo("repo-1", "acme/recrest", providerId),
         } as Record<string, Repository>,
         groups: {},
         scanPaths: [],
@@ -73,14 +77,14 @@ function wrapper(store: TestStore) {
   };
 }
 
-function makeRepo(id: string, name: string): Repository {
+function makeRepo(id: string, name: string, providerId: ProviderId | null = null): Repository {
   return {
     id,
     name,
     path: `/tmp/${id}`,
     groupId: null,
     remoteUrl: null,
-    providerId: null,
+    providerId,
     logoPath: null,
     logoDarkPath: null,
     status: {
@@ -289,5 +293,146 @@ describe("useNotificationTriggers", () => {
     // Our stub t() serialises params as "key=value,…" — the count of 6 new
     // PRs must appear in the body.
     expect(String(args?.body)).toContain("count=6");
+  });
+
+  // Plan 1 §A.6: per-provider CI wording. The stub t() echoes the i18n
+  // *key* (with params appended). We assert on which key the hook chose,
+  // which is what the test is really about — the resource bundle is i18n's
+  // problem, not the hook's.
+
+  it("resolves the GitHub-specific ci_failed key for GitHub repos", () => {
+    const store = makeStore("github");
+    renderHook(() => useNotificationTriggers(true), { wrapper: wrapper(store) });
+
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1, ciStatus: "success" })],
+        }),
+      );
+    });
+    expect(invokeMock).not.toHaveBeenCalled();
+
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1, ciStatus: "failure" })],
+        }),
+      );
+    });
+
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    const [, args] = invokeMock.mock.calls[0] ?? [];
+    expect(args).toMatchObject({ kind: "ci_failed" });
+    // Title key — the hook must pick the GitHub-flavoured branch.
+    expect(String(args?.title)).toBe("notifications.ci_failed.github.title");
+  });
+
+  it("resolves the GitLab-specific ci_failed key for GitLab repos", () => {
+    const store = makeStore("gitlab");
+    renderHook(() => useNotificationTriggers(true), { wrapper: wrapper(store) });
+
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1, ciStatus: "success" })],
+        }),
+      );
+    });
+    expect(invokeMock).not.toHaveBeenCalled();
+
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1, ciStatus: "failure" })],
+        }),
+      );
+    });
+
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    const [, args] = invokeMock.mock.calls[0] ?? [];
+    expect(args).toMatchObject({ kind: "ci_failed" });
+    expect(String(args?.title)).toBe("notifications.ci_failed.gitlab.title");
+  });
+
+  it("suppresses owned-PR notifications when providers slice is loaded with no connections", () => {
+    // I3: when the providers slice IS registered (so we know identity is
+    // tracked) but has zero connections, we still know who "me" is for
+    // each PR's provider — namely "nobody". Ownership therefore evaluates
+    // to false for every PR and no notification fires. This is the case
+    // identity-compare on EMPTY_PROVIDERS used to mishandle.
+    const store = configureStore({
+      reducer: {
+        prs: prsReducer,
+        repos: reposReducer,
+        providers: providersReducer,
+      },
+      preloadedState: {
+        repos: {
+          items: {
+            "repo-1": makeRepo("repo-1", "acme/recrest", "github"),
+          } as Record<string, Repository>,
+          groups: {},
+          scanPaths: [],
+          loading: false,
+          error: null,
+        },
+      },
+    });
+    type LocalStore = typeof store;
+    const Wrap = ({ children }: { children: ReactNode }) => {
+      const P = Provider as unknown as FC<{ store: LocalStore; children?: ReactNode }>;
+      return createElement(P, { store }, children);
+    };
+    renderHook(() => useNotificationTriggers(true), { wrapper: Wrap });
+
+    // First dispatch is the baseline (no emit anyway).
+    act(() => {
+      store.dispatch(setPrs({ repoId: "repo-1", prs: [makePr({ id: "a", number: 1 })] }));
+    });
+    // Second dispatch adds a brand-new PR — without a known username we
+    // can't establish ownership, but the slice is loaded so we don't fall
+    // through; the hook short-circuits silently.
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1 }), makePr({ id: "b", number: 2 })],
+        }),
+      );
+    });
+
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("falls back to ci_failed.default.title when the provider is unknown", () => {
+    const store = makeStore(null);
+    renderHook(() => useNotificationTriggers(true), { wrapper: wrapper(store) });
+
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1, ciStatus: "success" })],
+        }),
+      );
+    });
+
+    act(() => {
+      store.dispatch(
+        setPrs({
+          repoId: "repo-1",
+          prs: [makePr({ id: "a", number: 1, ciStatus: "failure" })],
+        }),
+      );
+    });
+
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    const [, args] = invokeMock.mock.calls[0] ?? [];
+    expect(String(args?.title)).toBe("notifications.ci_failed.default.title");
   });
 });

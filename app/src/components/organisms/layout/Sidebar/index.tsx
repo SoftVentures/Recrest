@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
@@ -83,7 +83,6 @@ function testIdForRoute(path: string): string {
 export function Sidebar() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const collapsed = useAppSelector((s) => s.ui.sidebarCollapsed);
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
@@ -168,7 +167,6 @@ export function Sidebar() {
               label={t("nav.settings")}
               active={isActive}
               collapsed={collapsed}
-              onClick={() => navigate(AppRoute.SETTINGS)}
               testId="nav-settings"
             />
           )}

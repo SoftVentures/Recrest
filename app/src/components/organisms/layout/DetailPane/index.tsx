@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -12,6 +12,7 @@ import { CiDot, type CiState } from "@/components/atoms/CiDot";
 import { DiffStat } from "@/components/atoms/DiffStat";
 import { Icon } from "@/components/atoms/Icon";
 import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
+import { DetailSection } from "@/components/molecules/DetailSection";
 import { IconButton } from "@/components/molecules/IconButton";
 import { OpenInIdeButton } from "@/components/molecules/OpenInIdeButton";
 import { RepoAvatar, setRepoLogo } from "@/components/molecules/RepoAvatar";
@@ -30,45 +31,6 @@ import { bumpRefreshNonce } from "@/store/slices/uiSlice";
 interface DetailPaneProps {
   repo: EnrichedRepo;
   onClose: () => void;
-}
-
-function Section({
-  title,
-  meta,
-  children,
-  defaultOpen = true,
-}: {
-  title: string;
-  meta?: ReactNode;
-  children: ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className={`a-dp-section ${open ? "open" : "closed"}`}>
-      {/* Header row: the collapse-toggle button on the left, optional meta
-       *  on the right as a sibling (not a descendant). Keeping meta outside
-       *  the button lets it contain real <button>/<a> elements without
-       *  nesting interactives — see the "Log →" link in the Recent Commits
-       *  section below. */}
-      <div className="a-dp-sec-hdr-row">
-        <button
-          type="button"
-          className="a-dp-sec-hdr"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open ? "true" : "false"}
-          aria-label={`${open ? "Collapse" : "Expand"} ${title}`}
-        >
-          <span className="a-dp-sec-chev">
-            <Icon name={open ? "chevDown" : "chev"} size={11} />
-          </span>
-          <span className="a-dp-sec-title">{title}</span>
-        </button>
-        {meta && <span className="a-dp-sec-meta">{meta}</span>}
-      </div>
-      {open && <div className="a-dp-sec-body">{children}</div>}
-    </div>
-  );
 }
 
 function formatRustError(err: unknown, fallback: string): string {
@@ -290,7 +252,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
 
       <div className="a-dp-body">
         {repo.status.dirty && (
-          <Section
+          <DetailSection
             title="Uncommitted"
             meta={
               <>
@@ -313,10 +275,10 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                 );
               })}
             </div>
-          </Section>
+          </DetailSection>
         )}
 
-        <Section
+        <DetailSection
           title="Recent commits"
           meta={
             <button
@@ -332,10 +294,10 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           }
         >
           <RecentCommitsBody repo={repo} />
-        </Section>
+        </DetailSection>
 
         {repoPrs.length > 0 && (
-          <Section title="Open merge requests" meta={repoPrs.length} defaultOpen={false}>
+          <DetailSection title="Open merge requests" meta={repoPrs.length} defaultOpen={false}>
             <div className="a-dp-prs">
               {repoPrs.map((p) => (
                 <div key={p.id} className="a-dp-pr">
@@ -350,7 +312,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                 </div>
               ))}
             </div>
-          </Section>
+          </DetailSection>
         )}
       </div>
 

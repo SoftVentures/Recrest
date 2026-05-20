@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { PROVIDER_IDS, PROVIDER_NAMES, type ProviderId } from "@recrest/shared";
 
 import { Badge } from "@/components/atoms/Badge";
+import { BrandIcon } from "@/components/atoms/BrandIcon";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import {
@@ -26,6 +27,12 @@ interface Props {
 export function ConnectProviderStep({ onBack, onNext }: Props) {
   const { t } = useTranslation("onboarding");
   const [tab, setTab] = useState<ProviderId>(PROVIDER_IDS[0]);
+  // W.3: when at least one provider is already connected, the CTA should
+  // just say "Continue" — "Continue without connecting" is misleading once
+  // the user is signed in.
+  const anyConnected = useAppSelector((s) =>
+    PROVIDER_IDS.some((id) => s.providers.connections[id]?.connected),
+  );
 
   return (
     <>
@@ -41,7 +48,15 @@ export function ConnectProviderStep({ onBack, onNext }: Props) {
       <Tabs value={tab} onValueChange={(v) => setTab(v as ProviderId)}>
         <TabsList className="w-full justify-start">
           {PROVIDER_IDS.map((id) => (
-            <TabsTrigger key={id} value={id} className="flex-1 sm:flex-none">
+            <TabsTrigger
+              key={id}
+              value={id}
+              className="flex-1 gap-2 sm:flex-none"
+              data-testid={`onboarding-provider-tab-${id}`}
+            >
+              {/* W.4: brand icons in the tab headers so providers are
+               *  visually distinguishable, not just text labels. */}
+              <BrandIcon slug={id} size={14} aria-hidden />
               {PROVIDER_NAMES[id]}
             </TabsTrigger>
           ))}
@@ -57,8 +72,12 @@ export function ConnectProviderStep({ onBack, onNext }: Props) {
         <Button variant="ghost" onClick={onBack}>
           {t("connectProvider.back")}
         </Button>
-        <Button variant="outline" onClick={onNext}>
-          {t("connectProvider.skip_and_continue")}
+        <Button
+          variant={anyConnected ? "default" : "outline"}
+          onClick={onNext}
+          data-testid="onboarding-provider-next"
+        >
+          {anyConnected ? t("connectProvider.continue") : t("connectProvider.skip_and_continue")}
         </Button>
       </DialogFooter>
     </>

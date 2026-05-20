@@ -62,10 +62,13 @@ export function BasicsStep({ onBack, onNext }: Props) {
             value={settings.theme}
             onValueChange={(v) => void save({ theme: v as ThemeMode })}
           >
-            <SelectTrigger id="ob-theme" className="sm:w-44">
+            {/* W.1: widened so the longest German option ("Systemdesign") fits
+             *  without truncation. Width was sm:w-44 (~11rem), but
+             *  "Folge dem System" / "Systemstandard" need ~14rem. */}
+            <SelectTrigger id="ob-theme" className="sm:min-w-56">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[14rem]">
               <SelectItem value="system">
                 <span className="inline-flex items-center gap-2">
                   <Monitor className="h-3.5 w-3.5" aria-hidden />
@@ -101,12 +104,26 @@ export function BasicsStep({ onBack, onNext }: Props) {
               void i18n.changeLanguage(v);
             }}
           >
-            <SelectTrigger id="ob-locale" className="sm:w-44">
+            <SelectTrigger id="ob-locale" className="sm:min-w-56">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="de">Deutsch</SelectItem>
+            <SelectContent className="min-w-[14rem]">
+              <SelectItem value="en">
+                {/* W.2: emoji flag prefix so the dropdown options aren't
+                 *  bare "English" / "Deutsch" rows. We pair with a sibling
+                 *  <span> rather than an <img> because we want to ship no
+                 *  binary asset — Unicode flag emoji render natively. */}
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden>🇬🇧</span>
+                  English
+                </span>
+              </SelectItem>
+              <SelectItem value="de">
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden>🇩🇪</span>
+                  Deutsch
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

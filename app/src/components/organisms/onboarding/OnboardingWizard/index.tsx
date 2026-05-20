@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +19,11 @@ type Step = (typeof STEPS)[number];
 export function OnboardingWizard() {
   const { shouldShow, dismiss } = useFirstRun();
   const [step, setStep] = useState<Step>("welcome");
+  // Plan 1 §D.4: stack of previously-visited steps so any step can pop
+  // back without each step needing to know what came before it. We hold
+  // it in a ref so `goBack` can read+pop without StrictMode running our
+  // updater twice and double-firing setStep.
+  const historyRef = useRef<Step[]>([]);
   const [active, setActive] = useState(false);
   const settingsLoaded = useAppSelector((s) => !s.settings.loading);
   const { t } = useTranslation();
@@ -32,7 +37,17 @@ export function OnboardingWizard() {
 
   if (!active) return null;
 
-  const goTo = (next: Step) => setStep(next);
+  const goTo = (next: Step) => {
+    historyRef.current = [...historyRef.current, step];
+    setStep(next);
+  };
+  const goBack = () => {
+    const prev = historyRef.current;
+    if (prev.length === 0) return;
+    const last = prev[prev.length - 1]!;
+    historyRef.current = prev.slice(0, -1);
+    setStep(last);
+  };
   const finish = () => {
     dismiss();
     setActive(false);
@@ -52,20 +67,26 @@ export function OnboardingWizard() {
       >
         <StepIndicator current={idx} total={STEPS.length} />
 
+        {/*
+         * M7: history-stack contract for step authors.
+         *
+         * All step components must persist their inputs to settings/state on
+         * change (e.g. via `dispatch(saveSettings(...))` or a Tauri command).
+         * Local-only `useState()` will be lost on the Back button — the step
+         * remounts when `step` changes, so any in-component state reverts to
+         * its initial value.
+         *
+         * See history-stack contract docs in plan/01.
+         */}
         {step === "welcome" && <WelcomeStep onNext={() => goTo("basics")} />}
-        {step === "basics" && (
-          <BasicsStep onBack={() => goTo("welcome")} onNext={() => goTo("folders")} />
-        )}
-        {step === "folders" && (
-          <PickFolderStep onBack={() => goTo("basics")} onNext={() => goTo("provider")} />
-        )}
-        {step === "provider" && (
-          <ConnectProviderStep onBack={() => goTo("folders")} onNext={() => goTo("scan")} />
-        )}
-        {step === "scan" && (
-          <InitialScanStep onBack={() => goTo("provider")} onNext={() => goTo("done")} />
-        )}
-        {step === "done" && <DoneStep onFinish={finish} />}
+        {/* `goBack` is the same callback for every step; it pops the history
+         * stack and is a no-op when the stack is empty. Passed unconditionally
+         * so the steps don't have to handle a missing callback. */}
+        {step === "basics" && <BasicsStep onBack={goBack} onNext={() => goTo("folders")} />}
+        {step === "folders" && <PickFolderStep onBack={goBack} onNext={() => goTo("provider")} />}
+        {step === "provider" && <ConnectProviderStep onBack={goBack} onNext={() => goTo("scan")} />}
+        {step === "scan" && <InitialScanStep onBack={goBack} onNext={() => goTo("done")} />}
+        {step === "done" && <DoneStep onBack={goBack} onFinish={finish} />}
       </DialogContent>
     </Dialog>
   );

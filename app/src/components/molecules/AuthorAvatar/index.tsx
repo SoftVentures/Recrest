@@ -31,7 +31,13 @@ export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorA
   // signed as "dependabot[bot]" or a PR fetched before `authorAvatarUrl`
   // existed still picks up the right face.
   const botSrc = src ?? resolveBotAvatar(name, email, size);
-  const resolvedSrc = botSrc ?? (email ? gravatarUrl(email, size) : null);
+  // Skip the Gravatar round-trip for the well-known dev-seed domains —
+  // they always 404 (because `?d=404` is the explicit fallback signal),
+  // which fills the console with noise during `yarn dev:web` and Playwright
+  // smoke runs. Falling straight through to the coloured initials chip
+  // matches what the user sees once the request has failed anyway.
+  const skipGravatar = !!email && isDevSeedEmail(email);
+  const resolvedSrc = botSrc ?? (email && !skipGravatar ? gravatarUrl(email, size) : null);
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => {
     // Reset the failure flag whenever the underlying URL changes — otherwise
@@ -107,6 +113,17 @@ export function AuthorAvatar({ name, size = 24, src, email, className }: AuthorA
   );
 }
 
+/** Email domains used by the dev-mode seed (and the Playwright fixture seed).
+ *  These addresses don't map to real Gravatars, so issuing the request just
+ *  produces `404` log noise — the cheap avoid-it-up-front check below saves
+ *  a few network round-trips per page load. */
+const DEV_SEED_EMAIL_DOMAINS = ["@example.com", "@renovateapp.com"] as const;
+
+function isDevSeedEmail(email: string): boolean {
+  const lower = email.toLowerCase();
+  return DEV_SEED_EMAIL_DOMAINS.some((d) => lower.endsWith(d));
+}
+
 /** Map a display name or commit-email to the canonical GitHub avatar URL
  *  for well-known bots. Returns null for anything we don't recognise so the
  *  caller can fall back to Gravatar-by-email. We query GitHub's
@@ -135,21 +152,36 @@ function resolveBotAvatar(
   return null;
 }
 
-const GRADIENTS = [
-  "linear-gradient(135deg,#ff7a59,#d6336c)",
-  "linear-gradient(135deg,#4f8cff,#7b2ff7)",
-  "linear-gradient(135deg,#10b981,#0ea5a3)",
-  "linear-gradient(135deg,#f59e0b,#ef4444)",
-  "linear-gradient(135deg,#06b6d4,#3b82f6)",
-  "linear-gradient(135deg,#a855f7,#ec4899)",
-  "linear-gradient(135deg,#84cc16,#10b981)",
-  "linear-gradient(135deg,#f97316,#eab308)",
+/** Color stops for the default avatars. Direction is applied separately so
+ *  it can be rotated deterministically from the hash — two avatars with
+ *  different keys but the same color slot still feel distinct. */
+const GRADIENT_STOPS = [
+  "#ff7a59,#d6336c",
+  "#4f8cff,#7b2ff7",
+  "#10b981,#0ea5a3",
+  "#f59e0b,#ef4444",
+  "#06b6d4,#3b82f6",
+  "#a855f7,#ec4899",
+  "#84cc16,#10b981",
+  "#f97316,#eab308",
 ];
+
+/** Plan 1 §B.2: cycle four gradient directions so the corner-bright pattern
+ *  isn't always top-left. Using the cardinal diagonals only (no top/bottom
+ *  axis) keeps the visual weight balanced regardless of which slot is
+ *  picked. */
+const GRADIENT_DIRECTIONS = ["135deg", "45deg", "225deg", "315deg"];
 
 function gradientFor(key: string): string {
   let hash = 0;
   for (let i = 0; i < key.length; i += 1) {
     hash = (hash * 31 + key.charCodeAt(i)) | 0;
   }
-  return GRADIENTS[Math.abs(hash) % GRADIENTS.length] ?? GRADIENTS[0]!;
+  const abs = Math.abs(hash);
+  const stops = GRADIENT_STOPS[abs % GRADIENT_STOPS.length] ?? GRADIENT_STOPS[0]!;
+  // Bit-shift so direction and color don't share the same low bits, keeping
+  // their distributions independent.
+  const dir =
+    GRADIENT_DIRECTIONS[(abs >>> 3) % GRADIENT_DIRECTIONS.length] ?? GRADIENT_DIRECTIONS[0]!;
+  return `linear-gradient(${dir},${stops})`;
 }

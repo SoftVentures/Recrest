@@ -1,10 +1,12 @@
-# Plan 2 — Repo Management & Git Actions
+# Plan 3 — Repo Management & Git Actions
 
 ## Context
 
 Konkretisierung der Repo-Verwaltungs-, Git-Aktionen- und Provider-Integrations-Items aus `docs/plans/future.md`. Phase A enthält die kaputten Repo-Aktionen (open in terminal/folder), Phase B die Polish-Features für Repo-Verwaltung, Phase C neue Git-Aktionen (stage/commit/config/workflows/diff/pages), Phase D die Provider-Tiefe für GitLab/Bitbucket.
 
-Ergänzt zur Settings-Erweiterung in Plan 3 (Terminal-Wahl löst auch A.1 hier).
+Ergänzt zur Settings-Erweiterung in Plan 4 (Terminal-Wahl löst auch A.1 hier).
+
+**Voraussetzung:** Plan 2 (Material UI Migration) ist gemerged. Alle neuen Komponenten in diesem Plan werden direkt gegen das MUI-Theme aus Plan 2 gebaut — kein Tailwind, kein SCSS, kein handgerollter Wrapper außer den in Plan 2 §B–D definierten. Bestehende Komponenten die hier touched werden, sind durch Plan 2 bereits migriert.
 
 ---
 
@@ -21,7 +23,7 @@ Ergänzt zur Settings-Erweiterung in Plan 3 (Terminal-Wahl löst auch A.1 hier).
   - **Linux/Arch+Hyprland:** `terminal.rs:34-65` Fallback-Chain `$TERMINAL → gnome-terminal → konsole → xterm` trifft typische Arch/Hyprland-User nicht (kitty/foot/wezterm/alacritty dominieren). Außerdem: detached child von Compositor-Session erbt evtl. nicht `WAYLAND_DISPLAY`.
   - **Windows:** `wt.exe` liegt in `%LOCALAPPDATA%\Microsoft\WindowsApps\wt.exe`. Wenn Windows Terminal nicht installiert ist, existiert `wt.exe` als Stub und öffnet den Store. Fallback `cmd.exe /C start cmd.exe /K cd /d <path>` quotet Pfade mit Spaces nicht (kein `"<path>"`).
 - **Vorgehen:**
-  1. **Settings-getriebene Terminal-Wahl (siehe Plan 3 §D.1)** ist Voraussetzung. Plan 3 muss vor Plan 2 §A.1 landen.
+  1. **Settings-getriebene Terminal-Wahl (siehe Plan 4 §D.1)** ist Voraussetzung. Plan 4 §D.1 muss vor diesem §A.1 landen.
   2. `terminal.rs` umstellen: `open_at(path)` liest `AppSettings.terminal`, dispatcht zu Handler pro `TerminalId`. Fallback-Chain greift nur bei `id = "auto"`.
   3. Per-Terminal-Handler in `app/src-tauri/src/commands/terminal/{macos,linux,windows}.rs` (Sub-Modul). Mit `tokio::process::Command::arg(path)` für Path-Quoting (kein String-Concat).
   4. **Per-OS Argv-Tabelle (in `terminal.rs` als Konstanten):**
@@ -303,7 +305,7 @@ Ergänzt zur Settings-Erweiterung in Plan 3 (Terminal-Wahl löst auch A.1 hier).
 ### C.5 MRs mit Diff-View + Comment-Posting
 
 - **Symptom:** "Merge requests mit code changes einsehen & verwalten."
-- **Bestehender Provider-Surface:** `get_pull_request_detail(remote_url, pr_number) → PullRequestDetailDto` existiert (Plan 2 §D.1 nutzt das auch). DTO erweitern, **nicht** neuen Command.
+- **Bestehender Provider-Surface:** `get_pull_request_detail(remote_url, pr_number) → PullRequestDetailDto` existiert (§D.1 dieses Plans nutzt das auch). DTO erweitern, **nicht** neuen Command.
 - **Provider-Trait erweitern (`trait.rs`):**
   - `get_pr_diff(remote_url, pr_number) → Vec<FileDiffDto>`.
   - `post_pr_comment(remote_url, pr_number, body, path?, position?) → Result<CommentDto>`.

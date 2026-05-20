@@ -19,6 +19,15 @@ pub struct PullRequestDto {
     pub additions: Option<u64>,
     pub deletions: Option<u64>,
     pub ci_status: Option<CiStatus>,
+    /// Plan 1 §A.2: usernames assigned to this PR. Used by the frontend
+    /// notification trigger to only notify for PRs the current user owns.
+    /// Defaulted to an empty Vec so older serialised snapshots still load.
+    #[serde(default)]
+    pub assignees: Vec<String>,
+    /// Plan 1 §A.2: usernames whose review has been requested. Treated as
+    /// equivalent to assignees for notification gating.
+    #[serde(default)]
+    pub requested_reviewers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

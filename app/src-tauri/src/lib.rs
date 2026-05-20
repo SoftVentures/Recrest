@@ -2,13 +2,14 @@ mod auth;
 mod commands;
 mod config;
 mod git;
+mod platform;
 mod providers;
 mod update;
 
 use std::sync::Arc;
 
 use tauri::{
-    Manager,
+    AppHandle, Manager,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
@@ -30,13 +31,223 @@ pub struct AppState {
     pub oauth_pending: Arc<Mutex<Option<(String, String)>>>,
 }
 
+#[cfg(target_os = "macos")]
+const ICON_PROD_LIGHT: &[u8] = include_bytes!("../icons/icon.icns");
+#[cfg(target_os = "macos")]
+const ICON_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.icns");
+#[cfg(target_os = "macos")]
+const ICON_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/icon-light.icns");
+#[cfg(target_os = "macos")]
+const ICON_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.icns");
+
+#[cfg(target_os = "macos")]
+fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
+    use objc2_foundation::NSString;
+    let appearance = app.effectiveAppearance();
+    let name = appearance.name();
+    name.isEqualToString(&NSString::from_str("NSAppearanceNameDarkAqua"))
+}
+
+#[cfg(target_os = "macos")]
+fn pick_icon_bytes(dark: bool) -> &'static [u8] {
+    let dev = cfg!(debug_assertions);
+    match (dev, dark) {
+        (false, false) => ICON_PROD_LIGHT,
+        (false, true) => ICON_PROD_DARK,
+        (true, false) => ICON_DEV_LIGHT,
+        (true, true) => ICON_DEV_DARK,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn set_macos_app_icon() {
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::NSData;
+
+    let Some(mtm) = objc2::MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    let bytes = pick_icon_bytes(is_system_dark(&app));
+    let data = NSData::with_bytes(bytes);
+    let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else {
+        return;
+    };
+    unsafe {
+        app.setApplicationIconImage(Some(&image));
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn observe_macos_appearance() {
+    use block2::RcBlock;
+    use objc2_foundation::{NSDistributedNotificationCenter, NSNotification, NSString};
+    use std::ptr::NonNull;
+
+    let name = NSString::from_str("AppleInterfaceThemeChangedNotification");
+    let block = RcBlock::new(move |_n: NonNull<NSNotification>| {
+        set_macos_app_icon();
+    });
+    let center = NSDistributedNotificationCenter::defaultCenter();
+    unsafe {
+        center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block);
+    }
+    std::mem::forget(block);
+}
+
+// Both light + dark 128×128 PNGs are embedded so the Windows runtime can
+// swap the taskbar / tray icon when the OS toggles light/dark mode. The
+// EXE-resource icon (embedded via `WindowsAttributes::window_icon_path` in
+// build.rs) stays static — that's the icon Windows shows for ~1 frame at
+// process start, but as soon as `set_windows_app_icon` runs the runtime
+// version wins and starts following the OS theme.
+#[cfg(windows)]
+const ICON_WIN_PROD_LIGHT: &[u8] = include_bytes!("../icons/128x128.png");
+#[cfg(windows)]
+const ICON_WIN_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.png");
+#[cfg(windows)]
+const ICON_WIN_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/128x128.png");
+#[cfg(windows)]
+const ICON_WIN_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.png");
+
+#[cfg(windows)]
+fn pick_windows_icon_bytes(dark: bool) -> &'static [u8] {
+    let dev = cfg!(debug_assertions);
+    match (dev, dark) {
+        (false, false) => ICON_WIN_PROD_LIGHT,
+        (false, true) => ICON_WIN_PROD_DARK,
+        (true, false) => ICON_WIN_DEV_LIGHT,
+        (true, true) => ICON_WIN_DEV_DARK,
+    }
+}
+
+/// Reads `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+/// \AppsUseLightTheme` — Windows 10+'s canonical "is the user running apps
+/// in dark mode" flag (0 = dark, 1 = light). Tauri's
+/// `Window::theme()` would work in principle but it's tied to the
+/// per-window theme override; we want the **system** preference so the
+/// taskbar/tray icon stays in sync with Explorer regardless of what theme
+/// the renderer is using.
+#[cfg(windows)]
+fn windows_uses_dark_mode() -> bool {
+    use windows::Win32::System::Registry::{
+        HKEY, HKEY_CURRENT_USER, KEY_READ, RRF_RT_REG_DWORD, RegCloseKey, RegGetValueW, RegOpenKeyExW,
+    };
+    use windows::core::PCWSTR;
+
+    let subkey: Vec<u16> = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let value_name: Vec<u16> = "AppsUseLightTheme"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+
+    unsafe {
+        let mut hkey = HKEY::default();
+        if RegOpenKeyExW(HKEY_CURRENT_USER, PCWSTR(subkey.as_ptr()), 0, KEY_READ, &mut hkey)
+            .is_err()
+        {
+            return false; // Default to light if registry isn't readable.
+        }
+        let mut data: u32 = 1;
+        let mut size: u32 = std::mem::size_of::<u32>() as u32;
+        let result = RegGetValueW(
+            hkey,
+            None,
+            PCWSTR(value_name.as_ptr()),
+            RRF_RT_REG_DWORD,
+            None,
+            Some(&mut data as *mut u32 as *mut _),
+            Some(&mut size),
+        );
+        let _ = RegCloseKey(hkey);
+        if result.is_err() {
+            return false;
+        }
+        // `AppsUseLightTheme = 0` → dark mode, `= 1` → light mode.
+        data == 0
+    }
+}
+
+/// Apply the right window+tray icon for the current Windows theme. Called
+/// at setup and on every `WindowEvent::ThemeChanged`.
+///
+/// Tauri/tao's `Window::set_icon` only sends `WM_SETICON(ICON_SMALL, …)` —
+/// that updates the titlebar/Alt-Tab thumbnail but leaves the **taskbar
+/// tile** still showing whatever ICON_BIG was set to last (typically the
+/// EXE resource icon). The taskbar pin slot reads `ICON_BIG`, so we
+/// mirror the small-slot HICON over via raw `SendMessage` here. The HICON
+/// itself is owned by tao's internal `WinIcon` cache (kept alive by the
+/// window's `window_state`), so sharing the handle across both slots is
+/// safe for the lifetime of this window.
+#[cfg(windows)]
+fn apply_windows_theme_icon(app: &AppHandle) {
+    use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        ICON_BIG, ICON_SMALL, SendMessageW, WM_GETICON, WM_SETICON,
+    };
+
+    let dark = windows_uses_dark_mode();
+    let bytes = pick_windows_icon_bytes(dark);
+    let image = match tauri::image::Image::from_bytes(bytes) {
+        Ok(image) => image,
+        Err(err) => {
+            tracing::warn!("[windows] could not decode app icon: {err}");
+            return;
+        }
+    };
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_icon(image.clone());
+
+        if let Ok(raw) = window.hwnd() {
+            let hwnd = HWND(raw.0 as *mut _);
+            unsafe {
+                let small_hicon = SendMessageW(
+                    hwnd,
+                    WM_GETICON,
+                    WPARAM(ICON_SMALL as usize),
+                    LPARAM(0),
+                );
+                if small_hicon.0 != 0 {
+                    SendMessageW(
+                        hwnd,
+                        WM_SETICON,
+                        WPARAM(ICON_BIG as usize),
+                        LPARAM(small_hicon.0),
+                    );
+                }
+            }
+        }
+    }
+
+    if let Some(tray) = app.tray_by_id(commands::tray::TRAY_ID) {
+        let _ = tray.set_icon(Some(image));
+    }
+}
+
 #[cfg(windows)]
 fn set_app_user_model_id() {
     // Must match `tauri.conf.json::identifier` so future Start-Menu entries
     // (installer-written shortcuts) and this runtime setting address the
-    // same notification channel.
-    use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
-    let aumid: Vec<u16> = "eu.softventures.recrest"
+    // same notification channel. M4: routed through the high-level `windows`
+    // crate (PCWSTR + windows_core::Result) so we have a single Win32
+    // dependency instead of `windows` + `windows-sys` side-by-side.
+    //
+    // Dev builds get a `.dev` suffix so the Windows taskbar doesn't
+    // recycle the prod build's cached pin icon / RelaunchIconResource —
+    // the two identities are now distinct in Explorer's per-AUMID store.
+    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+    use windows::core::PCWSTR;
+    let id = if cfg!(debug_assertions) {
+        "eu.softventures.recrest.dev"
+    } else {
+        "eu.softventures.recrest"
+    };
+    let aumid: Vec<u16> = id
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
@@ -44,7 +255,22 @@ fn set_app_user_model_id() {
     // is non-fatal (notifications still work, just with the parent-process
     // name). Silently swallow so a weird Windows build doesn't crash boot.
     unsafe {
-        let _ = SetCurrentProcessExplicitAppUserModelID(aumid.as_ptr());
+        let _ = SetCurrentProcessExplicitAppUserModelID(PCWSTR(aumid.as_ptr()));
+    }
+}
+
+/// Bring the main window forward — show, unminimize, focus. Used by the
+/// tray click handler, the Show menu item, and the macOS Reopen handler
+/// (Spotlight relaunch on a tray-hidden app). Also clears `skip_taskbar`
+/// because Plan 1 §C.4 sets it on a tray-hidden boot to keep the app off
+/// the Windows taskbar; once the user opens the window we want a normal
+/// taskbar entry again.
+fn show_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.set_skip_taskbar(false);
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
     }
 }
 
@@ -73,12 +299,19 @@ pub fn run() {
     }
 
     let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.show();
-                let _ = w.unminimize();
-                let _ = w.set_focus();
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // I5: respect `--start-minimized` on a second-instance launch.
+            // The autostart plugin re-launches the binary with this arg on
+            // login; without this guard we'd surface the window every time
+            // a user logged in even though the whole point of autostart-
+            // with-tray is to stay quietly in the background. NOTE: this
+            // only applies to the single_instance callback path. The tray
+            // click and macOS Reopen handlers both call `show_main_window`
+            // directly because those *are* user-initiated surface actions.
+            if argv.iter().any(|a| a == "--start-minimized") {
+                return;
             }
+            show_main_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -87,7 +320,12 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            // Pass `--start-minimized` so the OS launches Recrest into the
+            // tray on login (paired with Plan 1 §C.4's start-minimized
+            // logic in the setup hook below). Without this arg the
+            // autostarted instance would pop the window forward, which is
+            // exactly what users disabling-on-startup don't want.
+            Some(vec!["--start-minimized".into()]),
         ))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -196,7 +434,13 @@ pub fn run() {
                 });
             }
 
-            let start_minimized = config.settings().start_minimized;
+            // Only hide on startup when the OS-level autostart entry launched
+            // us with `--start-minimized`. Manual launches (Spotlight, Dock,
+            // double-click, CLI) never have the arg and therefore always show
+            // the window — even if `startMinimized` is true in settings.
+            let autostart_launch = std::env::args().any(|a| a == "--start-minimized");
+            let start_minimized = autostart_launch && config.settings().start_minimized;
+            let close_to_tray = config.settings().close_to_tray;
 
             // Hydrate each provider with any persisted self-hosted base URL so
             // the first API call after startup already targets the right
@@ -221,6 +465,21 @@ pub fn run() {
             };
             app.manage(state);
 
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::TitleBarStyle;
+                if let Some(window) = handle.get_webview_window("main") {
+                    let _ = window.set_decorations(true);
+                    let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
+                }
+                set_macos_app_icon();
+                observe_macos_appearance();
+            }
+
+            // Initial Windows icon swap runs AFTER the tray is created
+            // further down so `apply_windows_theme_icon` finds both the
+            // webview window and the tray. The tray block below calls it.
+
             // Deep-link listener for the OAuth callback. The handler only
             // re-emits the URL to the renderer; CSRF matching + token exchange
             // happens in `complete_oauth` so the sensitive work stays in Rust.
@@ -243,9 +502,23 @@ pub fn run() {
 
             // Honour the "Start minimized" preference — hide the main window to
             // the tray instead of showing it on boot.
+            // Plan 1 §C.4: "Start minimized" needs to honour `closeToTray`.
+            //   - both on  → hide to the tray (no taskbar entry).
+            //   - start_minimized + close_to_tray=false → minimize into the
+            //     taskbar (still visible, just collapsed).
+            //   - start_minimized=false → leave the window visible (default).
             if start_minimized {
                 if let Some(w) = handle.get_webview_window("main") {
-                    let _ = w.hide();
+                    if close_to_tray {
+                        // Hide entirely; user surfaces it via tray icon or
+                        // (on macOS) Spotlight reopen — see §C.1.
+                        let _ = w.set_skip_taskbar(true);
+                        let _ = w.hide();
+                    } else {
+                        // Real "minimize to taskbar" so user has a Windows-
+                        // standard reentry point.
+                        let _ = w.minimize();
+                    }
                 }
             }
 
@@ -262,13 +535,7 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
-                    "show" => {
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.show();
-                            let _ = w.unminimize();
-                            let _ = w.set_focus();
-                        }
-                    }
+                    "show" => show_main_window(app),
                     "hide" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.hide();
@@ -286,19 +553,45 @@ pub fn run() {
                         ..
                     } = event
                     {
-                        let app = tray.app_handle();
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.show();
-                            let _ = w.unminimize();
-                            let _ = w.set_focus();
-                        }
+                        show_main_window(tray.app_handle());
                     }
                 })
                 .build(app)?;
 
+            // Plan 1 §C.2: install the WM_NCHITTEST subclass on the main
+            // HWND so Windows 11 surfaces the Snap-Layouts flyout when the
+            // cursor hovers the maximize button. The frontend will push
+            // the actual button rectangles via `set_caption_button_bounds`
+            // once the React titlebar is mounted.
+            #[cfg(windows)]
+            {
+                if let Some(window) = handle.get_webview_window("main") {
+                    match window.hwnd() {
+                        Ok(hwnd) => {
+                            let raw = windows::Win32::Foundation::HWND(hwnd.0 as *mut _);
+                            platform::windows::install_subclass(raw);
+                        }
+                        Err(err) => tracing::warn!("could not get main HWND for subclass: {err}"),
+                    }
+                }
+                // Initial taskbar+tray icon swap to match the current OS
+                // theme. Tauri only emits `WindowEvent::ThemeChanged` on
+                // subsequent toggles, so this seeds the right variant at
+                // startup; otherwise dark-mode users would see the light
+                // icon flash until they alt-tab or change theme.
+                apply_windows_theme_icon(&handle);
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| {
+            #[cfg(windows)]
+            if let tauri::WindowEvent::ThemeChanged(_) = event {
+                // OS theme flipped (light↔dark). Re-apply both window and
+                // tray icons so the taskbar tile stays in sync with Explorer.
+                apply_windows_theme_icon(window.app_handle());
+            }
+
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 // Persist window geometry before hiding, so it survives a force-quit.
                 // Values are stored in LOGICAL pixels so the TS side (which
@@ -325,15 +618,13 @@ pub fn run() {
                     }
                 }
 
-                // Read the user preference synchronously from the managed state.
-                // `close_to_tray = true` (default) hides; `false` actually exits.
                 let app_handle = window.app_handle();
                 let close_to_tray = match app_handle.try_state::<AppState>() {
                     Some(state) => match state.config.try_lock() {
                         Ok(cfg) => cfg.settings().close_to_tray,
-                        Err(_) => true, // fall back to safer behaviour if locked
+                        Err(_) => false,
                     },
-                    None => true,
+                    None => false,
                 };
 
                 if close_to_tray {
@@ -359,6 +650,7 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
         commands::repos::open_in_ide,
@@ -394,9 +686,11 @@ pub fn run() {
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
         commands::settings::update_settings,
+        commands::settings::factory_reset,
         commands::window::save_window_state,
         commands::window::load_window_state,
         commands::window::validate_window_position,
+        commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
@@ -411,6 +705,7 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
         commands::repos::open_in_ide,
@@ -446,9 +741,11 @@ pub fn run() {
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
         commands::settings::update_settings,
+        commands::settings::factory_reset,
         commands::window::save_window_state,
         commands::window::load_window_state,
         commands::window::validate_window_position,
+        commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
@@ -459,7 +756,33 @@ pub fn run() {
         commands::dev::dev_panic,
     ]);
 
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running recrest application");
+    let app = builder
+        .build(tauri::generate_context!())
+        .expect("error while building recrest application");
+
+    app.run(|_app_handle, _event| {
+        // Plan 1 §C.1: macOS dispatches Spotlight / Dock launches against an
+        // already-running app as `Reopen`, NOT `single_instance`. When the
+        // user has closed the window to the tray (`hide()`), we'd otherwise
+        // sit silent on relaunch. Bring the window forward instead so
+        // cmd-space → "Recrest" → Enter actually surfaces the app.
+        // Gated to macOS because `RunEvent::Reopen` only exists there.
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Reopen {
+            has_visible_windows: false,
+            ..
+        } = _event
+        {
+            show_main_window(_app_handle);
+        }
+
+        // Plan 1 §C.2: tear down the WM_NCHITTEST subclass so Windows
+        // doesn't keep our function pointer alive past process exit. Most
+        // critical for `tauri dev` where the binary reloads — without
+        // this, the next launch would re-register over a dead pointer.
+        #[cfg(windows)]
+        if let tauri::RunEvent::Exit = _event {
+            platform::windows::uninstall_subclass();
+        }
+    });
 }

@@ -154,27 +154,26 @@ $font-families: (
   }
 }
 
-/* ─── Font-size / interface scale ─── */
-/* We scale the whole interface via `transform: scale()` on `#root` (the React
- * mount point). This keeps every Radix floating layer (Select/Tooltip/Dialog),
- * which portals into `document.body` as a sibling of `#root`, *outside* the
- * scaled subtree — so their `getBoundingClientRect()` math lines up with the
- * visual position and popovers don't drift to the wrong coords when the user
- * changes the size. `zoom` has the opposite behaviour (scales everything
- * including portals) and breaks Radix. */
-$ui-scales: ("sm": 0.9, "md": 1, "lg": 1.12, "xl": 1.25);
+/* `zoom` (not `transform: scale`) so text re-rasterises at the scaled
+ * pixel grid and stays crisp at lg/xl. Applied to `#root` only — Radix
+ * portals mount to `document.body` (outside `#root`) and live in
+ * unscaled space, so they consume the trigger's already-zoomed visual
+ * coordinates directly without compounding the scale. */
+$ui-scales: ("sm": 0.94, "md": 1, "lg": 1.12, "xl": 1.25);
 @each $name, $value in $ui-scales {
   html[data-font-size="#{$name}"] {
     --ui-scale: #{$value};
   }
 }
 #root {
-  transform: scale(var(--ui-scale, 1));
-  transform-origin: top left;
+  zoom: var(--ui-scale, 1);
+  /* `zoom` scales visually but the layout box keeps its CSS width — so
+   * dividing by the scale keeps the visual width matching the viewport. */
   width: calc(100vw / var(--ui-scale, 1));
   height: calc(100vh / var(--ui-scale, 1));
   overflow: hidden;
 }
+
 
 /* ─── Accessibility ─── */
 html[data-reduced-motion="true"] {
@@ -219,14 +218,30 @@ body {
   font-feature-settings: "cv11", "ss01", "ss03";
   font-size: 13px;
 }
-#root {
-  height: 100vh;
-}
+/* `#root` height/width are owned by the UI-scale block above (line ~176)
+ * which sets them to `calc(100vh / scale)` so the post-scale layout box
+ * matches the viewport exactly. Re-declaring `height: 100vh` here would
+ * override that calc (later rule wins at equal specificity) and, for any
+ * `--ui-scale > 1`, leave the rendered `#root` taller than the viewport
+ * (e.g. at "lg" / 1.12 → 800 × 1.12 = 896px on an 800px viewport). The
+ * sidebar's footer (Settings) then sat below the viewport bottom even
+ * though the layout chain itself was bounded. */
 
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* `100%` of `#root`, NOT `100vh`. `#root` is sized to `100vh / ui-scale`
+   * so that after its `transform: scale(ui-scale)` the rendered box matches
+   * the viewport. Using `100vh` here would re-introduce the unscaled value
+   * (and post-scale would render at 100vh × ui-scale — e.g. 896px on an
+   * 800px viewport at "lg" / 1.12), pushing the sidebar's footer below the
+   * viewport. `max-height: 100%` + `overflow: hidden` defend against any
+   * child whose `min-height: auto` would otherwise grow this beyond the
+   * parent height. */
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: var(--app-bg);
   color: var(--ink-1);
 }
@@ -268,26 +283,34 @@ body {
       font-variant-numeric: tabular-nums;
     }
     .t-mark {
+      /* The real `.icns`/`.ico` tile (rendered as inline SVG via `AppIcon`),
+         so the rounded square + chevrons match what users see in the Dock /
+         taskbar pin. No outer background or border — the SVG already ships
+         its own filled `rect` with corner radius. */
       width: 18px;
       height: 18px;
-      border-radius: 4px;
+      flex-shrink: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: #0f1115;
-      border: 1px solid #0f1115;
-      color: #ffffff;
     }
   }
 }
 
-/* macOS overlay: traffic lights are drawn by the OS at trafficLightPosition,
-   we only reserve space on the left and centre our brand line. */
+/* macOS overlay: traffic lights are drawn by the OS at trafficLightPosition.
+   The chrome row stays transparent so the lights remain visible even when the
+   window loses focus (macOS only greys them, it doesn't move/hide them) — a
+   solid `var(--canvas)` fill here would otherwise paint a strip the user
+   could mistake for a missing button row when they alt-tab. The hairline
+   bottom border keeps it visually anchored. */
 .chrome-mac {
-  height: 36px;
-  flex: 0 0 36px;
-  /* 80px reservation so brand never collides with system traffic lights. */
-  padding: 0 12px 0 80px;
+  height: 38px;
+  flex: 0 0 38px;
+  /* 84px reservation so brand never collides with system traffic lights
+     (lights sit at x=14 with ~58px combined width → ~72px right edge). */
+  padding: 0 12px 0 84px;
+  background: transparent;
+  border-bottom: 1px solid var(--hairline);
 }
 
 /* Windows 11: 32px titlebar, three square 46px buttons right-aligned. */
@@ -365,7 +388,15 @@ html[data-chrome="win11"] .app {
 .shell {
   flex: 1;
   display: flex;
+  /* `min-height: 0` lets this flex item shrink below its content's min-content
+   * size; without it the inner `.a-app` grid would push `.shell` (and the
+   * outer `.app`) past the viewport. `min-width: 0` mirrors this on the
+   * horizontal axis so children with intrinsic widths can't blow past 100vw.
+   * `overflow: hidden` is the final defence — anything that still escapes the
+   * grid bounds is clipped here instead of resizing the chain. */
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Keyboard kbd */
@@ -608,6 +639,30 @@ body,
     padding: 0 8px;
     font-size: 11px;
     border-radius: 5px;
+  }
+
+  /* M6: destructive tone for buttons that wipe state (factory reset,
+     remove repo, clear token). Driven by either the `.destructive`
+     modifier class OR `data-tone="destructive"` attribute so callers can
+     stay declarative without adding a class. Uses `--red` from the token
+     palette so light/dark themes get the right shade. */
+  &.destructive,
+  &[data-tone="destructive"] {
+    background: var(--red);
+    color: #ffffff;
+    border-color: var(--red);
+
+    &:hover {
+      /* Slightly darker on hover — `color-mix` keeps the math local to the
+         token without inventing a separate `--red-strong` variable. */
+      background: color-mix(in srgb, var(--red) 88%, #000);
+      border-color: color-mix(in srgb, var(--red) 88%, #000);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   }
 }
 

@@ -1,6 +1,39 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { defineConfig, devices } from "@playwright/test";
 
-const APP_URL = process.env.RECREST_APP_URL ?? "http://localhost:3000";
+// Parse repo-root .env so DEV_PORT_WEB controls the same URL the app's
+// Vite dev server binds to. No new dep — the file is tiny and already on disk.
+function loadRootEnv(): Record<string, string> {
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  try {
+    const raw = readFileSync(resolve(root, ".env"), "utf8");
+    const out: Record<string, string> = {};
+    for (const line of raw.split(/\r?\n/)) {
+      if (line.trimStart().startsWith("#")) continue;
+      const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+      if (!m) continue;
+      const key = m[1]!;
+      let value = m[2] ?? "";
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      out[key] = value;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+const rootEnv = loadRootEnv();
+const APP_PORT = process.env.DEV_PORT_WEB ?? rootEnv.DEV_PORT_WEB ?? "3000";
+const APP_URL = process.env.RECREST_APP_URL ?? `http://localhost:${APP_PORT}`;
 const LANDING_URL = process.env.RECREST_LANDING_URL ?? "http://localhost:4321";
 
 export default defineConfig({

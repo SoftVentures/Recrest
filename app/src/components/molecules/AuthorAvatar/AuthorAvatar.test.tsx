@@ -5,8 +5,8 @@ import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
 
 describe("AuthorAvatar", () => {
   it("rendert Initialen aus dem Namen", () => {
-    render(<AuthorAvatar name="Valentin Röhle" />);
-    expect(screen.getByText("VR")).toBeInTheDocument();
+    render(<AuthorAvatar name="Anna Müller" />);
+    expect(screen.getByText("AM")).toBeInTheDocument();
   });
 
   it("nutzt das aria-label mit dem vollen Namen", () => {
@@ -30,9 +30,17 @@ describe("AuthorAvatar", () => {
   });
 
   it("baut eine Gravatar-URL aus einer E-Mail", () => {
-    const { container } = render(<AuthorAvatar name="Grav" email="valentin.roehle@benova.eu" />);
+    // `@example.com` is suppressed on purpose (dev-seed convention — the
+    // domain always 404s on Gravatar so we skip the request entirely).
+    // Use a real-looking address here so the Gravatar fallback path runs.
+    const { container } = render(<AuthorAvatar name="Grav" email="alice@gmail.com" />);
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
     expect(img?.getAttribute("src")).toMatch(/^https:\/\/www\.gravatar\.com\/avatar\//);
+  });
+
+  it("überspringt Gravatar für Dev-Seed-Mails (.example.com)", () => {
+    const { container } = render(<AuthorAvatar name="Seed" email="alice@example.com" />);
+    expect(container.querySelector("img")).toBeNull();
   });
 });
