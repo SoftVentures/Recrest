@@ -962,8 +962,14 @@
  * `:root`. Use the attribute selector on `:root` itself, not a descendant
  * combinator (`[data-chrome] :root` matches nothing because <html> has no
  * ancestor). */
-:root[data-chrome="mac"] {
-  --chrome-h: 36px;
+/* `useChromeAttribute` writes the value of `useWindowChrome()` verbatim —
+ * `macos-overlay`, `win11`, `gnome`, or `none`. Match those exact strings,
+ * not the shorter platform aliases (`mac`) that earlier versions of this
+ * file assumed. A mismatch here silently leaves `--chrome-h` at 32px on
+ * macOS, which pushes the drawer/scrim 6px above the actual titlebar and
+ * eats the top edge of the page header. */
+:root[data-chrome="macos-overlay"] {
+  --chrome-h: 38px;
 }
 :root[data-chrome="gnome"] {
   --chrome-h: 42px;

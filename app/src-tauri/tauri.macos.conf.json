@@ -4,10 +4,20 @@
     "windows": [
       {
         "label": "main",
+        "title": "Recrest",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1100,
+        "minHeight": 720,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 14, "y": 18 }
+        "trafficLightPosition": { "x": 14, "y": 14 },
+        "dragDropEnabled": true,
+        "acceptFirstMouse": true
       }
     ]
   }

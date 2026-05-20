@@ -3,7 +3,7 @@ import { AppRoute } from "@recrest/shared";
 import { expect, test } from "../../fixtures/app.fixture.js";
 
 test.describe("app / visual tour", () => {
-  test.beforeEach(({}, testInfo) => {
+  test.beforeEach((_, testInfo) => {
     test.skip(testInfo.project.name !== "app-desktop", "desktop visual tour only");
   });
 

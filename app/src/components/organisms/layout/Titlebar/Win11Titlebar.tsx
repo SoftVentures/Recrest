@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { APP_VERSION } from "@recrest/shared";
 
-import { BrandMark } from "@/components/organisms/brand/BrandMark";
+import { AppIcon } from "@/components/organisms/brand/AppIcon";
 import { runWindow } from "@/components/organisms/layout/Titlebar/runWindow";
 import { invoke, isTauri } from "@/lib/tauri";
 
@@ -76,9 +76,7 @@ export function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
   return (
     <div className="chrome chrome-win11" data-tauri-drag-region>
       <div className="t-title" data-tauri-drag-region>
-        <span className="t-mark">
-          <BrandMark size={14} stroke="#ffffff" strokeWidth={72} />
-        </span>
+        <AppIcon className="t-mark" />
         <span className="t-name">Recrest</span>
         <span className="t-version">v{APP_VERSION}</span>
       </div>
