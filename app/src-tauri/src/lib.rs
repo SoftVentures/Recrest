@@ -31,6 +31,71 @@ pub struct AppState {
     pub oauth_pending: Arc<Mutex<Option<(String, String)>>>,
 }
 
+#[cfg(target_os = "macos")]
+const ICON_PROD_LIGHT: &[u8] = include_bytes!("../icons/icon.icns");
+#[cfg(target_os = "macos")]
+const ICON_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.icns");
+#[cfg(target_os = "macos")]
+const ICON_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/icon-light.icns");
+#[cfg(target_os = "macos")]
+const ICON_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.icns");
+
+#[cfg(target_os = "macos")]
+fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
+    use objc2_foundation::NSString;
+    let appearance = app.effectiveAppearance();
+    let name = appearance.name();
+    name.isEqualToString(&NSString::from_str("NSAppearanceNameDarkAqua"))
+}
+
+#[cfg(target_os = "macos")]
+fn pick_icon_bytes(dark: bool) -> &'static [u8] {
+    let dev = cfg!(debug_assertions);
+    match (dev, dark) {
+        (false, false) => ICON_PROD_LIGHT,
+        (false, true) => ICON_PROD_DARK,
+        (true, false) => ICON_DEV_LIGHT,
+        (true, true) => ICON_DEV_DARK,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn set_macos_app_icon() {
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::NSData;
+
+    let Some(mtm) = objc2::MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    let bytes = pick_icon_bytes(is_system_dark(&app));
+    let data = NSData::with_bytes(bytes);
+    let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else {
+        return;
+    };
+    unsafe {
+        app.setApplicationIconImage(Some(&image));
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn observe_macos_appearance() {
+    use block2::RcBlock;
+    use objc2_foundation::{NSDistributedNotificationCenter, NSNotification, NSString};
+    use std::ptr::NonNull;
+
+    let name = NSString::from_str("AppleInterfaceThemeChangedNotification");
+    let block = RcBlock::new(move |_n: NonNull<NSNotification>| {
+        set_macos_app_icon();
+    });
+    let center = NSDistributedNotificationCenter::defaultCenter();
+    unsafe {
+        center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block);
+    }
+    std::mem::forget(block);
+}
+
 #[cfg(windows)]
 fn set_app_user_model_id() {
     // Must match `tauri.conf.json::identifier` so future Start-Menu entries
@@ -227,7 +292,12 @@ pub fn run() {
                 });
             }
 
-            let start_minimized = config.settings().start_minimized;
+            // Only hide on startup when the OS-level autostart entry launched
+            // us with `--start-minimized`. Manual launches (Spotlight, Dock,
+            // double-click, CLI) never have the arg and therefore always show
+            // the window — even if `startMinimized` is true in settings.
+            let autostart_launch = std::env::args().any(|a| a == "--start-minimized");
+            let start_minimized = autostart_launch && config.settings().start_minimized;
             let close_to_tray = config.settings().close_to_tray;
 
             // Hydrate each provider with any persisted self-hosted base URL so
@@ -252,6 +322,17 @@ pub fn run() {
                 oauth_pending: Arc::new(Mutex::new(None)),
             };
             app.manage(state);
+
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::TitleBarStyle;
+                if let Some(window) = handle.get_webview_window("main") {
+                    let _ = window.set_decorations(true);
+                    let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
+                }
+                set_macos_app_icon();
+                observe_macos_appearance();
+            }
 
             // Deep-link listener for the OAuth callback. The handler only
             // re-emits the URL to the renderer; CSRF matching + token exchange
@@ -378,15 +459,13 @@ pub fn run() {
                     }
                 }
 
-                // Read the user preference synchronously from the managed state.
-                // `close_to_tray = true` (default) hides; `false` actually exits.
                 let app_handle = window.app_handle();
                 let close_to_tray = match app_handle.try_state::<AppState>() {
                     Some(state) => match state.config.try_lock() {
                         Ok(cfg) => cfg.settings().close_to_tray,
-                        Err(_) => true, // fall back to safer behaviour if locked
+                        Err(_) => false,
                     },
-                    None => true,
+                    None => false,
                 };
 
                 if close_to_tray {
@@ -412,6 +491,7 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
         commands::repos::open_in_ide,
@@ -466,6 +546,7 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
         commands::repos::open_in_ide,

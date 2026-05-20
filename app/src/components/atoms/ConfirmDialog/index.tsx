@@ -24,7 +24,9 @@ import {
  * Fast Refresh keeps working.
  *
  * The provider keeps a single dialog instance, so concurrent calls are
- * serialised — a second `confirm()` rejects the first one.
+ * serialised — a second `confirm()` resolves the first one as cancelled
+ * (`false`) and opens the new dialog. The promise never rejects; callers
+ * only need to check the boolean.
  */
 
 interface PendingState {

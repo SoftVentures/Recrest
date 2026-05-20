@@ -37,7 +37,7 @@
     "save": "Speichern",
     "delete": "Löschen",
     "clear": "Leeren",
-    "add_scope_label": "Hinzufüge-Bereich",
+    "add_scope_label": "Geltungsbereich",
     "add_scope": {
       "local": "Lokal",
       "global": "Global"

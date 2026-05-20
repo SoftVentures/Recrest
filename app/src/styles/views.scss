@@ -1,17 +1,80 @@
-/* ─── Merge Requests (list + drawer) ─── */
-/* Page-level layout mirrors `.a-branches`: a flat top toolbar followed by
- * a single rounded container for the rows. The drawer is the shared
- * floating overlay primitive (`.a-drawer`) — it sits above the list, so
- * the page no longer reserves a grid column for it. Keeping the page in
- * normal block flow (no `height: 100%`) means short result sets don't
- * leave the bottom of the page empty; long ones scroll via the parent
- * `.a-content-scroll`, exactly like Branches/Activity. */
+/* ─── Merge Requests ─── */
 .a-mr {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding-bottom: 60px;
   min-width: 0;
+}
+
+/* Pill-shaped text-filter input used by Branches and Merge Requests page
+ * toolbars. Same look as `.a-br-search` but scoped to a generic class so
+ * future pages can drop it in without copying branch-specific naming. */
+.a-search-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--ink-3);
+  min-width: 180px;
+  flex: 0 1 240px;
+
+  &:focus-within {
+    border-color: var(--accent);
+    color: var(--ink-1);
+  }
+}
+.a-search-pill-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 12px;
+  width: 100%;
+  padding: 0;
+
+  &::placeholder {
+    color: var(--ink-4);
+  }
+}
+
+/* Outlined dropdown trigger with chevron — shared by the Filter buttons on
+ * both Repositories and Merge Requests pages so the affordance reads the
+ * same in both places. */
+.r-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--canvas);
+  color: var(--ink-1);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+
+  &:hover,
+  &[data-state="open"] {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  > .r-filter-chev {
+    color: var(--ink-3);
+  }
 }
 .a-mr-toolbar {
   display: flex;
@@ -1291,6 +1354,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* Match `.r-filter-trigger` so both right-aligned controls share the
+   * same baseline. */
+  height: 32px;
+  padding: 0 12px;
 }
 .a-br-fetch-all svg {
   color: inherit;
@@ -1357,6 +1424,33 @@
 .a-br-list {
   display: flex;
   flex-direction: column;
+}
+
+.a-br-show-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 0;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--ink-1);
+  }
+
+  .a-br-show-more-total {
+    color: var(--ink-4);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+  }
 }
 /* Each row is its own grid, but the tail slot reserves a fixed min-width
    (buttons + chips) so the auto-sized column resolves to the *same* width
@@ -3372,7 +3466,6 @@
   display: none;
   grid-template-columns: 1fr;
   gap: 16px;
-  padding: 4px;
 }
 
 .repo-card-group {
@@ -3383,6 +3476,8 @@
 
 .repo-card-group-hdr {
   width: 100%;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* The actual card tiles sit one level below the page-level grid because
@@ -3433,11 +3528,9 @@
   align-items: center;
   gap: 1px;
   padding: 2px;
-  background: color-mix(in oklab, var(--canvas) 92%, transparent);
+  background: var(--canvas);
   border: 1px solid var(--border);
   border-radius: 8px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   z-index: 1;
 
@@ -3545,30 +3638,20 @@
   .repo-page-toolbar-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 12px;
     margin-bottom: 8px;
+    min-width: 0;
   }
 
   .repo-page-toolbar {
-    /* The base styles still come from the original `.repo-page-toolbar`
-       block above; we just zero its margin so the new flex row controls
-       spacing instead. */
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
     margin-bottom: 0;
   }
 
-  .repo-page-filters {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+  > .repo-page-toolbar-row > .r-filter-trigger {
     margin-left: auto;
-  }
-
-  .repo-page-sort {
-    height: 32px;
-    min-width: 180px;
-    font-size: 12px;
   }
 }
 

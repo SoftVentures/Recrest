@@ -1,19 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 import { useParams } from "react-router-dom";
 
-import { LayoutGrid, List, Rows3 } from "lucide-react";
+import {
+  ArrowDownFromLine,
+  ArrowUpFromLine,
+  CheckCircle2,
+  ChevronDown,
+  CircleDashed,
+  Filter,
+  LayoutGrid,
+  List,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { RepoListSort, RepoListViewMode, SortDirection } from "@recrest/shared";
 
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/molecules/compounds/Select";
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/molecules/compounds/DropdownMenu";
 import { RepoListSkeleton } from "@/components/molecules/skeletons/RepoListSkeleton";
 import { RepoList } from "@/components/organisms/repos/RepoList";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
@@ -22,22 +34,20 @@ import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { saveSettings } from "@/store/slices/settingsSlice";
-import { setSelectedRepo } from "@/store/slices/uiSlice";
+import {
+  type RepoFilterPage,
+  type RepoStatusChip,
+  setRepoFilterSort,
+  setSelectedRepo,
+  toggleRepoStatusChip,
+} from "@/store/slices/uiSlice";
 
 interface ReposPageProps {
   dirtyOnly?: boolean;
 }
 
-/** Status chips multi-select: each chip narrows the visible set. The
- *  `dirty/clean` chips are mutually exclusive at the data level — picking
- *  both would yield an empty list — but we don't enforce it in UI; the user
- *  sees the empty state and learns. `ahead/behind` stack with each other
- *  and with dirty/clean. */
-type StatusChip = "dirty" | "clean" | "ahead" | "behind";
+type StatusChip = RepoStatusChip;
 
-/** R.2 sort fields. The `""` field means "no sort, fall back to natural
- *  ordering" — kept as the default so the existing grouped-by-folder layout
- *  is preserved when the user hasn't picked a sort. */
 type SortField = "" | "name" | "lastModified" | "status";
 
 interface SortOption {
@@ -93,18 +103,22 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
   const repos = useEnrichedRepos();
   const loading = useAppSelector((s) => s.repos.loading);
   const error = useAppSelector((s) => s.repos.error);
-  const viewMode = useAppSelector((s) => s.settings.repoListViewMode);
-  const repoListSort = useAppSelector((s) => s.settings.repoListSort);
+  const rawViewMode = useAppSelector((s) => s.settings.repoListViewMode);
+  const viewMode: RepoListViewMode = rawViewMode === "flat" ? "grouped" : rawViewMode;
+  const filterPage: RepoFilterPage = dirtyOnly ? "changes" : "repos";
+  const repoListSort = useAppSelector((s) => s.ui.repoFilters[filterPage].sort);
+  const statusChipsList = useAppSelector((s) => s.ui.repoFilters[filterPage].statusChips);
+  const statusChips = useMemo(() => new Set<StatusChip>(statusChipsList), [statusChipsList]);
   const { repoId } = useParams<{ repoId?: string }>();
-
-  // R.2: status filter chips. Held in component state — the chips are a
-  // transient filter, not a persisted preference. The "Changes" page seeds
-  // the `dirty` chip via `dirtyOnly` instead of duplicating the logic.
-  const [statusChips, setStatusChips] = useState<Set<StatusChip>>(() => new Set());
 
   useEffect(() => {
     if (repoId) dispatch(setSelectedRepo(repoId));
   }, [dispatch, repoId]);
+
+  // Grouping is driven by sort, not by view mode. No sort = group by folder
+  // (both table and card layouts); active sort = flat list in the chosen
+  // order. Card mode falls back to a flat A→Z list when neither applies.
+  const isGrouped = !repoListSort.field;
 
   const filtered = useMemo(() => {
     let out = dirtyOnly ? repos.filter((r) => r.status.dirty) : repos;
@@ -119,20 +133,12 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
         return true;
       });
     }
+    const dir = repoListSort.direction === "desc" ? -1 : 1;
     if (repoListSort.field) {
-      const dir = repoListSort.direction === "desc" ? -1 : 1;
       out = [...out].sort((a, b) => {
-        if (repoListSort.field === "name") {
-          return a.name.localeCompare(b.name) * dir;
-        }
-        if (repoListSort.field === "lastModified") {
-          // Always newest-first when chosen — `direction` is fixed via the
-          // single dropdown option, so we don't need to multiply by `dir`.
-          return lastCommitTime(b) - lastCommitTime(a);
-        }
-        if (repoListSort.field === "status") {
-          return (statusRank(a) - statusRank(b)) * dir;
-        }
+        if (repoListSort.field === "name") return a.name.localeCompare(b.name) * dir;
+        if (repoListSort.field === "lastModified") return lastCommitTime(b) - lastCommitTime(a);
+        if (repoListSort.field === "status") return (statusRank(a) - statusRank(b)) * dir;
         return 0;
       });
     }
@@ -148,20 +154,16 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
 
   const onChangeSort = (key: string) => {
     const option = SORT_OPTIONS.find((o) => sortKey(o) === key) ?? SORT_OPTIONS[0]!;
-    void dispatch(
-      saveSettings({
-        repoListSort: { field: option.field, direction: option.direction },
+    dispatch(
+      setRepoFilterSort({
+        page: filterPage,
+        sort: { field: option.field, direction: option.direction },
       }),
     );
   };
 
   const toggleChip = (chip: StatusChip) => {
-    setStatusChips((prev) => {
-      const next = new Set(prev);
-      if (next.has(chip)) next.delete(chip);
-      else next.add(chip);
-      return next;
-    });
+    dispatch(toggleRepoStatusChip({ page: filterPage, chip }));
   };
 
   if (loading && repos.length === 0) {
@@ -185,10 +187,6 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
           {error}
         </div>
       )}
-      {/* D.1 + R.2 toolbar. The view toggle and the new filter/sort
-       *  controls share one row so they always live next to each other.
-       *  The container query in views.scss can still override the layout
-       *  to card-mode on narrow viewports for the *grouped* preset only. */}
       <div className="repo-page-toolbar-row" data-testid="repos-toolbar">
         <div
           className="repo-page-toolbar seg-group seg-group--square"
@@ -200,78 +198,101 @@ export function ReposPage({ dirtyOnly = false }: ReposPageProps) {
             current={viewMode}
             onSelect={onChangeView}
             icon={<List className="h-3.5 w-3.5" aria-hidden />}
-            label={t("repos.view.grouped", { defaultValue: "Grouped" })}
-          />
-          <ViewToggleButton
-            mode="flat"
-            current={viewMode}
-            onSelect={onChangeView}
-            icon={<Rows3 className="h-3.5 w-3.5" aria-hidden />}
-            label={t("repos.view.flat", { defaultValue: "Flat" })}
+            label={t("repos.view.default", { defaultValue: "Default" })}
           />
           <ViewToggleButton
             mode="card"
             current={viewMode}
             onSelect={onChangeView}
             icon={<LayoutGrid className="h-3.5 w-3.5" aria-hidden />}
-            label={t("repos.view.card", { defaultValue: "Card" })}
+            label={t("repos.view.cards", { defaultValue: "Cards" })}
           />
         </div>
 
-        <div className="repo-page-filters" data-testid="repos-filter-bar">
-          <div
-            className="repo-page-chips seg-group seg-group--square"
-            role="group"
-            aria-label={t("repos.filter.label", { defaultValue: "Status filter" })}
-          >
-            <StatusChipBtn
-              chip="dirty"
-              active={statusChips.has("dirty")}
-              onToggle={toggleChip}
-              label={t("repos.filter.dirty", { defaultValue: "Dirty" })}
-            />
-            <StatusChipBtn
-              chip="clean"
-              active={statusChips.has("clean")}
-              onToggle={toggleChip}
-              label={t("repos.filter.clean", { defaultValue: "Clean" })}
-            />
-            <StatusChipBtn
-              chip="ahead"
-              active={statusChips.has("ahead")}
-              onToggle={toggleChip}
-              label={t("repos.filter.ahead", { defaultValue: "Ahead" })}
-            />
-            <StatusChipBtn
-              chip="behind"
-              active={statusChips.has("behind")}
-              onToggle={toggleChip}
-              label={t("repos.filter.behind", { defaultValue: "Behind" })}
-            />
-          </div>
-
-          <Select value={sortKey(currentSort)} onValueChange={onChangeSort}>
-            <SelectTrigger
-              className="repo-page-sort"
-              data-testid="repos-sort-trigger"
-              aria-label={t("repos.sort.label", { defaultValue: "Sort by" })}
-            >
-              <SelectValue
-                placeholder={t("repos.sort.options.default", { defaultValue: "Default" })}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((opt) => (
-                <SelectItem key={sortKey(opt)} value={sortKey(opt)}>
-                  {t(`repos.sort.options.${opt.key}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ReposFiltersDropdown
+          statusChips={statusChips}
+          onToggleChip={toggleChip}
+          currentSortKey={sortKey(currentSort)}
+          onSelectSort={onChangeSort}
+        />
       </div>
-      <RepoList repos={filtered} viewMode={viewMode} />
+      <RepoList repos={filtered} viewMode={viewMode} grouped={isGrouped} />
     </div>
+  );
+}
+
+interface ReposFiltersDropdownProps {
+  statusChips: Set<StatusChip>;
+  onToggleChip: (chip: StatusChip) => void;
+  currentSortKey: string;
+  onSelectSort: (key: string) => void;
+}
+
+function ReposFiltersDropdown({
+  statusChips,
+  onToggleChip,
+  currentSortKey,
+  onSelectSort,
+}: ReposFiltersDropdownProps) {
+  const { t } = useTranslation();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="r-filter-trigger" data-testid="repos-filter-trigger">
+          <Filter className="h-3.5 w-3.5" aria-hidden />
+          <span>{t("repos.filter.button", { defaultValue: "Filter" })}</span>
+          <ChevronDown className="r-filter-chev h-3.5 w-3.5" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>{t("repos.filter.label", { defaultValue: "Status" })}</DropdownMenuLabel>
+        <DropdownMenuCheckboxItem
+          checked={statusChips.has("dirty")}
+          onSelect={(e) => e.preventDefault()}
+          onCheckedChange={() => onToggleChip("dirty")}
+        >
+          <CircleDashed className="mr-2 h-3.5 w-3.5" aria-hidden />
+          {t("repos.filter.dirty", { defaultValue: "Dirty" })}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={statusChips.has("clean")}
+          onSelect={(e) => e.preventDefault()}
+          onCheckedChange={() => onToggleChip("clean")}
+        >
+          <CheckCircle2 className="mr-2 h-3.5 w-3.5" aria-hidden />
+          {t("repos.filter.clean", { defaultValue: "Clean" })}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={statusChips.has("ahead")}
+          onSelect={(e) => e.preventDefault()}
+          onCheckedChange={() => onToggleChip("ahead")}
+        >
+          <ArrowUpFromLine className="mr-2 h-3.5 w-3.5" aria-hidden />
+          {t("repos.filter.ahead", { defaultValue: "Ahead" })}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={statusChips.has("behind")}
+          onSelect={(e) => e.preventDefault()}
+          onCheckedChange={() => onToggleChip("behind")}
+        >
+          <ArrowDownFromLine className="mr-2 h-3.5 w-3.5" aria-hidden />
+          {t("repos.filter.behind", { defaultValue: "Behind" })}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>{t("repos.sort.label", { defaultValue: "Sort by" })}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={currentSortKey} onValueChange={onSelectSort}>
+          {SORT_OPTIONS.map((opt) => (
+            <DropdownMenuRadioItem
+              key={sortKey(opt)}
+              value={sortKey(opt)}
+              onSelect={(e) => e.preventDefault()}
+            >
+              {t(`repos.sort.options.${opt.key}`)}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -296,27 +317,6 @@ function ViewToggleButton({ mode, current, onSelect, icon, label }: ViewToggleBu
     >
       {icon}
       <span>{label}</span>
-    </button>
-  );
-}
-
-interface StatusChipBtnProps {
-  chip: StatusChip;
-  active: boolean;
-  onToggle: (chip: StatusChip) => void;
-  label: string;
-}
-
-function StatusChipBtn({ chip, active, onToggle, label }: StatusChipBtnProps) {
-  return (
-    <button
-      type="button"
-      className={cn("repo-page-chip seg-btn", active && "is-active")}
-      data-testid={`repos-filter-chip-${chip}`}
-      aria-pressed={active}
-      onClick={() => onToggle(chip)}
-    >
-      {label}
     </button>
   );
 }

@@ -51,6 +51,11 @@ base64 = "0.22.1"
 which = "8"
 deunicode = "1"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
+# Used by `commands::repos::delete_repo` to move a repo folder into the OS
+# trash (macOS Trash, Windows Recycle Bin, freedesktop Trash on Linux). All
+# destructive UI flows go through the trash so the user can recover from a
+# mis-click — we never permanently `rm -rf` from a button.
+trash = "5"
 
 [target.'cfg(windows)'.dependencies]
 # Single Win32 dependency (M4 — was windows + windows-sys side-by-side).
@@ -62,6 +67,15 @@ fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 # `windows` crate is needed (vs `windows-sys`) because `SetWindowSubclass`
 # lives in the Win32 ABI helpers and we want safe HWND/LPARAM wrappers.
 windows = { version = "0.58", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Foundation", "Win32_Graphics_Gdi"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Sets NSApp.applicationIconImage at runtime so Stage Manager / Mission
+# Control show Recrest's icon in dev mode (where there's no .app bundle),
+# and re-applies it live when the user toggles system Dark Mode.
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSAppearance"] }
+objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSDistributedNotificationCenter", "NSNotification"] }
+block2 = "0.6"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Direct notify-rust use on Linux so we can attach the Recrest icon name +

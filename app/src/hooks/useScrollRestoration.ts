@@ -36,7 +36,16 @@ export function useScrollRestoration<T extends HTMLElement>(
   useEffect(() => {
     const refSnapshot = ref;
     const key = STORAGE_PREFIX + pageId;
-    const raw = sessionStorage.getItem(key);
+    // `sessionStorage.getItem` can throw in some environments (private mode,
+    // storage disabled by policy) before the later `setItem` try/catch in
+    // the cleanup ever runs. Treat any failure as "no saved position" so a
+    // hostile storage layer can't crash the page during mount.
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(key);
+    } catch {
+      raw = null;
+    }
     const saved = raw == null ? null : Number.parseInt(raw, 10);
     const top = saved == null || Number.isNaN(saved) ? null : saved;
 

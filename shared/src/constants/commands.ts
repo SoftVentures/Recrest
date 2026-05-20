@@ -13,6 +13,7 @@ export const TauriCommand = {
   REPO_STATUS: "repo_status",
   ADD_REPO: "add_repo",
   REMOVE_REPO: "remove_repo",
+  DELETE_REPO: "delete_repo",
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
   OPEN_IN_IDE: "open_in_ide",

@@ -235,6 +235,11 @@ function installStub(seed: Required_<AppSeed>): void {
       }
       case "remove_repo":
         return undefined;
+      case "delete_repo":
+        // dev:web has no filesystem — pretend the trash move succeeded.
+        // The frontend slice's `deleteRepo.fulfilled` then prunes the repo
+        // from `state.items` so the UI mirrors a real successful delete.
+        return undefined;
       case "list_recent_commits":
         return resolveRecentCommits(a);
       case "list_pr_events":

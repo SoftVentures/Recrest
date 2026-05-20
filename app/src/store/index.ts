@@ -41,12 +41,17 @@ export const store = configureStore({
           searchOpen: false,
           activeView: "dashboard" as const,
           selectedRepoId: null,
+          selectedPrKey: null,
           pinnedRepoIds: [],
           refreshNonce: 0,
           importDialogOpen: false,
           findDialogOpen: false,
           updaterBanner: null,
           updaterProgress: null,
+          repoFilters: {
+            repos: { sort: { field: "", direction: "asc" as const }, statusChips: [] },
+            changes: { sort: { field: "", direction: "asc" as const }, statusChips: [] },
+          },
         },
         settings: {
           pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,
@@ -57,7 +62,7 @@ export const store = configureStore({
           autoStart: false,
           autoUpdate: "manual",
           startMinimized: false,
-          closeToTray: true,
+          closeToTray: false,
           notifications: {
             enabled: false,
             newPr: true,

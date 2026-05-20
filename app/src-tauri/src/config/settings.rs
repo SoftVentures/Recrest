@@ -146,7 +146,7 @@ fn default_auto_update() -> String {
 }
 
 fn default_close_to_tray() -> bool {
-    true
+    false
 }
 
 fn default_ui_scale() -> f32 {

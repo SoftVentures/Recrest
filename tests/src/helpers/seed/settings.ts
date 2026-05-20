@@ -9,7 +9,7 @@ export const SEED_SETTINGS: AppSettings = {
   autoStart: false,
   autoUpdate: "auto",
   startMinimized: false,
-  closeToTray: true,
+  closeToTray: false,
   notifications: {
     enabled: true,
     newPr: true,

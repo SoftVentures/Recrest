@@ -154,32 +154,26 @@ $font-families: (
   }
 }
 
-/* ─── Font-size / interface scale ─── */
-/* We scale the whole interface via `transform: scale()` on `#root` (the React
- * mount point). This keeps every Radix floating layer (Select/Tooltip/Dialog),
- * which portals into `document.body` as a sibling of `#root`, *outside* the
- * scaled subtree — so their `getBoundingClientRect()` math lines up with the
- * visual position and popovers don't drift to the wrong coords when the user
- * changes the size. `zoom` has the opposite behaviour (scales everything
- * including portals) and breaks Radix. */
-$ui-scales: ("sm": 0.9, "md": 1, "lg": 1.12, "xl": 1.25);
+/* `zoom` (not `transform: scale`) so text re-rasterises at the scaled
+ * pixel grid and stays crisp at lg/xl. Applied to `#root` only — Radix
+ * portals mount to `document.body` (outside `#root`) and live in
+ * unscaled space, so they consume the trigger's already-zoomed visual
+ * coordinates directly without compounding the scale. */
+$ui-scales: ("sm": 0.94, "md": 1, "lg": 1.12, "xl": 1.25);
 @each $name, $value in $ui-scales {
   html[data-font-size="#{$name}"] {
     --ui-scale: #{$value};
   }
 }
-/* Plan 1 §D.6: a second, user-driven scale knob set via the Cmd+/-/0
- * hotkeys (and a future Settings slider) that multiplies on top of the
- * `data-font-size` selector above. `useThemeEffect` writes
- * `--ui-scale-pref` on `<html>` from `settings.uiScale`. Default 1 so a
- * fresh install with no preference is identical to before. */
 #root {
-  transform: scale(calc(var(--ui-scale, 1) * var(--ui-scale-pref, 1)));
-  transform-origin: top left;
-  width: calc(100vw / (var(--ui-scale, 1) * var(--ui-scale-pref, 1)));
-  height: calc(100vh / (var(--ui-scale, 1) * var(--ui-scale-pref, 1)));
+  zoom: var(--ui-scale, 1);
+  /* `zoom` scales visually but the layout box keeps its CSS width — so
+   * dividing by the scale keeps the visual width matching the viewport. */
+  width: calc(100vw / var(--ui-scale, 1));
+  height: calc(100vh / var(--ui-scale, 1));
   overflow: hidden;
 }
+
 
 /* ─── Accessibility ─── */
 html[data-reduced-motion="true"] {

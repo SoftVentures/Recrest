@@ -1,11 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  ArrowDownFromLine,
+  ArrowUpFromLine,
+  CheckCircle2,
+  ChevronDown,
+  Cloud,
+  Filter,
+  Laptop,
+  ListChecks,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { type BranchInfo, EventChannel, TauriCommand } from "@recrest/shared";
 
 import { Icon } from "@/components/atoms/Icon";
 import { RepoAvatar } from "@/components/molecules/RepoAvatar";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/molecules/compounds/DropdownMenu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
 import { BranchRowSkeleton } from "@/components/molecules/skeletons/BranchRowSkeleton";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
@@ -16,7 +35,20 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { loadRepos } from "@/store/slices/reposSlice";
 import { bumpRefreshNonce } from "@/store/slices/uiSlice";
 
-type BranchFilter = "" | "ahead" | "behind" | "clean" | "local" | "remote";
+const TRACKING = {
+  AHEAD: "ahead",
+  BEHIND: "behind",
+  CLEAN: "clean",
+} as const;
+type TrackingFlag = (typeof TRACKING)[keyof typeof TRACKING];
+
+const LOCATION = {
+  LOCAL: "local",
+  REMOTE: "remote",
+} as const;
+type LocationFlag = (typeof LOCATION)[keyof typeof LOCATION];
+
+const BRANCH_PAGE_SIZE = 25;
 
 interface BranchesByRepo {
   repo: EnrichedRepo;
@@ -169,9 +201,16 @@ export function BranchesPage() {
   const repos = useEnrichedRepos();
   const reposLoading = useAppSelector((s) => s.repos.loading);
   const dispatch = useAppDispatch();
-  const [filter, setFilter] = useState<BranchFilter>("");
+  const [tracking, setTracking] = useState<TrackingFlag | null>(null);
+  const [location, setLocation] = useState<LocationFlag | null>(null);
   const [search, setSearch] = useState("");
   const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const resetFilters = () => {
+    setTracking(null);
+    setLocation(null);
+  };
+  const activeFilterCount = (tracking ? 1 : 0) + (location ? 1 : 0);
 
   const { data: byRepoAll, loading: branchesLoading, reload } = useBranchesByRepo(repos);
 
@@ -215,12 +254,21 @@ export function BranchesPage() {
   }, [byRepoAll]);
 
   const byRepo = useMemo<BranchesByRepo[]>(() => {
-    const matchFilter = (b: BranchInfo) => {
-      if (filter === "ahead") return b.ahead > 0;
-      if (filter === "behind") return b.behind > 0;
-      if (filter === "clean") return b.clean;
-      if (filter === "local") return !b.isRemote;
-      if (filter === "remote") return b.isRemote;
+    // Within an axis: OR (any checked match passes). Between axes: AND. Empty
+    // axis means no constraint. So `tracking={ahead}` + `location={local}`
+    // gives "local branches that are ahead", and unchecking everything
+    // shows all branches.
+    const matchTracking = (b: BranchInfo) => {
+      if (tracking === null) return true;
+      if (tracking === TRACKING.AHEAD) return b.ahead > 0;
+      if (tracking === TRACKING.BEHIND) return b.behind > 0;
+      if (tracking === TRACKING.CLEAN) return b.clean;
+      return true;
+    };
+    const matchLocation = (b: BranchInfo) => {
+      if (location === null) return true;
+      if (location === LOCATION.LOCAL) return !b.isRemote;
+      if (location === LOCATION.REMOTE) return b.isRemote;
       return true;
     };
     const q = search.trim().toLowerCase();
@@ -232,10 +280,10 @@ export function BranchesPage() {
     return byRepoAll
       .map(({ repo, branches }) => ({
         repo,
-        branches: branches.filter((b) => matchFilter(b) && matchSearch(b)),
+        branches: branches.filter((b) => matchTracking(b) && matchLocation(b) && matchSearch(b)),
       }))
       .filter(({ branches }) => branches.length > 0);
-  }, [byRepoAll, filter, search]);
+  }, [byRepoAll, tracking, location, search]);
 
   const showSkeleton =
     (reposLoading || branchesLoading) && byRepoAll.every((g) => g.branches.length === 0);
@@ -258,51 +306,9 @@ export function BranchesPage() {
             className="a-br-search-input"
           />
         </div>
-        <div
-          className="a-br-filters seg-group"
-          role="tablist"
-          aria-label={t("branches.filter.label")}
-        >
-          <BFilter
-            active={filter === ""}
-            label={t("branches.filter.all")}
-            count={totals.all}
-            onClick={() => setFilter("")}
-          />
-          <BFilter
-            active={filter === "ahead"}
-            label={t("branches.filter.ahead")}
-            count={totals.ahead}
-            onClick={() => setFilter("ahead")}
-          />
-          <BFilter
-            active={filter === "behind"}
-            label={t("branches.filter.behind")}
-            count={totals.behind}
-            onClick={() => setFilter("behind")}
-          />
-          <BFilter
-            active={filter === "clean"}
-            label={t("branches.filter.clean")}
-            count={totals.clean}
-            onClick={() => setFilter("clean")}
-          />
-          <BFilter
-            active={filter === "local"}
-            label={t("branches.filter.local")}
-            count={totals.local}
-            onClick={() => setFilter("local")}
-          />
-          <BFilter
-            active={filter === "remote"}
-            label={t("branches.filter.remote")}
-            count={totals.remote}
-            onClick={() => setFilter("remote")}
-          />
-        </div>
         <button
           type="button"
-          className="r-btn sm ghost a-br-fetch-all"
+          className="r-btn a-br-fetch-all"
           disabled={fetchAllBusy || repos.length === 0}
           data-testid="branches-fetch-all"
           onClick={() =>
@@ -314,6 +320,120 @@ export function BranchesPage() {
             {fetchAllBusy ? t("branches.actions.fetching") : t("branches.actions.fetch_all")}
           </span>
         </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="r-filter-trigger"
+              data-testid="branches-filter-trigger"
+              aria-label={t("branches.filter.label")}
+            >
+              <Filter className="h-3.5 w-3.5" aria-hidden />
+              <span>{t("branches.filter.button", { defaultValue: "Filter" })}</span>
+              {activeFilterCount > 0 && <span className="seg-count">{activeFilterCount}</span>}
+              <ChevronDown className="r-filter-chev h-3.5 w-3.5" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              {t("branches.filter.tracking_label", { defaultValue: "Tracking" })}
+            </DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={tracking === null}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setTracking(null)}
+            >
+              <ListChecks className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.all", { defaultValue: "All" })}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.all}
+              </span>
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={tracking === TRACKING.AHEAD}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setTracking(TRACKING.AHEAD)}
+            >
+              <ArrowUpFromLine className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.ahead")}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.ahead}
+              </span>
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={tracking === TRACKING.BEHIND}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setTracking(TRACKING.BEHIND)}
+            >
+              <ArrowDownFromLine className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.behind")}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.behind}
+              </span>
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={tracking === TRACKING.CLEAN}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setTracking(TRACKING.CLEAN)}
+            >
+              <CheckCircle2 className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.clean")}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.clean}
+              </span>
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>
+              {t("branches.filter.location_label", { defaultValue: "Location" })}
+            </DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={location === null}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setLocation(null)}
+            >
+              <ListChecks className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.all", { defaultValue: "All" })}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.all}
+              </span>
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={location === LOCATION.LOCAL}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setLocation(LOCATION.LOCAL)}
+            >
+              <Laptop className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.local")}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.local}
+              </span>
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={location === LOCATION.REMOTE}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => setLocation(LOCATION.REMOTE)}
+            >
+              <Cloud className="mr-2 h-3.5 w-3.5" aria-hidden />
+              {t("branches.filter.remote")}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                {totals.remote}
+              </span>
+            </DropdownMenuCheckboxItem>
+            {activeFilterCount > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    resetFilters();
+                  }}
+                >
+                  {t("branches.filter.reset", { defaultValue: "Reset filters" })}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="a-br-groups">
@@ -332,7 +452,15 @@ export function BranchesPage() {
         )}
 
         {byRepo.map((g, gi) => (
-          <BranchGroup key={g.repo.id} group={g} gi={gi} busyKey={busyKey} t={t} run={run} />
+          <BranchGroup
+            key={g.repo.id}
+            group={g}
+            gi={gi}
+            busyKey={busyKey}
+            t={t}
+            run={run}
+            paginate={search.trim() === ""}
+          />
         ))}
       </div>
     </div>
@@ -345,14 +473,19 @@ function BranchGroup({
   busyKey,
   t,
   run,
+  paginate,
 }: {
   group: BranchesByRepo;
   gi: number;
   busyKey: string | null;
   t: (k: string, p?: Record<string, unknown>) => string;
   run: (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => Promise<void>;
+  paginate: boolean;
 }) {
   const { repo, branches } = group;
+  const [visibleCount, setVisibleCount] = useState<number>(BRANCH_PAGE_SIZE);
+  const visibleBranches = paginate ? branches.slice(0, visibleCount) : branches;
+  const hiddenCount = paginate ? branches.length - visibleBranches.length : 0;
   const sectionId = repo.id;
   const fetchKey = `${repo.id}:fetch`;
   // `--group-base` delays the row stagger so the group itself has popped
@@ -449,7 +582,7 @@ function BranchGroup({
       </div>
       {open && (
         <div className="a-br-list" id={listId}>
-          {branches.map((b, i) => (
+          {visibleBranches.map((b, i) => (
             <BranchRow
               key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
               repo={repo}
@@ -460,6 +593,25 @@ function BranchGroup({
               animIndex={Math.min(i, 10)}
             />
           ))}
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              className="a-br-show-more"
+              data-testid="branches-show-more"
+              data-repo-id={repo.id}
+              onClick={() =>
+                setVisibleCount((c) => Math.min(c + BRANCH_PAGE_SIZE, branches.length))
+              }
+            >
+              {t("branches.show_more", {
+                defaultValue: "Show {{count}} more",
+                count: Math.min(BRANCH_PAGE_SIZE, hiddenCount),
+              })}
+              <span className="a-br-show-more-total">
+                {visibleBranches.length} / {branches.length}
+              </span>
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -604,30 +756,5 @@ function BranchRow({
         </div>
       </div>
     </div>
-  );
-}
-
-function BFilter({
-  active,
-  label,
-  count,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  count: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active ? "true" : "false"}
-      className={`a-br-filter-pill seg-btn${active ? " active" : ""}`}
-      onClick={onClick}
-    >
-      <span>{label}</span>
-      <span className="a-br-filter-count seg-count">{count}</span>
-    </button>
   );
 }

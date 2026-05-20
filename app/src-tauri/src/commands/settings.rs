@@ -1,8 +1,13 @@
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter, State};
 
+use std::collections::BTreeMap;
+
 use crate::auth::token::TokenStore;
-use crate::config::settings::{AppSettings, NotificationSettings};
+use crate::config::settings::{
+    AppSettings, NotificationSettings, PrivacySettings, RepoImportDefaults, RepoListSort,
+    RepoListViewMode, TerminalSettings,
+};
 use crate::AppState;
 
 use super::error::CommandError;
@@ -33,6 +38,22 @@ pub struct SettingsPatch {
     pub close_to_tray: Option<bool>,
     pub notifications: Option<NotificationSettings>,
     pub crash_reporting: Option<bool>,
+    // Phase 0.1 additive fields. Each frontend dispatch of `saveSettings`
+    // that touches one of these used to be a silent no-op because the patch
+    // deserializer dropped unknown keys — view-mode toggle, sort dropdown,
+    // pin/unpin and the UI-scale hotkeys all bounced off the backend.
+    pub pinned_repo_ids: Option<Vec<String>>,
+    pub author_aliases: Option<BTreeMap<String, String>>,
+    pub ui_scale: Option<f32>,
+    pub repo_list_view_mode: Option<RepoListViewMode>,
+    pub repo_list_sort: Option<RepoListSort>,
+    pub repo_import_defaults: Option<RepoImportDefaults>,
+    // Mirror `default_ide`'s explicit-null pattern so the renderer can clear
+    // the scan path back to "no default" by sending `null`.
+    pub default_scan_path: Option<Option<String>>,
+    pub terminal: Option<TerminalSettings>,
+    pub commit_message_template: Option<String>,
+    pub privacy: Option<PrivacySettings>,
 }
 
 #[tauri::command]
@@ -82,6 +103,36 @@ pub async fn update_settings(
         }
         if let Some(value) = patch.crash_reporting {
             settings.crash_reporting = value;
+        }
+        if let Some(value) = patch.pinned_repo_ids {
+            settings.pinned_repo_ids = value;
+        }
+        if let Some(value) = patch.author_aliases {
+            settings.author_aliases = value;
+        }
+        if let Some(value) = patch.ui_scale {
+            settings.ui_scale = value;
+        }
+        if let Some(value) = patch.repo_list_view_mode {
+            settings.repo_list_view_mode = value;
+        }
+        if let Some(value) = patch.repo_list_sort {
+            settings.repo_list_sort = value;
+        }
+        if let Some(value) = patch.repo_import_defaults {
+            settings.repo_import_defaults = value;
+        }
+        if let Some(value) = patch.default_scan_path {
+            settings.default_scan_path = value;
+        }
+        if let Some(value) = patch.terminal {
+            settings.terminal = value;
+        }
+        if let Some(value) = patch.commit_message_template {
+            settings.commit_message_template = value;
+        }
+        if let Some(value) = patch.privacy {
+            settings.privacy = value;
         }
     }
     config.save(&app)?;

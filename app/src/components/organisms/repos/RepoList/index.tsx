@@ -14,11 +14,9 @@ import { setSelectedRepo } from "@/store/slices/uiSlice";
 
 interface RepoListProps {
   repos: EnrichedRepo[];
-  /** Deprecated: prefer `viewMode`. Kept so existing callers don't break. */
+  /** Group items by folder. Independent of `viewMode` so cards can be
+   *  grouped too. Defaults to `viewMode === "grouped"` for back-compat. */
   grouped?: boolean;
-  /** D.1: explicit view mode. When provided, overrides `grouped`. The
-   *  `card` mode also kicks in automatically below ~720px container width
-   *  via the `@container` query in `views.scss`. */
   viewMode?: RepoListViewMode;
 }
 
@@ -26,23 +24,17 @@ const GROUP_ORDER = ["SoftVentures", "Personal", "Tools", "Projects", "Recycle B
 
 const PINNED_GROUP = "__pinned__";
 
-export function RepoList({ repos, grouped = true, viewMode }: RepoListProps) {
+export function RepoList({ repos, grouped, viewMode }: RepoListProps) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const selectedId = useAppSelector((s) => s.ui.selectedRepoId);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  // Derive the effective layout. `viewMode` wins over `grouped` so callers
-  // that adopt the new prop don't have to clear the legacy one too.
-  const requestedMode: RepoListViewMode = viewMode ?? (grouped ? "grouped" : "flat");
+  const requestedMode: RepoListViewMode = viewMode ?? "grouped";
+  const isGrouped = grouped ?? requestedMode === "grouped";
 
-  // R.1: width-driven auto-card-mode is a *narrow-viewport one-way override*
-  // for the `grouped` layout only — the table cannot fit in <720px without
-  // overflow, so we collapse it to cards there. The `flat` and `card` modes
-  // already lay out fine at any width, so respecting the user's explicit
-  // toggle takes priority and the override never kicks in for them.
-  // Without this guard, a previous attempt forced card mode for *every*
-  // mode below 720px which made the toggle look broken on narrower widths.
+  // Below ~720px the table doesn't fit — fall back to card rendering. Cards
+  // already lay out fine narrow, so this override only ever flips table→card.
   const shellRef = useRef<HTMLDivElement | null>(null);
   const [autoCard, setAutoCard] = useState(false);
   useEffect(() => {
@@ -52,28 +44,21 @@ export function RepoList({ repos, grouped = true, viewMode }: RepoListProps) {
       const entry = entries[0];
       if (!entry) return;
       const width = entry.contentRect.width;
-      // Use the same 720px threshold as the @container query so visual and
-      // JSX-driven swaps line up at the exact same breakpoint.
       setAutoCard(width > 0 && width < 720);
     });
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
 
-  // The auto-override only flips `grouped` → `card`. Explicit `flat` stays
-  // flat and explicit `card` stays card; both already render correctly in a
-  // narrow shell. This is the one-way fallback the bug fix demands.
   const effectiveMode: RepoListViewMode =
-    autoCard && requestedMode === "grouped" ? "card" : requestedMode;
-  const isGrouped = effectiveMode === "grouped";
+    autoCard && requestedMode !== "card" ? "card" : requestedMode;
 
   const groups = useMemo(() => {
-    // Pinned repos float to the top in their own group regardless of which
-    // folder they belong to. Plan 1 §A.5: "wenn repo pinned, nicht oben" —
-    // before this, the pinned flag had no impact on ordering.
     const pinned = repos.filter((r) => r.pinned);
 
     if (!isGrouped) {
+      // Flat / card: pinned on top, rest in the caller's order (ReposPage
+      // applies the active sort before passing the list down).
       const rest = repos.filter((r) => !r.pinned);
       const out: { label: string | null; items: EnrichedRepo[]; key: string }[] = [];
       if (pinned.length > 0) {

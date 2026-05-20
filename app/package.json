@@ -12,6 +12,7 @@
     "tauri:build": "tauri build",
     "gen:installer-assets": "node src-tauri/installer-assets/generate.mjs",
     "gen:dev-icons": "tauri icon src/assets/recrest-icon-dev.svg -o src-tauri/icons-dev",
+    "gen:icon-variants": "node src-tauri/scripts/gen-icon-variants.mjs",
     "preformat": "node src/scripts/fix-imports.js",
     "format": "prettier --write 'src/**/*.{ts,tsx,json,css}'",
     "format:check": "prettier --check 'src/**/*.{ts,tsx,json,md,css}'",

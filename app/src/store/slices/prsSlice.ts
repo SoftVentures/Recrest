@@ -9,6 +9,7 @@ import {
 } from "@recrest/shared";
 
 import { invoke } from "@/lib/tauri";
+import { deleteRepo, removeRepo } from "@/store/slices/reposSlice";
 
 export interface PrsState {
   items: Record<RepositoryId, PullRequest[]>;
@@ -99,6 +100,20 @@ const prsSlice = createSlice({
         const k = detailKey(action.meta.arg.repoId, action.meta.arg.prNumber);
         state.detailLoading[k] = false;
       });
+
+    const purgeRepo = (state: PrsState, repoId: RepositoryId) => {
+      delete state.items[repoId];
+      const prefix = `${repoId}#`;
+      for (const key of Object.keys(state.detail)) {
+        if (key.startsWith(prefix)) delete state.detail[key];
+      }
+      for (const key of Object.keys(state.detailLoading)) {
+        if (key.startsWith(prefix)) delete state.detailLoading[key];
+      }
+    };
+    builder
+      .addCase(removeRepo.fulfilled, (state, action) => purgeRepo(state, action.payload))
+      .addCase(deleteRepo.fulfilled, (state, action) => purgeRepo(state, action.payload));
   },
 });
 

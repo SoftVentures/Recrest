@@ -20,7 +20,7 @@ import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, openExternal } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { useAppDispatch } from "@/store/hooks";
-import { removeRepo } from "@/store/slices/reposSlice";
+import { deleteRepo, removeRepo } from "@/store/slices/reposSlice";
 import { togglePinnedRepoPersisted } from "@/store/slices/uiSlice";
 
 export const COL_TEMPLATE = "minmax(220px, 1.6fr) minmax(130px, 0.8fr) 110px 96px 120px";
@@ -82,6 +82,28 @@ export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
       toast.success(`${repo.name} removed`, { id });
     } catch {
       toast.error("Forget failed", { id });
+    }
+  };
+
+  // Counterpart to clone: if Recrest can create the folder, Recrest can
+  // send it to the trash. Intentionally has no `rememberKey` — this is
+  // destructive enough that we want an explicit click every time, not a
+  // muscle-memory "don't ask again".
+  const onDelete = async () => {
+    const ok = await confirm({
+      title: `Delete "${repo.name}" from disk?`,
+      description: `This moves "${repo.path}" and everything inside it to your system trash, and stops Recrest from tracking the repository. You can restore the folder from the trash if you change your mind.`,
+      confirmLabel: "Move to Trash",
+      tone: "destructive",
+    });
+    if (!ok) return;
+    const id = toast.loading(`Deleting ${repo.name}…`);
+    try {
+      await dispatch(deleteRepo(repo.id)).unwrap();
+      toast.success(`${repo.name} moved to trash`, { id });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Delete failed: ${msg}`, { id });
     }
   };
 
@@ -206,6 +228,13 @@ export function RepoRow({ repo, selected, onSelect, animIndex }: RepoRowProps) {
             >
               <Icon name="x" size={12} />{" "}
               <span className="ml-2">Forget (keeps folder on disk)</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => void onDelete()}
+              className="text-destructive focus:text-destructive"
+              data-testid="repo-row-delete"
+            >
+              <Icon name="trash" size={12} /> <span className="ml-2">Delete from disk…</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

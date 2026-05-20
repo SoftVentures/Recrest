@@ -8,6 +8,7 @@
     "test:e2e": "playwright test",
     "test:e2e:landing": "playwright test --project=landing-desktop --project=landing-mobile",
     "test:e2e:app": "playwright test --project=app-desktop --project=app-mobile",
+    "test:e2e:visual": "playwright test --project=app-desktop --project=landing-desktop",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "test:e2e:update-snapshots": "playwright test --update-snapshots",

@@ -243,29 +243,9 @@ export function DashboardPage() {
             </span>
           </div>
           <div className="a-dash-chart">
-            {agg.map((v, i) => {
-              // `agg[0]` is 13 days ago, `agg[13]` is today — translate to a
-              // human-readable date so the tooltip answers "when?" not just
-              // "how many?".
-              const daysAgo = 13 - i;
-              const label =
-                daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
-              return (
-                <div className="a-dash-bar-col" key={i}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="a-dash-bar" style={{ height: `${(v / maxDay) * 100}%` }} />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" sideOffset={8}>
-                      <div className="font-medium">
-                        {v} commit{v === 1 ? "" : "s"}
-                      </div>
-                      <div className="text-[10px] opacity-70">{label}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              );
-            })}
+            {agg.map((v, i) => (
+              <DashboardBarColumn key={i} value={v} max={maxDay} index={i} />
+            ))}
           </div>
           <div className="a-dash-chart-axis">
             <span>14d ago</span>
@@ -567,6 +547,37 @@ function AttentionRow({
       </div>
       <span className={`a-dash-attn-tag t-${kind}`}>{kind}</span>
     </button>
+  );
+}
+
+interface DashboardBarColumnProps {
+  value: number;
+  max: number;
+  index: number;
+}
+
+function DashboardBarColumn({ value, max, index }: DashboardBarColumnProps) {
+  const [open, setOpen] = useState(false);
+  const daysAgo = 13 - index;
+  const label = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <div
+        className="a-dash-bar-col"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <TooltipTrigger asChild>
+          <div className="a-dash-bar" style={{ height: `${(value / max) * 100}%` }} />
+        </TooltipTrigger>
+      </div>
+      <TooltipContent side="top" sideOffset={8}>
+        <div className="font-medium">
+          {value} commit{value === 1 ? "" : "s"}
+        </div>
+        <div className="text-[10px] opacity-70">{label}</div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

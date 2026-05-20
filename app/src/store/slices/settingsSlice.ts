@@ -43,7 +43,7 @@ const initialState: SettingsState = {
   autoStart: false,
   autoUpdate: "manual",
   startMinimized: false,
-  closeToTray: true,
+  closeToTray: false,
   notifications: {
     enabled: false,
     newPr: true,
