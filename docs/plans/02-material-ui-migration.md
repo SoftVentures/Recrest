@@ -1,8 +1,10 @@
-# Plan 4 — Material UI Migration (Phase 4)
+# Plan 2 — Material UI Migration
 
 ## Context
 
-Phase 1–3 haben die App funktional fertig gemacht. Was übrig bleibt ist die **Design-Schuld**: ein gewachsener Mix aus eigenem SCSS (`app/src/styles/{tokens,layout,views,page-anim}.scss`), Tailwind v4, Radix-Primitiven (Dropdown/Dialog/Select/Tabs/Tooltip/Checkbox/Switch/Separator/Label/Slot) und handgerollten Atoms/Molecules (`Button`, `Input`, `Checkbox`, `Switch`, `IconButton`, `Drawer`, `DropdownMenu` Wrapper, `Badge`, …). Jede neue UI braucht heute drei Layer (CSS-Variable → SCSS-Klasse → React-Wrapper) und es gibt keine durchgängige Component-API, keine konsistenten Props, fragmentierte Stories, fragmentierte Tests.
+Plan 1 hat die App stabilisiert (Cross-Platform-Bugs, UI-Polish, OS-Spezifika, UX-Verbesserungen). **Vor** Plan 3 (Repo Management & Git Actions) und Plan 4 (Activity / Stats / Settings) räumen wir die **Design-Schuld** auf: ein gewachsener Mix aus eigenem SCSS (`app/src/styles/{tokens,layout,views,page-anim}.scss`), Tailwind v4, Radix-Primitiven (Dropdown/Dialog/Select/Tabs/Tooltip/Checkbox/Switch/Separator/Label/Slot) und handgerollten Atoms/Molecules (`Button`, `Input`, `Checkbox`, `Switch`, `IconButton`, `Drawer`, `DropdownMenu` Wrapper, `Badge`, …). Jede neue UI braucht heute drei Layer (CSS-Variable → SCSS-Klasse → React-Wrapper) und es gibt keine durchgängige Component-API, keine konsistenten Props, fragmentierte Stories, fragmentierte Tests.
+
+**Warum jetzt (vor Plan 3+4) statt am Ende?** Plan 3 baut ~6 große neue UI-Surfaces (Working-Copy-Panel, Commit-Dialog, CI-Tab, MR-Files-Tab, Deployments-Block, Provider-Integration). Plan 4 baut ~10 weitere (Insights-Cards, DateRangePicker, Terminal-Picker, Token-Help). Wenn die in alter Mixed-Stack-UI entstehen, migrieren wir sie später ein zweites Mal nach MUI. Migration jetzt = Plan 3+4-Komponenten werden von Beginn an in MUI gebaut und brauchen keinen Re-Refactor.
 
 **Ziel:** Auf **Material UI v7** (Joy UI **nicht** — bleibt nicht weiter gepflegt; MUI Core ist die Linie die Anthropic intern und das MUI-Team aktiv weiterentwickelt) als Single-Source-of-Truth migrieren. Custom SCSS → MUI `sx`/`styled()`/Theme. Radix → MUI Komponenten. Eigene Atoms → MUI direkt oder dünne MUI-Wrapper mit Story + Unit-Test.
 
@@ -14,7 +16,7 @@ Phase 1–3 haben die App funktional fertig gemacht. Was übrig bleibt ist die *
 - Joy UI wird **nicht** verwendet (MUI hat es eingefroren).
 - Kein Wechsel zu CSS-in-JS-Build-Plugin (`@mui/styled-engine-sc` o.ä.) — wir bleiben bei MUI's Default emotion engine. Begründung: das CLAUDE.md-Verbot von PostCSS-Reintro greift nicht (emotion injectet zur Laufzeit), und der zweistufige Compiler von styled-components/PandaCSS/Linaria ist mehr Aufwand als Nutzen für eine Tauri-WebView-App.
 
-**Source-of-Truth-Hinweis:** Bei Konflikt mit `docs/plans/implementation-plan.md` oder den Phase 1–3-Plänen gewinnt **dieser** Plan für Styling/Components; **funktionale** Anforderungen aus Phase 1–3 gewinnen über Styling-Entscheidungen hier.
+**Source-of-Truth-Hinweis:** Bei Konflikt mit Plan 1 (Styling) gewinnt **dieser** Plan. **Funktionale** Anforderungen aus Plan 1 gewinnen über Styling-Entscheidungen hier. Plan 3 und Plan 4 **bauen direkt gegen das MUI-Theme dieses Plans** — keine Tailwind-Klassen, kein SCSS, kein Custom-Wrapper außer dem was hier in Phase B–D definiert ist.
 
 ---
 

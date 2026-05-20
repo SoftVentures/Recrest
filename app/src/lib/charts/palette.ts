@@ -3,7 +3,7 @@
  *
  * Owns the curated 14-swatch palette and the deterministic per-repo color
  * map used by activity cards and any other chart surface. Centralised here
- * so Plan 1 §B.3 ("einheitlicher colorfade") and Plan 3 §B.x can layer on
+ * so Plan 1 §B.3 ("einheitlicher colorfade") and Plan 4 §B.x can layer on
  * top without re-introducing parallel palette constants.
  *
  * `activityStats.ts` re-exports `CHART_PALETTE`/`buildRepoColorMap` under

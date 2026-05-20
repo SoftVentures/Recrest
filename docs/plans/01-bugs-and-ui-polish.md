@@ -2,7 +2,7 @@
 
 ## Context
 
-Sammlung der plattformübergreifenden Bugs, OS-spezifischen Bugs (macOS/Windows/Linux) und allgemeinen UX-Verbesserungen aus `docs/plans/future.md`. Phase A (Bugs) hat Vorrang vor Phase D (Features). Repo-Aktions-Bugs ("open in terminal/folder") sind in Plan 2, da sie inhaltlich zur Repo-Aktions-Pipeline gehören. Author-Dedup ist hier verortet, weil sie in jeder Author-Anzeige greift, nicht nur in Statistiken.
+Sammlung der plattformübergreifenden Bugs, OS-spezifischen Bugs (macOS/Windows/Linux) und allgemeinen UX-Verbesserungen aus `docs/plans/future.md`. Phase A (Bugs) hat Vorrang vor Phase D (Features). Repo-Aktions-Bugs ("open in terminal/folder") sind in Plan 3, da sie inhaltlich zur Repo-Aktions-Pipeline gehören. Author-Dedup ist hier verortet, weil sie in jeder Author-Anzeige greift, nicht nur in Statistiken.
 
 Verifikation am Ende: `yarn typecheck && yarn lint && yarn test && yarn test:e2e` plus manuelle OS-Smokes wo angegeben.
 
@@ -49,7 +49,7 @@ pub struct AppSettings {
 
 ### 0.2 Drawer-Primitive — gemeinsame Prop-Surface
 
-Plan 1 §A.1 erstellt `app/src/components/molecules/Drawer/index.tsx`. Plan 2 §C.5 ergänzt einen "Files Changed"-Tab. Damit beide kohärent sind, definieren wir die finale Prop-Surface jetzt:
+Plan 1 §A.1 erstellt `app/src/components/molecules/Drawer/index.tsx`. Plan 3 §C.5 ergänzt einen "Files Changed"-Tab. Damit beide kohärent sind, definieren wir die finale Prop-Surface jetzt:
 
 ```ts
 type DrawerTab = { id: string; label: string; content: ReactNode };
@@ -69,11 +69,11 @@ type DrawerProps = {
 };
 ```
 
-Plan 1 §A.1 implementiert `children`-Variante; Plan 2 §C.5 nutzt `tabs`-Variante. **Reihenfolge:** Plan 1 §A.1 muss vor Plan 2 §C.5 landen.
+Plan 1 §A.1 implementiert `children`-Variante; Plan 3 §C.5 nutzt `tabs`-Variante. **Reihenfolge:** Plan 1 §A.1 muss vor Plan 3 §C.5 landen.
 
 ### 0.3 `lib/charts/`-Umbrella
 
-Plan 1 §B.3 (`palette.ts`) und Plan 3 §B.1 (`smoothLine.ts`) legen beide unter `app/src/lib/charts/` an. Die existierende Palette in `app/src/lib/activityStats.ts` (Konstante `ACTIVITY_PALETTE` und `buildRepoColorMap`) wird **nicht parallel** dupliziert, sondern **umgezogen**:
+Plan 1 §B.3 (`palette.ts`) und Plan 4 §B.1 (`smoothLine.ts`) legen beide unter `app/src/lib/charts/` an. Die existierende Palette in `app/src/lib/activityStats.ts` (Konstante `ACTIVITY_PALETTE` und `buildRepoColorMap`) wird **nicht parallel** dupliziert, sondern **umgezogen**:
 
 1. `ACTIVITY_PALETTE` → `app/src/lib/charts/palette.ts` (re-exportieren als `CHART_PALETTE`).
 2. `buildRepoColorMap` → ebd. (oder belassen in `activityStats.ts`, importiert die Palette).
@@ -84,16 +84,16 @@ Plan 1 §B.3 (`palette.ts`) und Plan 3 §B.1 (`smoothLine.ts`) legen beide unter
 Pflicht-Reihenfolge (verhindert Merge-Konflikte):
 
 1. **Phase 0.1 Settings-Migration** zuerst (alle neuen Felder mit `serde(default)` + Migrations-Test) — entkoppelt alle anderen Items.
-2. **Plan 1 §A.5** (pinnedRepoIds Persistenz) — Vor Plan 2 §B.4 (Click-to-unpin nutzt persistierten State).
-3. **Plan 1 §A.1** (Drawer-Primitive) — Vor Plan 2 §C.5 (Tab-Variante).
-4. **Plan 1 §B.3** (Palette-Extraktion) — Vor allen anderen Chart-Touches in Plan 1/Plan 3.
-5. **Plan 3 §D.1** (Terminal-Setting) — Vor Plan 2 §A.1 (Bug-Fix nutzt Setting).
+2. **Plan 1 §A.5** (pinnedRepoIds Persistenz) — Vor Plan 3 §B.4 (Click-to-unpin nutzt persistierten State).
+3. **Plan 1 §A.1** (Drawer-Primitive) — Vor Plan 3 §C.5 (Tab-Variante).
+4. **Plan 1 §B.3** (Palette-Extraktion) — Vor allen anderen Chart-Touches in Plan 1/Plan 4.
+5. **Plan 4 §D.1** (Terminal-Setting) — Vor Plan 3 §A.1 (Bug-Fix nutzt Setting).
 
 ### 0.5 Pfad-Korrekturen
 
 `app/src/lib/tauri.ts` existiert nicht — der korrekte Pfad ist `app/src/lib/tauri/index.ts` (Verzeichnis-Modul mit `services/`-Unterordner). Alle Items in den 3 Plänen referenzieren ggf. den falschen Pfad — bei jeder Implementierung den korrekten Pfad nutzen.
 
-`app/src-tauri/src/providers/r#trait.rs` (Plan 2) ist Schreibweise des Modul-Imports. **Die Datei heißt `trait.rs`** (Rust-Keywörter werden im `mod`-Statement mit `r#` escaped, der Dateiname bleibt `trait.rs`).
+`app/src-tauri/src/providers/r#trait.rs` (Plan 3) ist Schreibweise des Modul-Imports. **Die Datei heißt `trait.rs`** (Rust-Keywörter werden im `mod`-Statement mit `r#` escaped, der Dateiname bleibt `trait.rs`).
 
 ---
 
@@ -108,7 +108,7 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
   - `app/src/styles/views.scss` — Klasse `.a-mr-drawer`.
 - **Root-Cause-Hypothese:** Es existiert kein gemeinsames Drawer-Primitive; jede View baut sich ein eigenes. MR baut ad-hoc und weicht in Spacing/Schatten/Animation ab.
 - **Vorgehen:**
-  1. Shared Primitive extrahieren als `app/src/components/molecules/Drawer/index.tsx` mit Prop-Surface aus **Phase 0.2** (children-Variante in dieser Iteration; tabs-Variante kommt in Plan 2 §C.5).
+  1. Shared Primitive extrahieren als `app/src/components/molecules/Drawer/index.tsx` mit Prop-Surface aus **Phase 0.2** (children-Variante in dieser Iteration; tabs-Variante kommt in Plan 3 §C.5).
   2. Tokens/Spacing aus `DetailPane`-CSS übernehmen, in `app/src/styles/components/_drawer.scss` zentralisieren.
   3. `DetailPane` als dünner Wrapper auf neues Primitive setzen.
   4. `MergeRequestsPage.tsx:353` umstellen — Inhalt bleibt, Hülle wechselt zu `<Drawer>`.
@@ -129,7 +129,7 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
 - **Root-Cause-Hypothese:** Trigger-Hook hat keinen Filter und das DTO hat die Filter-Felder gar nicht.
 - **Vorgehen:**
   1. **DTO erweitern** (Backend + Frontend): `PullRequestDto.assignees: Vec<String>` (Login/Username-Liste), `PullRequestDto.requestedReviewers: Vec<String>`.
-  2. GitHub-Mapper befüllen. GitLab/Bitbucket: leere Vec bis Plan 2 §D.1 die Mapper liefert.
+  2. GitHub-Mapper befüllen. GitLab/Bitbucket: leere Vec bis Plan 3 §D.1 die Mapper liefert.
   3. **Filter an der richtigen Stelle:** Notification-Filter wirkt **vor** dem Hinzufügen zur `transitions[kind]`-Map (Zeile 120-132). Nicht erst vor `emit()`, sonst wird die Diff-Berechnung verschwendet.
      - `new_pr` (Zeile 123): `if (!isAssigneeOrReviewer(pr, me)) skipNotification`.
      - `ci_failed` / `merge_ready` (Zeile 127/130): selbe Bedingung.
@@ -205,7 +205,7 @@ Pflicht-Reihenfolge (verhindert Merge-Konflikte):
   1. In `RepoList`: vor Gruppierung `const pinned = repos.filter(r => r.pinned)`, eigene Gruppe "Pinned" an Index 0 prependen, Rest wie bisher.
   2. Pinned-Section ist nicht collapsible (oder default-expanded und merkt State).
   3. **Persistenz-Lift (siehe Phase 0.1):** `AppSettings.pinned_repo_ids: Vec<String>` mit `#[serde(default)]`; `uiSlice` lädt initial aus Settings, Toggle dispatched zusätzlich `saveSettings({ pinnedRepoIds })`.
-  4. **Voraussetzung für Plan 2 §B.4** (Click-to-unpin nutzt persistierten State).
+  4. **Voraussetzung für Plan 3 §B.4** (Click-to-unpin nutzt persistierten State).
 - **Test:**
   - Unit: `RepoList` mit gemischter Pin-Liste — Pinned erscheinen erste.
   - E2E: Pin → Reload → Pin bleibt oben.

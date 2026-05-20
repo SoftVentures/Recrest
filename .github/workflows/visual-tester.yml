@@ -66,12 +66,20 @@ jobs:
       # Linux needs apt-get for WebKit's system libs — only that step needs
       # sudo. Mirroring the split from ci.yml so --with-deps quirks under
       # yarn workspace don't bite us.
+      #
+      # We `cd` into the workspace and call `yarn playwright …` directly
+      # instead of `yarn workspace @recrest/tests exec playwright …` because
+      # yarn-1's `exec` binary-lookup fails on Windows (looks for `playwright`,
+      # not `playwright.cmd`). The `cd tests && yarn <bin>` form resolves via
+      # node_modules/.bin and handles the Windows extension transparently.
       - name: Install Playwright system deps (Linux)
         if: runner.os == 'Linux'
-        run: sudo yarn workspace @recrest/tests exec playwright install-deps
+        working-directory: tests
+        run: sudo yarn playwright install-deps
 
       - name: Install Playwright browsers
-        run: yarn workspace @recrest/tests exec playwright install
+        working-directory: tests
+        run: yarn playwright install
 
       - name: Run Playwright tests
         # Don't fail the workflow on assertion errors — visual diffs on
@@ -80,12 +88,37 @@ jobs:
         continue-on-error: true
         run: yarn test:e2e
 
+      # Playwright nests each failure under .screenshots/playwright/<test-dir>/
+      # with screenshot.png + trace.zip + video.webm + error-context.md side by
+      # side. Browsing the artifact zip means click-through every folder — ugly
+      # when all you want is to scan the images.
+      #
+      # Flatten all PNGs into a single dir prefixed by the test-dir name so
+      # filenames stay unique and self-describing. The trace.zip / video.webm /
+      # error-context.md live on in the separate HTML-report artifact below
+      # whenever a deeper look is needed.
+      - name: Flatten screenshots into a single folder
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p screenshots-flat
+          if [ -d .screenshots/playwright ]; then
+            find .screenshots/playwright -type f -name "*.png" | while IFS= read -r f; do
+              dir=$(basename "$(dirname "$f")")
+              base=$(basename "$f")
+              cp "$f" "screenshots-flat/${dir}__${base}"
+            done
+          fi
+          echo "flattened $(find screenshots-flat -type f | wc -l) PNGs"
+          ls -la screenshots-flat || true
+
       - name: Upload screenshots (${{ matrix.label }})
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.label }}
-          path: .screenshots/playwright/
+          path: screenshots-flat/
           if-no-files-found: ignore
           retention-days: 30
 

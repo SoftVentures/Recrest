@@ -1,5 +1,5 @@
 /**
- * Monotone cubic interpolation utility for chart line series (Plan 3 §B.1).
+ * Monotone cubic interpolation utility for chart line series (Plan 4 §B.1).
  *
  * Returns an SVG `path` `d` string that draws a smooth curve through the
  * supplied points using monotone-cubic interpolation (Steffen / Fritsch-Carlson

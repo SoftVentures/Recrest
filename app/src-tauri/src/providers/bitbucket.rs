@@ -471,7 +471,7 @@ fn map_pr(pr: BbPr, ci: Option<CiStatus>) -> PullRequestDto {
         deletions: None,
         ci_status: ci,
         // Plan 1 §A.2: Bitbucket assignee/reviewer mapping deferred to
-        // Plan 2 §D.1. See gitlab.rs for the same rationale.
+        // Plan 3 §D.1. See gitlab.rs for the same rationale.
         assignees: Vec::new(),
         requested_reviewers: Vec::new(),
     }

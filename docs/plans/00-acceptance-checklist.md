@@ -4,6 +4,14 @@ Jedes Item aus `docs/plans/future.md` als überprüfbarer Checkbox. Hak ab, soba
 
 Spalten-Konvention pro Item: `- [ ] <ID> — <Akzeptanz-Kriterium> (→ Plan N §X.Y)`.
 
+**Aktuelle Plan-Reihenfolge:**
+
+1. **Plan 1** — Bugs & UI Polish ← _größtenteils erledigt_
+2. **Plan 2** — Material UI Migration ← _als nächstes, vor Feature-Aufbau in 3+4_
+3. **Plan 3** — Repo Management & Git Actions
+4. **Plan 4** — Activity / Statistics / Dashboard & Settings & Quality
+5. **Phase 5** — Testing & Release (alle 4 auf `develop`, dann Cross-OS-Smoke, Beta-Release, Production-Release)
+
 ---
 
 ## Foundations (Cross-Plan)
@@ -61,58 +69,74 @@ Spalten-Konvention pro Item: `- [ ] <ID> — <Akzeptanz-Kriterium> (→ Plan N �
 
 ---
 
-## Plan 2 — Repo Management & Git Actions
+## Plan 2 — Material UI Migration
 
-### Bugs (Repo-Aktionen kaputt)
+> Skeleton — Items werden konkretisiert sobald Plan 2 startet. Phase 0–G aus `docs/plans/02-material-ui-migration.md` mappen direkt auf checkbar-aufzuhängende Akzeptanz-Kriterien (Theme-Tokens, Atoms-Wrapper, Storybook-Coverage, Bundle-Size, Cleanup).
 
-- [x] **2.A1** — "Open in Terminal" funktioniert auf macOS (Terminal+iTerm+Warp), Linux (kitty/foot/wezterm/alacritty/gnome-terminal/konsole), Windows (wt/pwsh/powershell/cmd) je nach gewähltem Terminal in Plan 3 §D.1. Pfade mit Spaces/Sonderzeichen funktionieren. (→ Plan 2 §A.1)
-- [x] **2.A2** — "Open in Folder" markiert das Repo-Verzeichnis im Datei-Explorer (Finder zeigt es selektiert auf macOS, Explorer markiert auf Windows, xdg-open öffnet auf Linux). In Production-Build (nicht nur Dev) funktioniert es. (→ Plan 2 §A.2)
-
-### Repo-Verwaltung (Polish)
-
-- [ ] **2.B1** — Repo-Import-Wizard hat Felder vorausgefüllt aus `repoImportDefaults` (Provider, Scan-Path, Group). Checkbox "Als Default speichern" funktioniert. (→ Plan 2 §B.1)
-- [ ] **2.B2** — Settings → Storage zeigt Radio "Default" neben jedem Scan-Path. Wahl wird beim Repo-Import übernommen. (→ Plan 2 §B.2)
-- [ ] **2.B3** — Repo ohne lokales Logo + ohne Brand-Match: zeigt Favicon des Origin-Hosts (falls Setting `privacy.fetchFavicons = true`). PNG-Bombe im Test-Server wird abgelehnt. SVG mit `<script>` wird abgelehnt. Self-signed Cert nur mit explizitem Allow. (→ Plan 2 §B.3)
-- [ ] **2.B4** — Click auf Pin-Icon im RepoRow toggelt Pin (vorher nur per Dropdown möglich). Tooltip ändert sich. (→ Plan 2 §B.4)
-- [x] **2.B5** — RepoList-Toggle "Grouped/Flat" verfügbar. Im Flat-Mode: sortierbarer Header (Name/Branch/Status/Activity), Klick toggelt Asc/Desc. Sort-State persistiert. Pinned bleibt oben. (→ Plan 2 §B.5)
-- [ ] **2.B6** — Per-Repo-Settings haben SSH-Key-Picker. Override greift (Test mit privatem Repo + Custom-Key). Passphrase wird nur in-Memory gespeichert. (→ Plan 2 §B.6)
-
-### Git-Aktionen
-
-- [ ] **2.C1** — Working-Copy-Panel im Repo-Detail listet geänderte Files mit Stage/Unstage-Checkboxes. Discard `.env` zeigt Confirmation-Dialog. Submodule-Pfad wird nicht descendet. (→ Plan 2 §C.1)
-- [ ] **2.C2** — Commit-Dialog hat "Default-Template einfügen"-Button (`{author}: {date}` rendered). Custom-Message möglich. Repo mit `pre-commit`-Hook (z.B. linting): Hook läuft tatsächlich (Failure blockt Commit), Badge "Hooks aktiv" sichtbar. Repo ohne Hook: libgit2-Pfad. (→ Plan 2 §C.2)
-- [ ] **2.C3** — Settings → Git Config Tab zeigt `user.name`, `user.email`, `core.editor` etc. — editierbar. Per-Repo-Override funktioniert. (→ Plan 2 §C.3)
-- [ ] **2.C4** — Repo-Detail Tab "CI": Liste der Workflows (GitHub Actions / GitLab Pipelines / Bitbucket Pipelines), Run-History, "Run workflow"-Button mit dynamischem Inputs-Form (für GitHub aus YAML; GitLab als Variables; Bitbucket leer). (→ Plan 2 §C.4)
-- [ ] **2.C5** — MR-Drawer hat Tab "Files Changed" mit Diff-Renderer. Inline-Comment-Composer funktioniert. Bundle-Größe ≤80KB gzipped (verifiziert). (→ Plan 2 §C.5)
-- [ ] **2.C6** — Repo mit GitHub Pages aktiviert: Block "Deployments" zeigt URL + Status. GitLab-Pages-Repo analog. Bitbucket-Repo mit `aws-s3-deploy` in Pipelines: zeigt "Pipelines-basiertes Deploy erkannt". (→ Plan 2 §C.6)
-
-### Provider-Integration
-
-- [ ] **2.D1** — GitLab-PR zeigt Author-Avatar + Display-Name (nicht Username). Bitbucket-PR ebenfalls. (→ Plan 2 §D.1)
-- [ ] **2.D2** — Sidebar/Filter-Dropdown listet GitHub-Orgs, GitLab-Groups, Bitbucket-Workspaces. Auswahl filtert Repo-Liste/Import. (→ Plan 2 §D.2)
+- [ ] **2.0.1** — MUI-Pakete (`@mui/material@^7`, `@mui/icons-material`, `@emotion/{react,styled}`) installiert, Joy UI nicht. (→ Plan 2 §0.1)
+- [ ] **2.0.2** — `createRecrestTheme({ mode, accent })` existiert; `ThemeProvider` in `main.tsx` aktiv; Dark-Mode + Accent-Palette + Font-Scale funktionieren wie vor der Migration. (→ Plan 2 §0.2)
+- [ ] **2.A.1** — Tailwind v4 + `@tailwindcss/vite` aus dem Build entfernt; keine `className="bg-..."` mehr im Code; CI-Lint-Regel verhindert Re-Intro. (→ Plan 2 §A.1)
+- [ ] **2.B.\*** — Atoms (Button, Input, Checkbox, Switch, IconButton, Badge, …) gegen MUI ausgetauscht oder als dünne MUI-Wrapper neu, jeweils Story + Unit-Test. (→ Plan 2 §B)
+- [ ] **2.C.\*** — Molecules (Drawer, DropdownMenu, Tabs, Tooltip, Dialog, Select) auf MUI; Radix-Imports entfernt. (→ Plan 2 §C)
+- [ ] **2.D.\*** — Organisms + Pages migriert; Custom-SCSS-Dateien (`tokens/layout/views/page-anim.scss`) entfernt; nur noch globale `:root`-Variablen die MUI nicht abdeckt. (→ Plan 2 §D)
+- [ ] **2.F.1** — Ordnerstruktur konsolidiert (Atoms/Molecules/Organisms/Pages) gemäß Plan 2 §F. (→ Plan 2 §F)
+- [ ] **2.G.1** — Magic Strings → typed constants (Routen, Settings-Keys, Storage-Keys). (→ Plan 2 §G)
+- [ ] **2.E.1** — Bundle-Size-Budget eingehalten (gzipped Vendor-Chunk inkl. MUI ≤ definiertes Cap); Storybook builds; `yarn test` + `yarn test:e2e` grün. (→ Plan 2 §E)
 
 ---
 
-## Plan 3 — Activity / Statistics / Dashboard & Settings & Quality
+## Plan 3 — Repo Management & Git Actions
+
+### Bugs (Repo-Aktionen kaputt)
+
+- [x] **3.A1** — "Open in Terminal" funktioniert auf macOS (Terminal+iTerm+Warp), Linux (kitty/foot/wezterm/alacritty/gnome-terminal/konsole), Windows (wt/pwsh/powershell/cmd) je nach gewähltem Terminal in Plan 4 §D.1. Pfade mit Spaces/Sonderzeichen funktionieren. (→ Plan 3 §A.1)
+- [x] **3.A2** — "Open in Folder" markiert das Repo-Verzeichnis im Datei-Explorer (Finder zeigt es selektiert auf macOS, Explorer markiert auf Windows, xdg-open öffnet auf Linux). In Production-Build (nicht nur Dev) funktioniert es. (→ Plan 3 §A.2)
+
+### Repo-Verwaltung (Polish)
+
+- [ ] **3.B1** — Repo-Import-Wizard hat Felder vorausgefüllt aus `repoImportDefaults` (Provider, Scan-Path, Group). Checkbox "Als Default speichern" funktioniert. (→ Plan 3 §B.1)
+- [ ] **3.B2** — Settings → Storage zeigt Radio "Default" neben jedem Scan-Path. Wahl wird beim Repo-Import übernommen. (→ Plan 3 §B.2)
+- [ ] **3.B3** — Repo ohne lokales Logo + ohne Brand-Match: zeigt Favicon des Origin-Hosts (falls Setting `privacy.fetchFavicons = true`). PNG-Bombe im Test-Server wird abgelehnt. SVG mit `<script>` wird abgelehnt. Self-signed Cert nur mit explizitem Allow. (→ Plan 3 §B.3)
+- [ ] **3.B4** — Click auf Pin-Icon im RepoRow toggelt Pin (vorher nur per Dropdown möglich). Tooltip ändert sich. (→ Plan 3 §B.4)
+- [x] **3.B5** — RepoList-Toggle "Grouped/Flat" verfügbar. Im Flat-Mode: sortierbarer Header (Name/Branch/Status/Activity), Klick toggelt Asc/Desc. Sort-State persistiert. Pinned bleibt oben. (→ Plan 3 §B.5)
+- [ ] **3.B6** — Per-Repo-Settings haben SSH-Key-Picker. Override greift (Test mit privatem Repo + Custom-Key). Passphrase wird nur in-Memory gespeichert. (→ Plan 3 §B.6)
+
+### Git-Aktionen
+
+- [ ] **3.C1** — Working-Copy-Panel im Repo-Detail listet geänderte Files mit Stage/Unstage-Checkboxes. Discard `.env` zeigt Confirmation-Dialog. Submodule-Pfad wird nicht descendet. (→ Plan 3 §C.1)
+- [ ] **3.C2** — Commit-Dialog hat "Default-Template einfügen"-Button (`{author}: {date}` rendered). Custom-Message möglich. Repo mit `pre-commit`-Hook (z.B. linting): Hook läuft tatsächlich (Failure blockt Commit), Badge "Hooks aktiv" sichtbar. Repo ohne Hook: libgit2-Pfad. (→ Plan 3 §C.2)
+- [ ] **3.C3** — Settings → Git Config Tab zeigt `user.name`, `user.email`, `core.editor` etc. — editierbar. Per-Repo-Override funktioniert. (→ Plan 3 §C.3)
+- [ ] **3.C4** — Repo-Detail Tab "CI": Liste der Workflows (GitHub Actions / GitLab Pipelines / Bitbucket Pipelines), Run-History, "Run workflow"-Button mit dynamischem Inputs-Form (für GitHub aus YAML; GitLab als Variables; Bitbucket leer). (→ Plan 3 §C.4)
+- [ ] **3.C5** — MR-Drawer hat Tab "Files Changed" mit Diff-Renderer. Inline-Comment-Composer funktioniert. Bundle-Größe ≤80KB gzipped (verifiziert). (→ Plan 3 §C.5)
+- [ ] **3.C6** — Repo mit GitHub Pages aktiviert: Block "Deployments" zeigt URL + Status. GitLab-Pages-Repo analog. Bitbucket-Repo mit `aws-s3-deploy` in Pipelines: zeigt "Pipelines-basiertes Deploy erkannt". (→ Plan 3 §C.6)
+
+### Provider-Integration
+
+- [ ] **3.D1** — GitLab-PR zeigt Author-Avatar + Display-Name (nicht Username). Bitbucket-PR ebenfalls. (→ Plan 3 §D.1)
+- [ ] **3.D2** — Sidebar/Filter-Dropdown listet GitHub-Orgs, GitLab-Groups, Bitbucket-Workspaces. Auswahl filtert Repo-Liste/Import. (→ Plan 3 §D.2)
+
+---
+
+## Plan 4 — Activity / Statistics / Dashboard & Settings & Quality
 
 ### Charts (Polish)
 
-- [ ] **3.B1** — MR-Velocity-Card zeigt geschwungene Linie (keine Knicke). Edge-Cases (0/1/2 Punkte) crashen nicht. (→ Plan 3 §B.1)
+- [ ] **4.B1** — MR-Velocity-Card zeigt geschwungene Linie (keine Knicke). Edge-Cases (0/1/2 Punkte) crashen nicht. (→ Plan 4 §B.1)
 
 ### Activity / Statistiken
 
-- [ ] **3.C1** — Activity-Page initial: 30 Tage. Range auf "all" → lädt zurück bis zum ältesten Commit jedes Repos (gestreamed in Chunks bei Mega-Repos, mit Truncation-Banner bei >5_000 Commits). Range-Wechsel cached → kein Re-Fetch wenn Range im Cache. (→ Plan 3 §C.1)
-- [ ] **3.C2** — DateRangePicker: zwei Date-Inputs + Preset-Chips (7d/30d/90d/1y/all). URL-Param `?since=…&until=…` reflektiert State. (→ Plan 3 §C.2)
-- [ ] **3.C3** — Activity-Page Block "Insights" mit 6 Cards: Streak (current+longest), Trend, Top-Authors, Active-Day-of-Week, Avg-Commits/Week, Longest-Gap. Streak/Gap nutzen lokale Timezone. (→ Plan 3 §C.3)
+- [ ] **4.C1** — Activity-Page initial: 30 Tage. Range auf "all" → lädt zurück bis zum ältesten Commit jedes Repos (gestreamed in Chunks bei Mega-Repos, mit Truncation-Banner bei >5_000 Commits). Range-Wechsel cached → kein Re-Fetch wenn Range im Cache. (→ Plan 4 §C.1)
+- [ ] **4.C2** — DateRangePicker: zwei Date-Inputs + Preset-Chips (7d/30d/90d/1y/all). URL-Param `?since=…&until=…` reflektiert State. (→ Plan 4 §C.2)
+- [ ] **4.C3** — Activity-Page Block "Insights" mit 6 Cards: Streak (current+longest), Trend, Top-Authors, Active-Day-of-Week, Avg-Commits/Week, Longest-Gap. Streak/Gap nutzen lokale Timezone. (→ Plan 4 §C.3)
 
 ### Settings
 
-- [ ] **3.D1** — System-Settings → Terminal-Dropdown listet **nur installierte** Terminals (per `which`/`where.exe`/`mdfind`-Detection). Profile-Input erscheint nur bei kompatiblen IDs. Custom-Command mit `{path}` Placeholder. Auswahl wirkt sofort auf "Open in Terminal". (→ Plan 3 §D.1)
-- [ ] **3.D2** — Provider-Token-Settings zeigt pro Provider Inline-Hilfe mit benötigten Scopes (GitHub/GitLab/Bitbucket je separat) + Link zur Token-Erstellungs-Seite. (→ Plan 3 §D.2)
+- [ ] **4.D1** — System-Settings → Terminal-Dropdown listet **nur installierte** Terminals (per `which`/`where.exe`/`mdfind`-Detection). Profile-Input erscheint nur bei kompatiblen IDs. Custom-Command mit `{path}` Placeholder. Auswahl wirkt sofort auf "Open in Terminal". (→ Plan 4 §D.1)
+- [ ] **4.D2** — Provider-Token-Settings zeigt pro Provider Inline-Hilfe mit benötigten Scopes (GitHub/GitLab/Bitbucket je separat) + Link zur Token-Erstellungs-Seite. (→ Plan 4 §D.2)
 
 ### Quality
 
-- [ ] **3.E1** — `yarn test --coverage` zeigt ≥60% Lines, ≥50% Branches App-weit. Jeder Slice (`reposSlice`, `prsSlice`, `providersSlice`, `settingsSlice`, `remoteImportSlice`, `activitySlice`) hat Reducer- und Thunk-Tests. Lib-Module (`activityStats`, `insights`, `notifications`, `charts/*`) ≥80% Lines. `cargo test` hat Happy+Failure-Cases pro Backend-Modul. (→ Plan 3 §E.1)
+- [ ] **4.E1** — `yarn test --coverage` zeigt ≥60% Lines, ≥50% Branches App-weit. Jeder Slice (`reposSlice`, `prsSlice`, `providersSlice`, `settingsSlice`, `remoteImportSlice`, `activitySlice`) hat Reducer- und Thunk-Tests. Lib-Module (`activityStats`, `insights`, `notifications`, `charts/*`) ≥80% Lines. `cargo test` hat Happy+Failure-Cases pro Backend-Modul. (→ Plan 4 §E.1)
 
 ---
 
@@ -212,8 +236,8 @@ Empfohlene Reihenfolge beim Abhaken:
 
 1. **Foundations zuerst** — F.1–F.4 müssen grün sein, sonst können andere Items strukturell nicht abgeschlossen werden.
 2. **Bugs vor Features** innerhalb jedes Plans (Phase A → B → C → D → E).
-3. **Cross-OS-Items (1.C\*, 2.A\*)** auf den jeweiligen Ziel-OS smoke-testen, nicht nur auf Dev-OS.
-4. **Production-Build verifizieren** für Items, die Capabilities/Tauri-Plugin-Permissions berühren (2.A2, 2.C\*, 1.C\*).
+3. **Cross-OS-Items (1.C\*, 3.A\*)** auf den jeweiligen Ziel-OS smoke-testen, nicht nur auf Dev-OS.
+4. **Production-Build verifizieren** für Items, die Capabilities/Tauri-Plugin-Permissions berühren (3.A2, 3.C\*, 1.C\*).
 
 Befehle:
 
@@ -225,3 +249,20 @@ yarn test:e2e
 ```
 
 Pro OS zusätzlich `yarn build` + Install-Smoke.
+
+---
+
+## Phase 5 — Testing & Release
+
+Vor dem ersten Production-Release nach Plan 1–4: alle Plans müssen auf `develop` gemerged sein, dann durchläuft die Codebasis einen finalen Cross-Plattform-Smoke + Beta-Zyklus. Details in `docs/plans/05-testing-and-release.md`.
+
+- [ ] **5.A1** — Alle Plan-1-bis-4-Akzeptanz-Items abgehakt (oben), `develop`-Branch enthält alle Plan-Merges.
+- [ ] **5.A2** — `yarn verify` grün (typecheck + lint + test + rust:check + rust:test + rust:clippy). Coverage-Schwellen aus 4.E1 erreicht.
+- [ ] **5.A3** — `yarn test:e2e` grün auf `app-desktop`, `app-firefox`, `app-webkit`, `app-mobile`, `landing-desktop`, `landing-firefox`, `landing-webkit`, `landing-mobile`.
+- [ ] **5.A4** — 📸 Visual Tester Workflow auf `develop` mit allen 3 OS (Linux/Windows/macOS) ausgeführt; Artefakte gesichtet, keine unerwarteten visuellen Regressionen.
+- [ ] **5.B1** — 🧪 Release (Tauri Beta) Workflow auf `develop` ausgeführt, alle 3 OS bauen Installer ohne Fehler. Installer-Artifact (`recrest-beta-<sha>`) heruntergeladen + auf jedem OS einmal manuell installiert + smoke-getestet (Onboarding-Wizard läuft, Login mit Test-Token, Repo-Import).
+- [ ] **5.B2** — Beta-Tester-Feedback (mindestens 1 Person pro OS) eingesammelt + offene Issues triagiert; Critical-Findings als hotfix in `develop` gemerged.
+- [ ] **5.C1** — `develop → main` PR aufgemacht; CI grün; Conventional-Commit-Squash-Merge respektiert (PR-Titel `feat: …` oder `feat!: …` bei Breaking).
+- [ ] **5.C2** — 🤖 Release Please öffnet/aktualisiert eine `release: 0.x.y`-PR auf `main`; Changelog manuell überprüft; PR gemerged → Tag `v0.x.y` entstanden.
+- [ ] **5.C3** — 📦 Release (Tauri) Workflow läuft automatisch auf den `v0.x.y`-Tag; alle 3 OS-Installer als GitHub-Release-Assets hochgeladen; Signaturen/Notarization grün (falls Secrets konfiguriert).
+- [ ] **5.C4** — Production-Installer auf jedem OS einmal manuell verifiziert: Update von vorheriger Beta-Version greift, Auto-Updater funktioniert beim nächsten Release.

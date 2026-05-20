@@ -6,9 +6,9 @@ import { useDrawerSwipe } from "@/hooks/useDrawerSwipe";
  * Shared right-side panel envelope used by `MergeRequestsPage`'s MR drawer
  * and (going forward) the repo detail PR drawer. The Phase 0.2 prop surface
  * is a discriminated union — callers pass either `children` for free-form
- * content or `tabs` for a tabbed shell. `tabs` is reserved for Plan 2 §C.5
+ * content or `tabs` for a tabbed shell. `tabs` is reserved for Plan 3 §C.5
  * ("Files Changed" tab) and not exercised yet; the type is locked in now so
- * Plan 2 can add it without breaking callers.
+ * Plan 3 can add it without breaking callers.
  */
 export type DrawerTab = {
   id: string;

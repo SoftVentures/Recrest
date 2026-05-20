@@ -115,7 +115,7 @@ pub struct AppSettings {
     #[serde(default)]
     pub provider_settings: BTreeMap<String, ProviderSettings>,
 
-    // ---- Plan 1 / Plan 2 / Plan 3 additive fields (Phase 0.1) ----
+    // ---- Plan 1 / Plan 3 / Plan 4 additive fields (Phase 0.1) ----
     #[serde(default)]
     pub pinned_repo_ids: Vec<String>,
     /// Manual author merges. Keys and values are `signatureKey`s as produced

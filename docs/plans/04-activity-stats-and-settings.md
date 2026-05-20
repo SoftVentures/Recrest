@@ -1,10 +1,12 @@
-# Plan 3 — Activity / Statistics / Dashboard & Settings & Quality
+# Plan 4 — Activity / Statistics / Dashboard & Settings & Quality
 
 ## Context
 
 Konkretisierung der Items aus `docs/plans/future.md`, die Activity/Statistiken, Dashboard, Settings und Test-Suite betreffen. Diese Domäne hat keine echten Bugs in `future.md` (Author-Dedup wurde Plan 1 zugeordnet), daher startet der Plan mit Polish-Items für Charts und geht dann zu Features (volle History, Custom-Range, Insights, Settings-Erweiterungen, Test-Coverage).
 
-Settings-Erweiterung "Terminal + Profil" hier, weil sie zur Settings-Domäne gehört — sie löst gleichzeitig Plan 2 A.1.
+Settings-Erweiterung "Terminal + Profil" hier, weil sie zur Settings-Domäne gehört — sie löst gleichzeitig Plan 3 A.1.
+
+**Voraussetzung:** Plan 2 (Material UI Migration) ist gemerged. Alle neuen Charts, Cards und Settings-Tabs werden in MUI gebaut. Recharts bleibt für die Charts selbst, die umgebenden Card/Layout/Tab-Strukturen kommen aus dem MUI-Theme aus Plan 2.
 
 ---
 
@@ -135,7 +137,7 @@ Keine spezifischen Bugs in dieser Domäne in `docs/plans/future.md`. Der Author-
 - **Symptom:** "Im system punkt in general soll man auch das richtige terminal und terminalprofil auswählen können."
 - **Betroffene Dateien:**
   - `app/src/components/organisms/settings/tabs/SystemSettings/index.tsx:26-56`.
-  - `app/src-tauri/src/commands/terminal.rs` (siehe Plan 2 §A.1).
+  - `app/src-tauri/src/commands/terminal.rs` (siehe Plan 3 §A.1).
   - `shared/src/types/settings.ts`.
 - **Vorgehen:**
   1. **Schema (siehe auch Plan 1 Phase 0.1):** `AppSettings.terminal: TerminalSettings` mit:
@@ -165,7 +167,7 @@ Keine spezifischen Bugs in dieser Domäne in `docs/plans/future.md`. Der Author-
      - Dropdown mit detected Terminals (`auto` immer erste Wahl).
      - Profile-Input (nur sichtbar für Terminals mit `--profile`-Support: gnome-terminal, kitty `--session`, wezterm `--config`, wt `-p`).
      - Custom-Command (Textfield, `{path}` Placeholder) für `id: Custom`.
-  4. **Verbindung zu Plan 2 §A.1:** `terminal.rs::open_at(path)` liest `AppSettings.terminal` und dispatcht zu Handler. Für `id: Auto` greift Detection-Order: System-Default → erstes installiertes vom Wunschliste.
+  4. **Verbindung zu Plan 3 §A.1:** `terminal.rs::open_at(path)` liest `AppSettings.terminal` und dispatcht zu Handler. Für `id: Auto` greift Detection-Order: System-Default → erstes installiertes vom Wunschliste.
 
 - **Test:**
   - Rust-Unit für `detect_terminals` pro OS — Mock `Command::output` (mockable via `which` crate oder Trait-Abstraction); Tabelle: 0 installiert / 1 installiert / alle installiert.
