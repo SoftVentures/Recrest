@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+import GeneralCard from "@/components/molecules/cards/GeneralCard";
 import type { FlakyRepo } from "@/lib/activityAggregates";
 
 interface Props {
@@ -8,36 +11,83 @@ interface Props {
   loading?: boolean;
 }
 
-export function FlakyReposCard({ rows, loading }: Props) {
+const List = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+});
+
+const Row = styled(Box)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  columnGap: 8,
+  rowGap: 4,
+  alignItems: "baseline",
+  fontSize: 12,
+  color: theme.palette.text.primary,
+}));
+
+const Name = styled("span")({
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  fontWeight: 600,
+});
+
+const Rate = styled("span")(({ theme }) => ({
+  fontVariantNumeric: "tabular-nums",
+  color: theme.palette.text.information,
+}));
+
+const Bar = styled(Box)(({ theme }) => ({
+  gridColumn: "1 / -1",
+  height: 5,
+  borderRadius: 8,
+  backgroundColor: theme.palette.surface.interface.backElevation,
+  overflow: "hidden",
+}));
+
+const Fill = styled(Box, { shouldForwardProp: (p) => p !== "width" })<{ width: number }>(
+  ({ theme, width }) => ({
+    width: `${width}%`,
+    height: "100%",
+    backgroundColor: theme.palette.error.main,
+  }),
+);
+
+const Empty = styled("div")(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.text.information,
+  padding: "10px 0",
+}));
+
+function FlakyReposCard({ rows, loading }: Props) {
   const { t } = useTranslation();
   return (
-    <CardShell
-      title={t("activity.cards.flaky_title")}
-      sub={t("activity.cards.flaky_sub")}
+    <GeneralCard
+      title={t("activity.cards.flaky_title", { defaultValue: "Flakiest repos" })}
+      sub={t("activity.cards.flaky_sub", { defaultValue: "failure rate · last 14 days" })}
       loading={loading}
       skeleton="rows"
+      testId="activity-flaky-card"
     >
       {rows.length === 0 ? (
-        <div className="a-act-card-empty">{t("activity.cards.flaky_empty")}</div>
+        <Empty>{t("activity.cards.flaky_empty", { defaultValue: "No check-run data yet." })}</Empty>
       ) : (
-        <div className="a-act-flaky">
-          {rows.map((r, i) => (
-            <div key={r.repoId} className="a-act-flaky-row">
-              <span className="a-act-flaky-name">{r.repoName}</span>
-              <span className="a-act-flaky-rate">{Math.round(r.failRate * 100)}%</span>
-              <div className="a-act-flaky-bar">
-                <div
-                  className="a-act-flaky-bar-fill a-act-anim-barh"
-                  style={{
-                    width: `${Math.max(3, r.failRate * 100)}%`,
-                    animationDelay: `${320 + i * 70}ms`,
-                  }}
-                />
-              </div>
-            </div>
+        <List>
+          {rows.map((r) => (
+            <Row key={r.repoId}>
+              <Name>{r.repoName}</Name>
+              <Rate>{Math.round(r.failRate * 100)}%</Rate>
+              <Bar>
+                <Fill width={Math.max(3, r.failRate * 100)} />
+              </Bar>
+            </Row>
           ))}
-        </div>
+        </List>
       )}
-    </CardShell>
+    </GeneralCard>
   );
 }
+
+export default FlakyReposCard;

@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
 
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
 import type { CheckRunSummary } from "@recrest/shared";
 
 interface Props {
@@ -12,18 +15,109 @@ interface Segment {
   color: string;
 }
 
-/**
- * Render the CI-health donut as a stacked ring split by run outcome
- * (passed / failed / other). The previous single-color circle compressed
- * "98% of 200 runs" and "100% of 4 runs" into the same visual; the stacked
- * variant shows both the proportion *and* the absolute outcome mix.
- *
- * `other` covers runs that finished without a clear pass/fail signal —
- * skipped, cancelled, neutral — i.e. `total - passed - failed`. We surface it
- * as amber so users can spot when CI is technically "green" but mostly
- * skipped.
- */
-export function CiHealthHero({ summaries }: Props) {
+const Root = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.surface.interface.base,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  padding: "12px 14px 10px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  height: "100%",
+}));
+
+const Label = styled("div")(({ theme }) => ({
+  fontSize: 11,
+  color: theme.palette.text.information,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  fontWeight: 600,
+}));
+
+const Ring = styled(Box)({
+  position: "relative",
+  width: 66,
+  height: 66,
+  flexShrink: 0,
+});
+
+const RingSvg = styled("svg")({
+  width: 66,
+  height: 66,
+  transform: "rotate(-90deg)",
+});
+
+const RingTrack = styled("circle")(({ theme }) => ({
+  fill: "none",
+  stroke: theme.palette.surface.interface.backElevation,
+  strokeWidth: 6,
+}));
+
+const RingFill = styled("circle")({
+  fill: "none",
+  strokeWidth: 6,
+  strokeLinecap: "butt",
+});
+
+const RingLabel = styled(Box)({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+  lineHeight: 1,
+  pointerEvents: "none",
+});
+
+const RingValue = styled("div")({
+  fontSize: 15,
+  fontWeight: 700,
+  letterSpacing: "-0.2px",
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 1,
+});
+
+const RingSub = styled("div")(({ theme }) => ({
+  fontSize: 9,
+  color: theme.palette.text.information,
+  marginTop: 2,
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 1,
+}));
+
+const HeadRow = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+});
+
+const Legend = styled(Box)({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "4px 10px",
+  marginTop: 2,
+});
+
+const LegendItem = styled("span")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  fontSize: 10.5,
+  color: theme.palette.text.information,
+}));
+
+const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
+  color: string;
+}>(({ color }) => ({
+  width: 6,
+  height: 6,
+  borderRadius: "50%",
+  backgroundColor: color,
+}));
+
+function CiHealthHero({ summaries }: Props) {
   const { t } = useTranslation();
   let passed = 0;
   let total = 0;
@@ -35,23 +129,26 @@ export function CiHealthHero({ summaries }: Props) {
   }
   const other = Math.max(0, total - passed - failing);
   const pct = total === 0 ? 1 : passed / total;
-  const headlineColor = pct >= 0.95 ? "var(--green)" : pct >= 0.8 ? "var(--amber)" : "var(--red)";
+  // src-old palette: green ≥95%, amber 80-95%, red <80%.
+  const headlineColor =
+    pct >= 0.95
+      ? "var(--mui-palette-success-main, #16a34a)"
+      : pct >= 0.8
+        ? "var(--mui-palette-warning-main, #d97706)"
+        : "var(--mui-palette-error-main, #dc2626)";
 
-  // Donut geometry — keep the same 27/22 viewbox the previous ring used so
-  // surrounding layout doesn't reflow.
-  const radius = 22;
+  // Donut geometry. Outer SVG viewbox is 66×66 so radius 27 gives a comfortable
+  // 3px stroke gap inside the box without clipping the segment caps.
+  const radius = 27;
   const circumference = 2 * Math.PI * radius;
 
   const segments: Segment[] = [
-    { key: "passed", value: passed, color: "var(--green)" },
-    { key: "failed", value: failing, color: "var(--red)" },
-    { key: "other", value: other, color: "var(--amber)" },
+    { key: "passed", value: passed, color: "var(--mui-palette-success-main, #16a34a)" },
+    { key: "failed", value: failing, color: "var(--mui-palette-error-main, #dc2626)" },
+    { key: "other", value: other, color: "var(--mui-palette-warning-main, #d97706)" },
   ];
   const segTotal = segments.reduce((a, s) => a + s.value, 0);
 
-  // Build dasharray offsets: each segment renders as a partial dasharray that
-  // starts where the previous one ended. SVG strokes start at the 3 o'clock
-  // position by default; rotating the group -90° puts the start at 12.
   let cursor = 0;
   const renderedSegments =
     segTotal === 0
@@ -62,77 +159,83 @@ export function CiHealthHero({ summaries }: Props) {
             const length = (s.value / segTotal) * circumference;
             const offset = -cursor;
             cursor += length;
-            return {
-              ...s,
-              dash: `${length} ${circumference - length}`,
-              offset,
-            };
+            return { ...s, dash: `${length} ${circumference - length}`, offset };
           });
 
   return (
-    <div className="a-act-kpi">
-      <div className="a-act-kpi-label">{t("activity.hero.ci_health")}</div>
-      <div className="a-act-ring">
-        <svg className="a-act-ring-svg" viewBox="0 0 54 54">
-          <circle cx="27" cy="27" r={radius} className="a-act-ring-track" />
-          {renderedSegments.length === 0 ? (
-            <circle
-              cx="27"
-              cy="27"
-              r={radius}
-              className="a-act-ring-fill"
-              style={{
-                stroke: "var(--ink-4)",
-                strokeDasharray: circumference,
-                strokeDashoffset: circumference,
-              }}
-            />
-          ) : (
-            renderedSegments.map((s) => (
+    <Root>
+      <Label>{t("activity.hero.ci_health", { defaultValue: "CI health" })}</Label>
+      <HeadRow>
+        <Ring>
+          <RingSvg viewBox="0 0 66 66">
+            <RingTrack cx="33" cy="33" r={radius} />
+            {renderedSegments.length === 0 ? (
               <circle
-                key={s.key}
-                cx="27"
-                cy="27"
+                cx="33"
+                cy="33"
                 r={radius}
-                className="a-act-ring-fill"
-                style={{
-                  stroke: s.color,
-                  strokeDasharray: s.dash,
-                  strokeDashoffset: s.offset,
-                }}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={5}
+                opacity={0.3}
               />
-            ))
-          )}
-        </svg>
-        <div className="a-act-ring-label">
-          <div className="a-act-ring-value" style={{ color: headlineColor }}>
-            {total === 0 ? "—" : `${Math.round(pct * 100)}%`}
-          </div>
-          <div className="a-act-ring-sub">
-            {total === 0
-              ? t("activity.hero.ci_none")
-              : t("activity.hero.ci_runs", { passed, total })}
-          </div>
-        </div>
-      </div>
-      {total > 0 && (
-        <div className="a-act-ring-legend" data-testid="ci-health-legend">
-          <span className="a-act-ring-legend-item">
-            <span className="a-act-ring-legend-dot" style={{ background: "var(--green)" }} />
-            {t("activity.hero.ci_legend_passed", { count: passed })}
-          </span>
-          <span className="a-act-ring-legend-item">
-            <span className="a-act-ring-legend-dot" style={{ background: "var(--red)" }} />
-            {t("activity.hero.ci_legend_failed", { count: failing })}
-          </span>
-          {other > 0 && (
-            <span className="a-act-ring-legend-item">
-              <span className="a-act-ring-legend-dot" style={{ background: "var(--amber)" }} />
-              {t("activity.hero.ci_legend_other", { count: other })}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
+            ) : (
+              renderedSegments.map((s) => (
+                <RingFill
+                  key={s.key}
+                  cx="33"
+                  cy="33"
+                  r={radius}
+                  style={{
+                    stroke: s.color,
+                    strokeDasharray: s.dash,
+                    strokeDashoffset: s.offset,
+                  }}
+                />
+              ))
+            )}
+          </RingSvg>
+          <RingLabel>
+            <RingValue sx={{ color: headlineColor }}>
+              {total === 0 ? "—" : `${Math.round(pct * 100)}%`}
+            </RingValue>
+            <RingSub>
+              {total === 0
+                ? t("activity.hero.ci_none", { defaultValue: "no runs" })
+                : `${passed}/${total}`}
+            </RingSub>
+          </RingLabel>
+        </Ring>
+        {total > 0 && (
+          <Legend>
+            <LegendItem>
+              <LegendDot color="var(--mui-palette-success-main, #16a34a)" />
+              {t("activity.hero.ci_legend_passed", {
+                count: passed,
+                defaultValue: `${passed} passed`,
+              })}
+            </LegendItem>
+            <LegendItem>
+              <LegendDot color="var(--mui-palette-error-main, #dc2626)" />
+              {t("activity.hero.ci_legend_failed", {
+                count: failing,
+                defaultValue: `${failing} failed`,
+              })}
+            </LegendItem>
+            {other > 0 && (
+              <LegendItem>
+                <LegendDot color="var(--mui-palette-warning-main, #d97706)" />
+                {t("activity.hero.ci_legend_other", {
+                  count: other,
+                  defaultValue: `${other} other`,
+                })}
+              </LegendItem>
+            )}
+          </Legend>
+        )}
+      </HeadRow>
+    </Root>
   );
 }
+
+export default CiHealthHero;

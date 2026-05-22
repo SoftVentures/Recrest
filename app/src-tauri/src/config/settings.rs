@@ -25,6 +25,71 @@ impl Default for NotificationSettings {
     }
 }
 
+/// Renderer-scoped appearance + accessibility tokens that the React shell
+/// owns end-to-end. Phase-2 moves these out of `localStorage` and onto the
+/// Tauri backend so every Recrest surface (web preview included) reads them
+/// from a single source of truth.
+///
+/// All fields are `#[serde(default)]` so existing `settings.json` files
+/// migrate cleanly: missing fields fall back to the renderer's defaults.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppearanceSettings {
+    /// Renderer-side theme variant — extends the legacy `theme` (light/dark/system)
+    /// with "oled" and "glassy" without breaking the older field. When the
+    /// renderer dispatches `setThemeId`, this slot wins over `theme`.
+    pub theme_id: String,
+    /// True ⇔ the renderer should track `prefers-color-scheme`. Mirrors the
+    /// legacy `theme === "system"` semantic but kept explicit so the renderer
+    /// can persist "user picked Light" vs. "user is on Light because OS says so".
+    pub follows_system: bool,
+    /// Accent / brand color (named scheme, not hex). One of: default, blue,
+    /// green, purple, pink, orange.
+    pub primary_color: String,
+    /// Renderer font slot — "inter" | "opendyslexic" | future additions.
+    pub font: String,
+    /// Renderer font size token — "sm" | "md" | "lg".
+    pub font_size: String,
+}
+
+impl Default for AppearanceSettings {
+    fn default() -> Self {
+        Self {
+            theme_id: "light".into(),
+            follows_system: true,
+            primary_color: "default".into(),
+            font: "inter".into(),
+            font_size: "md".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessibilitySettings {
+    /// Legacy boolean kept in sync with `appearance.font === "opendyslexic"`.
+    /// Tests written against the pre-Phase-2 shape keep working.
+    #[serde(default)]
+    pub dyslexia_font: bool,
+    #[serde(default)]
+    pub high_contrast: bool,
+    #[serde(default)]
+    pub reduced_motion: bool,
+    #[serde(default)]
+    pub underline_links: bool,
+}
+
+/// Tiny window-state slice persisted alongside settings (the sidebar lives
+/// here because it survives across sessions exactly like an appearance
+/// preference). Future window-state bits (panel splits, last-active route)
+/// land in the same struct.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowStateSettings {
+    #[serde(default)]
+    pub sidebar_collapsed: bool,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PrivacySettings {
@@ -139,6 +204,14 @@ pub struct AppSettings {
     pub commit_message_template: String,
     #[serde(default)]
     pub privacy: PrivacySettings,
+
+    // ---- Phase 2: renderer-scoped preferences moved off localStorage ----
+    #[serde(default)]
+    pub appearance: AppearanceSettings,
+    #[serde(default)]
+    pub accessibility: AccessibilitySettings,
+    #[serde(default)]
+    pub window_state: WindowStateSettings,
 }
 
 fn default_auto_update() -> String {
@@ -184,6 +257,9 @@ impl Default for AppSettings {
             terminal: TerminalSettings::default(),
             commit_message_template: default_commit_message_template(),
             privacy: PrivacySettings::default(),
+            appearance: AppearanceSettings::default(),
+            accessibility: AccessibilitySettings::default(),
+            window_state: WindowStateSettings::default(),
         }
     }
 }

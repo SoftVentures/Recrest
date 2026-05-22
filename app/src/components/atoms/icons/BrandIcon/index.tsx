@@ -1,0 +1,46 @@
+import { type SVGProps } from "react";
+
+import { type SimpleIcon, siBitbucket, siGithub, siGitlab } from "simple-icons";
+
+export type BrandSlug = "github" | "gitlab" | "bitbucket";
+
+const BRAND_ICONS: Record<BrandSlug, SimpleIcon> = {
+  github: siGithub,
+  gitlab: siGitlab,
+  bitbucket: siBitbucket,
+};
+
+interface BrandIconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
+  slug: BrandSlug;
+  size?: number;
+  color?: "currentColor" | "brand" | string;
+  title?: string;
+}
+
+function GeneralBrandIcon({
+  slug,
+  size = 16,
+  color = "currentColor",
+  title,
+  ...rest
+}: BrandIconProps) {
+  const icon = BRAND_ICONS[slug];
+  const fill = color === "brand" ? `#${icon.hex}` : color;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={fill}
+      role="img"
+      aria-label={title ?? icon.title}
+      style={{ flexShrink: 0 }}
+      {...rest}
+    >
+      <path d={icon.path} />
+    </svg>
+  );
+}
+
+export default GeneralBrandIcon;

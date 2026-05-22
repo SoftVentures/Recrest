@@ -28,6 +28,6 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src", "src/vite-env.d.ts"],
-  "exclude": ["src/scripts", "src-tauri", "dist", "node_modules"],
+  "exclude": ["src/scripts", "src-old", "src-tauri", "dist", "node_modules"],
   "references": [{ "path": "../shared" }]
 }

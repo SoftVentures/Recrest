@@ -1,39 +1,32 @@
-import { useEffect, useMemo } from "react";
+import { type ComponentType, useMemo } from "react";
 
 import { AppRoute, type Repository } from "@recrest/shared";
 
-import type { IconName } from "@/components/atoms/Icon";
+import {
+  Activity as ActivityIcon,
+  GitBranch as BranchesIcon,
+  Edit3 as ChangesIcon,
+  Home as DashboardIcon,
+  type LucideProps,
+  GitMerge as MrsIcon,
+  BookMarked as ReposIcon,
+  Settings as SettingsIcon,
+} from "lucide-react";
+
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { setSearchOpen, setSelectedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setSearchOpen, setSelectedRepo } from "@/store/slices/uiSlice";
+
+export type SearchKind = "nav" | "repo" | "mr" | "branch";
 
 export interface SearchResult {
   id: string;
   label: string;
   hint: string;
-  kind: "repo" | "nav" | "mr" | "branch";
-  icon?: IconName;
+  kind: SearchKind;
+  icon?: ComponentType<LucideProps>;
   repo?: Repository;
   onSelect: () => void;
-}
-
-export function useSearchHotkey(): void {
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    const onKeydown = (e: KeyboardEvent) => {
-      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
-      if (isCmdOrCtrl && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        dispatch(setSearchOpen(true));
-      }
-      if (e.key === "Escape") {
-        dispatch(setSearchOpen(false));
-      }
-    };
-    window.addEventListener("keydown", onKeydown);
-    return () => window.removeEventListener("keydown", onKeydown);
-  }, [dispatch]);
 }
 
 export interface SearchOptions {
@@ -60,14 +53,14 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
     const repos: Record<string, Repository> = {};
     for (const r of enriched) repos[r.id] = r;
 
-    const navItems: Array<{ label: string; path: string; icon: IconName }> = [
-      { label: options.labels.dashboard, path: AppRoute.DASHBOARD, icon: "home" },
-      { label: options.labels.repos, path: AppRoute.REPOS, icon: "repo" },
-      { label: options.labels.merge_requests, path: AppRoute.MERGE_REQUESTS, icon: "pr" },
-      { label: options.labels.changes, path: AppRoute.CHANGES, icon: "edit" },
-      { label: options.labels.branches, path: AppRoute.BRANCHES, icon: "branch" },
-      { label: options.labels.activity, path: AppRoute.ACTIVITY, icon: "activity" },
-      { label: options.labels.settings, path: AppRoute.SETTINGS, icon: "settings" },
+    const navItems: Array<{ label: string; path: string; icon: ComponentType<LucideProps> }> = [
+      { label: options.labels.dashboard, path: AppRoute.DASHBOARD, icon: DashboardIcon },
+      { label: options.labels.repos, path: AppRoute.REPOS, icon: ReposIcon },
+      { label: options.labels.merge_requests, path: AppRoute.MERGE_REQUESTS, icon: MrsIcon },
+      { label: options.labels.changes, path: AppRoute.CHANGES, icon: ChangesIcon },
+      { label: options.labels.branches, path: AppRoute.BRANCHES, icon: BranchesIcon },
+      { label: options.labels.activity, path: AppRoute.ACTIVITY, icon: ActivityIcon },
+      { label: options.labels.settings, path: AppRoute.SETTINGS, icon: SettingsIcon },
     ];
     for (const item of navItems) {
       if (!q || item.label.toLowerCase().includes(q)) {
@@ -85,8 +78,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
       }
     }
 
-    const repoList: Repository[] = enriched;
-    for (const repo of repoList) {
+    for (const repo of enriched) {
       if (!q || repo.name.toLowerCase().includes(q) || repo.path.toLowerCase().includes(q)) {
         results.push({
           id: `repo:${repo.id}`,
@@ -96,7 +88,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
           repo,
           onSelect: () => {
             dispatch(setSelectedRepo(repo.id));
-            options.navigate(AppRoute.REPOS);
+            options.navigate(`/repo/${repo.id}`);
             dispatch(setSearchOpen(false));
           },
         });
@@ -114,7 +106,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
             label: pr.title,
             hint: `${repo.name} · #${pr.number} · ${pr.author}`,
             kind: "mr",
-            icon: "pr",
+            icon: MrsIcon,
             repo,
             onSelect: () => {
               options.navigate(AppRoute.MERGE_REQUESTS);
@@ -125,7 +117,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
       }
     }
 
-    for (const repo of repoList) {
+    for (const repo of enriched) {
       const branch = repo.status?.branch;
       if (!branch) continue;
       if (!q || branch.toLowerCase().includes(q)) {
@@ -134,7 +126,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
           label: branch,
           hint: `${repo.name} · current branch`,
           kind: "branch",
-          icon: "branch",
+          icon: BranchesIcon,
           repo,
           onSelect: () => {
             dispatch(setSelectedRepo(repo.id));

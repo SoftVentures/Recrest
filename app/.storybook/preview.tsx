@@ -1,29 +1,38 @@
+import CssBaseline from "@mui/material/CssBaseline";
+import { ThemeProvider } from "@mui/material/styles";
 import type { Preview } from "@storybook/react-vite";
 
-import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
-
-import "@/i18n";
-import "@/styles/globals.css";
+import { THEMES, type ThemeId } from "@/lib/constants/theme.constants";
+import { getTheme } from "@/theme";
 
 const preview: Preview = {
   parameters: {
     controls: { expanded: true },
     layout: "centered",
-    backgrounds: {
-      default: "app",
-      values: [
-        { name: "app", value: "var(--surface)" },
-        { name: "dark", value: "#0f1115" },
-        { name: "light", value: "#ffffff" },
-      ],
+  },
+  globalTypes: {
+    themeId: {
+      description: "App theme",
+      defaultValue: "light",
+      toolbar: {
+        title: "Theme",
+        icon: "paintbrush",
+        items: THEMES.map((t) => ({ value: t.id, title: t.label })),
+        dynamicTitle: true,
+      },
     },
   },
   decorators: [
-    (Story) => (
-      <TooltipProvider delayDuration={250}>
-        <Story />
-      </TooltipProvider>
-    ),
+    (Story, ctx) => {
+      const themeId = (ctx.globals.themeId ?? "light") as ThemeId;
+      const theme = getTheme(themeId);
+      return (
+        <ThemeProvider theme={theme}>
+          <CssBaseline enableColorScheme />
+          <Story />
+        </ThemeProvider>
+      );
+    },
   ],
 };
 

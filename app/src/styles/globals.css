@@ -1,151 +1,104 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-/* SCSS partials (tokens, layout, views, page-anim) are imported from
- * `src/main.tsx`, not here. `@tailwindcss/vite` hijacks the CSS pipeline and
- * would pass Sass through unprocessed, so they need to go through Vite's own
- * preprocessor via a JS import. */
-
-@custom-variant dark (&:where(.dark, .dark *));
-
-@theme {
-  /* ───────────────────────── Palette ─────────────────────────
-     Shadcn-style Tailwind tokens are now thin aliases over the Recrest
-     design system defined in `tokens.css`. Those Recrest variables already
-     flip on `[data-theme="dark"]`/`.dark`, so a separate `.dark` block for
-     colours is no longer needed — the indirection does the theming.
-     Before: `bg-accent` was near-white grey in light, near-black grey in
-     dark. After: `bg-accent` is the brand accent-weak tone (warm-peach in
-     light, warm-orange-tinted in dark), consistent with the rest of the UI.
-  */
-  --color-background: var(--app-bg);
-  --color-foreground: var(--ink-1);
-
-  --color-muted: var(--surface-2);
-  --color-muted-foreground: var(--ink-3);
-
-  --color-card: var(--surface);
-  --color-card-foreground: var(--ink-1);
-
-  --color-popover: var(--canvas);
-  --color-popover-foreground: var(--ink-1);
-
-  --color-border: var(--border);
-  --color-input: var(--border);
-  --color-ring: var(--accent);
-
-  --color-primary: var(--ink-0);
-  --color-primary-foreground: var(--canvas);
-
-  --color-secondary: var(--surface-2);
-  --color-secondary-foreground: var(--ink-1);
-
-  --color-accent: var(--accent-weak);
-  --color-accent-foreground: var(--accent-ink);
-
-  --color-destructive: var(--red);
-  --color-destructive-foreground: var(--canvas);
-
-  --color-success: var(--green);
-  --color-success-foreground: var(--canvas);
-
-  --color-warning: var(--amber);
-  --color-warning-foreground: var(--canvas);
-
-  --color-info: var(--blue);
-  --color-info-foreground: var(--canvas);
-
-  /* Status dots / badges — reuse the Recrest semantic colours, same tokens
-     the non-Tailwind `.r-badge.*` and `.status-dot.*` classes pull from. */
-  --color-status-success: var(--green);
-  --color-status-warning: var(--amber);
-  --color-status-error: var(--red);
-  --color-status-info: var(--blue);
-  --color-status-neutral: var(--ink-3);
-
-  /* ───────────────────────── Radius scale ───────────────────────── */
-  --radius: 0.5rem;
-  --radius-sm: 0.3125rem;
-  --radius-md: 0.4375rem;
-  --radius-lg: 0.625rem;
-  --radius-xl: 0.875rem;
-
-  /* ───────────────────────── Shadows ───────────────────────── */
-  --shadow-sm: 0 1px 2px 0 oklch(0.145 0 0 / 0.05);
-  --shadow-md: 0 2px 8px -1px oklch(0.145 0 0 / 0.1), 0 1px 3px -1px oklch(0.145 0 0 / 0.06);
-  --shadow-lg: 0 8px 24px -4px oklch(0.145 0 0 / 0.12), 0 4px 8px -2px oklch(0.145 0 0 / 0.08);
-  --shadow-popover: 0 4px 16px -2px oklch(0.145 0 0 / 0.12), 0 2px 4px -1px oklch(0.145 0 0 / 0.06);
-
-  /* ───────────────────────── Motion ───────────────────────── */
-  --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-slow: 280ms;
-  --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* ───────────────────────── Typography ───────────────────────── */
-  --font-sans:
-    "Inter", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Helvetica Neue", system-ui, sans-serif;
-  --font-mono:
-    "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas,
-    monospace;
+html,
+body {
+  /* Lock the document chain to the viewport box explicitly. `100%` alone
+     fails when any ancestor in the chain is not `display: block` with an
+     explicit height, which can happen during HMR or extension injection.
+     `100dvh` (dynamic) handles mobile-browser URL-bar collapse; with
+     `100vh` as fallback for older browsers. */
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  width: 100dvw;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-.dark {
-  /* Color tokens are aliased to Recrest variables in `@theme` above — those
-     already switch automatically via `tokens.css`. Only shadows need an
-     explicit dark override (heavier alpha under dark chrome). */
-  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.4);
-  --shadow-md: 0 2px 8px -1px oklch(0 0 0 / 0.5), 0 1px 3px -1px oklch(0 0 0 / 0.4);
-  --shadow-lg: 0 8px 24px -4px oklch(0 0 0 / 0.55), 0 4px 8px -2px oklch(0 0 0 / 0.4);
-  --shadow-popover: 0 4px 16px -2px oklch(0 0 0 / 0.5), 0 2px 4px -1px oklch(0 0 0 / 0.35);
+/* Interface-size scaling. `--ui-scale` is written from `ThemeWrapper`. The
+ * `zoom` property re-rasterises every descendant at the scaled pixel grid
+ * (crisp text at lg/xl, unlike `transform: scale()` which would blur sub-
+ * pixel hinting). The `100vw / scale` counter-resize keeps the rendered
+ * footprint exactly equal to the real viewport so the OS never sees a
+ * horizontal/vertical scrollbar regardless of which size step is active. */
+/* Default scale lives on :root (html) so ThemeWrapper's inline override
+ * `<html style="--ui-scale: 1.25">` always wins over the fallback without
+ * needing `!important`. */
+:root {
+  --ui-scale: 1;
 }
 
-@layer base {
-  * {
-    border-color: var(--color-border);
-  }
+#root {
+  zoom: var(--ui-scale);
+  width: calc(100vw / var(--ui-scale));
+  height: calc(100vh / var(--ui-scale));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
-  html,
-  body,
-  #root {
-    height: 100%;
-  }
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
 
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+/* Reasonable default scrollbars; MUI components paint their own where needed. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
 
-  :focus-visible {
-    outline: none;
-  }
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 5px;
+}
 
-  /* Native <button> defaults to `cursor: default`, and Radix compounds render
-     generic <div>s for tabs/menuitems. Force a pointer for anything a user is
-     supposed to click, and fall back to `not-allowed` when explicitly disabled. */
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [role="tab"]:not([aria-disabled="true"]),
-  [role="menuitem"]:not([aria-disabled="true"]),
-  [role="menuitemcheckbox"]:not([aria-disabled="true"]),
-  [role="menuitemradio"]:not([aria-disabled="true"]),
-  [role="option"]:not([aria-disabled="true"]),
-  [role="checkbox"]:not([aria-disabled="true"]),
-  [role="switch"]:not([aria-disabled="true"]),
-  [role="radio"]:not([aria-disabled="true"]),
-  [role="combobox"]:not([aria-disabled="true"]),
-  summary,
-  label[data-slot="switch"],
-  a[href] {
-    cursor: pointer;
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
 
-  button:disabled,
-  [aria-disabled="true"] {
-    cursor: not-allowed;
-  }
+/* Match Tauri/Storybook expectations — focus rings stay visible only for
+   keyboard users, not click users. MUI's own focus-visible polyfill drives
+   most components; this is the fallback for plain elements. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   Accessibility toggles — driven by `data-*` attributes set on <html> from
+   `ThemeWrapper`. CSS-only so the rules apply everywhere (MUI components,
+   native elements, third-party SVGs) without per-component plumbing.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* High contrast — thicker, darker borders + denser text. */
+html[data-high-contrast="true"] {
+  --border-strength: 2px;
+}
+html[data-high-contrast="true"] *,
+html[data-high-contrast="true"] *::before,
+html[data-high-contrast="true"] *::after {
+  border-color: currentColor !important;
+}
+html[data-high-contrast="true"][data-theme="light"] {
+  color: #000;
+}
+html[data-high-contrast="true"][data-theme="dark"] {
+  color: #fff;
+}
+
+/* Reduced motion — kills CSS transitions and animations everywhere. */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Underline links — always-on, not just on hover. */
+html[data-underline-links="true"] a {
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
 }

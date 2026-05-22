@@ -10,6 +10,7 @@ export * from "./constants/polling.js";
 export * from "./constants/providers.js";
 export * from "./constants/routes.js";
 export * from "./constants/storage-keys.js";
+export * from "./constants/terminal.js";
 export * from "./constants/ui.js";
 
 export * from "./types/activity.js";

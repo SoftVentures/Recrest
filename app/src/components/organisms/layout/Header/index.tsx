@@ -1,182 +1,209 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useLocation } from "react-router-dom";
 
-import { BookPlus, Globe, Monitor } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { Icon } from "@/components/atoms/Icon";
-import { Kbd } from "@/components/atoms/Kbd";
-import { IconButton } from "@/components/molecules/IconButton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
+import { Tooltip } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+import { BookPlus, RefreshCw, Search } from "lucide-react";
+
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
-import { isTauri } from "@/lib/tauri";
-import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
+import { fetchPullRequests } from "@/store/actions/prs.actions";
+import { loadRepos } from "@/store/actions/repos.actions";
+import { bumpRefreshNonce, setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loadRepos } from "@/store/slices/reposSlice";
-import { bumpRefreshNonce, setImportDialogOpen, setSearchOpen } from "@/store/slices/uiSlice";
 
-/** G.2: Repo-Add scope toggle. Held in local state — the import dialog
- *  doesn't yet branch on the choice; the "Global" code path lands in a
- *  later phase. The visual affordance ships now so the muscle memory
- *  is in place by the time the backend follows. */
-type RepoAddScope = "local" | "global";
+const TopBar = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexWrap: "nowrap",
+  alignItems: "center",
+  // Bumped to 64 px to match the original mocks where the header is the
+  // primary visual anchor of the app shell. The taller bar also gives the
+  // 38-px buttons room to breathe.
+  height: 64,
+  paddingLeft: 24,
+  paddingRight: 24,
+  gap: 16,
+  backgroundColor: theme.palette.background.paper,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  position: "relative",
+  zIndex: 5,
+}));
 
-export function Header() {
-  const { t } = useTranslation();
-  const dispatch = useAppDispatch();
-  const platform = usePlatform();
-  const { title, meta } = useHeaderContext();
-  const reposLoading = useAppSelector((s) => s.repos.loading);
-  const searchKbd = formatShortcut(platform, { mod: true, key: "K" });
-  const [addScope, setAddScope] = useState<RepoAddScope>("local");
+const LeftSection = styled("div")({
+  display: "flex",
+  alignItems: "baseline",
+  flexWrap: "nowrap",
+  gap: 10,
+  minWidth: 0,
+  flex: "0 1 auto",
+});
 
-  const onRefresh = () => {
-    // G.1: surface success / failure of the global reload via sonner so the
-    // user gets feedback that the click had any effect at all. `loadRepos`
-    // is an async thunk; `unwrap()` re-throws the rejection error so the
-    // catch branch can describe what went wrong.
-    dispatch(bumpRefreshNonce());
-    void (async () => {
-      try {
-        await dispatch(loadRepos()).unwrap();
-        toast.success(t("toast.reload.success"));
-      } catch (err) {
-        const detail =
-          err && typeof err === "object" && "message" in err
-            ? String((err as { message?: unknown }).message)
-            : String(err ?? "");
-        toast.error(t("toast.reload.error", { detail }));
-      }
-    })();
-  };
+const Title = styled("h1")(({ theme }) => ({
+  // Page title at 24 px / 700 — mirrors the original mocks. The header sits
+  // on a 64 px bar, so the cap height of the title roughly aligns with the
+  // refresh icon's mid-line for visual balance.
+  fontSize: 24,
+  lineHeight: "30px",
+  fontWeight: 700,
+  color: theme.palette.text.primary,
+  letterSpacing: "-0.4px",
+  margin: 0,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  minWidth: 0,
+  fontFamily: "inherit",
+}));
 
-  const onAddRepo = () => {
-    if (!isTauri()) {
-      toast.info("Add repo works in the desktop app only.");
-      return;
-    }
-    dispatch(setImportDialogOpen(true));
-  };
+const Meta = styled("span")(({ theme }) => ({
+  fontSize: 11.5,
+  color: theme.palette.text.secondary,
+  fontVariantNumeric: "tabular-nums",
+  whiteSpace: "nowrap",
+  flex: "0 0 auto",
+  [theme.breakpoints.down(721)]: { display: "none" },
+}));
 
-  const addRepoLabel = t("actions.add_repo");
-  const localLabel = t("actions.add_scope.local", { defaultValue: "Local" });
-  const globalLabel = t("actions.add_scope.global", { defaultValue: "Global" });
-  return (
-    <div className="a-top" data-testid="app-header">
-      <div className="a-top-left">
-        <h1 className="a-top-title" data-testid="app-header-title">
-          {title}
-        </h1>
-        {meta && (
-          <span className="a-top-meta hidden min-[721px]:inline" data-testid="app-header-meta">
-            {meta}
-          </span>
-        )}
-      </div>
-      <div className="a-top-center">
-        <button
-          type="button"
-          className="a-search"
-          data-testid="search-trigger"
-          onClick={() => dispatch(setSearchOpen(true))}
-          aria-label={t("actions.search")}
-        >
-          <Icon name="search" size={13} />
-          <span className="a-search-placeholder">
-            {t("actions.search_placeholder", "Search repositories, branches, PRs…")}
-          </span>
-          <span className="hidden min-[1024px]:inline-flex">
-            <Kbd>{searchKbd}</Kbd>
-          </span>
-        </button>
-      </div>
-      <div className="a-top-right">
-        <IconButton
-          tooltip={t("actions.refresh")}
-          aria-label={t("actions.refresh")}
-          data-testid="btn-refresh"
-          onClick={onRefresh}
-          disabled={reposLoading}
-          data-spinning={reposLoading ? "true" : undefined}
-        >
-          <Icon name="refresh" size={14} />
-        </IconButton>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="r-btn primary shrink-0"
-              data-testid="btn-add-repo"
-              onClick={onAddRepo}
-              aria-label={addRepoLabel}
-            >
-              <BookPlus size={14} aria-hidden="true" />
-              {/* H.1: hide the label below ~960px and rely on the wrapping
-                  Tooltip + aria-label so the button stays accessible. The
-                  threshold is one past 960 so the verification viewport
-                  (`960px`) renders the icon-only state. */}
-              <span className="hidden min-[961px]:inline">{addRepoLabel}</span>
-            </button>
-          </TooltipTrigger>
-          {/* Tooltip is informational only on the wide layout (the label is
-              already visible as button text), but it's the primary affordance
-              that explains the icon-only button below 960px. Radix shows the
-              tooltip in both cases — that's fine: hovering a labelled button
-              with a redundant tooltip is benign and matches the rest of the
-              toolbar (refresh button has the same pattern). */}
-          <TooltipContent side="bottom">{addRepoLabel}</TooltipContent>
-        </Tooltip>
-        <div
-          className="a-topbar-scope seg-group seg-group--square"
-          role="group"
-          aria-label={t("actions.add_scope_label", { defaultValue: "Add scope" })}
-          data-testid="repo-add-scope"
-        >
-          {/* H.4: Lokal/Global scope toggle. Icons (Monitor/Globe) are always
-              visible; the text label collapses below 961px to mirror the
-              add-repo button's icon-only breakpoint (H.1). At every width the
-              wrapping Tooltip plus aria-label keep the action discoverable. */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className={cn("a-topbar-scope-btn seg-btn", addScope === "local" && "is-active")}
-                data-testid="repo-add-scope-local"
-                aria-pressed={addScope === "local"}
-                aria-label={localLabel}
-                onClick={() => setAddScope("local")}
-              >
-                <Monitor size={14} aria-hidden="true" />
-                <span className="hidden min-[961px]:inline">{localLabel}</span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{localLabel}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className={cn("a-topbar-scope-btn seg-btn", addScope === "global" && "is-active")}
-                data-testid="repo-add-scope-global"
-                aria-pressed={addScope === "global"}
-                aria-label={globalLabel}
-                onClick={() => setAddScope("global")}
-              >
-                <Globe size={14} aria-hidden="true" />
-                <span className="hidden min-[961px]:inline">{globalLabel}</span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{globalLabel}</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-    </div>
-  );
+const CenterSection = styled("div")({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  flex: "1 1 auto",
+  minWidth: 0,
+});
+
+const SearchTrigger = styled("button")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  height: 38,
+  width: "100%",
+  minWidth: "8rem",
+  maxWidth: 480,
+  flex: "1 1 auto",
+  paddingLeft: 12,
+  paddingRight: 12,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  color: theme.palette.text.secondary,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  "&:hover": {
+    borderColor: theme.palette.border.hover,
+  },
+}));
+
+const SearchPlaceholder = styled("span")(({ theme }) => ({
+  flex: "1 1 auto",
+  minWidth: 0,
+  fontSize: 13,
+  color: theme.palette.text.secondary,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  textAlign: "left",
+}));
+
+const Kbd = styled("kbd")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: 18,
+  minWidth: 22,
+  paddingLeft: 5,
+  paddingRight: 5,
+  borderRadius: 8,
+  border: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.default,
+  color: theme.palette.text.secondary,
+  fontSize: 10,
+  fontFamily: "inherit",
+  fontWeight: 600,
+  [theme.breakpoints.down(1024)]: { display: "none" },
+}));
+
+const RightSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 6,
+  flex: "0 0 auto",
+});
+
+const AddRepoButton = styled("button")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  height: 38,
+  paddingLeft: 14,
+  paddingRight: 14,
+  borderRadius: 8,
+  border: `1px solid ${theme.palette.surface.button.cta}`,
+  backgroundColor: theme.palette.surface.button.cta,
+  color: theme.palette.surface.button.ctaContrast,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 13,
+  fontWeight: 600,
+  flexShrink: 0,
+  transition: "background-color 0.15s ease, border-color 0.15s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.button.ctaHover,
+    borderColor: theme.palette.surface.button.ctaHover,
+  },
+}));
+
+const AddRepoLabel = styled("span")(({ theme }) => ({
+  [theme.breakpoints.down(961)]: { display: "none" },
+}));
+
+const RefreshButton = styled("button", { shouldForwardProp: (p) => p !== "spinning" })<{
+  spinning?: boolean;
+}>(({ theme, spinning }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 38,
+  height: 38,
+  padding: 0,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.secondary,
+  cursor: "pointer",
+  flexShrink: 0,
+  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+    borderColor: theme.palette.border.hover,
+    color: theme.palette.text.primary,
+  },
+  "&:disabled": {
+    opacity: 0.6,
+    cursor: "default",
+  },
+  "& svg": {
+    transition: "transform 0.2s ease",
+    ...(spinning && {
+      animation: "headerRefreshSpin 0.9s linear infinite",
+    }),
+  },
+  "@keyframes headerRefreshSpin": {
+    from: { transform: "rotate(0deg)" },
+    to: { transform: "rotate(360deg)" },
+  },
+}));
+
+interface HeaderContext {
+  title: string;
+  meta: string | null;
 }
 
-function useHeaderContext(): { title: string; meta: string | null } {
+function useHeaderContext(): HeaderContext {
   const { t } = useTranslation();
   const location = useLocation();
   const repos = useAppSelector((s) => s.repos.items);
@@ -190,36 +217,182 @@ function useHeaderContext(): { title: string; meta: string | null } {
   const path = location.pathname;
   if (path.startsWith("/dashboard")) {
     return {
-      title: t("view.dashboard.title"),
-      meta: t("view.dashboard.meta", { count: repoList.length }),
+      title: t("view.dashboard.title", "Dashboard"),
+      meta: t("view.dashboard.meta", {
+        count: repoList.length,
+        defaultValue: `${repoList.length} repos`,
+      }),
     };
   }
   if (path.startsWith("/merge-requests")) {
     return {
-      title: t("view.mrs.title"),
-      meta: t("view.mrs.meta", { count: mrOpen }),
+      title: t("view.mrs.title", "Merge Requests"),
+      meta: t("view.mrs.meta", { count: mrOpen, defaultValue: `${mrOpen} open` }),
     };
   }
   if (path.startsWith("/changes")) {
     return {
-      title: t("view.changes.title"),
-      meta: t("view.changes.meta", { count: dirtyCount }),
+      title: t("view.changes.title", "Changes"),
+      meta: t("view.changes.meta", {
+        count: dirtyCount,
+        defaultValue: `${dirtyCount} with uncommitted changes`,
+      }),
     };
   }
   if (path.startsWith("/branches")) {
     return {
-      title: t("view.branches.title"),
-      meta: t("view.branches.meta", { count: repoList.length }),
+      title: t("view.branches.title", "Branches"),
+      meta: t("view.branches.meta", {
+        count: repoList.length,
+        defaultValue: `across ${repoList.length} repos`,
+      }),
     };
   }
   if (path.startsWith("/activity")) {
-    return { title: t("view.activity.title"), meta: t("view.activity.meta") };
+    return {
+      title: t("view.activity.title", "Activity"),
+      meta: t("view.activity.meta", "last 14 days"),
+    };
   }
   if (path.startsWith("/settings")) {
-    return { title: t("view.settings.title"), meta: null };
+    return { title: t("view.settings.title", "Settings"), meta: null };
   }
-  return {
-    title: t("view.repos.title"),
-    meta: t("view.repos.meta", { count: repoList.length, total: repoList.length }),
-  };
+  // `/repo/:repoId` is the standalone detail view — surface the repo's
+  // own name instead of the generic "Repositories" label so the header
+  // tells the user what they're actually looking at. `/repos/:repoId`
+  // (plural — list with detail pane) keeps the list-style header.
+  if (path.startsWith("/repo/")) {
+    const repoId = path.slice("/repo/".length).split("/")[0];
+    const repo = repoId ? repos[repoId] : null;
+    if (repo) {
+      return {
+        title: repo.name,
+        meta: repo.path,
+      };
+    }
+  }
+  if (path.startsWith("/repos") || path.startsWith("/repo/")) {
+    return {
+      title: t("view.repos.title", "Repositories"),
+      meta: t("view.repos.meta", {
+        count: repoList.length,
+        defaultValue: `${repoList.length} repos`,
+      }),
+    };
+  }
+  return { title: "Recrest", meta: null };
 }
+
+function Header() {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const platform = usePlatform();
+  const { title, meta } = useHeaderContext();
+  const reposLoading = useAppSelector((s) => s.repos.loading);
+  const prsLoading = useAppSelector((s) => s.prs.loading);
+  const repoItems = useAppSelector((s) => s.repos.items);
+  const searchKbd = formatShortcut(platform, { mod: true, key: "K" });
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Spin lives as long as ANY refresh-related work is still in flight: our own
+  // dispatched promises, repo polling, PR polling — only then do we cut it off.
+  // A minimum of one full rotation (~900ms) keeps the feedback intentional even
+  // for cached/instant refreshes.
+  const startedAtRef = useRef<number>(0);
+  const spinning = refreshing || reposLoading || prsLoading;
+
+  useEffect(() => {
+    if (!refreshing) return;
+    if (reposLoading || prsLoading) return;
+    const elapsed = Date.now() - startedAtRef.current;
+    const minSpin = 900;
+    if (elapsed >= minSpin) {
+      setRefreshing(false);
+      return;
+    }
+    const t = window.setTimeout(() => setRefreshing(false), minSpin - elapsed);
+    return () => window.clearTimeout(t);
+  }, [refreshing, reposLoading, prsLoading]);
+
+  const onRefresh = () => {
+    if (spinning) return;
+    startedAtRef.current = Date.now();
+    setRefreshing(true);
+    // 1. Bump the nonce so commit/PR-event/check-run hooks refetch.
+    dispatch(bumpRefreshNonce());
+    // 2. Dispatch every async pull we know about in parallel. We deliberately
+    //    `Promise.all` so the local `refreshing` flag drops only once every
+    //    fetch settles — combined with `reposLoading`/`prsLoading` selectors,
+    //    the icon keeps spinning through the slowest call.
+    const repoIds = Object.keys(repoItems);
+    const promises: Promise<unknown>[] = [
+      dispatch(loadRepos()),
+      ...repoIds.map((id) => dispatch(fetchPullRequests(id))),
+    ];
+    void Promise.all(promises).finally(() => {
+      // The effect above takes care of enforcing the minimum spin time
+      // before actually clearing the flag.
+      setRefreshing((cur) => cur);
+    });
+  };
+
+  const onAddRepo = () => {
+    dispatch(setImportDialogOpen(true));
+  };
+
+  const addRepoLabel = t("actions.add_repo", "Add repo");
+  const searchLabel = t("actions.search", "Search");
+  const searchPlaceholder = t("actions.search_placeholder", "Search repositories, branches, PRs…");
+  const refreshLabel = t("actions.refresh", "Refresh");
+
+  return (
+    <TopBar data-testid="app-header">
+      <LeftSection>
+        <Title data-testid="app-header-title">{title}</Title>
+        {meta && <Meta data-testid="app-header-meta">{meta}</Meta>}
+      </LeftSection>
+
+      <CenterSection>
+        <SearchTrigger
+          type="button"
+          data-testid="search-trigger"
+          aria-label={searchLabel}
+          onClick={() => dispatch(setSearchOpen(true))}
+        >
+          <Search size={13} />
+          <SearchPlaceholder>{searchPlaceholder}</SearchPlaceholder>
+          <Kbd>{searchKbd}</Kbd>
+        </SearchTrigger>
+      </CenterSection>
+
+      <RightSection>
+        <Tooltip title={refreshLabel} arrow placement="bottom">
+          <RefreshButton
+            id="btn-refresh"
+            type="button"
+            aria-label={refreshLabel}
+            data-testid="btn-refresh"
+            disabled={reposLoading}
+            spinning={spinning}
+            onClick={onRefresh}
+          >
+            <RefreshCw size={16} aria-hidden />
+          </RefreshButton>
+        </Tooltip>
+        <Tooltip title={addRepoLabel} arrow placement="bottom">
+          <AddRepoButton
+            type="button"
+            data-testid="btn-add-repo"
+            aria-label={addRepoLabel}
+            onClick={onAddRepo}
+          >
+            <BookPlus size={14} aria-hidden />
+            <AddRepoLabel>{addRepoLabel}</AddRepoLabel>
+          </AddRepoButton>
+        </Tooltip>
+      </RightSection>
+    </TopBar>
+  );
+}
+
+export default Header;

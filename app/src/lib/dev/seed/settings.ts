@@ -32,4 +32,20 @@ export const SEED_SETTINGS: AppSettings = {
   terminal: { id: null, profile: null, customCommand: null },
   commitMessageTemplate: "{{author}}: {{date}}",
   privacy: { fetchFavicons: false },
+  appearance: {
+    themeId: "light",
+    followsSystem: true,
+    primaryColor: "default",
+    font: "inter",
+    fontSize: "md",
+  },
+  accessibility: {
+    dyslexiaFont: false,
+    highContrast: false,
+    reducedMotion: false,
+    underlineLinks: false,
+  },
+  windowState: {
+    sidebarCollapsed: false,
+  },
 };

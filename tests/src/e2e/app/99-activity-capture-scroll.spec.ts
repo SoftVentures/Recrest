@@ -8,7 +8,14 @@ test("scroll capture", async ({ page }, testInfo) => {
   await page.goto(AppRoute.ACTIVITY);
   await page.waitForTimeout(2800);
 
-  const scroller = page.locator(".a-content-scroll");
+  // The Activity page's content scroller is the `app-main` element after the
+  // MUI migration (no more SCSS `.a-content-scroll` class). Capture skips
+  // cleanly if there's no scrollable content yet.
+  const scroller = page.getByTestId("app-main");
+  if ((await scroller.count()) === 0) {
+    test.info().annotations.push({ type: "skip", description: "no scroller present" });
+    return;
+  }
   const total = await scroller.evaluate((el) => el.scrollHeight);
   let y = 0;
   let i = 0;

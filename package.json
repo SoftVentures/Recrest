@@ -13,6 +13,8 @@
   "scripts": {
     "dev": "yarn workspace @recrest/shared build && yarn workspace @recrest/app tauri:dev",
     "dev:web": "yarn workspace @recrest/shared build && yarn workspace @recrest/app dev",
+    "dev:web:old": "./scripts/dev-old.sh",
+    "dev:web:old:stop": "./scripts/dev-old.sh stop",
     "dev:landingpage": "yarn workspace @recrest/landingpage dev",
     "build": "yarn workspace @recrest/shared build && yarn workspace @recrest/app tauri:build",
     "build:landingpage": "yarn workspace @recrest/landingpage build",

@@ -31,7 +31,7 @@ export function usePlatform(): Platform {
         else if (p === "windows") setPlatform("windows");
         else setPlatform("linux");
       } catch {
-        // Not in Tauri — the UA-based initial value is fine.
+        /* Not in Tauri — the UA-based initial value is fine. */
       }
     })();
     return () => {
@@ -49,9 +49,15 @@ export function usePlatform(): Platform {
  */
 export function useWindowChrome(): WindowChrome {
   const platform = usePlatform();
-  const [inTauri, setInTauri] = useState(false);
-  useEffect(() => setInTauri(isTauri()), []);
-  if (!inTauri) return "none";
+  // In the pure-web dev mode (`yarn dev:web`) the browser already paints
+  // its own chrome — rendering ours on top would just steal vertical space
+  // for no benefit. The dev stub installs `__TAURI_INTERNALS__` so the seed
+  // IPC works, but tags itself with `__RECREST_DEV_STUB__`; we explicitly
+  // check that here so only the real Tauri runtime triggers the bespoke
+  // titlebar.
+  const isRealTauri =
+    isTauri() && !(typeof window !== "undefined" && "__RECREST_DEV_STUB__" in window);
+  if (!isRealTauri) return "none";
   if (platform === "mac") return "macos-overlay";
   if (platform === "windows") return "win11";
   return "gnome";
@@ -67,6 +73,5 @@ export function formatShortcut(
   if (keys.shift) parts.push(platform === "mac" ? "⇧" : "Shift");
   if (keys.alt) parts.push(platform === "mac" ? "⌥" : "Alt");
   parts.push(keys.key);
-  // Mac traditionally uses "+", Win/Linux use "+" too but with spaces.
   return platform === "mac" ? parts.join("") : parts.join("+");
 }

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
   <title>Recrest — Dev build</title>
-  <desc>Recrest icon, development variant: white chevrons with an orange &lt;/&gt; badge in the lower-right corner.</desc>
-  <g transform="translate(288, 352)" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="52">
+  <desc>Recrest icon, development variant: transparent background, orange chevrons, orange &lt;/&gt; badge in the lower-right corner.</desc>
+  <g transform="translate(288, 352)" fill="none" stroke="#f46a3d" stroke-linecap="round" stroke-linejoin="round" stroke-width="52">
     <path d="M0 200 L224 0 L448 200"/>
     <path d="M0 320 L224 120 L448 320" opacity="0.5"/>
   </g>

@@ -1,14 +1,42 @@
 import { useTranslation } from "react-i18next";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+import GeneralCard from "@/components/molecules/cards/GeneralCard";
 
 interface Props {
   hours: number[];
   loading?: boolean;
 }
 
+const Wrap = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 6,
+});
+
+const Svg = styled("svg")({
+  width: 150,
+  height: 150,
+});
+
+const Foot = styled(Box)(({ theme }) => ({
+  textAlign: "center",
+  fontSize: 11,
+  color: theme.palette.text.information,
+  "& > strong": {
+    display: "block",
+    color: theme.palette.text.primary,
+    fontWeight: 700,
+    fontVariantNumeric: "tabular-nums",
+    marginBottom: 1,
+  },
+}));
+
 /** 24-segment radial chart — one wedge per hour, radius scaled by commit count. */
-export function AuthorClockCard({ hours, loading }: Props) {
+function AuthorClockCard({ hours, loading }: Props) {
   const { t } = useTranslation();
   const peak = Math.max(1, ...hours);
   const cx = 75;
@@ -16,9 +44,6 @@ export function AuthorClockCard({ hours, loading }: Props) {
   const rMax = 62;
   const rMin = 26;
   const wedge = (2 * Math.PI) / 24;
-  // Sqrt scaling so a single commit still claims visible surface when `peak`
-  // is much larger — radial charts otherwise compress small values into
-  // invisible slivers against the inner ring.
   const scale = (v: number) => (v === 0 ? 0 : Math.sqrt(v / peak));
 
   const wedgePath = (hour: number, radius: number): string => {
@@ -43,21 +68,40 @@ export function AuthorClockCard({ hours, loading }: Props) {
       : "—";
 
   return (
-    <CardShell
-      title={t("activity.cards.clock_title")}
-      sub={t("activity.cards.clock_sub")}
+    <GeneralCard
+      title={t("activity.cards.clock_title", { defaultValue: "Activity clock" })}
+      sub={t("activity.cards.clock_sub", { defaultValue: "hour-of-day distribution" })}
       loading={loading}
       skeleton="radial"
+      testId="activity-clock-card"
     >
-      <div className="a-act-clock">
-        <svg viewBox="0 0 150 150">
-          <circle cx={cx} cy={cy} r={rMax} fill="var(--surface-2)" opacity="0.45" />
-          <circle cx={cx} cy={cy} r={rMin - 2} fill="var(--surface-1)" />
+      <Wrap>
+        <Svg viewBox="0 0 150 150">
+          <circle
+            cx={cx}
+            cy={cy}
+            r={rMax}
+            fill="var(--mui-palette-surface-interface-backElevation, #f2f2f4)"
+            opacity="0.55"
+          />
+          <circle
+            cx={cx}
+            cy={cy}
+            r={rMin - 2}
+            fill="var(--mui-palette-surface-interface-base, white)"
+          />
           {hours.map((v, h) => {
             const k = scale(v);
             const r = v === 0 ? rMin + 0.5 : rMin + (rMax - rMin) * k;
             const opacity = v === 0 ? 0.12 : 0.55 + 0.45 * k;
-            return <path key={h} d={wedgePath(h, r)} fill="var(--accent)" opacity={opacity} />;
+            return (
+              <path
+                key={h}
+                d={wedgePath(h, r)}
+                fill="var(--mui-palette-primary-main, #f97316)"
+                opacity={opacity}
+              />
+            );
           })}
           {[0, 6, 12, 18].map((h) => {
             const a = -Math.PI / 2 + h * wedge;
@@ -69,7 +113,7 @@ export function AuthorClockCard({ hours, loading }: Props) {
                 x={x}
                 y={y}
                 fontSize="9"
-                fill="var(--ink-3)"
+                fill="var(--mui-palette-text-information, #8a8a94)"
                 textAnchor="middle"
                 dominantBaseline="central"
               >
@@ -77,14 +121,14 @@ export function AuthorClockCard({ hours, loading }: Props) {
               </text>
             );
           })}
-        </svg>
-        <div className="a-act-clock-foot">
-          <div>
-            <strong>{peakLabel}</strong>
-          </div>
-          <div className="mt-1">{total} commits</div>
-        </div>
-      </div>
-    </CardShell>
+        </Svg>
+        <Foot>
+          <strong>{peakLabel}</strong>
+          <span>{total} commits</span>
+        </Foot>
+      </Wrap>
+    </GeneralCard>
   );
 }
+
+export default AuthorClockCard;

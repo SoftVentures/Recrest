@@ -54,6 +54,9 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // Headed by default locally so the dev can watch tests run; CI stays
+    // headless because GitHub runners have no display.
+    headless: !!process.env.CI,
   },
   projects: [
     {

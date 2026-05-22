@@ -37,6 +37,21 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@radix-ui/*"],
+              message: "Radix is removed — use the matching MUI component instead.",
+            },
+            {
+              group: ["tailwindcss", "tw-animate-css", "class-variance-authority", "tailwind-merge"],
+              message: "Tailwind/CVA stack is removed — use MUI sx + theme tokens.",
+            },
+          ],
+        },
+      ],
     },
     settings: {
       react: { version: "detect" },
@@ -47,6 +62,7 @@ export default tseslint.config(
       "dist/**",
       "node_modules/**",
       "src-tauri/**",
+      "src-old/**",
       "storybook-static/**",
       "src/scripts/**",
     ],

@@ -2,7 +2,10 @@ import { useMemo } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+import GeneralCard from "@/components/molecules/cards/GeneralCard";
 import type { LanguageSlice } from "@/lib/activityAggregates";
 
 interface Props {
@@ -33,13 +36,70 @@ function donutArcs(mix: LanguageSlice[], radius: number, cx: number, cy: number)
   return arcs;
 }
 
-export function LanguageDonutCard({ mix, loading }: Props) {
+const Wrap = styled(Box)({
+  display: "grid",
+  gridTemplateColumns: "auto 1fr",
+  alignItems: "center",
+  gap: 16,
+});
+
+const Svg = styled("svg")({
+  width: 120,
+  height: 120,
+  flexShrink: 0,
+});
+
+const Centre = styled("text")(({ theme }) => ({
+  textAnchor: "middle",
+  fontSize: 22,
+  fontWeight: 700,
+  fill: theme.palette.text.primary,
+  fontVariantNumeric: "tabular-nums",
+}));
+
+const CentreSub = styled("text")(({ theme }) => ({
+  textAnchor: "middle",
+  fontSize: 9,
+  fill: theme.palette.text.information,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+}));
+
+const LegendList = styled("ul")({
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  maxHeight: 180,
+  overflowY: "auto",
+});
+
+const LegendItem = styled("li")(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "10px 1fr auto",
+  gap: 8,
+  alignItems: "center",
+  fontSize: 11,
+  color: theme.palette.text.primary,
+  "& > span:last-of-type": {
+    color: theme.palette.text.information,
+    fontVariantNumeric: "tabular-nums",
+  },
+}));
+
+const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
+  color: string;
+}>(({ color }) => ({
+  width: 8,
+  height: 8,
+  borderRadius: 8,
+  backgroundColor: color,
+}));
+
+function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
-  const totalCommits = Math.round(mix.reduce((a, b) => a + b.commits, 0));
-  // Collapse the long tail (<1% share) into the existing "Other" bucket so
-  // we never render two "Other" rows — the bucketizer already emits one
-  // for lock files / archives / unknown extensions, and the tail-collapse
-  // below needs to merge into that same entry rather than create a sibling.
   const TAIL_THRESHOLD = 0.01;
   const legend = useMemo(() => {
     const result: LanguageSlice[] = [];
@@ -65,43 +125,41 @@ export function LanguageDonutCard({ mix, loading }: Props) {
     }
     return result;
   }, [mix]);
+  const totalCommits = Math.round(legend.reduce((a, b) => a + b.commits, 0));
   const arcs = useMemo(() => donutArcs(legend, 48, 60, 60), [legend]);
   return (
-    <CardShell
-      title={t("activity.cards.language_title")}
-      sub={t("activity.cards.language_sub")}
+    <GeneralCard
+      title={t("activity.cards.language_title", { defaultValue: "Language mix" })}
+      sub={t("activity.cards.language_sub", { defaultValue: "weighted by commits" })}
       loading={loading}
       skeleton="donut"
+      testId="activity-language-card"
     >
-      <div className="a-act-donut-wrap">
-        <svg className="a-act-donut-svg" viewBox="0 0 120 120">
-          {arcs.map((a, i) => (
-            <path
-              key={a.slice.language}
-              d={a.path}
-              fill={a.slice.color}
-              className="a-act-donut-arc"
-              style={{ animationDelay: `${220 + i * 60}ms` }}
-            />
+      <Wrap>
+        <Svg viewBox="0 0 120 120">
+          {arcs.map((a) => (
+            <path key={a.slice.language} d={a.path} fill={a.slice.color} />
           ))}
-          <circle cx="60" cy="60" r="34" fill="var(--surface-1)" />
-          <text x="60" y="56" className="a-act-donut-centre">
+          <circle cx="60" cy="60" r="34" fill="var(--mui-palette-surface-interface-base, white)" />
+          <Centre x="60" y="58">
             {totalCommits}
-          </text>
-          <text x="60" y="78" className="a-act-donut-sub">
+          </Centre>
+          <CentreSub x="60" y="78">
             commits
-          </text>
-        </svg>
-        <ul className="a-act-donut-legend">
+          </CentreSub>
+        </Svg>
+        <LegendList>
           {legend.map((s) => (
-            <li key={s.language}>
-              <span className="a-act-donut-swatch" style={{ background: s.color }} />
+            <LegendItem key={s.language}>
+              <Swatch color={s.color} />
               <span>{s.language}</span>
               <span>{Math.round(s.share * 100)}%</span>
-            </li>
+            </LegendItem>
           ))}
-        </ul>
-      </div>
-    </CardShell>
+        </LegendList>
+      </Wrap>
+    </GeneralCard>
   );
 }
+
+export default LanguageDonutCard;
