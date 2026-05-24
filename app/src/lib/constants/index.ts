@@ -1,4 +1,5 @@
 export * from "@/lib/constants/ciStates.constants";
+export * from "@/lib/constants/componentTests.constants";
 export * from "@/lib/constants/events.constants";
 export * from "@/lib/constants/feedEventKinds.constants";
 export * from "@/lib/constants/i18n.constants";

@@ -14,6 +14,9 @@ import { render } from "@testing-library/react";
 import { type ThemeId } from "@/lib/constants/theme.constants";
 import i18n from "@/locales";
 import { providersReducer } from "@/store/reducers/providersReducer";
+import { prsReducer } from "@/store/reducers/prsReducer";
+import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
+import { reposReducer } from "@/store/reducers/reposReducer";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 import { getTheme } from "@/theme";
@@ -43,7 +46,14 @@ export function renderWithProviders(
   opts?: { themeId?: ThemeId; route?: string },
 ) {
   const store = configureStore({
-    reducer: { ui: uiReducer, settings: settingsReducer, providers: providersReducer },
+    reducer: {
+      ui: uiReducer,
+      settings: settingsReducer,
+      providers: providersReducer,
+      repos: reposReducer,
+      prs: prsReducer,
+      remoteImport: remoteImportReducer,
+    },
   });
   const theme = getTheme(opts?.themeId ?? "light");
   return render(
@@ -51,7 +61,12 @@ export function renderWithProviders(
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <MemoryRouter initialEntries={[opts?.route ?? "/"]}>{ui}</MemoryRouter>
+          <MemoryRouter
+            initialEntries={[opts?.route ?? "/"]}
+            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+          >
+            {ui}
+          </MemoryRouter>
         </ThemeProvider>
       </I18nextProvider>
     </ReduxProvider>,
