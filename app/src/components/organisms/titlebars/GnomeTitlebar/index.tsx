@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { runWindow } from "@/lib/utils/window.utils";
 
@@ -57,7 +58,7 @@ const ClosePill = styled("button")(({ theme }) => ({
  * double-click on the drag region or keyboard shortcuts.
  */
 function GnomeTitlebar() {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(I18nNamespace.COMMON);
   const closeLabel = t("titlebar.close");
   return (
     <Bar data-tauri-drag-region data-testid={TEST_IDS.titlebar.gnome}>

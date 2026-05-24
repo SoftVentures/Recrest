@@ -7,6 +7,7 @@ import { styled } from "@mui/material/styles";
 
 import { TauriCommand } from "@recrest/shared";
 
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { runWindow } from "@/lib/utils/window.utils";
@@ -80,7 +81,7 @@ const CtrlButton = styled("button", {
  * surface its Snap-Layouts flyout — the Rust subclass needs pixel rects.
  */
 function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(I18nNamespace.COMMON);
   const minimizeLabel = t("titlebar.minimize");
   const maximizeLabel = isMaximized ? t("titlebar.restore") : t("titlebar.maximize");
   const closeLabel = t("titlebar.close");

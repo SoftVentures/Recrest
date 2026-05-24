@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box, DialogTitle, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { X as CloseIcon, Copy as CopyIcon, ExternalLink } from "lucide-react";
 
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 
 /** Title slot for `GeneralModal` — the row with title/subtitle on the left and
  *  optional copy / open-in-browser / close icon-buttons on the right. */
@@ -77,6 +80,7 @@ function ModalTitle({
   onOpenInNewTab,
   id,
 }: ModalTitleProps) {
+  const { t } = useTranslation(I18nNamespace.ARIA);
   return (
     <StyledTitle id={id}>
       <TitleRow>
@@ -85,7 +89,7 @@ function ModalTitle({
           {onCopy && (
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Copy"
+              aria-label={t("modal.copy")}
               onClick={onCopy}
               icon={<CopyIcon size={13} />}
             />
@@ -93,7 +97,7 @@ function ModalTitle({
           {onOpenInNewTab && (
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Open in browser"
+              aria-label={t("modal.open_in_browser")}
               onClick={onOpenInNewTab}
               icon={<ExternalLink size={13} />}
             />
@@ -101,7 +105,7 @@ function ModalTitle({
           {onClose && (
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Close"
+              aria-label={t("modal.close")}
               onClick={onClose}
               icon={<CloseIcon size={14} />}
             />

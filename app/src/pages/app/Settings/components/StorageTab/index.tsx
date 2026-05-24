@@ -13,6 +13,7 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 const FactRow = styled(Box)(({ theme }) => ({
@@ -56,7 +57,7 @@ export function StorageSection() {
               <GeneralIconButton
                 size={IconButtonSize.XS}
                 variant={IconButtonVariant.GHOST}
-                aria-label="More info"
+                aria-label={t("settings.more_info", { ns: I18nNamespace.ARIA })}
                 icon={<Info size={11} />}
               />
             </GeneralTooltip>
@@ -79,7 +80,7 @@ export function StorageSection() {
             <GeneralIconButton
               size={IconButtonSize.XS}
               variant={IconButtonVariant.GHOST}
-              aria-label="More info"
+              aria-label={t("settings.more_info", { ns: I18nNamespace.ARIA })}
               icon={<Info size={11} />}
             />
           </GeneralTooltip>

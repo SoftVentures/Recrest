@@ -8,6 +8,7 @@ import { keyframes, styled } from "@mui/material/styles";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
@@ -28,7 +29,11 @@ function HeatmapCard({ matrix, loading }: Props) {
       skeleton="heatmap"
       testId={TEST_IDS.activity.heatmap.card}
     >
-      <Grid data-testid={TEST_IDS.activity.heatmap.root} role="img" aria-label="heatmap">
+      <Grid
+        data-testid={TEST_IDS.activity.heatmap.root}
+        role="img"
+        aria-label={t("repo.heatmap", { ns: I18nNamespace.ARIA })}
+      >
         {matrix.map((row, dayIdx) => (
           <Row key={dayIdx}>
             <Label variant="caption" component="span" aria-hidden>

@@ -37,6 +37,7 @@ import {
   PrimaryBtn,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { PROVIDER_NAMES, Provider, type ProviderId } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import {
@@ -252,7 +253,8 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             value={query}
             onChange={setQuery}
             placeholder={t("import.search_placeholder")}
-            clearLabel={t("actions.clear_search")}
+            aria-label={t("search.input", { ns: I18nNamespace.ARIA })}
+            clearLabel={t("search.clear", { ns: I18nNamespace.ARIA })}
             width="100%"
             height={32}
             data-testid={TEST_IDS.addRepoDialog.search}

@@ -9,6 +9,7 @@ import GeneralButtonGroup, {
   GeneralButtonGroupItem,
 } from "@/components/atoms/buttons/GeneralButtonGroup";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { RepoAddScope } from "@/lib/constants/repoAddScope.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
@@ -48,6 +49,7 @@ function ScopeButtonGroup({ value, onChange, variant = "expanded" }: Props) {
   const { t } = useTranslation();
   const localLabel = t("actions.add_scope.local");
   const globalLabel = t("actions.add_scope.global");
+  const groupLabel = t("scope.group", { ns: I18nNamespace.ARIA });
 
   const handleChange = (_: unknown, next: RepoAddScope | null) => {
     if (next) onChange(next);
@@ -62,7 +64,7 @@ function ScopeButtonGroup({ value, onChange, variant = "expanded" }: Props) {
         density="sm"
         orientation="vertical"
         onChange={handleChange}
-        aria-label="Add scope"
+        aria-label={groupLabel}
         data-testid={TEST_IDS.repos.addScope.root}
       >
         <GeneralButtonGroupItem
@@ -98,7 +100,7 @@ function ScopeButtonGroup({ value, onChange, variant = "expanded" }: Props) {
       shape="square"
       density="md"
       onChange={handleChange}
-      aria-label="Add scope"
+      aria-label={groupLabel}
       data-testid={TEST_IDS.repos.addScope.root}
     >
       <GeneralButtonGroupItem

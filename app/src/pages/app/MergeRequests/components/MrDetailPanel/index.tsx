@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 
 import { type PullRequest, TauriCommand } from "@recrest/shared";
@@ -12,6 +14,7 @@ import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import { ciFor } from "@/lib/constants/ciStates.constants";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
@@ -71,6 +74,7 @@ export interface MrDetailPanelProps {
 }
 
 export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelProps) {
+  const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const dispatch = useAppDispatch();
   const [busy, setBusy] = useState<null | "checkout" | "merge">(null);
   const detail = useAppSelector((s) => s.prs.detail[detailKey(repoId, pr.number)]);
@@ -155,7 +159,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
               <Box component="span">
                 <GeneralIconButton
                   size={IconButtonSize.MD}
-                  aria-label="Open on host"
+                  aria-label={tAria("repo.open_on_host")}
                   onClick={() => void openExternal(pr.url)}
                   icon={brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
                 />
@@ -166,7 +170,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
                 <Box component="span">
                   <GeneralIconButton
                     size={IconButtonSize.MD}
-                    aria-label="Close drawer"
+                    aria-label={tAria("drawer.close")}
                     onClick={onClose}
                     icon={<X size={14} />}
                   />

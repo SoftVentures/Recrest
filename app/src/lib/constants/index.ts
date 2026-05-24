@@ -1,6 +1,7 @@
 export * from "@/lib/constants/ciStates.constants";
 export * from "@/lib/constants/events.constants";
 export * from "@/lib/constants/feedEventKinds.constants";
+export * from "@/lib/constants/i18n.constants";
 export * from "@/lib/constants/ides.constants";
 export * from "@/lib/constants/prStates.constants";
 export * from "@/lib/constants/providers.constants";

@@ -1,5 +1,7 @@
 import { type KeyboardEvent, type MouseEvent, useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -25,6 +27,7 @@ import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/Ge
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -58,6 +61,7 @@ export interface RepoRowProps {
 }
 
 export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
+  const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const dispatch = useAppDispatch();
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
@@ -205,7 +209,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         <GeneralTooltip title="Open in VS Code" placement="top">
           <GeneralIconButton
             size={IconButtonSize.MD}
-            aria-label="Open in IDE"
+            aria-label={tAria("repo.open_in_ide")}
             onClick={onOpenIde}
             icon={<IdeIcon id="vscode" size={16} color="brand" />}
           />
@@ -213,7 +217,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         <GeneralTooltip title="Open in Terminal" placement="top">
           <GeneralIconButton
             size={IconButtonSize.MD}
-            aria-label="Open in Terminal"
+            aria-label={tAria("repo.open_in_terminal")}
             onClick={onOpenTerminal}
             icon={<TerminalLucide size={15} />}
           />
@@ -224,7 +228,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         >
           <GeneralIconButton
             size={IconButtonSize.MD}
-            aria-label="Open remote"
+            aria-label={tAria("repo.open_remote")}
             onClick={onOpenRemote}
             disabled={!repo.remoteUrl}
             icon={brand ? <BrandIcon slug={brand} size={16} /> : <ExternalLink size={15} />}
@@ -233,7 +237,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         <GeneralTooltip title="Open in Explorer" placement="top">
           <GeneralIconButton
             size={IconButtonSize.MD}
-            aria-label="Open in Explorer"
+            aria-label={tAria("repo.open_in_explorer")}
             onClick={onOpenExplorer}
             icon={<Folder size={15} />}
           />
@@ -241,7 +245,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         <GeneralTooltip title="More" placement="top">
           <GeneralIconButton
             size={IconButtonSize.MD}
-            aria-label="More"
+            aria-label={tAria("repo.more_actions")}
             onClick={openMenu}
             icon={<MoreHorizontal size={15} />}
           />

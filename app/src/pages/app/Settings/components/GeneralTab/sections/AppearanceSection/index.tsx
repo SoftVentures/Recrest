@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { PRIMARY_COLOR_SCHEMES, type PrimaryColorScheme } from "@/lib/constants/theme.constants";
 import {
@@ -199,7 +200,7 @@ export function AppearanceSection() {
                   type="button"
                   color={PRIMARY_COLOR_SCHEMES[scheme].MAIN}
                   active={currentAccent === id}
-                  aria-label={id}
+                  aria-label={t("settings.theme_swatch", { ns: I18nNamespace.ARIA, label: id })}
                   aria-pressed={currentAccent === id}
                   data-testid={TEST_IDS.settings.general.accentChip(id)}
                   onClick={() => dispatch(setPrimaryColor(scheme))}

@@ -242,7 +242,6 @@
     "loading": "Lade Branches…",
     "empty": "Keine Branches passen zum Filter.",
     "search_placeholder": "Branches nach Namen filtern…",
-    "search_aria": "Branches nach Namen filtern",
     "no_repos": "Noch keine Repositories — füge eines hinzu, um seine Branches zu sehen.",
     "tag": {
       "current": "aktuell",
@@ -354,7 +353,6 @@
     "timeline": {
       "title": "Verlauf",
       "sub": "{{count}} Events über {{days}} Tage",
-      "filter_label": "Event-Typ",
       "filter_all": "Alle",
       "filter_commits": "Commits",
       "filter_prs": "Merge Requests",

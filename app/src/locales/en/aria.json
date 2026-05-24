@@ -1,0 +1,58 @@
+{
+  "modal": {
+    "copy": "Copy",
+    "open_in_browser": "Open in browser",
+    "close": "Close"
+  },
+  "drawer": {
+    "close": "Close drawer"
+  },
+  "search": {
+    "input": "Search",
+    "clear": "Clear search"
+  },
+  "sidebar": {
+    "primary": "Primary",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar"
+  },
+  "header": {
+    "search": "Search",
+    "refresh": "Refresh",
+    "add_repo": "Add repository"
+  },
+  "scope": {
+    "group": "Add scope",
+    "local": "Local",
+    "global": "Global"
+  },
+  "settings": {
+    "more_info": "More info",
+    "send_test_notification": "Send test notification",
+    "remove_path": "Remove {{path}}",
+    "theme_swatch": "{{label}} theme"
+  },
+  "repo": {
+    "open_in_ide": "Open in IDE",
+    "open_in_terminal": "Open in Terminal",
+    "open_in_explorer": "Open in Explorer",
+    "open_remote": "Open remote",
+    "open_on_host": "Open on host",
+    "open_folder": "Open folder",
+    "open_terminal": "Open terminal",
+    "more_actions": "More actions",
+    "close_detail_pane": "Close detail pane",
+    "view_toggle": "Repository view",
+    "heatmap": "Activity heatmap",
+    "heatmap_commits_one": "{{count}} commit",
+    "heatmap_commits_other": "{{count}} commits",
+    "heatmap_days_ago_one": "{{count}} day ago",
+    "heatmap_days_ago_other": "{{count}} days ago"
+  },
+  "branches": {
+    "search": "Filter branches by name"
+  },
+  "activity": {
+    "timeline_filter": "Event type"
+  }
+}

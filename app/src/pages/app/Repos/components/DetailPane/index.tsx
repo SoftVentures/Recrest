@@ -2,6 +2,8 @@ import { useMemo } from "react";
 
 import { useNavigate } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 
 import {
@@ -34,6 +36,7 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
@@ -86,6 +89,7 @@ export interface DetailPaneProps {
 }
 
 export function DetailPane({ repo, onClose }: DetailPaneProps) {
+  const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const navigate = useNavigate();
   const prs = useAppSelector((s) => s.prs.items[repo.id] ?? []);
   const { commits } = useRecentCommits({ repoId: repo.id, days: 30, limit: 4 });
@@ -120,7 +124,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           {onClose && (
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Close detail pane"
+              aria-label={tAria("repo.close_detail_pane")}
               onClick={onClose}
               icon={<X size={14} />}
             />
@@ -141,7 +145,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             <GeneralIconButton
               size={IconButtonSize.MD}
               variant={IconButtonVariant.OUTLINE}
-              aria-label="Open in Terminal"
+              aria-label={tAria("repo.open_in_terminal")}
               onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
               icon={<TerminalLucide size={13} />}
             />
@@ -150,7 +154,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             <GeneralIconButton
               size={IconButtonSize.MD}
               variant={IconButtonVariant.OUTLINE}
-              aria-label="Open in Explorer"
+              aria-label={tAria("repo.open_in_explorer")}
               onClick={() => void run(TauriCommand.OPEN_IN_EXPLORER, "Explorer")}
               icon={<Folder size={13} />}
             />
@@ -160,7 +164,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
               <GeneralIconButton
                 size={IconButtonSize.MD}
                 variant={IconButtonVariant.OUTLINE}
-                aria-label="Open remote"
+                aria-label={tAria("repo.open_remote")}
                 onClick={() => void openExternal(repo.remoteUrl!)}
                 icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
               />

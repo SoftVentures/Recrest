@@ -31,6 +31,7 @@ import {
 } from "@/components/organisms/OverallSearch/OverallSearch.styles";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
 import { type SearchResult, useSearchResults } from "@/hooks/useSearch";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { SearchKind } from "@/lib/constants/searchKinds.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -181,6 +182,7 @@ function OverallSearch() {
               setCursor(0);
             }}
             placeholder={t("actions.search_placeholder")}
+            aria-label={t("search.input", { ns: I18nNamespace.ARIA })}
             data-testid={TEST_IDS.searchOverlay.input}
             aria-activedescendant={
               results[cursor] ? `search-result-${results[cursor]!.id}` : undefined

@@ -36,6 +36,7 @@ import {
   ScopeRow,
   StyledNavLink,
 } from "@/components/organisms/layout/Sidebar/Sidebar.styles";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS, navCountTestId, navTestId } from "@/lib/constants/testIds.constants";
 import { toggleSidebar } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -116,7 +117,7 @@ function Sidebar() {
 
   return (
     <Aside
-      aria-label="Primary"
+      aria-label={t("sidebar.primary", { ns: I18nNamespace.ARIA })}
       data-testid={TEST_IDS.sidebar.root}
       data-collapsed={collapsed ? "true" : undefined}
       collapsed={collapsed}

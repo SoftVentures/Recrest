@@ -29,6 +29,7 @@ import { FeedEventRow } from "@/components/organisms/activity/Timeline/parts/Fee
 import { type FeedEvent } from "@/components/organisms/activity/Timeline/parts/_shared";
 import { ACTIVITY_DAYS, dayLabel, daysAgo } from "@/lib/activityStats";
 import { FeedEventKind, FeedFilterKind } from "@/lib/constants/feedEventKinds.constants";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 
@@ -164,7 +165,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
       value={filter}
       exclusive
       onChange={(_, next: FilterKind | null) => next && setFilter(next)}
-      aria-label={t("activity.timeline.filter_label")}
+      aria-label={t("activity.timeline_filter", { ns: I18nNamespace.ARIA })}
     >
       <Pill value={FeedFilterKind.ALL}>
         <Box component="span">{t("activity.timeline.filter_all")}</Box>

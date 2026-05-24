@@ -9,6 +9,7 @@ import { Folder, FolderOpen, Plus, X } from "lucide-react";
 
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
@@ -171,7 +172,7 @@ export function IntegrationsSection() {
           <PathText component="span">{p}</PathText>
           <GeneralIconButton
             size={IconButtonSize.SM}
-            aria-label={`Remove ${p}`}
+            aria-label={t("settings.remove_path", { ns: I18nNamespace.ARIA, path: p })}
             onClick={() => onRemove(p)}
             data-testid={TEST_IDS.settings.integrations.scanRemove(p)}
             icon={<X size={13} />}

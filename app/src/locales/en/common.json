@@ -242,7 +242,6 @@
     "loading": "Loading branches…",
     "empty": "No branches match your filter.",
     "search_placeholder": "Filter branches by name…",
-    "search_aria": "Filter branches by name",
     "no_repos": "No repositories yet — add one to see its branches.",
     "tag": {
       "current": "current",
@@ -354,7 +353,6 @@
     "timeline": {
       "title": "History",
       "sub": "{{count}} events across {{days}} days",
-      "filter_label": "Event type",
       "filter_all": "All",
       "filter_commits": "Commits",
       "filter_prs": "Merge requests",

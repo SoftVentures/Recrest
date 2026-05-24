@@ -30,6 +30,7 @@ import {
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
 import { LocationFlag, TrackingFlag } from "@/lib/constants/branchesFilter.constants";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke } from "@/lib/tauri";
 import {
@@ -211,8 +212,8 @@ export default function BranchesPage() {
             value={search}
             onChange={setSearch}
             placeholder={t("branches.search_placeholder")}
-            aria-label={t("branches.search_aria")}
-            clearLabel={t("actions.clear_search")}
+            aria-label={t("branches.search", { ns: I18nNamespace.ARIA })}
+            clearLabel={t("search.clear", { ns: I18nNamespace.ARIA })}
             width={240}
             height={32}
             data-testid={TEST_IDS.branches.search}

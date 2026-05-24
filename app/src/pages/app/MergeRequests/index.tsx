@@ -20,6 +20,7 @@ import {
   pgFall,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import { useAppSelector } from "@/store/hooks";
@@ -132,7 +133,8 @@ export default function MergeRequestsPage() {
           value={filter}
           onChange={setFilter}
           placeholder={t("mrs.filter_placeholder")}
-          clearLabel={t("actions.clear_search")}
+          aria-label={t("search.input", { ns: I18nNamespace.ARIA })}
+          clearLabel={t("search.clear", { ns: I18nNamespace.ARIA })}
           data-testid={TEST_IDS.mr.filterInput}
           clearTestId={TEST_IDS.mr.filterClear}
         />

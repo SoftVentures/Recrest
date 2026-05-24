@@ -54,8 +54,12 @@ export interface GeneralSearchInputProps {
   width?: number | string;
   height?: number;
   hideIcon?: boolean;
+  /** Accessible label for the clear (X) button. Required so screen readers
+   *  announce the action — pull from the `aria` i18n namespace at the call site. */
   clearLabel: string;
-  "aria-label"?: string;
+  /** Accessible label for the input itself. Required because the icon-only
+   *  visual gives no other affordance for assistive tech. */
+  "aria-label": string;
   "data-testid"?: string;
   clearTestId?: string;
 }

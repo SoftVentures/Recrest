@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 
 import { useParams } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
+
 import { Box, Divider, Menu } from "@mui/material";
 
 import {
@@ -19,6 +21,7 @@ import GeneralButtonGroup, {
   GeneralButtonGroupItem,
 } from "@/components/atoms/buttons/GeneralButtonGroup";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import type { RepoSortKey } from "@/lib/constants/sortKeys.constants";
 import type { RepoStatusChip } from "@/lib/constants/statusChips.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -57,6 +60,7 @@ const SORT_OPTIONS: SortOption[] = [
 ];
 
 export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
+  const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const enriched = useEnrichedRepos();
   const { repoId } = useParams<{ repoId?: string }>();
   const [selectedId, setSelectedId] = useState<string | null>(repoId ?? null);
@@ -110,7 +114,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             value={view}
             exclusive
             onChange={(_, v: RepoView | null) => v && setView(v)}
-            aria-label="repo view"
+            aria-label={tAria("repo.view_toggle")}
           >
             <GeneralButtonGroupItem value="list" data-testid={TEST_IDS.repos.viewToggle.grouped}>
               <ListIcon size={14} aria-hidden style={{ marginRight: 6 }} />

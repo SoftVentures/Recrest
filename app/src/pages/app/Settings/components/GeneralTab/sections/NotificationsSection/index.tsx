@@ -8,6 +8,7 @@ import { TauriCommand } from "@recrest/shared";
 import { Send } from "lucide-react";
 
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
@@ -100,7 +101,7 @@ export function NotificationsSection() {
       {show && (
         <TestBtn
           type="button"
-          aria-label="Send test notification"
+          aria-label={t("settings.send_test_notification", { ns: I18nNamespace.ARIA })}
           onClick={() => void sendTestNotification(kind)}
         >
           <Send size={11} /> Test
@@ -125,7 +126,7 @@ export function NotificationsSection() {
           {enabled && (
             <TestBtn
               type="button"
-              aria-label="Send test notification"
+              aria-label={t("settings.send_test_notification", { ns: I18nNamespace.ARIA })}
               onClick={() => void sendTestNotification(NotificationKind.GENERIC)}
             >
               <Send size={11} /> Test

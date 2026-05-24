@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useNavigate, useParams } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 
 import { AppRoute, PrState, type PullRequest, TauriCommand } from "@recrest/shared";
@@ -26,6 +28,7 @@ import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
@@ -81,6 +84,7 @@ import { bumpRefreshNonce } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function RepoDetailPage() {
+  const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { repoId } = useParams<{ repoId: string }>();
@@ -221,21 +225,21 @@ export default function RepoDetailPage() {
             </PrimaryBtn>
             <IconOnlyBtn
               type="button"
-              aria-label="Open terminal"
+              aria-label={tAria("repo.open_terminal")}
               onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
             >
               <TerminalIcon size={14} />
             </IconOnlyBtn>
             <IconOnlyBtn
               type="button"
-              aria-label="Open folder"
+              aria-label={tAria("repo.open_folder")}
               onClick={() => void runCmd(TauriCommand.OPEN_IN_EXPLORER, "Explorer")}
             >
               <Folder size={14} />
             </IconOnlyBtn>
             <IconOnlyBtn
               type="button"
-              aria-label="Open on host"
+              aria-label={tAria("repo.open_on_host")}
               disabled={!repo.remoteUrl}
               onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
             >
@@ -314,7 +318,7 @@ export default function RepoDetailPage() {
                     key={i}
                     heightPct={heightPct}
                     hot={v >= maxBucket * 0.66}
-                    aria-label={`${v} commit${v === 1 ? "" : "s"}, ${13 - i} day${13 - i === 1 ? "" : "s"} ago`}
+                    aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
                     data-testid={TEST_IDS.repoDetail.sparkCell}
                     data-index={i}
                   />

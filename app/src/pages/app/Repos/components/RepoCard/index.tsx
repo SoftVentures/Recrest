@@ -1,5 +1,7 @@
 import { type KeyboardEvent, type MouseEvent } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -20,6 +22,7 @@ import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -51,6 +54,7 @@ export interface RepoCardProps {
 }
 
 export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
+  const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
   const brand = brandFromUrl(repo.remoteUrl);
@@ -88,7 +92,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           <GeneralTooltip title="Open in VS Code" placement="top">
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Open in IDE"
+              aria-label={tAria("repo.open_in_ide")}
               onClick={() => void run(TauriCommand.OPEN_IN_IDE, "Open in IDE")}
               icon={<IdeIcon id="vscode" size={13} />}
             />
@@ -96,7 +100,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           <GeneralTooltip title="Open Terminal" placement="top">
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Open in Terminal"
+              aria-label={tAria("repo.open_in_terminal")}
               onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
               icon={<TerminalLucide size={13} />}
             />
@@ -107,7 +111,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           >
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Open remote"
+              aria-label={tAria("repo.open_remote")}
               disabled={!repo.remoteUrl}
               onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
               icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
@@ -116,7 +120,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           <GeneralTooltip title="Open in Explorer" placement="top">
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="Open in Explorer"
+              aria-label={tAria("repo.open_in_explorer")}
               onClick={() => void run(TauriCommand.OPEN_IN_EXPLORER, "Explorer")}
               icon={<Folder size={13} />}
             />
@@ -124,7 +128,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           <GeneralTooltip title="More" placement="top">
             <GeneralIconButton
               size={IconButtonSize.SM}
-              aria-label="More"
+              aria-label={tAria("repo.more_actions")}
               icon={<MoreHorizontal size={13} />}
             />
           </GeneralTooltip>
