@@ -6,10 +6,11 @@ import { Box } from "@mui/material";
 
 import { type RemoteRepository } from "@recrest/shared";
 
-import { ArrowDown, Check, ChevronRight, FolderGit2, Inbox } from "lucide-react";
+import { ArrowDown, Check, ChevronRight, FolderGit2, FolderOpen, Inbox } from "lucide-react";
 import { toast } from "sonner";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
+import GeneralAvatar from "@/components/atoms/avatars/GeneralAvatar";
 import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
 import {
   AsideHeading,
@@ -21,6 +22,7 @@ import {
   ConnectIcon,
   ConnectText,
   EmptyState,
+  ProviderGroup,
   ProvidersAside,
   ProvidersGrid,
   ProvidersMain,
@@ -32,6 +34,7 @@ import {
 } from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/ProvidersPanel.styles";
 import RepoRowCard from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/parts/RepoRowCard";
 import {
+  BrowseBtn,
   Footer,
   Input,
   PrimaryBtn,
@@ -40,6 +43,9 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { PROVIDER_NAMES, Provider, type ProviderId } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
+import { hashCode } from "@/lib/utils/hash.utils";
+import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import {
   cloneRemoteRepositoriesBulk,
   fetchRemoteOrganizations,
@@ -52,6 +58,21 @@ import { keyFor } from "@/store/types/remoteImport.types";
 interface ProvidersPanelProps {
   connectedProviders: ProviderId[];
   onClose: () => void;
+}
+
+// Stable two-stop gradients for org chips when the provider didn't supply
+// an `avatarUrl`. Matches the look of `RepoAvatar`/`AuthorAvatar`.
+const ORG_GRADIENTS: ReadonlyArray<readonly [string, string]> = [
+  ["#4f8cff", "#7b2ff7"],
+  ["#ff7a59", "#d6336c"],
+  ["#10b981", "#0ea5a3"],
+  ["#f59e0b", "#ef4444"],
+  ["#06b6d4", "#3b82f6"],
+  ["#ec4899", "#8b5cf6"],
+];
+function gradientForOrg(id: string): readonly [string, string] {
+  const idx = hashCode(id.toLowerCase()) % ORG_GRADIENTS.length;
+  return ORG_GRADIENTS[idx] ?? ORG_GRADIENTS[0]!;
 }
 
 export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelProps) {
@@ -126,6 +147,11 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
     });
   }, []);
 
+  const onBrowseDestination = async () => {
+    const picked = await pickFolder(destination.trim() || undefined);
+    if (picked) setDestination(picked);
+  };
+
   const onImport = async () => {
     if (!destination.trim()) {
       toast.error(t("import.pick_dest"));
@@ -192,7 +218,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
       <ProvidersAside>
         <AsideHeading>{t("import.providers_heading")}</AsideHeading>
         {connectedProviders.map((id) => (
-          <Box key={id} sx={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <ProviderGroup key={id}>
             <AsideItem
               type="button"
               active={activeProvider === id && activeOrg === null}
@@ -219,31 +245,45 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
               <ChevronRight size={12} />
             </AsideItem>
             {activeProvider === id &&
-              orgs.map((org) => (
-                <AsideItem
-                  key={org.id}
-                  type="button"
-                  active={activeOrg === org.slug}
-                  indent
-                  onClick={() => {
-                    setActiveOrg(org.slug);
-                    setSelected(new Set());
-                  }}
-                >
-                  <Box
-                    component="span"
-                    style={{
-                      flex: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+              orgs.map((org) => {
+                const [g1, g2] = gradientForOrg(org.id);
+                const letter = (org.displayName.trim().charAt(0) || "?").toUpperCase();
+                return (
+                  <AsideItem
+                    key={org.id}
+                    type="button"
+                    active={activeOrg === org.slug}
+                    indent
+                    onClick={() => {
+                      setActiveOrg(org.slug);
+                      setSelected(new Set());
                     }}
                   >
-                    {org.displayName}
-                  </Box>
-                </AsideItem>
-              ))}
-          </Box>
+                    <AsideIcon component="span">
+                      <GeneralAvatar
+                        size={18}
+                        radius={4}
+                        gradient={`linear-gradient(135deg, ${g1} 0%, ${g2} 100%)`}
+                        letter={letter}
+                        label={org.displayName}
+                        imageUrl={org.avatarUrl}
+                      />
+                    </AsideIcon>
+                    <Box
+                      component="span"
+                      style={{
+                        flex: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {org.displayName}
+                    </Box>
+                  </AsideItem>
+                );
+              })}
+          </ProviderGroup>
         ))}
       </ProvidersAside>
 
@@ -329,6 +369,15 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             data-testid={TEST_IDS.addRepoDialog.bulkDest}
             style={{ flex: 1, marginRight: 8 }}
           />
+          <BrowseBtn
+            type="button"
+            onClick={() => void onBrowseDestination()}
+            disabled={!isTauri()}
+            data-testid={TEST_IDS.addRepoDialog.bulkDestBrowse}
+          >
+            <FolderOpen size={13} />
+            {t("actions.browse")}
+          </BrowseBtn>
           <SecondaryBtn type="button" onClick={onClose}>
             {t("actions.cancel")}
           </SecondaryBtn>

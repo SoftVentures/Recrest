@@ -50,5 +50,39 @@
   "pr_count_one": "{{count}} MR",
   "pr_count_other": "{{count}} MRs",
   "empty": "Noch keine Repositories",
-  "empty_desc": "Füge einen oder mehrere Scan-Pfade in den Einstellungen hinzu, damit Recrest deine lokalen Git-Repositories findet."
+  "empty_desc": "Füge einen oder mehrere Scan-Pfade in den Einstellungen hinzu, damit Recrest deine lokalen Git-Repositories findet.",
+  "branch": {
+    "create_title": "Branch erstellen",
+    "create_desc_from": "Verzweigt von '{{from}}'.",
+    "create_desc": "Verzweigt von HEAD.",
+    "name_label": "Branch-Name",
+    "name_placeholder": "feature/meine-aenderung",
+    "checkout_label": "Den neuen Branch direkt auschecken",
+    "submit": "Branch erstellen",
+    "cancel": "Abbrechen",
+    "created": "'{{name}}' erstellt"
+  },
+  "find_across": {
+    "title": "Über alle Repositories suchen",
+    "placeholder": "Dateiinhalte durchsuchen…",
+    "no_results": "Keine Treffer",
+    "hint": "Durchsucht alle erfassten Repositories. Mindestens zwei Zeichen.",
+    "result_aria": "{{repo}} — {{path}}:{{line}}"
+  },
+  "stats": {
+    "ahead_behind": "Voraus / Hinterher",
+    "ahead_behind_sub": "gegenüber origin",
+    "changed_lines": "Geänderte Zeilen",
+    "changed_files_one": "{{count}} Datei",
+    "changed_files_other": "{{count}} Dateien",
+    "commits_14d": "Commits · letzte 14 Tage",
+    "commits_14d_sub": "Spitze {{count}}/Tag",
+    "open_mrs": "Offene Merge-Requests",
+    "open_mrs_sub": "{{count}} Entwurf",
+    "last_commit": "Letzter Commit",
+    "last_commit_empty": "kein Provider verbunden"
+  },
+  "changed_files": {
+    "truncated": "…weitere Dateien abgeschnitten"
+  }
 }

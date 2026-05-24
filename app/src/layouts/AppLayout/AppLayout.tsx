@@ -9,6 +9,7 @@ import OverallSearch from "@/components/organisms/OverallSearch";
 import UpdaterBanner from "@/components/organisms/banners/UpdaterBanner";
 import Header from "@/components/organisms/layout/Header";
 import Sidebar from "@/components/organisms/layout/Sidebar";
+import OnboardingWizard from "@/components/organisms/onboarding/OnboardingWizard";
 import Titlebar from "@/components/organisms/titlebars/Titlebar";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
@@ -129,6 +130,7 @@ export function AppLayout() {
       </Shell>
       <OverallSearch />
       <AddRepoModal />
+      <OnboardingWizard />
     </AppFrame>
   );
 }

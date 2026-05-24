@@ -18,6 +18,12 @@ export const ProvidersAside = styled(Box)(({ theme }) => ({
   gap: 2,
 })) as typeof Box;
 
+export const ProviderGroup = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+}) as typeof Box;
+
 export const AsideHeading = styled(Typography)(({ theme }) => ({
   padding: "6px 10px",
   fontSize: 10,

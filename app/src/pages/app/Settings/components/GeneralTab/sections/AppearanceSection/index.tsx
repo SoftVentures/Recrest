@@ -1,3 +1,4 @@
+import ReactCountryFlag from "react-country-flag";
 import { useTranslation } from "react-i18next";
 
 import { Box, MenuItem, type SelectChangeEvent } from "@mui/material";
@@ -66,9 +67,9 @@ const ACCENT_IDS: AccentId[] = ["coral", "blue", "green", "purple", "pink", "amb
 const FONT_SIZE_IDS: FontSizeId[] = ["sm", "md", "lg", "xl"];
 const THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled", "glassy"];
 
-const LOCALES: { code: string; label: string; flag: string }[] = [
-  { code: "en", label: "English", flag: "🇬🇧" },
-  { code: "de", label: "Deutsch", flag: "🇩🇪" },
+const LOCALES: { code: string; countryCode: string; label: string }[] = [
+  { code: "en", countryCode: "GB", label: "English" },
+  { code: "de", countryCode: "DE", label: "Deutsch" },
 ];
 
 const FONT_SIZE_ICONS: Record<FontSizeId, typeof Type> = {
@@ -91,6 +92,17 @@ const Swatches = styled(Box)({
   alignItems: "center",
   gap: 10,
 }) as typeof Box;
+
+// SVG flags scale crisply at the small icon size — emoji-based `🇬🇧` rendered
+// inconsistently across Windows (no native colour-emoji font for region flags).
+const LocaleFlag = styled(ReactCountryFlag)({
+  marginRight: 8,
+  width: 16,
+  height: 12,
+  borderRadius: 2,
+  flexShrink: 0,
+  display: "inline-block",
+});
 
 interface SwatchProps {
   color: string;
@@ -181,9 +193,7 @@ export function AppearanceSection() {
         >
           {LOCALES.map((l) => (
             <MenuItem key={l.code} value={l.code}>
-              <Box component="span" sx={{ mr: 1 }}>
-                {l.flag}
-              </Box>
+              <LocaleFlag countryCode={l.countryCode} svg aria-hidden />
               {l.label}
             </MenuItem>
           ))}

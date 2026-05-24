@@ -2,10 +2,11 @@ import { type FormEvent, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  BrowseBtn,
   Field,
   Footer,
   FormBody,
@@ -13,10 +14,13 @@ import {
   Hint,
   Input,
   Label,
+  PathFieldRow,
   PrimaryBtn,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
+import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { gitCloneUrl, loadRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 
@@ -29,6 +33,11 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   const canSubmit = Boolean(url.trim() && destination.trim()) && !busy;
+
+  const onBrowse = async () => {
+    const picked = await pickFolder(destination.trim() || undefined);
+    if (picked) setDestination(picked);
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,14 +83,25 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
         </Field>
         <Field>
           <Label htmlFor="add-repo-dest">{t("import.field.dest")}</Label>
-          <Input
-            id="add-repo-dest"
-            type="text"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            placeholder="/Users/you/Code"
-            data-testid={TEST_IDS.addRepoDialog.dest}
-          />
+          <PathFieldRow>
+            <Input
+              id="add-repo-dest"
+              type="text"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder="/Users/you/Code"
+              data-testid={TEST_IDS.addRepoDialog.dest}
+            />
+            <BrowseBtn
+              type="button"
+              onClick={() => void onBrowse()}
+              disabled={!isTauri()}
+              data-testid={TEST_IDS.addRepoDialog.destBrowse}
+            >
+              <FolderOpen size={13} />
+              {t("actions.browse")}
+            </BrowseBtn>
+          </PathFieldRow>
           <Hint>{t("import.field.dest_hint")}</Hint>
         </Field>
         <Field>

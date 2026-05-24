@@ -13,3 +13,4 @@ export const setUpdaterBanner = createAction<UpdaterBannerState | null>("ui/setU
 export const togglePinnedRepo = createAction<string>("ui/togglePinnedRepo");
 export const setPinnedRepos = createAction<string[]>("ui/setPinnedRepos");
 export const setSelectedRepo = createAction<string | null>("ui/setSelectedRepo");
+export const setOnboardingOverride = createAction<boolean>("ui/setOnboardingOverride");

@@ -65,11 +65,24 @@ const Kpis = styled(Box)({
   ...prefersReducedMotionGuard,
 }) as typeof Box;
 
-const KSep = styled(Typography)(({ theme }) => ({
+const AheadBehindValue = styled(Box)({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: 4,
+  lineHeight: 1,
+}) as typeof Box;
+
+const AheadBehindArrow = styled(Box)(({ theme }) => ({
+  fontSize: 22,
+  fontWeight: 600,
+  color: theme.palette.text.information,
+})) as typeof Box;
+
+const AheadBehindSep = styled(Box)(({ theme }) => ({
+  fontWeight: 400,
   color: theme.palette.text.informationLight,
-  fontWeight: 500,
-  margin: "0 2px",
-})) as typeof Typography;
+  margin: "0 6px",
+})) as typeof Box;
 
 const Grid = styled(Box)({
   display: "grid",
@@ -269,13 +282,13 @@ function DashboardPage() {
         <Kpi
           label={t("dash.kpi.ahead_behind")}
           value={
-            <>
-              ↑{totalAhead}{" "}
-              <KSep component="span" variant="caption">
-                /
-              </KSep>{" "}
-              ↓{totalBehind}
-            </>
+            <AheadBehindValue component="span">
+              <AheadBehindArrow component="span">↑</AheadBehindArrow>
+              {totalAhead}
+              <AheadBehindSep component="span">/</AheadBehindSep>
+              <AheadBehindArrow component="span">↓</AheadBehindArrow>
+              {totalBehind}
+            </AheadBehindValue>
           }
           sub={t("dash.kpi.ahead_behind_sub")}
           onClick={() => navigate(AppRoute.BRANCHES)}
@@ -284,6 +297,7 @@ function DashboardPage() {
           label={t("dash.kpi.commits")}
           value={totalCommits}
           sub={t("dash.kpi.commits_sub", { count: maxDay })}
+          onClick={() => navigate(AppRoute.ACTIVITY)}
         />
       </StaggeredReveal>
 
@@ -374,7 +388,7 @@ function DashboardPage() {
               <EmptyState mascot="snoozing" mascotSize={72} title={t("dash.commits.empty")} />
             ) : (
               recent.map((c) => (
-                <ClickableRow key={c.sha} onClick={() => goto(c.repoId)}>
+                <ClickableRow key={`${c.repoId}-${c.sha}`} onClick={() => goto(c.repoId)}>
                   <AuthorAvatar name={c.author} email={c.authorEmail ?? undefined} size={24} />
                   <RowBody>
                     <RowPrimary>{c.summary || "—"}</RowPrimary>

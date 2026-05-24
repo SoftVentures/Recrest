@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
+
 import GeneralAvatar from "@/components/atoms/avatars/GeneralAvatar";
+import { gravatarHash, gravatarUrl } from "@/lib/utils/gravatar.utils";
 import { hashCode } from "@/lib/utils/hash.utils";
 
 const AUTHOR_GRADIENTS: ReadonlyArray<readonly [string, string]> = [
@@ -32,8 +35,34 @@ function AuthorAvatar({ name, email, size = 24 }: Props) {
   const [c1, c2] = gradientForAuthor(id);
   const gradient = `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
   const letter = (name.trim().charAt(0) || "?").toUpperCase();
+
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!email || failed) {
+      setImageUrl(null);
+      return;
+    }
+    let alive = true;
+    void gravatarHash(email).then((h) => {
+      if (alive) setImageUrl(gravatarUrl(h, size));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [email, size, failed]);
+
   return (
-    <GeneralAvatar size={size} radius={size / 2} gradient={gradient} letter={letter} label={name} />
+    <GeneralAvatar
+      size={size}
+      radius={size / 2}
+      gradient={gradient}
+      letter={letter}
+      label={name}
+      imageUrl={imageUrl}
+      onImageError={() => setFailed(true)}
+    />
   );
 }
 

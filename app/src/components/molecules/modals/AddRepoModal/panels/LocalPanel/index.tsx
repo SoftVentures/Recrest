@@ -2,10 +2,11 @@ import { type FormEvent, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  BrowseBtn,
   Field,
   Footer,
   FormBody,
@@ -13,10 +14,13 @@ import {
   Hint,
   Input,
   Label,
+  PathFieldRow,
   PrimaryBtn,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
+import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { addRepo } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 
@@ -25,6 +29,11 @@ export function LocalPanel({ onClose }: { onClose: () => void }) {
   const dispatch = useAppDispatch();
   const [path, setPath] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const onBrowse = async () => {
+    const picked = await pickFolder(path.trim() || undefined);
+    if (picked) setPath(picked);
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,15 +58,26 @@ export function LocalPanel({ onClose }: { onClose: () => void }) {
       <FormFields>
         <Field>
           <Label htmlFor="add-repo-path">{t("import.field.path")}</Label>
-          <Input
-            id="add-repo-path"
-            type="text"
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-            placeholder="/Users/you/Code/my-repo"
-            autoFocus
-            data-testid={TEST_IDS.addRepoDialog.path}
-          />
+          <PathFieldRow>
+            <Input
+              id="add-repo-path"
+              type="text"
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              placeholder="/Users/you/Code/my-repo"
+              autoFocus
+              data-testid={TEST_IDS.addRepoDialog.path}
+            />
+            <BrowseBtn
+              type="button"
+              onClick={() => void onBrowse()}
+              disabled={!isTauri()}
+              data-testid={TEST_IDS.addRepoDialog.pathBrowse}
+            >
+              <FolderOpen size={13} />
+              {t("actions.browse")}
+            </BrowseBtn>
+          </PathFieldRow>
           <Hint>{t("import.field.path_hint")}</Hint>
         </Field>
       </FormFields>

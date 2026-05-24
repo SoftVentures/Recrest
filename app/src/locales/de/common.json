@@ -25,6 +25,7 @@
   "actions": {
     "refresh": "Aktualisieren",
     "add": "Hinzufügen",
+    "browse": "Durchsuchen…",
     "add_repo": "Repository hinzufügen",
     "remove": "Entfernen",
     "search": "Suchen",
@@ -340,7 +341,7 @@
       "review_queue_empty": "Keine offenen MRs warten.",
       "ci_trend_title": "CI-Pass-Rate · 14 Tage",
       "ci_trend_sub": "tägliche Pass-Quote",
-      "flaky_title": "Flakigste Repos",
+      "flaky_title": "Instabilste Repos",
       "flaky_sub": "Fehlerquote · letzte 14 Tage",
       "flaky_empty": "Noch keine Check-Run-Daten.",
       "busiest_peak_title": "Aktivität & Peak",

@@ -86,6 +86,39 @@ export const Input = styled("input")(({ theme }) => ({
   },
 }));
 
+export const PathFieldRow = styled(Box)({
+  display: "flex",
+  alignItems: "stretch",
+  gap: 6,
+  minWidth: 0,
+  "& > input": { flex: 1, minWidth: 0 },
+}) as typeof Box;
+
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
+export const BrowseBtn = styled("button")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  height: 36,
+  padding: "0 12px",
+  borderRadius: 8,
+  border: `1px solid ${theme.palette.divider}`,
+  background: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  fontFamily: "inherit",
+  fontSize: 12.5,
+  fontWeight: 500,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  flexShrink: 0,
+  transition: "background-color 0.12s ease, border-color 0.12s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+    borderColor: theme.palette.border.hover,
+  },
+  "&:disabled": { opacity: 0.55, cursor: "not-allowed" },
+}));
+
 export const Hint = styled(Typography)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,

@@ -10,8 +10,8 @@ Everything the user sees or runs: the React 19 frontend in `src/` and the Rust T
 
 From the repo root via `yarn workspace @recrest/app <script>`:
 
-- `dev` — Vite only (port 1420). Tauri IPC no-ops via `isTauri()`. Use this for pure UI work.
-- `tauri:dev` — full desktop shell. Requires Rust toolchain.
+- `dev` — Vite only. Tauri IPC no-ops via `isTauri()`. Use this for pure UI work. Port follows `TAURI_ENV_PLATFORM`: **3000** outside Tauri (matches the root `yarn dev:web` flow and Playwright's base URL), **1420** when invoked via `tauri:dev`. `strictPort: true` on both — no silent fallback.
+- `tauri:dev` — full desktop shell on port **1420**. Requires Rust toolchain.
 - `build` — `tsc -b && vite build` (production bundle).
 - `tauri:build` — wraps the desktop installer. **Will fail until `src-tauri/icons/` contains PNGs** — that's a known scope gap.
 - `test` — vitest (jsdom).
@@ -66,6 +66,7 @@ Two icon sets live under `src-tauri/`:
 
 - No nested interactive elements. Clickable rows use `<div role="button" tabIndex={0}>` with an `onKeyDown` that handles Enter/Space, so hover-revealed action `<button>`s inside them remain legal HTML.
 - Styling is MUI v9 + Emotion (`@mui/material` + `@emotion/styled`) only. The phase-two migration removed Tailwind, PostCSS, and SCSS modules — **do not reintroduce** `postcss.config.js`, `postcss`, `autoprefixer`, or `tailwindcss`. If a third-party widget pulls in a competing styling layer, contain it in its own folder and don't let the imports leak into shared atoms/molecules.
+- **No `sx` prop.** Every styled collection lives in a `styled()` component — either inline at the top of the file or extracted to `<Name>.styles.tsx`. The `sx={{ ... }}` shorthand is forbidden because it bypasses static extraction, fragments style ownership, and makes the theme contract opaque. Single dynamic offsets that genuinely can't be styled (e.g. an animated `transform` driven by motion state) belong in a `style={{}}` prop, not `sx`.
 - `useDevice` (backed by `device-type-detection`) drives `useResponsiveSidebar` in `AppShell`. Auto-collapse preserves the user's manual preference and restores it on wider viewports.
 
 ## Component conventions

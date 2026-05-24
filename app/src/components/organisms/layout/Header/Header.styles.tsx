@@ -127,7 +127,7 @@ export const AddRepoButton = styled("button")(({ theme }) => ({
   paddingLeft: 14,
   paddingRight: 14,
   borderRadius: 8,
-  border: `1px solid ${theme.palette.surface.button.cta}`,
+  border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.button.cta,
   color: theme.palette.surface.button.ctaContrast,
   cursor: "pointer",
@@ -138,7 +138,7 @@ export const AddRepoButton = styled("button")(({ theme }) => ({
   transition: "background-color 0.15s ease, border-color 0.15s ease",
   "&:hover": {
     backgroundColor: theme.palette.surface.button.ctaHover,
-    borderColor: theme.palette.surface.button.ctaHover,
+    borderColor: theme.palette.border.hover,
   },
 }));
 

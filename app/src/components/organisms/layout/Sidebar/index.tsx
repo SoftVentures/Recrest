@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type ReactNode } from "react";
 
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 import { AppRoute, type AppRoutePath, PrState } from "@recrest/shared";
 
@@ -18,6 +19,7 @@ import {
   BookMarked as ReposIcon,
   Settings as SettingsIcon,
 } from "lucide-react";
+import { useAnimate } from "motion/react";
 
 import ScopeButtonGroup, { RepoAddScope } from "@/components/atoms/buttons/ScopeButtonGroup";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
@@ -51,12 +53,39 @@ interface NavSpec {
 
 function Sidebar() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.ui.sidebarCollapsed);
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
   const connections = useAppSelector((s) => s.providers.connections);
   const [addScope, setAddScope] = useState<RepoAddScope>(RepoAddScope.LOCAL);
+
+  // framer-motion drives width via `useAnimate` on the ref directly. Setting
+  // `style={{ width }}` in JSX would race against motion — every re-render
+  // would force-set the final width and abort the in-flight interpolation.
+  // Only padding is driven from React; width lives entirely on the DOM node
+  // via the animate() call.
+  // Collapsed: 49px (38 + side padding + border); expanded: 209.
+  const [scope, animate] = useAnimate<HTMLElement>();
+  const padX = collapsed ? theme.spacing(0.625) : theme.spacing(1);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (!scope.current) return;
+    const target = collapsed ? 49 : 209;
+    if (isFirstRender.current) {
+      // Skip the animation on mount so the Aside doesn't visibly grow from 0.
+      scope.current.style.width = `${target}px`;
+      isFirstRender.current = false;
+      return;
+    }
+    void animate(
+      scope.current,
+      { width: target },
+      { type: "tween", duration: 0.18, ease: [0.32, 0.72, 0, 1] },
+    );
+  }, [animate, collapsed, scope]);
 
   const repoList = Object.values(repos);
   const dirtyCount = repoList.filter((r) => r.status.dirty).length;
@@ -117,10 +146,11 @@ function Sidebar() {
 
   return (
     <Aside
+      ref={scope}
       aria-label={t("sidebar.primary", { ns: I18nNamespace.ARIA })}
       data-testid={TEST_IDS.sidebar.root}
       data-collapsed={collapsed ? "true" : undefined}
-      collapsed={collapsed}
+      style={{ paddingLeft: padX, paddingRight: padX }}
     >
       <BrandRow>
         <BrandMark collapsed={collapsed} />
@@ -195,7 +225,7 @@ function Sidebar() {
           const settingsLink = (
             <StyledNavLink to={AppRoute.SETTINGS} data-testid={TEST_IDS.sidebar.navSettings}>
               {({ isActive }) => (
-                <NavItem collapsed={collapsed} active={isActive}>
+                <NavItem collapsed={collapsed} active={isActive} forceBorder>
                   <SettingsIcon size={15} />
                   {!collapsed && <NavLabel>{settingsLabel}</NavLabel>}
                 </NavItem>

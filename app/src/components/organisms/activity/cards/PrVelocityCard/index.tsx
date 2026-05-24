@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { styled, useTheme } from "@mui/material/styles";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { VelocityDay } from "@/lib/activityAggregates";
@@ -59,6 +59,7 @@ const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
 
 function PrVelocityCard({ rows, loading }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const chronological = [...rows].reverse();
   const opened = chronological.map((r) => r.opened);
   const merged = chronological.map((r) => r.merged);
@@ -66,8 +67,8 @@ function PrVelocityCard({ rows, loading }: Props) {
   const w = 320;
   const h = 140;
   const pad = 12;
-  const openedColor = "var(--mui-palette-primary-main, #f97316)";
-  const mergedColor = "var(--mui-palette-success-main, #16a34a)";
+  const openedColor = theme.palette.primary.main;
+  const mergedColor = theme.palette.success.main;
   return (
     <GeneralCard
       title={t("activity.cards.pr_velocity_title")}

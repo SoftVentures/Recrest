@@ -199,17 +199,15 @@ function Header() {
             <RefreshCw size={16} aria-hidden />
           </RefreshButton>
         </GeneralTooltip>
-        <GeneralTooltip title={addRepoLabel} arrow placement="bottom">
-          <AddRepoButton
-            type="button"
-            data-testid={TEST_IDS.header.btnAddRepo}
-            aria-label={addRepoLabel}
-            onClick={onAddRepo}
-          >
-            <BookPlus size={14} aria-hidden />
-            <AddRepoLabel component="span">{addRepoLabel}</AddRepoLabel>
-          </AddRepoButton>
-        </GeneralTooltip>
+        <AddRepoButton
+          type="button"
+          data-testid={TEST_IDS.header.btnAddRepo}
+          aria-label={addRepoLabel}
+          onClick={onAddRepo}
+        >
+          <BookPlus size={14} aria-hidden />
+          <AddRepoLabel component="span">{addRepoLabel}</AddRepoLabel>
+        </AddRepoButton>
       </RightSection>
     </TopBar>
   );

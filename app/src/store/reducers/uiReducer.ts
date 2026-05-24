@@ -6,6 +6,7 @@ import {
   setActiveView,
   setFindDialogOpen,
   setImportDialogOpen,
+  setOnboardingOverride,
   setPinnedRepos,
   setSearchOpen,
   setSelectedRepo,
@@ -26,6 +27,7 @@ const initialState: UiState = {
   updaterBanner: null,
   pinnedRepoIds: [],
   selectedRepoId: null,
+  onboardingOverride: false,
 };
 
 export const uiReducer = createReducer(initialState, (builder) => {
@@ -65,6 +67,9 @@ export const uiReducer = createReducer(initialState, (builder) => {
     })
     .addCase(setSelectedRepo, (state, action) => {
       state.selectedRepoId = action.payload;
+    })
+    .addCase(setOnboardingOverride, (state, action) => {
+      state.onboardingOverride = action.payload;
     })
     // Phase 2: hydrate UI-scoped persisted fields from the Tauri backend.
     // `sidebarCollapsed` lives under `windowState`, `pinnedRepoIds` stays

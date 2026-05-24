@@ -9,6 +9,9 @@ import {
   Body,
   Header,
   HeaderIcon,
+  HeaderSubtitle,
+  HeaderText,
+  HeaderTitle,
   TabBar,
   TabButton,
 } from "@/components/molecules/modals/AddRepoModal/AddRepoModal.styles";
@@ -57,10 +60,12 @@ export default function AddRepoModal() {
           <HeaderIcon>
             <Plus size={20} />
           </HeaderIcon>
-          {t("import.title")}
+          <HeaderText>
+            <HeaderTitle>{t("import.title")}</HeaderTitle>
+            <HeaderSubtitle>{t("import.desc")}</HeaderSubtitle>
+          </HeaderText>
         </Header>
       }
-      subtitle={t("import.desc")}
       contentChildren={
         <>
           <TabBar role="tablist">

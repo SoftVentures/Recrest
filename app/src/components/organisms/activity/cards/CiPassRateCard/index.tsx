@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 import type { CheckRunSummary } from "@recrest/shared";
 
@@ -40,6 +41,7 @@ interface Props {
 
 function CiPassRateCard({ rows, summaries, loading }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const chronological = [...rows].reverse();
   const w = 320;
   const h = 140;
@@ -81,7 +83,7 @@ function CiPassRateCard({ rows, summaries, loading }: Props) {
   subBits.push(t("activity.cards.ci_trend_sub_window"));
   const sub = subBits.join(" · ");
 
-  const greenColor = "var(--mui-palette-success-main, #16a34a)";
+  const greenColor = theme.palette.success.main;
 
   return (
     <GeneralCard

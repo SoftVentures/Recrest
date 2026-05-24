@@ -217,6 +217,8 @@
       "clear_tokens_done": "All provider tokens cleared",
       "retrigger_onboarding": "Retrigger onboarding",
       "retrigger_onboarding_done": "Onboarding reset — reloading",
+      "open_onboarding": "Open onboarding wizard",
+      "open_onboarding_sub": "Show the first-run wizard now — does not touch saved settings.",
       "rescan_repos": "Rescan all repos",
       "rescan_done": "Rescan dispatched",
       "confirm_title": "Destructive action",

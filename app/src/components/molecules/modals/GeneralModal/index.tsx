@@ -44,15 +44,26 @@ const StyledDialog = styled(Dialog, {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
+    // Without this MUI's default `maxWidth="md"` shrinks the paper to ~768px
+    // while the inner Root keeps its requested `modalWidth` (e.g. 880) — the
+    // overflow clips action buttons on the right edge. Letting the paper grow
+    // to the inner content fixes both layouts in one place.
+    maxWidth: "none !important",
   },
 }));
 
 const StyledContent = styled(DialogContent)({
   margin: 0,
   padding: 0,
-  overflow: "auto",
+  overflow: "hidden",
   flex: 1,
   minHeight: 0,
+  // Flex column so children with `flex: 1` (e.g. the AddRepo Body wrapping
+  // ProvidersPanel / LocalPanel) actually fill the available height instead
+  // of collapsing to intrinsic content height — that was leaving the modal
+  // half-empty in the LocalPanel tab.
+  display: "flex",
+  flexDirection: "column",
 });
 
 const StyledActions = styled(DialogActions)({

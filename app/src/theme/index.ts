@@ -119,6 +119,11 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
 
   const primary = getPrimaryColorScheme(opts?.primaryColor);
 
+  // In dark mode the lighter shade reads cleaner against the dark surfaces —
+  // promote `primary.LIGHT` to `palette.primary.main` so every consumer that
+  // reaches for the accent automatically picks up the brighter variant.
+  const primaryMain = isDark ? primary.LIGHT : primary.MAIN;
+
   // Surface palette source — OLED overrides dark slots with pure-black variants.
   const C = isOled ? OLED_COLORS : isDark ? DARK_THEME_COLORS : LIGHT_THEME_COLORS;
   const F = isDark ? FORMATTING_COLORS.DARK : FORMATTING_COLORS.LIGHT;
@@ -146,7 +151,7 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
       primary: {
         tertiary: primary.TERTIARY,
         light: primary.LIGHT,
-        main: primary.MAIN,
+        main: primaryMain,
         dark: primary.DARK,
         link: primary.LINK,
       },
@@ -195,7 +200,7 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
         disabled: C.INK_4,
       },
       icon: {
-        primary: primary.MAIN,
+        primary: primaryMain,
         secondary: C.INK_2,
         contrast: C.INK_0,
         information: C.INK_3,
@@ -204,7 +209,7 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
       },
       border: {
         default: C.BORDER,
-        primary: primary.MAIN,
+        primary: primaryMain,
         hover: C.BORDER_STRONG,
         separator: C.HAIRLINE,
         inactive: C.BORDER,
@@ -212,7 +217,7 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
       },
       surface: {
         button: {
-          primary: primary.MAIN,
+          primary: primaryMain,
           hover: primary.DARK,
           secondary: isDark ? C.SURFACE_2 : primary.TERTIARY,
           hoverLight: C.SURFACE_HOVER,

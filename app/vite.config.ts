@@ -87,6 +87,13 @@ export default defineConfig({
     alias: {
       "@": srcDir,
     },
+    // framer-motion ships `@emotion/styled` as a sub-dep, which makes Vite's
+    // dev-mode pre-bundler load a second @emotion/react instance — the second
+    // instance has its own ThemeContext, so MUI's ThemeProvider fills one
+    // instance and `styled()` calls read from the other and explode with
+    // `theme.palette.surface is undefined`. Forcing a single resolved copy
+    // keeps both ends on the same React Context.
+    dedupe: ["@emotion/react", "@emotion/styled", "react", "react-dom"],
   },
   define: {
     // Some npm packages still reference Node's `global`; alias it to `globalThis`

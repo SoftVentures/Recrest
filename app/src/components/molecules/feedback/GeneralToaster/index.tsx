@@ -17,7 +17,7 @@ function GeneralToaster() {
         style: {
           background: theme.palette.surface.interface.base,
           color: theme.palette.text.primary,
-          border: `1px solid ${theme.palette.border.default}`,
+          border: `1px solid ${theme.palette.divider}`,
         },
       }}
     />

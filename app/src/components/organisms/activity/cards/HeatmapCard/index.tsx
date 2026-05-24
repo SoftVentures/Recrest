@@ -101,7 +101,7 @@ const Cell = styled(Box, { shouldForwardProp: (p) => p !== "intensity" })<{
   intensity: number;
 }>(({ theme, intensity }) => ({
   height: 12,
-  borderRadius: 8,
+  borderRadius: 2,
   backgroundColor:
     intensity === 0
       ? theme.palette.surface.interface.backElevation

@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { keyframes, styled } from "@mui/material/styles";
+import { keyframes, styled, useTheme } from "@mui/material/styles";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { LanguageSlice } from "@/lib/activityAggregates";
@@ -93,6 +93,7 @@ const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
 
 function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const TAIL_THRESHOLD = 0.01;
   const legend = useMemo(() => {
     const result: LanguageSlice[] = [];
@@ -138,7 +139,7 @@ function LanguageDonutCard({ mix, loading }: Props) {
               style={{ animationDelay: `${220 + i * 60}ms` }}
             />
           ))}
-          <circle cx="60" cy="60" r="34" fill="var(--mui-palette-surface-interface-base, white)" />
+          <circle cx="60" cy="60" r="34" fill={theme.palette.surface.interface.base} />
           <Centre x="60" y="58">
             {totalCommits}
           </Centre>

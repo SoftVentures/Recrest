@@ -1,14 +1,13 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-export const Header = styled(Box)(({ theme }) => ({
+export const Header = styled(Box)({
   display: "flex",
   alignItems: "flex-start",
   gap: 14,
-  padding: "18px 22px",
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  flexShrink: 0,
-})) as typeof Box;
+  flex: 1,
+  minWidth: 0,
+}) as typeof Box;
 
 export const HeaderIcon = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -21,6 +20,29 @@ export const HeaderIcon = styled(Box)(({ theme }) => ({
   color: theme.palette.primary.contrastText,
   flexShrink: 0,
 })) as typeof Box;
+
+export const HeaderText = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  minWidth: 0,
+  flex: 1,
+  paddingTop: 4,
+}) as typeof Box;
+
+export const HeaderTitle = styled(Typography)(({ theme }) => ({
+  fontSize: 18,
+  fontWeight: 700,
+  lineHeight: "24px",
+  color: theme.palette.text.primary,
+  letterSpacing: "-0.01em",
+})) as typeof Typography;
+
+export const HeaderSubtitle = styled(Typography)(({ theme }) => ({
+  fontSize: 12.5,
+  lineHeight: "18px",
+  color: theme.palette.text.information,
+})) as typeof Typography;
 
 export const HeaderBody = styled(Box)({
   flex: 1,

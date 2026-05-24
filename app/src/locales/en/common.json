@@ -25,6 +25,7 @@
   "actions": {
     "refresh": "Refresh",
     "add": "Add",
+    "browse": "Browse…",
     "add_repo": "Add Repository",
     "remove": "Remove",
     "search": "Search",

@@ -11,30 +11,37 @@ interface CollapsibleProps {
 
 interface ItemProps extends CollapsibleProps {
   active?: boolean;
+  /** Force a visible border regardless of active state — used for the
+   *  settings entry so it always reads as a chip in the footer. */
+  forceBorder?: boolean;
 }
 
 const SHOULD_FORWARD = (prop: PropertyKey) =>
-  prop !== "collapsed" && prop !== "active" && prop !== "isCount";
+  prop !== "collapsed" && prop !== "active" && prop !== "isCount" && prop !== "forceBorder";
 
+// Width + padding are animated via framer-motion's `useAnimate` hook, which
+// targets the ref directly with a JS-driven RAF loop. This stays compatible
+// with MUI's `styled()` theme context (wrapping the styled component in
+// `motion.create(...)` breaks the emotion ThemeContext path).
 // eslint-disable-next-line no-restricted-syntax -- semantic <aside> required for sidebar landmark
-export const Aside = styled("aside", { shouldForwardProp: SHOULD_FORWARD })<CollapsibleProps>(
-  ({ theme, collapsed }) => ({
-    // Collapsed: 38px NavItem + 5px each side + 1px right border = 49.
-    // Expanded: 192px content + 8px each side + 1px right border = 209.
-    width: collapsed ? 49 : 209,
-    flexShrink: 0,
-    alignSelf: "stretch",
-    backgroundColor: theme.palette.surface.interface.navigation,
-    borderRight: `1px solid ${theme.palette.divider}`,
-    display: "flex",
-    flexDirection: "column",
-    padding: collapsed ? theme.spacing(0, 0.625, 1) : theme.spacing(0, 1, 1),
-    minHeight: 0,
-    transition: "width 0.18s cubic-bezier(0.4, 0, 0.2, 1)",
-    position: "relative",
-    overflow: "visible",
-  }),
-);
+export const Aside = styled("aside")(({ theme }) => ({
+  flexShrink: 0,
+  alignSelf: "stretch",
+  backgroundColor: theme.palette.surface.interface.navigation,
+  borderRight: `1px solid ${theme.palette.divider}`,
+  display: "flex",
+  flexDirection: "column",
+  paddingBottom: theme.spacing(1),
+  minHeight: 0,
+  // `position: relative` + `z-index: 1` lifts the Aside above the main content
+  // area so the FoldButton (positioned absolutely with negative right offset)
+  // is fully visible past Aside's right edge instead of being painted under
+  // the sibling main-content's background.
+  position: "relative",
+  zIndex: 1,
+  overflow: "visible",
+  willChange: "width",
+}));
 
 export const BrandRow = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -76,16 +83,22 @@ export const Nav = styled("nav", { shouldForwardProp: SHOULD_FORWARD })<Collapsi
   }),
 );
 
-// Active state mirrors src-old: subtle canvas-coloured pill with a hairline
-// border-ring (light) or surface-hover bg (dark). The label stays in its
-// normal text colour, just heavier weight — the background carries the
-// "active" signal without the row having to shout in primary tone.
+// Active items get the primary-tinted background AND a visible border. Inactive
+// items keep a transparent 1px border purely to reserve layout space so the box
+// doesn't shift when the active state toggles. `forceBorder` keeps the border
+// visible regardless (used for the settings entry in the footer).
 export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemProps>(({
   theme,
   collapsed,
   active,
+  forceBorder,
 }) => {
-  const isDark = theme.palette.mode === "dark";
+  // `surface.interface.active` is the canonical hover/active surface token
+  // and stays distinct from the navigation bg across every theme (light,
+  // dark AND oled — `surface.interface.base` collapses to pure black in
+  // oled which would leave the active state invisible against the sidebar).
+  const activeBg = theme.palette.surface.interface.active;
+  const showBorder = active || forceBorder;
   return {
     display: "flex",
     alignItems: "center",
@@ -96,28 +109,17 @@ export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemPr
     borderRadius: 8,
     textDecoration: "none",
     color: theme.palette.text.primary,
-    backgroundColor: active
-      ? isDark
-        ? theme.palette.surface.interface.active
-        : theme.palette.surface.interface.base
-      : "transparent",
+    backgroundColor: active ? activeBg : "transparent",
     fontSize: 14,
     fontWeight: active ? 600 : 500,
     fontFamily: "inherit",
     width: collapsed ? 38 : "100%",
-    boxShadow:
-      active && !isDark
-        ? `0 1px 0 rgba(17,17,22,0.04), 0 0 0 1px ${theme.palette.border.default}`
-        : "none",
+    border: `1px solid ${showBorder ? theme.palette.divider : "transparent"}`,
     position: "relative",
-    transition: "background 120ms, color 120ms",
+    transition: "background 120ms, color 120ms, border-color 120ms",
     cursor: "pointer",
     "&:hover": {
-      backgroundColor: active
-        ? isDark
-          ? theme.palette.surface.interface.active
-          : theme.palette.surface.interface.base
-        : `color-mix(in srgb, ${theme.palette.primary.main} 10%, ${theme.palette.surface.interface.navigation})`,
+      backgroundColor: activeBg,
     },
   };
 });

@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 
 import { Box, Checkbox } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 import { type RemoteRepository } from "@recrest/shared";
 
@@ -36,6 +37,7 @@ export function RepoRowCard({
   onToggle,
   progress,
 }: RepoRowCardProps): ReactNode {
+  const theme = useTheme();
   return (
     <RepoRow selected={selected} disabled={alreadyLocal}>
       <Checkbox
@@ -86,7 +88,7 @@ export function RepoRowCard({
         <StatusInline
           component="span"
           variant="caption"
-          style={{ color: "var(--mui-palette-success-main, #16a34a)" }}
+          style={{ color: theme.palette.success.main }}
         >
           <Check size={11} /> done
         </StatusInline>
@@ -95,7 +97,7 @@ export function RepoRowCard({
         <StatusInline
           component="span"
           variant="caption"
-          style={{ color: "var(--mui-palette-error-main, #dc2626)" }}
+          style={{ color: theme.palette.error.main }}
         >
           <X size={11} /> failed
         </StatusInline>

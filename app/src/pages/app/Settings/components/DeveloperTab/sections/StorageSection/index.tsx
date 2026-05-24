@@ -9,6 +9,7 @@ import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/Se
 import { clearProviderToken } from "@/store/actions/providers.actions";
 import { scanForRepos } from "@/store/actions/repos.actions";
 import { saveSettings } from "@/store/actions/settings.actions";
+import { setOnboardingOverride } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export function StorageSection() {
@@ -74,6 +75,10 @@ export function StorageSection() {
     if (!window.confirm("Re-trigger onboarding? Page will reload.")) return;
     try {
       localStorage.removeItem(StorageKey.ONBOARDING_DISMISSED);
+      // Force-flag survives the reload via sessionStorage and tells
+      // `useFirstRun` to bypass the no-scanPaths / no-providers gates so the
+      // wizard shows even on an already-set-up install.
+      sessionStorage.setItem(`${StorageKey.ONBOARDING_DISMISSED}-force`, "true");
     } catch {
       /* ignore */
     }
@@ -88,6 +93,11 @@ export function StorageSection() {
     }
     await dispatch(scanForRepos(scanPaths));
     toast.success("Rescan complete");
+  };
+
+  const openOnboarding = () => {
+    dispatch(setOnboardingOverride(true));
+    toast.success("Onboarding wizard opened");
   };
 
   return (
@@ -140,6 +150,19 @@ export function StorageSection() {
           onClick={retriggerOnboarding}
         >
           Re-trigger
+        </GeneralButton>
+      </SettingsRow>
+      <SettingsRow
+        label="Open onboarding wizard"
+        sub="Show the first-run wizard now — does not touch saved settings."
+      >
+        <GeneralButton
+          size="sm"
+          variant="outline"
+          data-testid={TEST_IDS.settings.developer.storage.openOnboarding}
+          onClick={openOnboarding}
+        >
+          Open
         </GeneralButton>
       </SettingsRow>
       <SettingsRow label="Rescan repositories">

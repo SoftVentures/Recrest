@@ -217,6 +217,8 @@
       "clear_tokens_done": "Alle Provider-Tokens gelöscht",
       "retrigger_onboarding": "Onboarding erneut zeigen",
       "retrigger_onboarding_done": "Onboarding zurückgesetzt — lade neu",
+      "open_onboarding": "Onboarding-Wizard öffnen",
+      "open_onboarding_sub": "Den First-Run-Wizard sofort anzeigen — bestehende Einstellungen bleiben unverändert.",
       "rescan_repos": "Alle Repos neu scannen",
       "rescan_done": "Rescan gestartet",
       "confirm_title": "Destruktive Aktion",

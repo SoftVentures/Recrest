@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
 
+import { useTheme } from "@mui/material/styles";
+
 import type { CheckRunSummary } from "@recrest/shared";
 
 import {
@@ -30,6 +32,7 @@ interface Segment {
 
 function CiHealthHero({ summaries }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   let passed = 0;
   let total = 0;
   let failing = 0;
@@ -43,10 +46,10 @@ function CiHealthHero({ summaries }: Props) {
   // src-old palette: green ≥95%, amber 80-95%, red <80%.
   const headlineColor =
     pct >= 0.95
-      ? "var(--mui-palette-success-main, #16a34a)"
+      ? theme.palette.success.main
       : pct >= 0.8
-        ? "var(--mui-palette-warning-main, #d97706)"
-        : "var(--mui-palette-error-main, #dc2626)";
+        ? theme.palette.warning.main
+        : theme.palette.error.main;
 
   // Donut geometry: outer SVG viewbox is 66×66 so radius 27 gives a comfortable
   // 3px stroke gap inside the box without clipping the segment caps.
@@ -54,9 +57,9 @@ function CiHealthHero({ summaries }: Props) {
   const circumference = 2 * Math.PI * radius;
 
   const segments: Segment[] = [
-    { key: "passed", value: passed, color: "var(--mui-palette-success-main, #16a34a)" },
-    { key: "failed", value: failing, color: "var(--mui-palette-error-main, #dc2626)" },
-    { key: "other", value: other, color: "var(--mui-palette-warning-main, #d97706)" },
+    { key: "passed", value: passed, color: theme.palette.success.main },
+    { key: "failed", value: failing, color: theme.palette.error.main },
+    { key: "other", value: other, color: theme.palette.warning.main },
   ];
   const segTotal = segments.reduce((a, s) => a + s.value, 0);
 
@@ -116,16 +119,16 @@ function CiHealthHero({ summaries }: Props) {
         {total > 0 && (
           <Legend>
             <LegendItem component="span" variant="caption">
-              <LegendDot color="var(--mui-palette-success-main, #16a34a)" />
+              <LegendDot color={theme.palette.success.main} />
               {t("activity.hero.ci_legend_passed", { count: passed })}
             </LegendItem>
             <LegendItem component="span" variant="caption">
-              <LegendDot color="var(--mui-palette-error-main, #dc2626)" />
+              <LegendDot color={theme.palette.error.main} />
               {t("activity.hero.ci_legend_failed", { count: failing })}
             </LegendItem>
             {other > 0 && (
               <LegendItem component="span" variant="caption">
-                <LegendDot color="var(--mui-palette-warning-main, #d97706)" />
+                <LegendDot color={theme.palette.warning.main} />
                 {t("activity.hero.ci_legend_other", { count: other })}
               </LegendItem>
             )}

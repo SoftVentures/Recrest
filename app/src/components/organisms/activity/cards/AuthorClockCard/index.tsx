@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { styled, useTheme } from "@mui/material/styles";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -39,6 +39,7 @@ const Foot = styled(Box)(({ theme }) => ({
 /** 24-segment radial chart — one wedge per hour, radius scaled by commit count. */
 function AuthorClockCard({ hours, loading }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const peak = Math.max(1, ...hours);
   const cx = 75;
   const cy = 75;
@@ -82,15 +83,10 @@ function AuthorClockCard({ hours, loading }: Props) {
             cx={cx}
             cy={cy}
             r={rMax}
-            fill="var(--mui-palette-surface-interface-backElevation, #f2f2f4)"
+            fill={theme.palette.surface.interface.backElevation}
             opacity="0.55"
           />
-          <circle
-            cx={cx}
-            cy={cy}
-            r={rMin - 2}
-            fill="var(--mui-palette-surface-interface-base, white)"
-          />
+          <circle cx={cx} cy={cy} r={rMin - 2} fill={theme.palette.surface.interface.base} />
           {hours.map((v, h) => {
             const k = scale(v);
             const r = v === 0 ? rMin + 0.5 : rMin + (rMax - rMin) * k;
@@ -99,7 +95,7 @@ function AuthorClockCard({ hours, loading }: Props) {
               <path
                 key={h}
                 d={wedgePath(h, r)}
-                fill="var(--mui-palette-primary-main, #f97316)"
+                fill={theme.palette.primary.main}
                 opacity={opacity}
               />
             );
@@ -114,7 +110,7 @@ function AuthorClockCard({ hours, loading }: Props) {
                 x={x}
                 y={y}
                 fontSize="9"
-                fill="var(--mui-palette-text-information, #8a8a94)"
+                fill={theme.palette.text.information}
                 textAnchor="middle"
                 dominantBaseline="central"
               >

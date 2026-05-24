@@ -35,12 +35,15 @@ export const COMPONENT_TEST_IDS = {
       itemB: "item-b",
       itemC: "item-c",
     },
+    kbd: { root: "kbd-root" },
+    aheadBehind: { root: "ahead-behind-root" },
   },
   molecules: {
     drawer: { body: "drawer-body" },
     toaster: { wrap: "toaster-wrap" },
     modal: { root: "modal", body: "modal-body" },
     providersPanel: { wrap: "panel-wrap" },
+    kpiCard: { root: "kpi-card-root" },
   },
   organisms: {
     repoCard: { wrap: "repo-card-wrap" },
