@@ -3,177 +3,40 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
 
 import type { CheckRunSummary } from "@recrest/shared";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
-import type { PassRateDay } from "@/lib/activityAggregates";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import {
+  Axis,
+  AxisLine,
+  Breakdown,
+  Chart,
+  Fill,
+  Headline,
+  Plot,
+  RepoBar,
+  RepoBarFill,
+  RepoName,
+  RepoPct,
+  RepoRow,
+  RepoRuns,
+  Series,
+  Svg,
+} from "@/components/organisms/activity/cards/CiPassRateCard/CiPassRateCard.styles";
+import {
+  type CiRepoBreakdown,
+  type PassRateDay,
+  computeCiRepoBreakdown,
+} from "@/lib/activityAggregates";
 import { monotoneCubic } from "@/lib/charts/smoothLine";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   rows: PassRateDay[];
   summaries?: readonly CheckRunSummary[];
   loading?: boolean;
 }
-
-interface RepoBreakdown {
-  repoId: string;
-  repoName: string;
-  passed: number;
-  total: number;
-  rate: number;
-}
-
-function buildRepoBreakdown(summaries: readonly CheckRunSummary[]): RepoBreakdown[] {
-  const byRepo = new Map<string, RepoBreakdown>();
-  for (const s of summaries) {
-    const existing = byRepo.get(s.repoId);
-    if (existing) {
-      existing.passed += s.passed;
-      existing.total += s.total;
-    } else {
-      byRepo.set(s.repoId, {
-        repoId: s.repoId,
-        repoName: s.repoName,
-        passed: s.passed,
-        total: s.total,
-        rate: 0,
-      });
-    }
-  }
-  const out: RepoBreakdown[] = [];
-  for (const r of byRepo.values()) {
-    r.rate = r.total === 0 ? 1 : r.passed / r.total;
-    out.push(r);
-  }
-  out.sort((a, b) => b.total - a.total);
-  return out;
-}
-
-const Chart = styled(Box)({
-  display: "grid",
-  gridTemplateColumns: "28px 1fr",
-  gap: 6,
-  alignItems: "stretch",
-});
-
-const Axis = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  fontSize: 10,
-  color: theme.palette.text.information,
-  textAlign: "right",
-  padding: "8px 0",
-}));
-
-const Plot = styled(Box)({
-  width: "100%",
-});
-
-const Svg = styled("svg")({
-  width: "100%",
-  height: 140,
-});
-
-const AxisLine = styled("line")(({ theme }) => ({
-  stroke: theme.palette.divider,
-  strokeWidth: 1,
-}));
-
-const Series = styled("path")({
-  fill: "none",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-});
-
-const Fill = styled("path")({
-  fillOpacity: 0.18,
-});
-
-const Headline = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  "& > strong": {
-    fontSize: 22,
-    fontWeight: 700,
-    color: theme.palette.success.main,
-    letterSpacing: "-0.4px",
-    fontVariantNumeric: "tabular-nums",
-    lineHeight: 1,
-  },
-  "& > span": {
-    fontSize: 10,
-    color: theme.palette.text.information,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    fontWeight: 600,
-    marginTop: 2,
-  },
-}));
-
-const Breakdown = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  gap: 5,
-  marginTop: 6,
-});
-
-const RepoRow = styled(Box)(({ theme }) => ({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(60px, 100px) 32px 36px",
-  alignItems: "center",
-  gap: 8,
-  fontSize: 11,
-  color: theme.palette.text.information,
-}));
-
-const RepoName = styled("span")(({ theme }) => ({
-  color: theme.palette.text.primary,
-  fontWeight: 500,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-}));
-
-const RepoBar = styled(Box)(({ theme }) => ({
-  height: 5,
-  borderRadius: 8,
-  backgroundColor: theme.palette.surface.interface.backElevation,
-  overflow: "hidden",
-}));
-
-const RepoBarFill = styled(Box, {
-  shouldForwardProp: (p) => p !== "width" && p !== "tone",
-})<{
-  width: number;
-  tone: "ok" | "warn" | "fail";
-}>(({ theme, width, tone }) => ({
-  width: `${width}%`,
-  height: "100%",
-  backgroundColor:
-    tone === "ok"
-      ? theme.palette.success.main
-      : tone === "warn"
-        ? theme.palette.warning.main
-        : theme.palette.error.main,
-}));
-
-const RepoPct = styled("span")(({ theme }) => ({
-  textAlign: "right",
-  color: theme.palette.text.primary,
-  fontVariantNumeric: "tabular-nums",
-  fontWeight: 600,
-}));
-
-const RepoRuns = styled("span")(({ theme }) => ({
-  textAlign: "right",
-  color: theme.palette.text.information,
-  fontVariantNumeric: "tabular-nums",
-}));
 
 function CiPassRateCard({ rows, summaries, loading }: Props) {
   const { t } = useTranslation();
@@ -200,8 +63,8 @@ function CiPassRateCard({ rows, summaries, loading }: Props) {
   const totalRuns = rows.reduce((a, r) => a + r.total, 0);
   const avgRate = totalRuns === 0 ? null : totalPassed / totalRuns;
 
-  const breakdown = useMemo<RepoBreakdown[]>(
-    () => (summaries ? buildRepoBreakdown(summaries) : []),
+  const breakdown = useMemo<CiRepoBreakdown[]>(
+    () => (summaries ? computeCiRepoBreakdown(summaries) : []),
     [summaries],
   );
   const repoCount = breakdown.length;
@@ -215,32 +78,32 @@ function CiPassRateCard({ rows, summaries, loading }: Props) {
   const subBits: string[] = [];
   if (repoCount > 0) subBits.push(`across ${repoCount} ${repoCount === 1 ? "repo" : "repos"}`);
   if (totalRuns > 0) subBits.push(`${totalRuns} runs`);
-  subBits.push(t("activity.cards.ci_trend_sub_window", { defaultValue: "last 14 days" }));
+  subBits.push(t("activity.cards.ci_trend_sub_window"));
   const sub = subBits.join(" · ");
 
   const greenColor = "var(--mui-palette-success-main, #16a34a)";
 
   return (
     <GeneralCard
-      title={t("activity.cards.ci_trend_title", { defaultValue: "CI pass rate · 14 days" })}
+      title={t("activity.cards.ci_trend_title")}
       sub={sub}
       loading={loading}
       skeleton="line"
-      testId="activity-ci-card"
+      testId={TEST_IDS.activity.cards.ciPassRate}
       right={
         headlineText && (
           <Headline>
-            <strong>{headlineText}</strong>
-            <span>avg pass</span>
+            <Box component="strong">{headlineText}</Box>
+            <Box component="span">avg pass</Box>
           </Headline>
         )
       }
     >
       <Chart>
         <Axis aria-hidden>
-          <span>100%</span>
-          <span>50%</span>
-          <span>0%</span>
+          <Box component="span">100%</Box>
+          <Box component="span">50%</Box>
+          <Box component="span">0%</Box>
         </Axis>
         <Plot>
           <Svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
@@ -274,12 +137,18 @@ function CiPassRateCard({ rows, summaries, loading }: Props) {
             const tone: "ok" | "warn" | "fail" = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "fail";
             return (
               <RepoRow key={r.repoId}>
-                <RepoName>{r.repoName}</RepoName>
+                <RepoName component="span" variant="caption">
+                  {r.repoName}
+                </RepoName>
                 <RepoBar>
                   <RepoBarFill width={pct} tone={tone} />
                 </RepoBar>
-                <RepoPct>{pct}%</RepoPct>
-                <RepoRuns>{r.total}</RepoRuns>
+                <RepoPct component="span" variant="caption">
+                  {pct}%
+                </RepoPct>
+                <RepoRuns component="span" variant="caption">
+                  {r.total}
+                </RepoRuns>
               </RepoRow>
             );
           })}

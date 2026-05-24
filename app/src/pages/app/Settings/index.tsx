@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import { useFullbleedScroll } from "@/hooks/useFullbleedScroll";
-import { usePlatform } from "@/hooks/usePlatform";
+import { platformLabel, usePlatform } from "@/hooks/usePlatform";
 import {
   PAGE_DUR_SM,
   PAGE_EASE,
@@ -29,6 +29,7 @@ import {
   pgSlideL,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { AboutSection } from "@/pages/app/Settings/components/AboutTab";
 import { AccountsSection } from "@/pages/app/Settings/components/AccountsTab";
 import {
@@ -84,9 +85,9 @@ const Root = styled(Box)({
   minHeight: 0,
   height: "100%",
   overflow: "hidden",
-});
+}) as typeof Box;
 
-const Nav = styled("aside")(({ theme }) => ({
+const Nav = styled(Box)(({ theme }) => ({
   flex: "0 0 220px",
   alignSelf: "stretch",
   display: "flex",
@@ -101,9 +102,9 @@ const Nav = styled("aside")(({ theme }) => ({
   // `.p-settings .a-settings-nav`.
   animation: `${pgSlideL} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
-}));
+})) as typeof Box;
 
-const NavFooter = styled("div")(({ theme }) => ({
+const NavFooter = styled(Box)(({ theme }) => ({
   // Auto top-margin pushes the brand+version block to the bottom of the
   // tab nav regardless of how many tabs are visible (dev mode adds one).
   marginTop: "auto",
@@ -115,30 +116,31 @@ const NavFooter = styled("div")(({ theme }) => ({
   gap: 6,
   fontSize: 11,
   color: theme.palette.text.information,
-}));
+})) as typeof Box;
 
-const FooterName = styled("span")(({ theme }) => ({
+const FooterName = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   color: theme.palette.text.secondary,
-}));
+})) as typeof Typography;
 
-const FooterDot = styled("span")(({ theme }) => ({
+const FooterDot = styled(Typography)(({ theme }) => ({
   width: 3,
   height: 3,
   borderRadius: "50%",
   backgroundColor: theme.palette.text.informationLight,
   flexShrink: 0,
-}));
+})) as typeof Typography;
 
-const FooterVersion = styled("span")(({ theme }) => ({
+const FooterVersion = styled(Typography)(({ theme }) => ({
   fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
   fontSize: 10.5,
   color: theme.palette.text.information,
-}));
+})) as typeof Typography;
 
 interface TabBtnProps {
   active?: boolean;
 }
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const TabBtn = styled("button", {
   shouldForwardProp: (p) => p !== "active",
 })<TabBtnProps>(({ theme, active }) => ({
@@ -170,7 +172,7 @@ const Body = styled(Box)({
   minWidth: 0,
   minHeight: 0,
   overflowY: "auto",
-});
+}) as typeof Box;
 
 const PageInner = styled(Box)({
   // Right padding lives on the content (not the scroll container) so the
@@ -190,7 +192,7 @@ const PageInner = styled(Box)({
   "& > *:nth-of-type(5)": { animationDelay: "280ms" },
   "& > *:nth-of-type(n + 6)": { animationDelay: "320ms" },
   ...prefersReducedMotionGuard,
-});
+}) as typeof Box;
 
 const PageHead = styled(Box)({
   marginBottom: 20,
@@ -199,21 +201,21 @@ const PageHead = styled(Box)({
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   animationDelay: "40ms",
   ...prefersReducedMotionGuard,
-});
+}) as typeof Box;
 
-const PageH2 = styled("h2")(({ theme }) => ({
+const PageH2 = styled(Typography)(({ theme }) => ({
   fontSize: 18,
   fontWeight: 700,
   color: theme.palette.text.primary,
   margin: "0 0 4px",
   letterSpacing: "-0.01em",
-}));
+})) as typeof Typography;
 
 const PageIntro = styled(Typography)(({ theme }) => ({
   fontSize: 12.5,
   color: theme.palette.text.information,
   margin: 0,
-}));
+})) as typeof Typography;
 
 const KNOWN_TAB_IDS = new Set<TabId>([
   "general",
@@ -224,17 +226,6 @@ const KNOWN_TAB_IDS = new Set<TabId>([
   "about",
   "developer",
 ]);
-
-function platformLabel(p: ReturnType<typeof usePlatform>): string {
-  switch (p) {
-    case "mac":
-      return "macOS";
-    case "windows":
-      return "Windows";
-    case "linux":
-      return "Linux";
-  }
-}
 
 function SettingsPage() {
   const { t } = useTranslation();
@@ -271,8 +262,8 @@ function SettingsPage() {
   );
 
   return (
-    <Root data-testid="settings-view">
-      <Nav role="tablist" data-testid="settings-tabs">
+    <Root data-testid={TEST_IDS.settings.view}>
+      <Nav component="aside" role="tablist" data-testid={TEST_IDS.settings.tabs}>
         {TABS.map((tb) => {
           const Icon = tb.icon;
           return (
@@ -282,26 +273,30 @@ function SettingsPage() {
               role="tab"
               active={tab === tb.id}
               aria-selected={tab === tb.id}
-              data-testid={`settings-tab-${tb.id}`}
+              data-testid={TEST_IDS.settings.tab(tb.id)}
               onClick={() => setTab(tb.id)}
             >
               <Icon size={13} />
-              <span>{t(tb.labelKey)}</span>
+              <Box component="span">{t(tb.labelKey)}</Box>
             </TabBtn>
           );
         })}
-        <NavFooter data-testid="settings-nav-footer">
-          <FooterName>Recrest</FooterName>
-          <FooterDot aria-hidden />
-          <FooterVersion>v{APP_VERSION}</FooterVersion>
+        <NavFooter data-testid={TEST_IDS.settings.navFooter}>
+          <FooterName component="span" variant="caption">
+            Recrest
+          </FooterName>
+          <FooterDot component="span" variant="caption" aria-hidden />
+          <FooterVersion component="span" variant="caption">
+            v{APP_VERSION}
+          </FooterVersion>
         </NavFooter>
       </Nav>
 
-      <Body data-testid={`settings-panel-${tab}`}>
+      <Body data-testid={TEST_IDS.settings.panel(tab)}>
         {tab === "general" && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.general.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.general.title")}</PageH2>
               <PageIntro>{t("settings.general.intro")}</PageIntro>
             </PageHead>
             <AppearanceSection />
@@ -315,7 +310,7 @@ function SettingsPage() {
         {tab === "accounts" && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.accounts.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.accounts.title")}</PageH2>
               <PageIntro>{t("settings.accounts.intro")}</PageIntro>
             </PageHead>
             <AccountsSection />
@@ -324,7 +319,7 @@ function SettingsPage() {
         {tab === "integrations" && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.integrations.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.integrations.title")}</PageH2>
               <PageIntro>{t("settings.integrations.intro")}</PageIntro>
             </PageHead>
             <IntegrationsSection />
@@ -333,7 +328,7 @@ function SettingsPage() {
         {tab === "shortcuts" && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.shortcuts.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.shortcuts.title")}</PageH2>
               <PageIntro>
                 {t("settings.shortcuts.intro")} · Detected: {platformLabel(platform)}
               </PageIntro>
@@ -344,7 +339,7 @@ function SettingsPage() {
         {tab === "storage" && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.storage.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.storage.title")}</PageH2>
               <PageIntro>{t("settings.storage.intro")}</PageIntro>
             </PageHead>
             <StorageSection />
@@ -353,7 +348,7 @@ function SettingsPage() {
         {tab === "about" && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.about.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.about.title")}</PageH2>
               <PageIntro>{t("settings.about.intro")}</PageIntro>
             </PageHead>
             <AboutSection />
@@ -362,7 +357,7 @@ function SettingsPage() {
         {tab === "developer" && import.meta.env.DEV && (
           <PageInner>
             <PageHead>
-              <PageH2>{t("settings.developer.title")}</PageH2>
+              <PageH2 component="h2">{t("settings.developer.title")}</PageH2>
               <PageIntro>{t("settings.developer.intro")}</PageIntro>
             </PageHead>
             <Suspense fallback={null}>

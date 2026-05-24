@@ -1,6 +1,6 @@
 import type { EventCallback, UnlistenFn } from "@tauri-apps/api/event";
 
-import { type EventChannelName } from "@/lib/constants/events";
+import { type EventChannelName } from "@/lib/constants/events.constants";
 import { listen, safeListen } from "@/lib/tauri";
 
 /**

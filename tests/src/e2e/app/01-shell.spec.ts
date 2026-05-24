@@ -2,16 +2,17 @@ import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
 import { SEED_PR_COUNTS, SEED_REPOS } from "../../helpers/seed/index.js";
+import { TEST_IDS, navCountTestId } from "../../helpers/test-ids";
 
 test.describe("app / shell", () => {
   test("AppShell renders Titlebar + Sidebar + Main without ErrorBoundary fallback", async ({
     page,
   }) => {
     await page.goto("/");
-    await expect(page.getByTestId("app")).toBeVisible();
-    await expect(page.getByTestId("sidebar")).toBeVisible();
-    await expect(page.getByTestId("app-main")).toBeVisible();
-    await expect(page.getByTestId("error-boundary-fallback")).toHaveCount(0);
+    await expect(page.getByTestId(TEST_IDS.app)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.sidebar.root)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.appMain)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.errorBoundaryFallback)).toHaveCount(0);
   });
 
   test("redirects / to /dashboard", async ({ page }) => {
@@ -28,14 +29,14 @@ test.describe("app / shell", () => {
     );
     await page.goto(AppRoute.REPOS);
 
-    const reposCount = page.getByTestId("nav-repos-count");
+    const reposCount = page.getByTestId(navCountTestId("/repos"));
     await expect(reposCount).toHaveText(String(SEED_REPOS.length));
 
     const dirty = SEED_REPOS.filter((r) => r.status.dirty).length;
-    const changesCount = page.getByTestId("nav-changes-count");
+    const changesCount = page.getByTestId(navCountTestId("/changes"));
     await expect(changesCount).toHaveText(String(dirty));
 
-    const mrCount = page.getByTestId("nav-merge-requests-count");
+    const mrCount = page.getByTestId(navCountTestId("/merge-requests"));
     if (await mrCount.count()) {
       // Sidebar only counts PRs from repos whose provider is connected —
       // gitlab + bitbucket are disconnected in the default seed, so the

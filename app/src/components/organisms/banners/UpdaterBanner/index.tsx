@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { setUpdaterBanner } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
@@ -28,17 +29,17 @@ function UpdaterBanner() {
   if (!banner) return null;
 
   return (
-    <Bar data-testid="updater-banner">
+    <Bar data-testid={TEST_IDS.updaterBanner.root}>
       <Message variant="body2">
-        A new version is available: <strong>{banner.version}</strong>
+        A new version is available: <Box component="strong">{banner.version}</Box>
         {banner.currentVersion ? ` (current ${banner.currentVersion})` : ""}
       </Message>
       {banner.canAutoInstall ? (
-        <GeneralButton size="sm" variant="default" data-testid="updater-banner-install">
+        <GeneralButton size="sm" variant="default" data-testid={TEST_IDS.updaterBanner.install}>
           Install &amp; restart
         </GeneralButton>
       ) : (
-        <GeneralButton size="sm" variant="outline" data-testid="updater-banner-download">
+        <GeneralButton size="sm" variant="outline" data-testid={TEST_IDS.updaterBanner.download}>
           Download
         </GeneralButton>
       )}
@@ -46,7 +47,7 @@ function UpdaterBanner() {
         size="sm"
         variant="ghost"
         onClick={() => dispatch(setUpdaterBanner(null))}
-        data-testid="updater-banner-dismiss"
+        data-testid={TEST_IDS.updaterBanner.dismiss}
       >
         Dismiss
       </GeneralButton>

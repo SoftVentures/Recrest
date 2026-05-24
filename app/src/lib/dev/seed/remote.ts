@@ -1,11 +1,6 @@
 import type { Organization, ProviderId, RemoteRepository } from "@recrest/shared";
 
-const today = new Date();
-const daysAgoIso = (d: number): string => {
-  const dt = new Date(today);
-  dt.setDate(dt.getDate() - d);
-  return dt.toISOString();
-};
+import { daysAgo as daysAgoIso } from "@/lib/dev/seed/time";
 
 /** Demo orgs the dev-stub returns from `list_remote_organizations`. */
 export const SEED_ORGS: Partial<Record<ProviderId, Organization[]>> = {

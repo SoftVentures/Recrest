@@ -15,7 +15,12 @@ export type ThemeIdValue = "light" | "dark" | "oled" | "glassy";
  *  in `app/src/lib/constants/theme.constants.ts`. */
 export type PrimaryColorScheme = "default" | "blue" | "green" | "purple" | "pink" | "amber";
 
-export type AutoUpdateMode = "auto" | "manual" | "off";
+export const AutoUpdateMode = {
+  AUTO: "auto",
+  MANUAL: "manual",
+  OFF: "off",
+} as const;
+export type AutoUpdateMode = (typeof AutoUpdateMode)[keyof typeof AutoUpdateMode];
 
 export interface NotificationSettings {
   enabled: boolean;

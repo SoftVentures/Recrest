@@ -1,9 +1,10 @@
 import { type ComponentType, type ReactNode } from "react";
 
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import Mascot, { type MascotVariant } from "@/components/atoms/brand/Mascot";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 /**
  * Centered empty-state block used inside cards and full-page placeholders.
@@ -58,21 +59,21 @@ const TextBlock = styled(Box)({
   gap: 4,
 });
 
-const Title = styled("h3")(({ theme }) => ({
+const Title = styled(Typography)(({ theme }) => ({
   fontSize: 13,
   fontWeight: 600,
   color: theme.palette.text.primary,
   margin: 0,
   letterSpacing: "-0.01em",
-}));
+})) as typeof Typography;
 
-const Description = styled("p")(({ theme }) => ({
+const Description = styled(Typography)(({ theme }) => ({
   fontSize: 12.5,
   color: theme.palette.text.information,
   margin: 0,
   maxWidth: 360,
   lineHeight: 1.5,
-}));
+})) as typeof Typography;
 
 const ActionSlot = styled(Box)({
   marginTop: 4,
@@ -93,7 +94,7 @@ function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <Root className={className} data-testid="empty-state">
+    <Root className={className} data-testid={TEST_IDS.emptyState}>
       {mascot ? (
         <MascotInk>
           <Mascot variant={mascot} size={mascotSize} />
@@ -106,8 +107,14 @@ function EmptyState({
         )
       )}
       <TextBlock>
-        <Title>{title}</Title>
-        {description && <Description>{description}</Description>}
+        <Title variant="subtitle2" component="h3">
+          {title}
+        </Title>
+        {description && (
+          <Description variant="body2" component="p">
+            {description}
+          </Description>
+        )}
       </TextBlock>
       {action && <ActionSlot>{action}</ActionSlot>}
     </Root>

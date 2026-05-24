@@ -21,6 +21,10 @@
  * When the backend grows a new command the matching branch must land here
  * too — otherwise `dev:web` silently returns `null` and shows empty UI.
  */
+import { PrEventKind, PrState } from "@recrest/shared";
+
+import { Provider } from "@/lib/constants/providers.constants";
+import { StorageKey } from "@/lib/constants/storage.constants";
 import { type AppSeed, DEFAULT_SEED } from "@/lib/dev/seed";
 import { SEED_ORGS, SEED_REMOTE_LISTINGS } from "@/lib/dev/seed/remote";
 
@@ -109,10 +113,10 @@ function installStub(seed: Required_<AppSeed>): void {
             author: pr.author,
             url: pr.url,
             timestamp: pr.createdAt,
-            kind: "opened",
+            kind: PrEventKind.OPENED,
           });
         }
-        if ((pr.state === "merged" || pr.state === "closed") && pr.updatedAt) {
+        if ((pr.state === PrState.MERGED || pr.state === PrState.CLOSED) && pr.updatedAt) {
           const mergedMs = new Date(pr.updatedAt).getTime();
           if (mergedMs >= cutoffMs) {
             out.push({
@@ -123,7 +127,7 @@ function installStub(seed: Required_<AppSeed>): void {
               author: pr.author,
               url: pr.url,
               timestamp: pr.updatedAt,
-              kind: pr.state === "merged" ? "merged" : "closed",
+              kind: pr.state === PrState.MERGED ? PrEventKind.MERGED : PrEventKind.CLOSED,
             });
           }
         }
@@ -340,7 +344,7 @@ function installStub(seed: Required_<AppSeed>): void {
 
       // --- remote import
       case "list_remote_repositories": {
-        const providerId = (a.providerId as string | undefined) ?? "github";
+        const providerId = (a.providerId as string | undefined) ?? Provider.GITHUB;
         const orgSlug = (a.orgSlug as string | null | undefined) ?? null;
         const key = `${providerId}::${orgSlug ?? "__self__"}`;
         const repositories = SEED_REMOTE_LISTINGS[key] ?? [];
@@ -355,7 +359,7 @@ function installStub(seed: Required_<AppSeed>): void {
         return { repositories, localMatches };
       }
       case "list_remote_organizations": {
-        const providerId = (a.providerId as string | undefined) ?? "github";
+        const providerId = (a.providerId as string | undefined) ?? Provider.GITHUB;
         return (SEED_ORGS as Record<string, unknown>)[providerId] ?? [];
       }
       case "clone_remote_repository":
@@ -400,7 +404,7 @@ function installStub(seed: Required_<AppSeed>): void {
         // into localStorage. Mirror persistence behaviour with a localStorage
         // overlay so dev:web matches the prod desktop experience.
         try {
-          const raw = window.localStorage.getItem("recrest:dev-settings");
+          const raw = window.localStorage.getItem(StorageKey.DEV_SETTINGS);
           if (raw) {
             const stored = JSON.parse(raw) as Record<string, unknown>;
             SEED.settings = { ...(SEED.settings as object), ...stored };
@@ -423,7 +427,7 @@ function installStub(seed: Required_<AppSeed>): void {
         const current = (SEED.settings ?? {}) as Record<string, unknown>;
         SEED.settings = { ...current, ...patch };
         try {
-          window.localStorage.setItem("recrest:dev-settings", JSON.stringify(SEED.settings));
+          window.localStorage.setItem(StorageKey.DEV_SETTINGS, JSON.stringify(SEED.settings));
         } catch {
           /* quota or blocked storage — non-fatal */
         }

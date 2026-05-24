@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 test("scroll capture", async ({ page }, testInfo) => {
   if (testInfo.project.name !== "app-desktop") return;
@@ -11,7 +12,7 @@ test("scroll capture", async ({ page }, testInfo) => {
   // The Activity page's content scroller is the `app-main` element after the
   // MUI migration (no more SCSS `.a-content-scroll` class). Capture skips
   // cleanly if there's no scrollable content yet.
-  const scroller = page.getByTestId("app-main");
+  const scroller = page.getByTestId(TEST_IDS.appMain);
   if ((await scroller.count()) === 0) {
     test.info().annotations.push({ type: "skip", description: "no scroller present" });
     return;

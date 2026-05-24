@@ -14,10 +14,11 @@ import {
 } from "lucide-react";
 
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { SearchKind } from "@/lib/constants/searchKinds.constants";
 import { setSearchOpen, setSelectedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-export type SearchKind = "nav" | "repo" | "mr" | "branch";
+export { SearchKind };
 
 export interface SearchResult {
   id: string;
@@ -68,7 +69,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
           id: `nav:${item.path}`,
           label: item.label,
           hint: item.path,
-          kind: "nav",
+          kind: SearchKind.NAV,
           icon: item.icon,
           onSelect: () => {
             options.navigate(item.path);
@@ -84,7 +85,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
           id: `repo:${repo.id}`,
           label: repo.name,
           hint: repo.path,
-          kind: "repo",
+          kind: SearchKind.REPO,
           repo,
           onSelect: () => {
             dispatch(setSelectedRepo(repo.id));
@@ -105,7 +106,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
             id: `mr:${repoId}:${pr.id}`,
             label: pr.title,
             hint: `${repo.name} · #${pr.number} · ${pr.author}`,
-            kind: "mr",
+            kind: SearchKind.MR,
             icon: MrsIcon,
             repo,
             onSelect: () => {
@@ -125,7 +126,7 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
           id: `branch:${repo.id}`,
           label: branch,
           hint: `${repo.name} · current branch`,
-          kind: "branch",
+          kind: SearchKind.BRANCH,
           icon: BranchesIcon,
           repo,
           onSelect: () => {

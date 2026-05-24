@@ -8,6 +8,7 @@ import {
   POLLING_INTERVAL_MIN_MS,
 } from "@recrest/shared";
 
+import { StorageKey } from "@/lib/constants/storage.constants";
 import {
   DEFAULT_PRIMARY_COLOR,
   DEFAULT_THEME_ID,
@@ -84,8 +85,8 @@ function resolveBootTheme(): { themeId: ThemeId; followsSystem: boolean } {
   let stored: string | null = null;
   let follows: string | null = null;
   try {
-    stored = window.localStorage.getItem("recrest:theme");
-    follows = window.localStorage.getItem("recrest:theme-follows-system");
+    stored = window.localStorage.getItem(StorageKey.THEME);
+    follows = window.localStorage.getItem(StorageKey.THEME_FOLLOWS_SYSTEM);
   } catch {
     /* localStorage blocked — fall through to system */
   }

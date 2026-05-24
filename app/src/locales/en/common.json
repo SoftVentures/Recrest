@@ -41,7 +41,16 @@
     "add_scope": {
       "local": "Local",
       "global": "Global"
-    }
+    },
+    "adding": "Adding…",
+    "clone": "Clone",
+    "cloning": "Cloning…",
+    "importing": "Importing…",
+    "search_group_branches": "Branches",
+    "search_group_mrs": "Merge requests",
+    "search_group_nav": "Go to",
+    "search_group_repos": "Repositories",
+    "clear_search": "Clear search"
   },
   "toast": {
     "reload": {
@@ -55,13 +64,33 @@
     "error": "Something went wrong"
   },
   "view": {
-    "dashboard": { "title": "Dashboard", "meta": "{{count}} repos" },
-    "repos": { "title": "Repositories", "meta": "{{count}} repos" },
-    "mrs": { "title": "Merge Requests", "meta": "{{count}} open" },
-    "changes": { "title": "Changes", "meta": "{{count}} with uncommitted changes" },
-    "branches": { "title": "Branches", "meta": "across {{count}} repos" },
-    "activity": { "title": "Activity", "meta": "last 14 days" },
-    "settings": { "title": "Settings" }
+    "dashboard": {
+      "title": "Dashboard",
+      "meta": "{{count}} repos"
+    },
+    "repos": {
+      "title": "Repositories",
+      "meta": "{{count}} repos"
+    },
+    "mrs": {
+      "title": "Merge Requests",
+      "meta": "{{count}} open"
+    },
+    "changes": {
+      "title": "Changes",
+      "meta": "{{count}} with uncommitted changes"
+    },
+    "branches": {
+      "title": "Branches",
+      "meta": "across {{count}} repos"
+    },
+    "activity": {
+      "title": "Activity",
+      "meta": "last 14 days"
+    },
+    "settings": {
+      "title": "Settings"
+    }
   },
   "repos": {
     "col": {
@@ -115,7 +144,10 @@
       "title": "Activity · last 14 days",
       "meta": "{{total}} commits across {{repos}} repos"
     },
-    "attention": { "title": "Needs your attention", "empty": "Everything is clean and in sync." },
+    "attention": {
+      "title": "Needs your attention",
+      "empty": "Everything is clean and in sync."
+    },
     "empty": {
       "title": "No repositories yet",
       "hint": "Add a folder to start tracking. Recrest scans for git repos and surfaces dirty trees, ahead/behind status and open MRs.",
@@ -126,8 +158,14 @@
       "all": "View all →",
       "empty": "No open merge requests."
     },
-    "commits": { "title": "Recent commits", "all": "All activity →" },
-    "langs": { "title": "Languages" },
+    "commits": {
+      "title": "Recent commits",
+      "all": "All activity →",
+      "empty": "—"
+    },
+    "langs": {
+      "title": "Languages"
+    },
     "quick": {
       "title": "Quick actions",
       "fetch_all": "Fetch all",
@@ -152,10 +190,22 @@
     "close": "Close"
   },
   "mrs": {
-    "filter": { "open": "Open", "draft": "Draft", "merged": "Merged", "closed": "Closed" },
+    "filter": {
+      "open": "Open",
+      "draft": "Draft",
+      "merged": "Merged",
+      "closed": "Closed"
+    },
     "filters": "Filters",
-    "actions": { "merge": "Merge", "checkout": "Checkout" },
-    "strip": { "branch": "Branch", "changes": "Changes", "ci": "CI" },
+    "actions": {
+      "merge": "Merge",
+      "checkout": "Checkout"
+    },
+    "strip": {
+      "branch": "Branch",
+      "changes": "Changes",
+      "ci": "CI"
+    },
     "drawer": {
       "meta": "Metadata",
       "opened_on": "Opened on {{date}}",
@@ -169,7 +219,8 @@
       "files": "Files",
       "timeline": "Timeline",
       "open_on_host": "Open on host"
-    }
+    },
+    "filter_placeholder": "Filter merge requests…"
   },
   "branches": {
     "filter": {
@@ -179,7 +230,11 @@
       "behind": "Behind",
       "clean": "Clean",
       "local": "Local",
-      "remote": "Remote only"
+      "remote": "Remote only",
+      "button": "Filter",
+      "location_label": "Location",
+      "reset": "Reset filters",
+      "tracking_label": "Tracking"
     },
     "branches": "branches",
     "branches_count_one": "{{count}} branch",
@@ -214,8 +269,14 @@
     }
   },
   "activity": {
-    "chart": { "title": "Commits · last 14 days", "sub": "{{total}} commits" },
-    "filter": { "all_repos": "All repositories", "all_authors": "All authors" },
+    "chart": {
+      "title": "Commits · last 14 days",
+      "sub": "{{total}} commits"
+    },
+    "filter": {
+      "all_repos": "All repositories",
+      "all_authors": "All authors"
+    },
     "commits": "commits",
     "empty": "No commits match your filter.",
     "kpi": {
@@ -287,7 +348,8 @@
       "busiest_label": "Busiest day",
       "peak_label": "Peak hours",
       "age_days_one": "{{count}} day old",
-      "age_days_other": "{{count}} days old"
+      "age_days_other": "{{count}} days old",
+      "ci_trend_sub_window": "last 14 days"
     },
     "timeline": {
       "title": "History",
@@ -345,11 +407,17 @@
     },
     "accounts": {
       "title": "Accounts",
-      "intro": "Remotes you've signed in to."
+      "intro": "Remotes you've signed in to.",
+      "providers": "Providers",
+      "providers_sub": "Connect a Personal Access Token to list merge requests."
     },
     "integrations": {
       "title": "Integrations",
-      "intro": "Where Recrest looks for git repositories on your machine."
+      "intro": "Where Recrest looks for git repositories on your machine.",
+      "add": "Add scan path",
+      "add_sub": "Recrest scans this folder and every sub-folder for git repositories.",
+      "scan": "Scan sources",
+      "scan_sub": "Folders Recrest scans recursively for git repositories."
     },
     "shortcuts": {
       "title": "Shortcuts",
@@ -361,20 +429,134 @@
       "toggle_detail": "Toggle detail pane",
       "next_prev_repo": "Next / previous repo",
       "open_editor": "Open in editor",
-      "open_terminal": "Open terminal"
+      "open_terminal": "Open terminal",
+      "editor": "Editor & terminal",
+      "git": "Git operations",
+      "open_settings": "Open settings"
     },
     "storage": {
       "title": "Storage",
-      "intro": "Where Recrest keeps caches, indexes, and clone targets."
+      "intro": "Where Recrest keeps caches, indexes, and clone targets.",
+      "crash_reporting": "Crash reporting",
+      "crash_reporting_info": "Crash reports are sent over HTTPS to our error tracker. No personal data is included.",
+      "crash_reporting_sub": "Send anonymised crash reports to help us fix bugs.",
+      "diagnostics": "Diagnostics",
+      "git_info": "Detected system git used by Recrest for shell-out operations."
     },
     "about": {
       "title": "About Recrest",
       "intro": "Version information, licenses, and credits.",
-      "version": "Version"
+      "version": "Version",
+      "app_version": "Application",
+      "arch": "Architecture",
+      "build_mode": "Build",
+      "build_time": "Build time",
+      "commit": "Commit",
+      "git": "System git",
+      "license": "License",
+      "link_github": "Source code",
+      "link_issues": "Report a bug",
+      "link_licenses": "License",
+      "links_title": "Links",
+      "os": "Operating system",
+      "repository": "Repository",
+      "tauri_version": "Tauri runtime"
     },
     "developer": {
       "title": "Developer",
       "intro": "Debug-only tools. These settings are hidden in production builds."
+    },
+    "accessibility": {
+      "high_contrast": "High contrast",
+      "high_contrast_sub": "Reinforce borders and dim text for better legibility.",
+      "reduced_motion": "Reduce motion",
+      "reduced_motion_sub": "Disable non-essential animations and transitions.",
+      "title": "Accessibility",
+      "underline_links": "Underline links",
+      "underline_links_sub": "Always underline links instead of only on hover."
+    },
+    "desktop": {
+      "auto_start": "Start on system login",
+      "auto_start_desc": "Launch Recrest automatically when you sign in to your OS.",
+      "close_to_tray": "Close to tray",
+      "close_to_tray_desc": "Closing the window keeps Recrest running in the tray. Quit from the tray menu.",
+      "start_minimized": "Start minimized",
+      "start_minimized_desc": "Open silently to the tray instead of foregrounding the window."
+    },
+    "fields": {
+      "accent": "Accent",
+      "accent_sub": "Pick the highlight colour used across the app.",
+      "default_ide": "Default IDE",
+      "default_shell": "Default shell",
+      "default_terminal": "Default terminal",
+      "font": "Font",
+      "font_size": "Font size",
+      "font_size_sub": "Scale text everywhere from compact to spacious.",
+      "font_sub": "Typeface used across the interface. OpenDyslexic is a dyslexia-friendly font.",
+      "language": "Language",
+      "language_sub": "Interface language.",
+      "polling_interval": "Polling interval (minutes)",
+      "polling_interval_hint": "How often Recrest refreshes git state in the background.",
+      "theme": "Theme",
+      "theme_sub": "Light, dark, or follow the OS."
+    },
+    "ide": {
+      "auto_system_default": "System default ({{ide}})",
+      "detection_hint": "We didn't find a known IDE on $PATH. Install one or pick manually below.",
+      "no_ide_detected": "No IDE detected",
+      "not_installed_tag": "not installed"
+    },
+    "notifications": {
+      "ci_failed": "CI failed",
+      "enabled": "Desktop notifications",
+      "enabled_desc": "Surface new MRs and CI failures as system notifications.",
+      "merge_ready": "Ready to merge",
+      "new_pr": "New merge request"
+    },
+    "providers": {
+      "base_url_hint": "Override only if you self-host. Leave empty to revert to the default endpoint.",
+      "base_url_label": "API base URL",
+      "bitbucket_scope_note": "Bitbucket requires selecting these manually in the app-password form.",
+      "bitbucket_username_hint": "Bitbucket app-passwords require the username separately.",
+      "bitbucket_username_label": "Bitbucket username",
+      "bitbucket_username_placeholder": "your-bitbucket-username",
+      "connect_browser": "Connect via browser",
+      "connect_with": "Connect with {{name}}",
+      "disconnect": "Disconnect",
+      "edit_base_url": "Change API base URL",
+      "paste_here": "Paste the token you just created — we store it encrypted in your OS keychain.",
+      "required_scopes": "Required scopes",
+      "save": "Save",
+      "self_hosted": "Self-hosted",
+      "status_connected": "Connected",
+      "status_disconnected": "Not connected",
+      "token_placeholder": "Paste your personal access token"
+    },
+    "sections": {
+      "desktop": "Desktop",
+      "notifications": "Notifications",
+      "system": "System",
+      "updates": "Updates"
+    },
+    "shell": {
+      "auto_system_default": "System default ({{shell}})",
+      "detection_done": "Shell launched inside the terminal above.",
+      "detection_hint": "No shells were detected on $PATH. Install one or pick manually below.",
+      "no_shell_detected": "No shell detected"
+    },
+    "terminal": {
+      "auto_system_default": "System default ({{terminal}})",
+      "detection_done": "Opens this terminal when you trigger “Open terminal”.",
+      "detection_hint": "No installed terminal emulators were detected. Install one to enable this dropdown.",
+      "no_terminal_detected": "No terminal detected"
+    },
+    "updates": {
+      "check_now_label": "Check for updates",
+      "check_now": "Check now",
+      "checking": "Checking…",
+      "current_version_label": "Current version",
+      "mode": "Update mode",
+      "mode_hint": "Automatic downloads + installs silently. Manual prompts a banner. Off disables checks."
     }
   },
   "notifications": {
@@ -406,8 +588,14 @@
     },
     "generic": {
       "title": "Recrest",
-      "clone_done": { "title": "Clone complete", "body": "{{repo}}" },
-      "update_available": { "title": "Update available", "body": "v{{version}}" },
+      "clone_done": {
+        "title": "Clone complete",
+        "body": "{{repo}}"
+      },
+      "update_available": {
+        "title": "Update available",
+        "body": "v{{version}}"
+      },
       "test_body": "Test notification from Recrest"
     },
     "burst": {
@@ -417,5 +605,34 @@
     },
     "test": "Test",
     "test_sent": "Test notification sent"
+  },
+  "import": {
+    "dest_placeholder": "Destination folder (/Users/you/Code)",
+    "field": {
+      "dest": "Destination folder",
+      "path": "Repository folder",
+      "sub": "Subfolder name (optional)",
+      "url": "Repository URL",
+      "dest_hint": "Parent folder. The clone lands in a subfolder named after the URL unless you override below.",
+      "path_hint": "Absolute path to a folder that already contains a .git directory."
+    },
+    "group": {
+      "added": "Already on system",
+      "available": "Available — recently active"
+    },
+    "loading": "Loading repositories…",
+    "no_results": "No repositories.",
+    "pick_dest": "Pick a destination folder first.",
+    "providers_heading": "Providers",
+    "search_placeholder": "Search repositories…",
+    "tab": {
+      "clone": "Clone from URL",
+      "local": "Existing folder",
+      "providers": "From providers"
+    },
+    "title": "Add repository",
+    "url_hint": "HTTPS or SSH — GitHub, GitLab, Bitbucket, or self-hosted.",
+    "connect_first": "Connect GitHub, GitLab or Bitbucket in Settings to browse your remote repositories here.",
+    "desc": "Import from a connected provider, add an existing folder, or clone from any URL."
   }
 }

@@ -1,7 +1,12 @@
 import type { RepositoryId } from "./repo.js";
 
 /** Kind of PR lifecycle event observed in the 14-day window. */
-export type PrEventKind = "opened" | "merged" | "closed";
+export const PrEventKind = {
+  OPENED: "opened",
+  MERGED: "merged",
+  CLOSED: "closed",
+} as const;
+export type PrEventKind = (typeof PrEventKind)[keyof typeof PrEventKind];
 
 /** A single state transition on a pull/merge request within the activity window. */
 export interface PrEvent {

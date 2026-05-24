@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { VelocityDay } from "@/lib/activityAggregates";
-import { monotoneCubic } from "@/lib/charts/smoothLine";
+import { smoothSeries } from "@/lib/charts/smoothLine";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   rows: VelocityDay[];
@@ -46,6 +47,7 @@ const Legend = styled(Box)(({ theme }) => ({
   },
 }));
 
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   color: string;
 }>(({ color }) => ({
@@ -54,17 +56,6 @@ const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   borderRadius: "50%",
   backgroundColor: color,
 }));
-
-function smoothSeries(values: number[], peak: number, w: number, h: number, pad: number): string {
-  const n = values.length;
-  if (n === 0) return "";
-  const stepX = (w - pad * 2) / Math.max(1, n - 1);
-  const points = values.map((v, i) => ({
-    x: pad + i * stepX,
-    y: h - pad - (v / Math.max(1, peak)) * (h - pad * 2),
-  }));
-  return monotoneCubic(points);
-}
 
 function PrVelocityCard({ rows, loading }: Props) {
   const { t } = useTranslation();
@@ -79,11 +70,11 @@ function PrVelocityCard({ rows, loading }: Props) {
   const mergedColor = "var(--mui-palette-success-main, #16a34a)";
   return (
     <GeneralCard
-      title={t("activity.cards.pr_velocity_title", { defaultValue: "MR velocity" })}
-      sub={t("activity.cards.pr_velocity_sub", { defaultValue: "opened vs merged · 14 days" })}
+      title={t("activity.cards.pr_velocity_title")}
+      sub={t("activity.cards.pr_velocity_sub")}
       loading={loading}
       skeleton="line"
-      testId="activity-velocity-card"
+      testId={TEST_IDS.activity.cards.prVelocity}
     >
       <ChartWrap>
         <Svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
@@ -93,14 +84,14 @@ function PrVelocityCard({ rows, loading }: Props) {
         </Svg>
       </ChartWrap>
       <Legend>
-        <span>
+        <Box component="span">
           <LegendDot color={openedColor} />
-          {t("activity.cards.pr_velocity_opened", { defaultValue: "Opened" })}
-        </span>
-        <span>
+          {t("activity.cards.pr_velocity_opened")}
+        </Box>
+        <Box component="span">
           <LegendDot color={mergedColor} />
-          {t("activity.cards.pr_velocity_merged", { defaultValue: "Merged" })}
-        </span>
+          {t("activity.cards.pr_velocity_merged")}
+        </Box>
       </Legend>
     </GeneralCard>
   );

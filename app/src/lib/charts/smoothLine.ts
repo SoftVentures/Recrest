@@ -110,3 +110,25 @@ export function monotoneCubic(points: readonly Point[]): string {
   }
   return d;
 }
+
+/**
+ * Projects a numeric series into a smoothed SVG path within a `(w, h)` viewBox
+ * with `pad` margin on every side. Y is inverted (canvas coords), so larger
+ * series values render higher on the chart.
+ */
+export function smoothSeries(
+  values: number[],
+  peak: number,
+  w: number,
+  h: number,
+  pad: number,
+): string {
+  const n = values.length;
+  if (n === 0) return "";
+  const stepX = (w - pad * 2) / Math.max(1, n - 1);
+  const points = values.map((v, i) => ({
+    x: pad + i * stepX,
+    y: h - pad - (v / Math.max(1, peak)) * (h - pad * 2),
+  }));
+  return monotoneCubic(points);
+}

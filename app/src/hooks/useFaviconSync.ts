@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 
-import IconDark from "@/assets/recrest-icon-dark.svg?url";
-import IconDevDark from "@/assets/recrest-icon-dev-dark.svg?url";
-import IconDevLight from "@/assets/recrest-icon-dev-light.svg?url";
-import IconLight from "@/assets/recrest-icon-light.svg?url";
+import IconDark from "@/assets/logos/recrest-icon-dark.svg?url";
+import IconDevDark from "@/assets/logos/recrest-icon-dev-dark.svg?url";
+import IconDevLight from "@/assets/logos/recrest-icon-dev-light.svg?url";
+import IconLight from "@/assets/logos/recrest-icon-light.svg?url";
+import { ThemeId } from "@/lib/constants/theme.constants";
 import { useAppSelector } from "@/store/hooks";
 
 /**
@@ -29,7 +30,8 @@ export function useFaviconSync(): void {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const isDark = themeId === "dark" || themeId === "oled" || themeId === "glassy";
+    const isDark =
+      themeId === ThemeId.DARK || themeId === ThemeId.OLED || themeId === ThemeId.GLASSY;
     const isDev = import.meta.env.DEV;
 
     const href = isDev ? (isDark ? IconDevDark : IconDevLight) : isDark ? IconDark : IconLight;

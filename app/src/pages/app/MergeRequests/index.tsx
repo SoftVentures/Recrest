@@ -5,12 +5,14 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { PrState } from "@recrest/shared";
 import type { PullRequest } from "@recrest/shared";
 
-import { ChevronDown, X as ClearIcon, Filter, Search } from "lucide-react";
+import { ChevronDown, Filter } from "lucide-react";
 
-import GeneralDrawer from "@/components/molecules/drawers/GeneralDrawer";
-import EmptyStatePlaceholder from "@/components/molecules/placeholders/EmptyStatePlaceholder";
+import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
+import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
+import EmptyState from "@/components/molecules/feedback/EmptyState";
 import { useDrawerSwipe } from "@/hooks/useDrawerSwipe";
 import {
   PAGE_DUR_SM,
@@ -18,7 +20,7 @@ import {
   pgFall,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
-import { MrDetailPanel } from "@/pages/app/MergeRequests/components/MrDetailPanel";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import { useAppSelector } from "@/store/hooks";
 
@@ -46,53 +48,7 @@ const Toolbar = styled(Box)({
   ...prefersReducedMotionGuard,
 });
 
-const SearchBox = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: 7,
-  height: 30,
-  width: 240,
-  padding: "0 10px",
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  backgroundColor: theme.palette.surface.interface.base,
-  color: theme.palette.text.information,
-  fontSize: 12,
-  "&:focus-within": {
-    borderColor: theme.palette.border.hover,
-  },
-}));
-
-const SearchInput = styled("input")(({ theme }) => ({
-  flex: 1,
-  minWidth: 0,
-  background: "transparent",
-  border: 0,
-  outline: "none",
-  fontSize: 12,
-  color: theme.palette.text.primary,
-  fontFamily: "inherit",
-  "&::placeholder": { color: theme.palette.text.information },
-}));
-
-const ClearBtn = styled("button")(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 16,
-  height: 16,
-  border: 0,
-  background: "transparent",
-  color: theme.palette.text.information,
-  cursor: "pointer",
-  borderRadius: "50%",
-  padding: 0,
-  "&:hover": {
-    color: theme.palette.text.primary,
-    backgroundColor: theme.palette.surface.interface.active,
-  },
-}));
-
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const FilterBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -132,10 +88,6 @@ const Scroll = styled(Box)({
   paddingBottom: 24,
 });
 
-const DrawerBody = styled(Box)({
-  height: "100%",
-});
-
 export default function MergeRequestsPage() {
   const { t } = useTranslation();
   const items = useAppSelector((s) => s.prs.items);
@@ -150,7 +102,7 @@ export default function MergeRequestsPage() {
       if (!repo || !repo.providerId) continue;
       if (!connections[repo.providerId]?.connected) continue;
       for (const pr of prs) {
-        if (pr.state !== "open") continue;
+        if (pr.state !== PrState.OPEN) continue;
         out.push({ pr, repoId, repoName: repo.name });
       }
     }
@@ -174,28 +126,17 @@ export default function MergeRequestsPage() {
   });
 
   return (
-    <Root data-testid="merge-requests-page">
+    <Root data-testid={TEST_IDS.mr.page}>
       <Toolbar>
-        <SearchBox>
-          <Search size={13} />
-          <SearchInput
-            placeholder={t("mrs.filter_placeholder", { defaultValue: "Filter merge requests…" })}
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            data-testid="mr-filter-input"
-          />
-          {filter && (
-            <ClearBtn
-              type="button"
-              aria-label={t("common.clear_search", { defaultValue: "Clear search" })}
-              data-testid="mr-filter-clear"
-              onClick={() => setFilter("")}
-            >
-              <ClearIcon size={11} aria-hidden />
-            </ClearBtn>
-          )}
-        </SearchBox>
-        <FilterBtn type="button" data-testid="mr-filter-btn">
+        <GeneralSearchInput
+          value={filter}
+          onChange={setFilter}
+          placeholder={t("mrs.filter_placeholder")}
+          clearLabel={t("actions.clear_search")}
+          data-testid={TEST_IDS.mr.filterInput}
+          clearTestId={TEST_IDS.mr.filterClear}
+        />
+        <FilterBtn type="button" data-testid={TEST_IDS.mr.filterBtn}>
           <Filter size={13} />
           {t("mrs.filters")}
           <ChevronDown size={13} />
@@ -204,7 +145,8 @@ export default function MergeRequestsPage() {
 
       <Scroll>
         {rows.length === 0 ? (
-          <EmptyStatePlaceholder
+          <EmptyState
+            mascot="snoozing"
             title="No open merge requests"
             description="Connected providers haven't returned any open PRs yet."
           />
@@ -222,18 +164,13 @@ export default function MergeRequestsPage() {
         )}
       </Scroll>
 
-      <GeneralDrawer open={!!selected} onClose={() => setSelected(null)} size="md">
-        <DrawerBody ref={drawerRef} data-testid="mr-drawer">
-          {selected && (
-            <MrDetailPanel
-              pr={selected.pr}
-              repoId={selected.repoId}
-              repoName={selected.repoName}
-              onClose={() => setSelected(null)}
-            />
-          )}
-        </DrawerBody>
-      </GeneralDrawer>
+      <MrDetailDrawer
+        pr={selected?.pr ?? null}
+        repoId={selected?.repoId ?? ""}
+        repoName={selected?.repoName}
+        bodyRef={drawerRef}
+        onClose={() => setSelected(null)}
+      />
     </Root>
   );
 }

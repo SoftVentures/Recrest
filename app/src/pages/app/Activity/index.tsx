@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Box, MenuItem, Select, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import GeneralAuthorAvatar from "@/components/molecules/avatars/GeneralAuthorAvatar";
-import GeneralRepoAvatar from "@/components/molecules/avatars/GeneralRepoAvatar";
+import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
+import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import Timeline from "@/components/organisms/activity/Timeline";
 import AuthorClockCard from "@/components/organisms/activity/cards/AuthorClockCard";
 import AuthorsHero from "@/components/organisms/activity/cards/AuthorsHero";
@@ -57,6 +57,7 @@ import {
   pgZoom,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useAppSelector } from "@/store/hooks";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -79,14 +80,14 @@ const Root = styled(Box)({
   // or not the scrollbar is currently drawn — eliminates the left/right
   // jump users see on page swap when the inner scrollbar pops in/out.
   scrollbarGutter: "stable",
-});
+}) as typeof Box;
 
 const Page = styled(Box)({
   padding: "18px 22px 80px",
   display: "flex",
   flexDirection: "column",
   gap: 16,
-});
+}) as typeof Box;
 
 const PageHead = styled(Box)({
   display: "flex",
@@ -97,26 +98,26 @@ const PageHead = styled(Box)({
   // Page head drops in first.
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
-});
+}) as typeof Box;
 
-const PageTitle = styled("h2")(({ theme }) => ({
+const PageTitle = styled(Typography)(({ theme }) => ({
   margin: 0,
   fontSize: 18,
   fontWeight: 700,
   letterSpacing: "-0.2px",
   color: theme.palette.text.primary,
-}));
+})) as typeof Typography;
 
 const PageSub = styled(Typography)(({ theme }) => ({
   marginTop: 2,
   fontSize: 12,
   color: theme.palette.text.information,
-}));
+})) as typeof Typography;
 
 const FilterRow = styled(Box)({
   display: "flex",
   gap: 6,
-});
+}) as typeof Box;
 
 const FilterSelect = styled(Select)(({ theme }) => ({
   height: 28,
@@ -144,15 +145,15 @@ const SelectOption = styled(Box)({
   alignItems: "center",
   gap: 8,
   fontSize: 12,
-});
+}) as typeof Box;
 
-const SelectDot = styled("span")(({ theme }) => ({
+const SelectDot = styled(Typography)(({ theme }) => ({
   width: 8,
   height: 8,
   borderRadius: "50%",
   backgroundColor: theme.palette.text.informationLight,
   flexShrink: 0,
-}));
+})) as typeof Typography;
 
 const Hero = styled(Box)({
   display: "grid",
@@ -170,7 +171,7 @@ const Hero = styled(Box)({
   "& > *:nth-of-type(3)": { animationDelay: "160ms" },
   "& > *:nth-of-type(4)": { animationDelay: "210ms" },
   ...prefersReducedMotionGuard,
-});
+}) as typeof Box;
 
 const Grid = styled(Box)({
   display: "grid",
@@ -195,7 +196,7 @@ const Grid = styled(Box)({
   "& > *:nth-of-type(7)": { animationDelay: "640ms" },
   "& > *:nth-of-type(n + 8)": { animationDelay: "700ms" },
   ...prefersReducedMotionGuard,
-});
+}) as typeof Box;
 
 const Span = styled(Box, { shouldForwardProp: (p) => p !== "cols" })<{ cols: number }>(
   ({ cols }) => ({
@@ -343,15 +344,13 @@ export default function ActivityPage() {
   const total = stats.commits.current + stats.commits.previous;
 
   return (
-    <Root data-testid="activity-page">
+    <Root data-testid={TEST_IDS.activity.page}>
       <Page>
         <PageHead>
           <Box sx={{ minWidth: 0 }}>
-            <PageTitle>
-              {t("activity.chart.title", { defaultValue: `Commits · last ${ACTIVITY_DAYS} days` })}
-            </PageTitle>
+            <PageTitle component="h2">{t("activity.chart.title")}</PageTitle>
             <PageSub>
-              {t("activity.chart.sub", { total, defaultValue: `${total} commits` })}
+              {t("activity.chart.sub", { total })}
               {selectedRepo !== "all" && ` · ${repoNameById[selectedRepo] ?? ""}`}
             </PageSub>
           </Box>
@@ -360,21 +359,19 @@ export default function ActivityPage() {
               value={selectedRepo}
               size="small"
               onChange={(e) => setSelectedRepo(e.target.value as string)}
-              data-testid="activity-repo-filter"
+              data-testid={TEST_IDS.activity.repoFilter}
             >
               <MenuItem value="all">
                 <SelectOption>
-                  <SelectDot />
-                  <span>
-                    {t("activity.filter.all_repos", { defaultValue: "All repositories" })}
-                  </span>
+                  <SelectDot component="span" variant="caption" />
+                  <Box component="span">{t("activity.filter.all_repos")}</Box>
                 </SelectOption>
               </MenuItem>
               {repos.map((r) => (
                 <MenuItem key={r.id} value={r.id}>
                   <SelectOption>
-                    <GeneralRepoAvatar repo={r} size={16} radius={4} />
-                    <span>{r.name}</span>
+                    <RepoAvatar repo={r} size={16} radius={4} />
+                    <Box component="span">{r.name}</Box>
                   </SelectOption>
                 </MenuItem>
               ))}
@@ -383,19 +380,19 @@ export default function ActivityPage() {
               value={selectedAuthor}
               size="small"
               onChange={(e) => setSelectedAuthor(e.target.value as string)}
-              data-testid="activity-author-filter"
+              data-testid={TEST_IDS.activity.authorFilter}
             >
               <MenuItem value="all">
                 <SelectOption>
-                  <SelectDot />
-                  <span>{t("activity.filter.all_authors", { defaultValue: "All authors" })}</span>
+                  <SelectDot component="span" variant="caption" />
+                  <Box component="span">{t("activity.filter.all_authors")}</Box>
                 </SelectOption>
               </MenuItem>
               {authorOptions.map((a) => (
                 <MenuItem key={a.key} value={a.key}>
                   <SelectOption>
-                    <GeneralAuthorAvatar name={a.name} email={a.email ?? undefined} size={16} />
-                    <span>{a.name}</span>
+                    <AuthorAvatar name={a.name} email={a.email ?? undefined} size={16} />
+                    <Box component="span">{a.name}</Box>
                   </SelectOption>
                 </MenuItem>
               ))}

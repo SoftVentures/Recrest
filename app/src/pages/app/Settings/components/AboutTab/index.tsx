@@ -7,33 +7,17 @@ import { styled } from "@mui/material/styles";
 
 import { type GitInfo, type PlatformInfo, TauriCommand } from "@recrest/shared";
 
-import { Bug, ExternalLink, FileText, Github as GithubIcon, Scale } from "lucide-react";
+import { Bug, FileText, Github as GithubIcon, Scale } from "lucide-react";
 
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { formatBuildTime, gitDescription } from "@/lib/utils/about.utils";
+import LinkItem from "@/pages/app/Settings/components/AboutTab/parts/LinkItem";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 const GITHUB_URL = "https://github.com/SoftVentures/Recrest";
 const ISSUES_URL = "https://github.com/SoftVentures/Recrest/issues";
 const LICENSES_URL = "https://github.com/SoftVentures/Recrest/blob/main/LICENSE";
-
-const Section = styled("section")({
-  marginBottom: 22,
-});
-
-const SectionLabel = styled("h3")(({ theme }) => ({
-  fontSize: 11,
-  color: theme.palette.text.information,
-  margin: "0 0 10px",
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  fontWeight: 600,
-}));
-
-const Card = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.surface.interface.base,
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  overflow: "hidden",
-}));
 
 const FactRow = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -42,16 +26,16 @@ const FactRow = styled(Box)(({ theme }) => ({
   padding: "11px 16px",
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
-}));
+})) as typeof Box;
 
-const FactKey = styled("div")(({ theme }) => ({
+const FactKey = styled(Box)(({ theme }) => ({
   flex: 1,
   fontSize: 12.5,
   color: theme.palette.text.primary,
   fontWeight: 500,
-}));
+})) as typeof Box;
 
-const FactVal = styled("div", { shouldForwardProp: (p) => p !== "mono" })<{ mono?: boolean }>(
+const FactVal = styled(Box, { shouldForwardProp: (p) => p !== "mono" })<{ mono?: boolean }>(
   ({ theme, mono }) => ({
     fontSize: 12,
     color: theme.palette.text.information,
@@ -63,59 +47,6 @@ const FactVal = styled("div", { shouldForwardProp: (p) => p !== "mono" })<{ mono
     gap: 6,
   }),
 );
-
-const LinkRow = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  padding: "12px 16px",
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  "&:last-of-type": { borderBottom: 0 },
-}));
-
-const LinkLeft = styled(Box)({
-  flex: 1,
-  minWidth: 0,
-});
-
-const LinkTitle = styled("div")(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  fontSize: 13,
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-}));
-
-const LinkUrl = styled("div")(({ theme }) => ({
-  marginTop: 2,
-  fontSize: 11,
-  color: theme.palette.text.information,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-}));
-
-const OpenBtn = styled("button")(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  height: 28,
-  padding: "0 10px",
-  border: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.surface.interface.base,
-  color: theme.palette.text.primary,
-  borderRadius: 8,
-  fontSize: 11.5,
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  "&:hover": {
-    backgroundColor: theme.palette.surface.interface.active,
-    borderColor: theme.palette.border.hover,
-  },
-}));
 
 interface AppMeta {
   name: string;
@@ -140,23 +71,6 @@ async function loadAppMeta(): Promise<AppMeta> {
   } catch {
     return { name: "Recrest", version: "unknown", tauriVersion: null };
   }
-}
-
-function formatBuildTime(iso: string | undefined): string {
-  if (!iso) return DASH;
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toISOString().replace("T", " ").slice(0, 16) + " UTC";
-  } catch {
-    return iso;
-  }
-}
-
-function gitDescription(info: GitInfo | null): string {
-  if (!info || !info.installed) return "not installed";
-  const version = info.version ?? "installed";
-  return info.path ? `${version} · ${info.path}` : version;
 }
 
 interface FactRowSpec {
@@ -190,52 +104,52 @@ export function AboutSection() {
 
   const rows: FactRowSpec[] = [
     {
-      key: t("settings.about.app_version", { defaultValue: "Application" }),
+      key: t("settings.about.app_version"),
       value: meta ? `${meta.name} ${meta.version}` : DASH,
     },
     {
-      key: t("settings.about.tauri_version", { defaultValue: "Tauri runtime" }),
+      key: t("settings.about.tauri_version"),
       value: meta?.tauriVersion ?? DASH,
     },
     {
-      key: t("settings.about.repository", { defaultValue: "Repository" }),
+      key: t("settings.about.repository"),
       value: "SoftVentures/Recrest",
       mono: true,
     },
     {
-      key: t("settings.about.commit", { defaultValue: "Commit" }),
+      key: t("settings.about.commit"),
       value: buildSha,
       mono: true,
     },
     {
-      key: t("settings.about.build_time", { defaultValue: "Build time" }),
+      key: t("settings.about.build_time"),
       value: buildTime,
       mono: true,
     },
     {
-      key: t("settings.about.os", { defaultValue: "Operating system" }),
+      key: t("settings.about.os"),
       value: platform ? `${platform.os} ${platform.version}` : DASH,
     },
     {
-      key: t("settings.about.arch", { defaultValue: "Architecture" }),
+      key: t("settings.about.arch"),
       value: platform?.arch ?? DASH,
       mono: true,
     },
     {
-      key: t("settings.about.git", { defaultValue: "System git" }),
+      key: t("settings.about.git"),
       value: gitDescription(git),
     },
     {
-      key: t("settings.about.license", { defaultValue: "License" }),
+      key: t("settings.about.license"),
       value: (
         <>
           <Scale size={11} />
-          <span>MIT</span>
+          <Box component="span">MIT</Box>
         </>
       ),
     },
     {
-      key: t("settings.about.build_mode", { defaultValue: "Build" }),
+      key: t("settings.about.build_mode"),
       value: import.meta.env.DEV ? "development" : "release",
     },
   ];
@@ -246,62 +160,39 @@ export function AboutSection() {
 
   return (
     <>
-      <Section>
-        <SectionLabel>{t("settings.about.version", { defaultValue: "Version" })}</SectionLabel>
-        <Card>
+      <SettingsSection title={t("settings.about.version")}>
+        <GeneralCard padding={0} flushHeight>
           {rows.map((r) => (
             <FactRow key={r.key}>
               <FactKey>{r.key}</FactKey>
               <FactVal mono={r.mono}>{r.value}</FactVal>
             </FactRow>
           ))}
-        </Card>
-      </Section>
+        </GeneralCard>
+      </SettingsSection>
 
-      <Section>
-        <SectionLabel>{t("settings.about.links_title", { defaultValue: "Links" })}</SectionLabel>
-        <Card>
-          <LinkRow>
-            <LinkLeft>
-              <LinkTitle>
-                <GithubIcon size={13} />
-                {t("settings.about.link_github", { defaultValue: "Source code" })}
-              </LinkTitle>
-              <LinkUrl>{GITHUB_URL}</LinkUrl>
-            </LinkLeft>
-            <OpenBtn type="button" onClick={() => openUrl(GITHUB_URL)}>
-              <ExternalLink size={11} />
-              Open
-            </OpenBtn>
-          </LinkRow>
-          <LinkRow>
-            <LinkLeft>
-              <LinkTitle>
-                <Bug size={13} />
-                {t("settings.about.link_issues", { defaultValue: "Report a bug" })}
-              </LinkTitle>
-              <LinkUrl>{ISSUES_URL}</LinkUrl>
-            </LinkLeft>
-            <OpenBtn type="button" onClick={() => openUrl(ISSUES_URL)}>
-              <ExternalLink size={11} />
-              Open
-            </OpenBtn>
-          </LinkRow>
-          <LinkRow>
-            <LinkLeft>
-              <LinkTitle>
-                <FileText size={13} />
-                {t("settings.about.link_licenses", { defaultValue: "License" })}
-              </LinkTitle>
-              <LinkUrl>MIT</LinkUrl>
-            </LinkLeft>
-            <OpenBtn type="button" onClick={() => openUrl(LICENSES_URL)}>
-              <ExternalLink size={11} />
-              Open
-            </OpenBtn>
-          </LinkRow>
-        </Card>
-      </Section>
+      <SettingsSection title={t("settings.about.links_title")}>
+        <GeneralCard padding={0} flushHeight>
+          <LinkItem
+            icon={GithubIcon}
+            title={t("settings.about.link_github")}
+            url={GITHUB_URL}
+            onOpen={() => openUrl(GITHUB_URL)}
+          />
+          <LinkItem
+            icon={Bug}
+            title={t("settings.about.link_issues")}
+            url={ISSUES_URL}
+            onOpen={() => openUrl(ISSUES_URL)}
+          />
+          <LinkItem
+            icon={FileText}
+            title={t("settings.about.link_licenses")}
+            url="MIT"
+            onOpen={() => openUrl(LICENSES_URL)}
+          />
+        </GeneralCard>
+      </SettingsSection>
     </>
   );
 }

@@ -1,5 +1,7 @@
 import type { RecentCommit, Repository, RepositoryGroup, RepositoryStatus } from "@recrest/shared";
 
+import { daysAgo } from "@/lib/dev/seed/time";
+
 /**
  * Dev-stub repos, mirrored from `tests/src/helpers/seed/repos.ts`.
  * Only `Recrest` and `local-dev-stacks` are real project names — everything
@@ -10,9 +12,6 @@ import type { RecentCommit, Repository, RepositoryGroup, RepositoryStatus } from
  * regardless of when the dev server is started. Hard-coded ISO strings used
  * to drift outside the window once the calendar advanced past the seed date.
  */
-function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 86_400_000).toISOString();
-}
 
 export const SEED_GROUPS: Record<string, RepositoryGroup> = {
   "open-source": { id: "open-source", name: "Open Source", color: "#d97757" },

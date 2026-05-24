@@ -9,9 +9,9 @@ import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/Se
 const Keys = styled(Box)({
   display: "inline-flex",
   gap: 4,
-});
+}) as typeof Box;
 
-const Kbd = styled("span")(({ theme }) => ({
+const Kbd = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -25,7 +25,7 @@ const Kbd = styled("span")(({ theme }) => ({
   fontSize: 10.5,
   fontWeight: 600,
   fontFamily: "inherit",
-}));
+})) as typeof Box;
 
 interface Row {
   label: string;
@@ -52,7 +52,7 @@ export function ShortcutsSection() {
     { label: t("settings.shortcuts.open_editor"), keys: [fmt({ mod: true, key: "↵" })] },
     { label: t("settings.shortcuts.open_terminal"), keys: [fmt({ mod: true, key: "T" })] },
     {
-      label: t("settings.shortcuts.open_settings", { defaultValue: "Open settings" }),
+      label: t("settings.shortcuts.open_settings"),
       keys: [fmt({ mod: true, key: "," })],
     },
   ];
@@ -64,33 +64,37 @@ export function ShortcutsSection() {
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
               {r.keys.map((k, i) => (
-                <Kbd key={i}>{k}</Kbd>
+                <Kbd component="span" key={i}>
+                  {k}
+                </Kbd>
               ))}
             </Keys>
           </SettingsRow>
         ))}
       </SettingsSection>
 
-      <SettingsSection title={t("settings.shortcuts.git", { defaultValue: "Git operations" })}>
+      <SettingsSection title={t("settings.shortcuts.git")}>
         {gitOps.map((r) => (
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
               {r.keys.map((k, i) => (
-                <Kbd key={i}>{k}</Kbd>
+                <Kbd component="span" key={i}>
+                  {k}
+                </Kbd>
               ))}
             </Keys>
           </SettingsRow>
         ))}
       </SettingsSection>
 
-      <SettingsSection
-        title={t("settings.shortcuts.editor", { defaultValue: "Editor & terminal" })}
-      >
+      <SettingsSection title={t("settings.shortcuts.editor")}>
         {editorOps.map((r) => (
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
               {r.keys.map((k, i) => (
-                <Kbd key={i}>{k}</Kbd>
+                <Kbd component="span" key={i}>
+                  {k}
+                </Kbd>
               ))}
             </Keys>
           </SettingsRow>

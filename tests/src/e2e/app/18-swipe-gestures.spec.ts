@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 /**
  * D.5: swipe gestures.
@@ -85,16 +86,16 @@ test.describe("app / swipe gestures (D.5)", () => {
       "TouchEvent constructor + MR list view are most reliable on app-desktop",
     );
     await page.goto(AppRoute.MERGE_REQUESTS);
-    await expect(page.getByTestId("merge-requests-page")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.mr.page)).toBeVisible();
 
-    const firstRow = page.getByTestId("mr-row").first();
+    const firstRow = page.getByTestId(TEST_IDS.mr.row).first();
     await expect(firstRow).toBeVisible({ timeout: 10_000 });
     await firstRow.click();
 
-    const drawer = page.getByTestId("mr-drawer");
+    const drawer = page.getByTestId(TEST_IDS.mr.drawer);
     await expect(drawer).toBeVisible();
 
-    await dispatchSwipe(page, '[data-testid="mr-drawer"]', { dx: 200, dy: 0 });
+    await dispatchSwipe(page, `[data-testid="${TEST_IDS.mr.drawer}"]`, { dx: 200, dy: 0 });
     await expect(drawer).toBeHidden();
   });
 

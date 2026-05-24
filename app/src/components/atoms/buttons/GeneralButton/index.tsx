@@ -1,7 +1,11 @@
 import { forwardRef } from "react";
 
-import { Button, CircularProgress, type ButtonProps as MuiButtonProps } from "@mui/material";
+import { Button, type ButtonProps as MuiButtonProps } from "@mui/material";
 import { styled } from "@mui/material/styles";
+
+import GeneralCircularLoader, {
+  CircularLoaderSize,
+} from "@/components/atoms/loaders/GeneralCircularLoader";
 
 export type GeneralButtonVariant =
   | "default"
@@ -83,7 +87,9 @@ const GeneralButton = forwardRef<HTMLButtonElement, GeneralButtonProps>(function
       color={muiColor}
       size={mapSize(size)}
       disabled={disabled || loading}
-      startIcon={loading ? <CircularProgress size={14} color="inherit" /> : startIcon}
+      startIcon={
+        loading ? <GeneralCircularLoader size={CircularLoaderSize.SM} color="inherit" /> : startIcon
+      }
       {...rest}
     >
       {children}

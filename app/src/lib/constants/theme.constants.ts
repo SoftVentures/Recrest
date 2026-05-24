@@ -287,12 +287,19 @@ export interface AppTheme {
   isGlassy: boolean;
 }
 
+export const ThemeId = {
+  LIGHT: "light",
+  DARK: "dark",
+  OLED: "oled",
+  GLASSY: "glassy",
+} as const;
+export type ThemeId = (typeof ThemeId)[keyof typeof ThemeId];
+
 export const THEMES = [
-  { id: "light", label: "Light", mode: "light", isOled: false, isGlassy: false },
-  { id: "dark", label: "Dark", mode: "dark", isOled: false, isGlassy: false },
-  { id: "oled", label: "OLED", mode: "dark", isOled: true, isGlassy: false },
-  { id: "glassy", label: "Glassy", mode: "dark", isOled: false, isGlassy: true },
+  { id: ThemeId.LIGHT, label: "Light", mode: "light", isOled: false, isGlassy: false },
+  { id: ThemeId.DARK, label: "Dark", mode: "dark", isOled: false, isGlassy: false },
+  { id: ThemeId.OLED, label: "OLED", mode: "dark", isOled: true, isGlassy: false },
+  { id: ThemeId.GLASSY, label: "Glassy", mode: "dark", isOled: false, isGlassy: true },
 ] as const satisfies readonly AppTheme[];
 
-export type ThemeId = (typeof THEMES)[number]["id"];
-export const DEFAULT_THEME_ID: ThemeId = "light";
+export const DEFAULT_THEME_ID: ThemeId = ThemeId.LIGHT;

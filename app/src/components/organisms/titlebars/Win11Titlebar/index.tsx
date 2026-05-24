@@ -2,16 +2,20 @@ import { useEffect, useRef } from "react";
 
 import { useTranslation } from "react-i18next";
 
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { runWindow } from "@/components/organisms/titlebars/runWindow";
+import { TauriCommand } from "@recrest/shared";
+
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
+import { runWindow } from "@/lib/utils/window.utils";
 
 export interface Win11TitlebarProps {
   isMaximized: boolean;
 }
 
-const Bar = styled("div")(({ theme }) => ({
+const Bar = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -32,12 +36,12 @@ const Bar = styled("div")(({ theme }) => ({
   zIndex: 200,
 }));
 
-const TitleSlot = styled("div")({
+const TitleSlot = styled(Box)({
   // Empty drag region — brand mark/name/version live in the sidebar.
   flex: 1,
 });
 
-const Controls = styled("div")({
+const Controls = styled(Box)({
   display: "flex",
   gap: 0,
 });
@@ -46,6 +50,7 @@ interface CtrlButtonProps {
   closeVariant?: boolean;
 }
 
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const CtrlButton = styled("button", {
   shouldForwardProp: (p) => p !== "closeVariant",
 })<CtrlButtonProps>(({ theme, closeVariant }) => ({
@@ -76,11 +81,9 @@ const CtrlButton = styled("button", {
  */
 function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
   const { t } = useTranslation("common");
-  const minimizeLabel = t("titlebar.minimize", "Minimize");
-  const maximizeLabel = isMaximized
-    ? t("titlebar.restore", "Restore")
-    : t("titlebar.maximize", "Maximize");
-  const closeLabel = t("titlebar.close", "Close");
+  const minimizeLabel = t("titlebar.minimize");
+  const maximizeLabel = isMaximized ? t("titlebar.restore") : t("titlebar.maximize");
+  const closeLabel = t("titlebar.close");
 
   const minRef = useRef<HTMLButtonElement | null>(null);
   const maxRef = useRef<HTMLButtonElement | null>(null);
@@ -99,7 +102,7 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
     };
 
     const push = () => {
-      void invoke("set_caption_button_bounds", {
+      void invoke(TauriCommand.SET_CAPTION_BUTTON_BOUNDS, {
         min: rectOf(min),
         max: rectOf(max),
         close: rectOf(close),
@@ -121,7 +124,7 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
   }, []);
 
   return (
-    <Bar data-tauri-drag-region data-testid="titlebar-win11">
+    <Bar data-tauri-drag-region data-testid={TEST_IDS.titlebar.win11}>
       {/* Brand mark/name/version intentionally omitted — they live in the
        *  sidebar instead, freeing the title bar for future Snap-Layouts /
        *  workspace switcher tooling. The empty drag region keeps the bar
@@ -133,7 +136,7 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
           type="button"
           aria-label={minimizeLabel}
           title={minimizeLabel}
-          data-testid="titlebar-min"
+          data-testid={TEST_IDS.titlebar.min}
           onClick={() => void runWindow((w) => w.minimize())}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -145,7 +148,7 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
           type="button"
           aria-label={maximizeLabel}
           title={maximizeLabel}
-          data-testid="titlebar-max"
+          data-testid={TEST_IDS.titlebar.max}
           onClick={() => void runWindow((w) => w.toggleMaximize())}
         >
           {isMaximized ? (
@@ -189,7 +192,7 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
           type="button"
           aria-label={closeLabel}
           title={closeLabel}
-          data-testid="titlebar-close"
+          data-testid={TEST_IDS.titlebar.close}
           onClick={() => void runWindow((w) => w.close())}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>

@@ -1,5 +1,7 @@
 import { type RefObject, useEffect, useRef } from "react";
 
+import { storageKeyForScroll } from "@/lib/constants/storage.constants";
+
 /**
  * Remembers a page's scroll position across mounts.
  *
@@ -14,8 +16,6 @@ import { type RefObject, useEffect, useRef } from "react";
  * between sessions — restoring last week's scroll position would be more
  * confusing than helpful.
  */
-const STORAGE_PREFIX = "recrest:scroll:";
-
 export function useScrollRestoration<T extends HTMLElement>(
   pageId: string,
   ref?: RefObject<T | null>,
@@ -24,7 +24,7 @@ export function useScrollRestoration<T extends HTMLElement>(
 
   useEffect(() => {
     const refSnapshot = ref;
-    const key = STORAGE_PREFIX + pageId;
+    const key = storageKeyForScroll(pageId);
     let raw: string | null = null;
     try {
       raw = sessionStorage.getItem(key);

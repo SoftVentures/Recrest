@@ -2,57 +2,42 @@ import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { Folder, FolderOpen, Plus, X } from "lucide-react";
 
-const Section = styled("section")({
-  marginBottom: 22,
-});
+import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-const SectionLabel = styled("h3")(({ theme }) => ({
+const Section = styled(Box)({
+  marginBottom: 22,
+}) as typeof Box;
+
+const SectionLabel = styled(Typography)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   margin: "0 0 6px",
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   fontWeight: 600,
-}));
+})) as typeof Typography;
 
-const SectionDesc = styled("p")(({ theme }) => ({
+const SectionDesc = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.information,
   margin: "0 0 10px 2px",
-}));
-
-const Card = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.surface.interface.base,
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  padding: "14px 16px",
-  marginBottom: 10,
-}));
-
-const CardTitle = styled("div")(({ theme }) => ({
-  fontSize: 13,
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-  marginBottom: 4,
-}));
-
-const CardSub = styled("div")(({ theme }) => ({
-  fontSize: 11.5,
-  color: theme.palette.text.information,
-  marginBottom: 10,
-}));
+})) as typeof Typography;
 
 const InputRow = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 8,
-});
+}) as typeof Box;
 
+// eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / autofocus / IME
 const TextInput = styled("input")(({ theme }) => ({
   flex: 1,
   minWidth: 0,
@@ -69,6 +54,7 @@ const TextInput = styled("input")(({ theme }) => ({
   "&:focus": { borderColor: theme.palette.border.hover },
 }));
 
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const BrowseBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -89,6 +75,7 @@ const BrowseBtn = styled("button")(({ theme }) => ({
   },
 }));
 
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const AddBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -121,26 +108,9 @@ const PathRow = styled(Box)(({ theme }) => ({
   color: theme.palette.text.primary,
   fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
   fontSize: 12,
-}));
+})) as typeof Box;
 
-const PathText = styled("span")({ flex: 1, minWidth: 0 });
-
-const PathRemove = styled("button")(({ theme }) => ({
-  width: 24,
-  height: 24,
-  borderRadius: 8,
-  border: 0,
-  background: "transparent",
-  color: theme.palette.text.information,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  "&:hover": {
-    backgroundColor: theme.palette.surface.interface.active,
-    color: theme.palette.text.primary,
-  },
-}));
+const PathText = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 
 export function IntegrationsSection() {
   const { t } = useTranslation();
@@ -157,56 +127,55 @@ export function IntegrationsSection() {
   const onRemove = (p: string) => setPaths(paths.filter((x) => x !== p));
 
   return (
-    <Section>
-      <SectionLabel>
-        {t("settings.integrations.scan", { defaultValue: "Scan sources" })}
-      </SectionLabel>
-      <SectionDesc>
-        {t("settings.integrations.scan_sub", {
-          defaultValue: "Folders Recrest scans recursively for git repositories.",
-        })}
+    <Section component="section">
+      <SectionLabel component="h3">{t("settings.integrations.scan")}</SectionLabel>
+      <SectionDesc component="p" variant="body2">
+        {t("settings.integrations.scan_sub")}
       </SectionDesc>
 
-      <Card>
-        <CardTitle>{t("settings.integrations.add", { defaultValue: "Add scan path" })}</CardTitle>
-        <CardSub>
-          {t("settings.integrations.add_sub", {
-            defaultValue: "Recrest scans this folder and every sub-folder for git repositories.",
-          })}
-        </CardSub>
+      <GeneralCard
+        title={t("settings.integrations.add")}
+        sub={t("settings.integrations.add_sub")}
+        padding="14px 16px"
+        flushHeight
+        sx={{ marginBottom: 1.25 }}
+      >
         <InputRow>
           <TextInput
             placeholder="/path/to/repos"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onAdd();
+              if (e.key === KEYBOARD_KEYS.ENTER) onAdd();
             }}
-            data-testid="settings-scan-input"
+            data-testid={TEST_IDS.settings.integrations.scanInput}
           />
-          <BrowseBtn type="button" data-testid="settings-scan-browse">
+          <BrowseBtn type="button" data-testid={TEST_IDS.settings.integrations.scanBrowse}>
             <FolderOpen size={13} />
             Browse…
           </BrowseBtn>
-          <AddBtn type="button" onClick={onAdd} data-testid="settings-scan-add">
+          <AddBtn
+            type="button"
+            onClick={onAdd}
+            data-testid={TEST_IDS.settings.integrations.scanAdd}
+          >
             <Plus size={13} />
             Add
           </AddBtn>
         </InputRow>
-      </Card>
+      </GeneralCard>
 
       {paths.map((p) => (
         <PathRow key={p}>
           <Folder size={13} />
-          <PathText>{p}</PathText>
-          <PathRemove
-            type="button"
+          <PathText component="span">{p}</PathText>
+          <GeneralIconButton
+            size={IconButtonSize.SM}
             aria-label={`Remove ${p}`}
             onClick={() => onRemove(p)}
-            data-testid={`settings-scan-remove-${p}`}
-          >
-            <X size={13} />
-          </PathRemove>
+            data-testid={TEST_IDS.settings.integrations.scanRemove(p)}
+            icon={<X size={13} />}
+          />
         </PathRow>
       ))}
     </Section>

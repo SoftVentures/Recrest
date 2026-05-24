@@ -73,11 +73,24 @@ export interface RecentCommit {
   repoName: string;
 }
 
-export type ChangedFileStatus = "staged" | "unstaged" | "untracked" | "conflicted";
+export const ChangedFileStatus = {
+  STAGED: "staged",
+  UNSTAGED: "unstaged",
+  UNTRACKED: "untracked",
+  CONFLICTED: "conflicted",
+} as const;
+export type ChangedFileStatus = (typeof ChangedFileStatus)[keyof typeof ChangedFileStatus];
 
 /** Art der Änderung (unabhängig vom Staging-State) — treibt die Farbgebung
  *  der Working-Tree-Liste im Frontend. */
-export type ChangedFileKind = "added" | "modified" | "deleted" | "renamed" | "typechange";
+export const ChangedFileKind = {
+  ADDED: "added",
+  MODIFIED: "modified",
+  DELETED: "deleted",
+  RENAMED: "renamed",
+  TYPECHANGE: "typechange",
+} as const;
+export type ChangedFileKind = (typeof ChangedFileKind)[keyof typeof ChangedFileKind];
 
 export interface ChangedFile {
   path: string;

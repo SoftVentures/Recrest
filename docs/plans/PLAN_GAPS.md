@@ -29,9 +29,9 @@ Schwere: **P0** = Plan-Gate hart gerissen (Build/Funktion/Konstanten-Disziplin) 
 | # | Plan-Ref | Soll | Ist | Schwere |
 |---|---|---|---|---|
 | C1 | 3.1 / 3.8.G | `app/src/lib/constants/events.ts` mit `TauriEvent` als `as const`-Map | Datei existiert (`events.ts`), Inhalt nicht stichprobenartig verifiziert. **Aber** `rg "repo://"` Treffer nur in Kommentaren — vermutlich OK | ✅ |
-| C2 | 3.8 / 5.5.3 | `testIds.constants.ts` zentralisiert alle `data-testid`-Strings | **Datei existiert nicht**. `data-testid="..."` Literale weiterhin überall inline in Pages/Components | **P0** |
-| C3 | 3.8 / 5.5.3 | `storage.constants.ts` für LocalStorage-Keys | **Datei existiert nicht**. Roh-Strings `"recrest:theme"`, `"recrest:theme-follows-system"`, `"recrest:scroll:"`, `"recrest:dev-settings"`, `"recrest:notif*"` etc. inline in 7+ Files (`useThemeAttribute.ts`, `useScrollRestoration.ts`, `devStub.ts`, `DeveloperTab.tsx`, `settingsReducer.ts`) | **P0** |
-| C4 | 3.8 / 4.X.8 | `providers.constants.ts`, `prStates.constants.ts`, `ciStates.constants.ts` | **Keine dieser Dateien existiert** in `app/src/lib/constants/` (nur `events.ts` + `theme.constants.ts`) | **P0** |
+| C2 | 3.8 / 5.5.3 | `testIds.constants.ts` zentralisiert alle `data-testid`-Strings | Datei vorhanden, alle ~170 statischen + 7 dynamischen Stellen migriert; Playwright-Specs nutzen Helper-Re-Export | ✅ (Plan 3 / PLAN_MAGIC_STRINGS) |
+| C3 | 3.8 / 5.5.3 | `storage.constants.ts` für LocalStorage-Keys | Datei vorhanden, alle `recrest:*` Literale auf `StorageKey` / `storageKeyForX()` umgestellt (außer der dokumentierten Anti-Flash-Skript-Ausnahme) | ✅ (Plan 3) |
+| C4 | 3.8 / 4.X.8 | `providers.constants.ts`, `prStates.constants.ts`, `ciStates.constants.ts` | Alle drei vorhanden, plus `ides.constants.ts`, `sortKeys.constants.ts`, `statusChips.constants.ts` mit UI-Mapping-Tables (`PROVIDER_BRAND_ICONS`, `PR_STATE_UI`, `CI_STATE_UI`, `IDE_UI`, …) | ✅ (Plan 3) |
 | C5 | 3.6 | `DetailPane` + `WindowChrome` als Layout-Organisms in `components/organisms/layout/` | Nur `Header` + `Sidebar` vorhanden — kein `DetailPane`, kein `WindowChrome` | **P1** |
 | C6 | 3.9 | Molecules: `KpiCard`, `KpiTile`, `InfoCard`, `InfoHint`, `SettingsField`, `SettingsSectionHeader`, `OpenInIdeButton`, `DetailSection`, `MrChip`, `BranchFilterChip`, `ExternalLinkButton`, `EmptyState` | `EmptyStatePlaceholder` vorhanden in `placeholders/`. **`KpiCard`/`KpiTile`** fehlt komplett (Gap 11.2 + 1.2). `MrChip`/`BranchFilterChip` fehlt. `OpenInIdeButton`, `DetailSection`, `InfoCard/Hint`, `ExternalLinkButton` als Molecule fehlt | **P1** |
 | C7 | 3.8 + 3.9 Checklist | Jede migrierte Component hat ≥1 Story | **0 Stories** im gesamten `app/src/` (`find … -name "*.stories.tsx"` → leer). Storybook-Decorator existiert, aber keine Inhalte | **P1** |
@@ -51,7 +51,7 @@ Schwere: **P0** = Plan-Gate hart gerissen (Build/Funktion/Konstanten-Disziplin) 
 | D6 | 4.9 | Onboarding-Domain (Wizard, FirstRun-Detection) | Kein `app/src/pages/app/Onboarding/` und kein `onboarding/`-Sub-Folder gefunden | **P1** |
 | D7 | 4.10 | Search/cmdk Command-Palette in `app/src/components/organisms/search/` | Folder existiert ✅ — Inhalt nicht stichprobenartig geprüft | ⚠ |
 | D8 | 4.11 | Brand + Feedback Domain | `components/atoms/brand/`, `components/atoms/feedback/`, `organisms/banners/` vorhanden | ⚠ |
-| D9 | 4.X.8 | Magic-Strings pro Feature auf Konstanten ziehen | **Nicht erledigt** — siehe C2, C3, C4. `data-testid="..."` weiterhin inline | **P0** |
+| D9 | 4.X.8 | Magic-Strings pro Feature auf Konstanten ziehen | testIds, storage-keys, providers, PR/CI-states, IDEs, sort/status-chips alle zentralisiert. ESLint `no-restricted-syntax` blockiert Rückfall | ✅ (Plan 3) |
 | D10 | 4.X (i18n) | Strings via `t()` aus Namespaces | Nicht stichprobenartig verifiziert; Locales-Folder existiert | ⚠ |
 | D11 | Gap 2.2 + 15.5 | IDE-/Provider-Icons gefüllt + 16×16 statt outlined 13×13 | Offen laut Gap-Doc | **P1** |
 | D12 | Gap 5.2 / 15.6 | Pills (`current`, `clean`, `dirty`, `remote`) **UPPERCASE** + Drawer-Sections + Search-Sections | Offen laut Gap-Doc 15.12 | **P1** |
@@ -71,7 +71,7 @@ Schwere: **P0** = Plan-Gate hart gerissen (Build/Funktion/Konstanten-Disziplin) 
 | E4 | 5.3.3 | Keine SCSS-Files mehr in `app/src/` (außer `page-anim.scss` + ggf. `window-chrome.scss`) | `find app/src -name "*.scss"` → **0 Treffer**. Auch `page-anim.scss` fehlt — das ist Plan-konform (3.1 Carve-out), aber Animationen müssen jetzt anderswo leben | ⚠ |
 | E5 | 5.4 | `app/src/styles/` enthält nur noch nötige Files | Nur `globals.css` vorhanden ✅ — minimal | ✅ |
 | E6 | 5.5.1 | ESLint `no-restricted-imports` blockiert `@radix-ui/*` | Nicht verifiziert in dieser Analyse | ⚠ |
-| E7 | 5.5.3 | ESLint `no-restricted-syntax` blockiert Magic-Strings (Events, testIds, Storage-Keys) | **Kann gar nicht aktiv sein**, weil die Konstanten-Module gar nicht existieren (siehe C2, C3, C4) | **P0** |
+| E7 | 5.5.3 | ESLint `no-restricted-syntax` blockiert Magic-Strings (Events, testIds, Storage-Keys) | Aktiv in `app/eslint.config.js` mit Overrides für `src/lib/constants/**`. Blockiert `data-testid`-Literale, `recrest:`-Strings, inline `invoke`/`listen`/IPC-Schemas | ✅ (Plan 3) |
 | E8 | 5.6 | `useThemeEffect` ggf. entfernen | Ersetzt durch `useThemeAttribute` ✅ | ✅ |
 | E9 | 5.7 | Bundle-Size dokumentiert, ≤ +30% Pre-Phase-1-Baseline | Keine Messung in dieser Analyse | ⚠ |
 | E10 | 5.8 / Gap | Visual-Diff in allen 4 Themes (`light/dark/oled/glassy`) abgenommen | Gap-Doc dokumentiert Drift in Light + Dark — kein Vergleich für `oled`/`glassy` | **P1** |
@@ -107,11 +107,11 @@ Schwere: **P0** = Plan-Gate hart gerissen (Build/Funktion/Konstanten-Disziplin) 
 ## Priorisierte Backlog-Empfehlung
 
 **P0 (blockiert Plan-Gates, sofort)**
-1. **`testIds.constants.ts` anlegen** + alle `data-testid` migrieren (C2 / D9 / E7).
-2. **`storage.constants.ts` anlegen** + alle `"recrest:..."` Strings migrieren (C3).
-3. **`providers.constants.ts`, `prStates.constants.ts`, `ciStates.constants.ts`** anlegen + Konsumenten umstellen (C4).
-4. **Atom-/Molecule-Tests** (C8) — mindestens für `GeneralButton`, `GeneralButtonGroup`, `GeneralIconButton`, `GeneralDrawer`, `ConfirmDialog`.
-5. **ESLint `no-restricted-syntax`** scharfschalten (E7) sobald Konstanten-Module stehen.
+1. ✅ **`testIds.constants.ts` anlegen** + alle `data-testid` migrieren (C2 / D9 / E7) — siehe `docs/plans/PLAN_MAGIC_STRINGS.md`.
+2. ✅ **`storage.constants.ts` anlegen** + alle `"recrest:..."` Strings migrieren (C3).
+3. ✅ **`providers.constants.ts`, `prStates.constants.ts`, `ciStates.constants.ts`** anlegen + Konsumenten umstellen (C4) — plus `ides`, `sortKeys`, `statusChips`.
+4. **Atom-/Molecule-Tests** (C8) — mindestens für `GeneralButton`, `GeneralButtonGroup`, `GeneralIconButton`, `GeneralDrawer`, `ConfirmDialog`. ⏳ noch offen
+5. ✅ **ESLint `no-restricted-syntax`** scharfschalten (E7) — aktiv in `app/eslint.config.js`.
 
 **P1 (Plan fordert, fehlend)**
 6. **Stories** anlegen (C7) — pro Atom/Molecule mindestens eine. Theme-Toolbar wirkt sonst nicht.

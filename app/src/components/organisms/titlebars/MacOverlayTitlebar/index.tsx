@@ -1,4 +1,7 @@
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
+
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 /**
  * macOS "Overlay" titlebar. The OS draws traffic-lights at the configured
@@ -8,7 +11,7 @@ import { styled } from "@mui/material/styles";
  * The container stays transparent so the native traffic-lights remain
  * visible (macOS greys them when inactive but doesn't move/hide them).
  */
-const Bar = styled("div")(({ theme }) => ({
+const Bar = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -34,7 +37,7 @@ const Bar = styled("div")(({ theme }) => ({
 function MacOverlayTitlebar() {
   // No brand mark / name / version in the chrome itself — that bar is just
   // OS chrome + drag region; brand lives in the sidebar where it belongs.
-  return <Bar data-tauri-drag-region data-testid="titlebar-mac" />;
+  return <Bar data-tauri-drag-region data-testid={TEST_IDS.titlebar.mac} />;
 }
 
 export default MacOverlayTitlebar;

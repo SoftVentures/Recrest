@@ -4,11 +4,11 @@ import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import PageTransition from "@/components/atoms/transitions/PageTransition";
+import AddRepoModal from "@/components/molecules/modals/AddRepoModal";
+import OverallSearch from "@/components/organisms/OverallSearch";
 import UpdaterBanner from "@/components/organisms/banners/UpdaterBanner";
 import Header from "@/components/organisms/layout/Header";
 import Sidebar from "@/components/organisms/layout/Sidebar";
-import AddRepoDialog from "@/components/organisms/repos/AddRepoDialog";
-import SearchOverlay from "@/components/organisms/search/SearchOverlay";
 import Titlebar from "@/components/organisms/titlebars/Titlebar";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
@@ -17,6 +17,7 @@ import { usePageSwipe } from "@/hooks/usePageSwipe";
 import { usePrPolling } from "@/hooks/usePrPolling";
 import { useResponsiveSidebar } from "@/hooks/useResponsiveSidebar";
 import { useThemeAttribute } from "@/hooks/useThemeAttribute";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 const AppFrame = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -26,7 +27,7 @@ const AppFrame = styled(Box)(({ theme }) => ({
   minHeight: 0,
   overflow: "hidden",
   backgroundColor: theme.palette.background.default,
-}));
+})) as typeof Box;
 
 const Shell = styled(Box)({
   display: "grid",
@@ -36,22 +37,22 @@ const Shell = styled(Box)({
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
-});
+}) as typeof Box;
 
 const SidebarSlot = styled(Box)({
   gridColumn: 1,
   gridRow: "1 / span 2",
   minHeight: 0,
   display: "flex",
-});
+}) as typeof Box;
 
 const HeaderSlot = styled(Box)({
   gridColumn: "2 / -1",
   gridRow: 1,
   minWidth: 0,
-});
+}) as typeof Box;
 
-const MainSlot = styled("main")(({ theme }) => ({
+const MainSlot = styled(Box)(({ theme }) => ({
   gridColumn: 2,
   gridRow: 2,
   minHeight: 0,
@@ -60,7 +61,7 @@ const MainSlot = styled("main")(({ theme }) => ({
   flexDirection: "column",
   backgroundColor: theme.palette.background.default,
   overflow: "hidden",
-}));
+})) as typeof Box;
 
 /**
  * Single scroll surface for every page (mirrors src-old's `.a-content-scroll`).
@@ -89,7 +90,7 @@ const ContentScroll = styled(Box)({
   // hidden as the default removes a redundant scroller that would
   // otherwise add a second gutter on top of the inner one.
   overflow: "hidden",
-});
+}) as typeof Box;
 
 export function AppLayout() {
   useAppBootstrap();
@@ -108,7 +109,7 @@ export function AppLayout() {
   const { pathname } = useLocation();
 
   return (
-    <AppFrame data-testid="app">
+    <AppFrame data-testid={TEST_IDS.app}>
       <Titlebar />
       <Shell>
         <SidebarSlot>
@@ -117,7 +118,7 @@ export function AppLayout() {
         <HeaderSlot>
           <Header />
         </HeaderSlot>
-        <MainSlot data-testid="app-main">
+        <MainSlot component="main" data-testid={TEST_IDS.appMain}>
           <UpdaterBanner />
           <ContentScroll data-content-scroll>
             <PageTransition key={pathname}>
@@ -126,8 +127,8 @@ export function AppLayout() {
           </ContentScroll>
         </MainSlot>
       </Shell>
-      <SearchOverlay />
-      <AddRepoDialog />
+      <OverallSearch />
+      <AddRepoModal />
     </AppFrame>
   );
 }

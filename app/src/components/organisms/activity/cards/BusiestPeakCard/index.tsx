@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { ActivityStats } from "@/lib/activityStats";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   stats: ActivityStats;
@@ -23,7 +24,7 @@ const Mini = styled(Box)({
   minWidth: 0,
 });
 
-const MiniLabel = styled("div")(({ theme }) => ({
+const MiniLabel = styled(Box)(({ theme }) => ({
   fontSize: 11,
   fontWeight: 600,
   color: theme.palette.text.information,
@@ -31,7 +32,7 @@ const MiniLabel = styled("div")(({ theme }) => ({
   letterSpacing: "0.06em",
 }));
 
-const MiniValue = styled("div")(({ theme }) => ({
+const MiniValue = styled(Box)(({ theme }) => ({
   fontSize: 16,
   fontWeight: 700,
   color: theme.palette.text.primary,
@@ -39,29 +40,27 @@ const MiniValue = styled("div")(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 }));
 
-const MiniSub = styled("div")(({ theme }) => ({
+const MiniSub = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
 }));
 
 function BusiestPeakCard({ stats }: Props) {
   const { t } = useTranslation();
-  const dash = t("activity.cadence.none", { defaultValue: "—" });
+  const dash = t("activity.cadence.none");
   return (
     <GeneralCard
-      title={t("activity.cards.busiest_peak_title", { defaultValue: "Busiest & peak" })}
-      testId="activity-busiest-peak-card"
+      title={t("activity.cards.busiest_peak_title")}
+      testId={TEST_IDS.activity.cards.busiestPeak}
     >
       <MiniGrid>
         <Mini>
-          <MiniLabel>
-            {t("activity.cards.busiest_label", { defaultValue: "Busiest day" })}
-          </MiniLabel>
+          <MiniLabel>{t("activity.cards.busiest_label")}</MiniLabel>
           <MiniValue>{stats.busiestDay ? stats.busiestDay.label : dash}</MiniValue>
           <MiniSub>{stats.busiestDay ? `${stats.busiestDay.count} commits` : ""}</MiniSub>
         </Mini>
         <Mini>
-          <MiniLabel>{t("activity.cards.peak_label", { defaultValue: "Peak hours" })}</MiniLabel>
+          <MiniLabel>{t("activity.cards.peak_label")}</MiniLabel>
           <MiniValue>{stats.peakHour ? stats.peakHour.label : dash}</MiniValue>
           <MiniSub>{stats.peakHour ? `${stats.peakHour.count} commits` : ""}</MiniSub>
         </Mini>

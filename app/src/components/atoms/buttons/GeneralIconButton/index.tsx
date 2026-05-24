@@ -1,259 +1,178 @@
-import React from "react";
+import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from "react";
 
-import { Box, styled } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
-import { useDevice } from "@/hooks/useDevice";
+/**
+ * Size of the icon-button hitbox. The icon itself sits in the middle — pass
+ * the matching `size` to your Lucide icon (see `ICON_BUTTON_ICON_SIZES`).
+ *
+ * Adding a size: append the literal to the const, add an entry to both records.
+ */
+export const IconButtonSize = {
+  XS: "xs",
+  SM: "sm",
+  MD: "md",
+  LG: "lg",
+} as const;
 
-interface GeneralIconButtonProps {
-  id?: string;
-  icon: React.ReactNode;
-  onAction?: (_e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => void;
-  noMargin?: boolean;
-  noPadding?: boolean;
-  bigIcon?: boolean;
-  hugeIcon?: boolean;
-  customIconSize?: number;
-  forChat?: boolean;
-  title?: string;
-  placement?: "top" | "bottom" | "left" | "right";
-  noBackground?: boolean;
-  fixedBackground?: boolean;
-  customBackgroundColor?: string;
-  customColor?: string;
-  hoverAllowed?: boolean;
-  toolTipMaxWidth?: string;
-  tooltipArrow?: boolean;
-  rounded?: boolean;
-  disabled?: boolean;
-  isActive?: boolean;
+export type IconButtonSize = (typeof IconButtonSize)[keyof typeof IconButtonSize];
+
+/** Pixel hitbox per size. */
+export const ICON_BUTTON_HITBOX: Record<IconButtonSize, number> = {
+  [IconButtonSize.XS]: 16,
+  [IconButtonSize.SM]: 22,
+  [IconButtonSize.MD]: 28,
+  [IconButtonSize.LG]: 36,
+};
+
+/** Suggested icon `size` prop (lucide-react) that visually centres in each hitbox. */
+export const ICON_BUTTON_ICON_SIZES: Record<IconButtonSize, number> = {
+  [IconButtonSize.XS]: 11,
+  [IconButtonSize.SM]: 13,
+  [IconButtonSize.MD]: 14,
+  [IconButtonSize.LG]: 16,
+};
+
+export const IconButtonVariant = {
+  /** Transparent surface, hover changes icon colour only. */
+  GHOST: "ghost",
+  /** Transparent surface, hover adds a subtle background tint. Default. */
+  SUBTLE: "subtle",
+  /** Persistent border, hover lifts background + border. */
+  OUTLINE: "outline",
+} as const;
+
+export type IconButtonVariant = (typeof IconButtonVariant)[keyof typeof IconButtonVariant];
+
+export const IconButtonShape = {
+  /** Pill / round button — fits free-floating clear/close glyphs. */
+  CIRCLE: "circle",
+  /** Rounded-square — fits toolbar rows / chrome buttons. */
+  SQUARE: "square",
+} as const;
+
+export type IconButtonShape = (typeof IconButtonShape)[keyof typeof IconButtonShape];
+
+export const IconButtonTone = {
+  NEUTRAL: "neutral",
+  PRIMARY: "primary",
+  DANGER: "danger",
+} as const;
+
+export type IconButtonTone = (typeof IconButtonTone)[keyof typeof IconButtonTone];
+
+interface RootProps {
+  $size: IconButtonSize;
+  $variant: IconButtonVariant;
+  $shape: IconButtonShape;
+  $tone: IconButtonTone;
 }
 
-const IconButton = styled(Box, {
-  shouldForwardProp: (prop) =>
-    prop !== "noMargin" &&
-    prop !== "noPadding" &&
-    prop !== "bigIcon" &&
-    prop !== "hugeIcon" &&
-    prop !== "customIconSize" &&
-    prop !== "forChat" &&
-    prop !== "noBackground" &&
-    prop !== "fixedBackground" &&
-    prop !== "customBackgroundColor" &&
-    prop !== "customColor" &&
-    prop !== "hoverAllowed" &&
-    prop !== "rounded" &&
-    prop !== "disabled" &&
-    prop !== "isActive",
-})<Omit<GeneralIconButtonProps, "icon">>(
-  ({
-    theme,
-    noMargin,
-    noPadding,
-    bigIcon,
-    hugeIcon,
-    customIconSize,
-    forChat,
-    noBackground,
-    fixedBackground,
-    customBackgroundColor,
-    customColor,
-    hoverAllowed,
-    rounded,
-    disabled,
-    isActive,
-  }) => ({
-    display: "flex",
+// eslint-disable-next-line no-restricted-syntax -- native <button> required for accessibility (focus, keyboard, form-association)
+const Root = styled("button", {
+  shouldForwardProp: (p) => p !== "$size" && p !== "$variant" && p !== "$shape" && p !== "$tone",
+})<RootProps>(({ theme, $size, $variant, $shape, $tone }) => {
+  const hit = ICON_BUTTON_HITBOX[$size];
+  const baseColor =
+    $tone === IconButtonTone.PRIMARY
+      ? theme.palette.primary.main
+      : $tone === IconButtonTone.DANGER
+        ? theme.palette.error.main
+        : theme.palette.text.information;
+  const hoverColor =
+    $tone === IconButtonTone.PRIMARY
+      ? theme.palette.primary.dark
+      : $tone === IconButtonTone.DANGER
+        ? theme.palette.error.dark
+        : theme.palette.text.primary;
+
+  return {
+    display: "inline-flex",
     alignItems: "center",
-    borderRadius: rounded ? "50%" : theme.spacing(1),
-    padding: noPadding ? 0 : "4px",
-    marginRight: noMargin ? 0 : 8,
-    backgroundColor: disabled
-      ? "transparent"
-      : fixedBackground
-        ? theme.palette.surface.interface.background
-        : forChat
-          ? theme.palette.surface.interface.base
-          : customBackgroundColor
-            ? customBackgroundColor
-            : `transparent`,
-    backgroundImage: "unset",
-    color: disabled
-      ? theme.palette.icon.disabled
-      : isActive
-        ? theme.palette.primary.main
-        : forChat
-          ? theme.palette.icon.secondary
-          : customColor
-            ? customColor
-            : theme.palette.text.default,
-    border: forChat ? `1px solid ${theme.palette.border.separator}` : undefined,
-    ...(hoverAllowed && {
-      "&:hover": {
-        backgroundColor:
-          disabled || noBackground
-            ? "transparent"
-            : customBackgroundColor
-              ? customBackgroundColor
-              : theme.palette.surface.button.hoverLight,
-        "& path": {
-          fill: disabled
-            ? theme.palette.icon.disabled
-            : customColor
-              ? customColor
-              : theme.palette.icon.primary,
-        },
-        "& span": {
-          color: disabled
-            ? theme.palette.icon.disabled
-            : customColor
-              ? customColor
-              : theme.palette.icon.primary,
-        },
-        "& svg": {
-          color: disabled
-            ? theme.palette.icon.disabled
-            : customColor
-              ? customColor
-              : theme.palette.icon.primary,
-        },
-      },
-      "&:active": {
-        backgroundColor:
-          disabled || noBackground ? "transparent" : theme.palette.surface.button.secondary,
-        "& path": {
-          fill: disabled
-            ? theme.palette.icon.disabled
-            : customColor
-              ? customColor
-              : theme.palette.icon.primary,
-        },
-        "& span": {
-          color: disabled
-            ? theme.palette.icon.disabled
-            : customColor
-              ? customColor
-              : theme.palette.icon.primary,
-        },
-        "& svg": {
-          color: disabled
-            ? theme.palette.icon.disabled
-            : customColor
-              ? customColor
-              : theme.palette.icon.primary,
-        },
-      },
-    }),
-    "& span": {
-      width: customIconSize ? customIconSize : hugeIcon ? 24 : bigIcon ? 20 : 16,
-      height: customIconSize ? customIconSize : hugeIcon ? 24 : bigIcon ? 20 : 16,
-      fontSize: customIconSize ? customIconSize : hugeIcon ? "24px" : bigIcon ? "20px" : "16px",
-      cursor: !disabled && "pointer",
-      color: disabled
-        ? theme.palette.icon.disabled
-        : isActive
-          ? theme.palette.primary.main
-          : forChat
-            ? theme.palette.icon.secondary
-            : customColor
-              ? customColor
-              : theme.palette.text.default,
+    justifyContent: "center",
+    width: hit,
+    height: hit,
+    padding: 0,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    flexShrink: 0,
+    borderRadius: $shape === IconButtonShape.CIRCLE ? "50%" : 8,
+    border: $variant === IconButtonVariant.OUTLINE ? `1px solid ${theme.palette.divider}` : 0,
+    backgroundColor:
+      $variant === IconButtonVariant.OUTLINE ? theme.palette.surface.interface.base : "transparent",
+    color: baseColor,
+    transition: "background-color 120ms ease, color 120ms ease, border-color 120ms ease",
+    "&:hover:not(:disabled)": {
+      color: hoverColor,
+      backgroundColor:
+        $variant === IconButtonVariant.GHOST
+          ? "transparent"
+          : theme.palette.surface.interface.active,
+      borderColor: $variant === IconButtonVariant.OUTLINE ? theme.palette.border.hover : undefined,
     },
-    "& svg": {
-      width: customIconSize ? customIconSize : hugeIcon ? 24 : bigIcon ? 20 : 16,
-      height: customIconSize ? customIconSize : hugeIcon ? 24 : bigIcon ? 20 : 16,
-      fontSize: customIconSize ? customIconSize : hugeIcon ? "24px" : bigIcon ? "20px" : "16px",
-      cursor: !disabled && "pointer",
-      color: disabled
-        ? theme.palette.icon.disabled
-        : isActive
-          ? theme.palette.primary.main
-          : forChat
-            ? theme.palette.icon.secondary
-            : customColor
-              ? customColor
-              : theme.palette.text.default,
+    "&:focus-visible": {
+      outline: `2px solid ${theme.palette.primary.main}`,
+      outlineOffset: 2,
     },
-  }),
-);
-
-const GeneralIconButton: React.FC<GeneralIconButtonProps> = ({
-  id,
-  icon,
-  onAction,
-  noMargin = false,
-  noPadding = false,
-  bigIcon = false,
-  hugeIcon = false,
-  customIconSize,
-  forChat = false,
-  title,
-  placement,
-  tooltipArrow = true,
-  noBackground = false,
-  fixedBackground = false,
-  customBackgroundColor,
-  customColor,
-  hoverAllowed = true,
-  rounded = false,
-  disabled = false,
-  isActive = false,
-}) => {
-  const { isMobile, isTablet } = useDevice();
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
-    if ((e.key === "Enter" || e.key === " ") && !disabled) {
-      e.preventDefault();
-      onAction?.(e as unknown as React.MouseEvent<HTMLElement>);
-    }
+    "&:disabled": {
+      opacity: 0.5,
+      cursor: "not-allowed",
+    },
+    'html[data-reduced-motion="true"] &': {
+      transition: "none",
+    },
   };
+});
 
-  const eventProps =
-    isMobile || isTablet
-      ? {
-          onTouchEnd: (e: React.TouchEvent<HTMLElement>) => onAction?.(e),
-          onClick: (e: React.MouseEvent<HTMLElement>) => onAction?.(e),
-          onKeyDown: handleKeyDown,
-        }
-      : {
-          onClick: (e: React.MouseEvent<HTMLElement>) => onAction?.(e),
-          onKeyDown: handleKeyDown,
-        };
+export interface GeneralIconButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "ref" | "children"
+> {
+  /** The icon to render inside the hitbox. Pass the Lucide (or any other) icon
+   *  element pre-sized via the `iconSize` lookup `ICON_BUTTON_ICON_SIZES[size]`. */
+  icon: ReactNode;
+  size?: IconButtonSize;
+  variant?: IconButtonVariant;
+  shape?: IconButtonShape;
+  tone?: IconButtonTone;
+  /** Required accessibility label — icon-only buttons must announce their purpose. */
+  "aria-label": string;
+}
 
-  const content = (
-    <IconButton
-      {...eventProps}
-      id={id}
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      noMargin={noMargin}
-      noPadding={noPadding}
-      bigIcon={bigIcon}
-      hugeIcon={hugeIcon}
-      customIconSize={customIconSize}
-      forChat={forChat}
-      noBackground={noBackground}
-      fixedBackground={fixedBackground}
-      customBackgroundColor={customBackgroundColor}
-      customColor={customColor}
-      hoverAllowed={hoverAllowed}
-      rounded={rounded}
-      disabled={disabled}
-      isActive={isActive}
-    >
-      {icon}
-    </IconButton>
-  );
-
-  if (!disabled && title && placement) {
+/**
+ * Single canonical primitive for icon-only buttons. Every pure-icon button
+ * across the app — search clear, dialog close, tooltip trigger, row actions,
+ * sidebar collapse — composes this. Custom inline `styled("button")` icon
+ * buttons are forbidden; extend `IconButtonSize`/`IconButtonVariant` if a new
+ * shape is needed.
+ */
+const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
+  function GeneralIconButton(
+    {
+      icon,
+      size = IconButtonSize.MD,
+      variant = IconButtonVariant.SUBTLE,
+      shape = IconButtonShape.SQUARE,
+      tone = IconButtonTone.NEUTRAL,
+      type = "button",
+      ...rest
+    },
+    ref,
+  ) {
     return (
-      <GeneralTooltip title={title} placement={placement} arrow={tooltipArrow}>
-        {content}
-      </GeneralTooltip>
+      <Root
+        ref={ref}
+        type={type}
+        $size={size}
+        $variant={variant}
+        $shape={shape}
+        $tone={tone}
+        {...rest}
+      >
+        {icon}
+      </Root>
     );
-  }
-
-  return content;
-};
+  },
+);
 
 export default GeneralIconButton;

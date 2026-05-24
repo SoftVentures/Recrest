@@ -3,37 +3,16 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { keyframes, styled } from "@mui/material/styles";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { LanguageSlice } from "@/lib/activityAggregates";
+import { donutArcs } from "@/lib/charts/donutArcs";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   mix: LanguageSlice[];
   loading?: boolean;
-}
-
-interface Arc {
-  slice: LanguageSlice;
-  path: string;
-}
-
-function donutArcs(mix: LanguageSlice[], radius: number, cx: number, cy: number): Arc[] {
-  const arcs: Arc[] = [];
-  let cursor = -Math.PI / 2;
-  for (const slice of mix) {
-    const angle = slice.share * 2 * Math.PI;
-    const end = cursor + angle;
-    const x1 = cx + Math.cos(cursor) * radius;
-    const y1 = cy + Math.sin(cursor) * radius;
-    const x2 = cx + Math.cos(end) * radius;
-    const y2 = cy + Math.sin(end) * radius;
-    const large = angle > Math.PI ? 1 : 0;
-    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
-    arcs.push({ slice, path });
-    cursor = end;
-  }
-  return arcs;
 }
 
 const Wrap = styled(Box)({
@@ -47,6 +26,19 @@ const Svg = styled("svg")({
   width: 120,
   height: 120,
   flexShrink: 0,
+});
+
+const arcFadeIn = keyframes`
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+`;
+
+const Arc = styled("path")({
+  transformOrigin: "60px 60px",
+  animation: `${arcFadeIn} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+  'html[data-reduced-motion="true"] &': {
+    animation: "none",
+  },
 });
 
 const Centre = styled("text")(({ theme }) => ({
@@ -65,7 +57,7 @@ const CentreSub = styled("text")(({ theme }) => ({
   letterSpacing: "0.06em",
 }));
 
-const LegendList = styled("ul")({
+const LegendList = styled(Box)({
   margin: 0,
   padding: 0,
   listStyle: "none",
@@ -74,9 +66,9 @@ const LegendList = styled("ul")({
   gap: 4,
   maxHeight: 180,
   overflowY: "auto",
-});
+}) as typeof Box;
 
-const LegendItem = styled("li")(({ theme }) => ({
+const LegendItem = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "10px 1fr auto",
   gap: 8,
@@ -87,8 +79,9 @@ const LegendItem = styled("li")(({ theme }) => ({
     color: theme.palette.text.information,
     fontVariantNumeric: "tabular-nums",
   },
-}));
+})) as typeof Box;
 
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   color: string;
 }>(({ color }) => ({
@@ -129,16 +122,21 @@ function LanguageDonutCard({ mix, loading }: Props) {
   const arcs = useMemo(() => donutArcs(legend, 48, 60, 60), [legend]);
   return (
     <GeneralCard
-      title={t("activity.cards.language_title", { defaultValue: "Language mix" })}
-      sub={t("activity.cards.language_sub", { defaultValue: "weighted by commits" })}
+      title={t("activity.cards.language_title")}
+      sub={t("activity.cards.language_sub")}
       loading={loading}
       skeleton="donut"
-      testId="activity-language-card"
+      testId={TEST_IDS.activity.cards.language}
     >
       <Wrap>
         <Svg viewBox="0 0 120 120">
-          {arcs.map((a) => (
-            <path key={a.slice.language} d={a.path} fill={a.slice.color} />
+          {arcs.map((a, i) => (
+            <Arc
+              key={a.slice.language}
+              d={a.path}
+              fill={a.slice.color}
+              style={{ animationDelay: `${220 + i * 60}ms` }}
+            />
           ))}
           <circle cx="60" cy="60" r="34" fill="var(--mui-palette-surface-interface-base, white)" />
           <Centre x="60" y="58">
@@ -148,12 +146,12 @@ function LanguageDonutCard({ mix, loading }: Props) {
             commits
           </CentreSub>
         </Svg>
-        <LegendList>
+        <LegendList component="ul">
           {legend.map((s) => (
-            <LegendItem key={s.language}>
+            <LegendItem key={s.language} component="li">
               <Swatch color={s.color} />
-              <span>{s.language}</span>
-              <span>{Math.round(s.share * 100)}%</span>
+              <Box component="span">{s.language}</Box>
+              <Box component="span">{Math.round(s.share * 100)}%</Box>
             </LegendItem>
           ))}
         </LegendList>

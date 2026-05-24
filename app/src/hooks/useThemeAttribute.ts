@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 
+import { StorageKey } from "@/lib/constants/storage.constants";
+import { ThemeId } from "@/lib/constants/theme.constants";
 import { useAppSelector } from "@/store/hooks";
 
 /**
@@ -19,7 +21,8 @@ export function useThemeAttribute(): void {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const isDark = themeId === "dark" || themeId === "oled" || themeId === "glassy";
+    const isDark =
+      themeId === ThemeId.DARK || themeId === ThemeId.OLED || themeId === ThemeId.GLASSY;
     document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
     document.documentElement.setAttribute("data-theme-id", themeId);
     // Background on <html> was set inline by the anti-flash script before
@@ -27,8 +30,11 @@ export function useThemeAttribute(): void {
     // surface — otherwise the inline value lingers and fights theme changes.
     document.documentElement.style.backgroundColor = "";
     try {
-      window.localStorage.setItem("recrest:theme", themeId);
-      window.localStorage.setItem("recrest:theme-follows-system", followsSystem ? "true" : "false");
+      window.localStorage.setItem(StorageKey.THEME, themeId);
+      window.localStorage.setItem(
+        StorageKey.THEME_FOLLOWS_SYSTEM,
+        followsSystem ? "true" : "false",
+      );
     } catch {
       /* localStorage blocked — non-fatal, just no anti-flash next time */
     }

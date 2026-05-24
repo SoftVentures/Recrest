@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
 
-import { Box, Tooltip } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { ReviewQueueEntry } from "@/lib/activityAggregates";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { openExternal } from "@/lib/tauri";
 
 interface Props {
@@ -16,8 +18,9 @@ const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 6,
-});
+}) as typeof Box;
 
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const Item = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -38,32 +41,33 @@ const Item = styled("button")(({ theme }) => ({
   },
 }));
 
-const Body = styled("span")({
+const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 2,
   minWidth: 0,
   flex: 1,
-});
+}) as typeof Box;
 
-const Title = styled("span")(({ theme }) => ({
+const Title = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-}));
+})) as typeof Typography;
 
-const Meta = styled("span")(({ theme }) => ({
+const Meta = styled(Typography)(({ theme }) => ({
   fontSize: 10.5,
   color: theme.palette.text.information,
   display: "inline-flex",
   alignItems: "center",
   gap: 4,
   flexWrap: "wrap",
-}));
+})) as typeof Typography;
 
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 const Age = styled("span", { shouldForwardProp: (p) => p !== "old" })<{ old?: boolean }>(
   ({ theme, old }) => ({
     fontSize: 11,
@@ -84,49 +88,48 @@ const Empty = styled(Box)(({ theme }) => ({
   color: theme.palette.text.information,
   padding: "16px 0",
   textAlign: "center",
-}));
+})) as typeof Box;
 
 function ReviewQueueCard({ entries, loading }: Props) {
   const { t } = useTranslation();
   return (
     <GeneralCard
-      title={t("activity.cards.review_queue_title", { defaultValue: "Review queue" })}
-      sub={t("activity.cards.review_queue_sub", { defaultValue: "oldest open MRs" })}
+      title={t("activity.cards.review_queue_title")}
+      sub={t("activity.cards.review_queue_sub")}
       loading={loading}
       skeleton="rows"
-      testId="activity-review-queue-card"
+      testId={TEST_IDS.activity.cards.reviewQueue}
     >
       {entries.length === 0 ? (
-        <Empty data-testid="activity-card-review-queue-empty">
-          {t("activity.cards.review_queue_empty", { defaultValue: "No open MRs waiting." })}
+        <Empty data-testid={TEST_IDS.activity.cards.reviewQueueEmpty}>
+          {t("activity.cards.review_queue_empty")}
         </Empty>
       ) : (
-        <List data-testid="activity-card-review-queue-list">
+        <List data-testid={TEST_IDS.activity.cards.reviewQueueList}>
           {entries.map((e) => {
             const age = Math.round(e.ageDays);
             const ageLabel =
               age === 1
-                ? t("activity.cards.age_days_one", { count: age, defaultValue: `${age} day old` })
-                : t("activity.cards.age_days_other", {
-                    count: age,
-                    defaultValue: `${age} days old`,
-                  });
+                ? t("activity.cards.age_days_one", { count: age })
+                : t("activity.cards.age_days_other", { count: age });
             const open = () => void openExternal(e.url);
             return (
               <Item key={`${e.repoId}#${e.number}`} type="button" onClick={open}>
-                <Body>
-                  <Title>{e.title}</Title>
-                  <Meta>
-                    <span>{e.repoName}</span>
-                    <span>·</span>
-                    <span>#{e.number}</span>
-                    <span>·</span>
-                    <span>{e.author}</span>
+                <Body component="span">
+                  <Title component="span" variant="caption">
+                    {e.title}
+                  </Title>
+                  <Meta component="span" variant="caption">
+                    <Box component="span">{e.repoName}</Box>
+                    <Box component="span">·</Box>
+                    <Box component="span">#{e.number}</Box>
+                    <Box component="span">·</Box>
+                    <Box component="span">{e.author}</Box>
                   </Meta>
                 </Body>
-                <Tooltip arrow placement="top" title={ageLabel}>
+                <GeneralTooltip arrow placement="top" title={ageLabel}>
                   <Age old={age >= 7}>{age}d</Age>
-                </Tooltip>
+                </GeneralTooltip>
               </Item>
             );
           })}

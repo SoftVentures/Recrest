@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import type { PullRequest } from "@recrest/shared";
+import { PrState, type PullRequest } from "@recrest/shared";
 
 interface Props {
   prsByRepo: Record<string, readonly PullRequest[]>;
@@ -20,7 +20,7 @@ const Root = styled(Box)(({ theme }) => ({
   height: "100%",
 }));
 
-const Label = styled("div")(({ theme }) => ({
+const Label = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   textTransform: "uppercase",
@@ -28,7 +28,7 @@ const Label = styled("div")(({ theme }) => ({
   fontWeight: 600,
 }));
 
-const Value = styled("div")(({ theme }) => ({
+const Value = styled(Box)(({ theme }) => ({
   fontSize: 26,
   fontWeight: 700,
   color: theme.palette.text.primary,
@@ -37,7 +37,7 @@ const Value = styled("div")(({ theme }) => ({
   lineHeight: 1.1,
 }));
 
-const Sub = styled("div")(({ theme }) => ({
+const Sub = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
@@ -50,7 +50,7 @@ function OpenPrsHero({ prsByRepo }: Props) {
   let draft = 0;
   for (const prs of Object.values(prsByRepo)) {
     for (const pr of prs) {
-      if (pr.state !== "open") continue;
+      if (pr.state !== PrState.OPEN) continue;
       open += 1;
       if (pr.draft) draft += 1;
     }
@@ -58,15 +58,9 @@ function OpenPrsHero({ prsByRepo }: Props) {
   const review = Math.max(0, open - draft);
   return (
     <Root>
-      <Label>{t("activity.hero.open_prs", { defaultValue: "Open MRs" })}</Label>
+      <Label>{t("activity.hero.open_prs")}</Label>
       <Value>{open}</Value>
-      <Sub>
-        {t("activity.hero.open_prs_sub", {
-          review,
-          draft,
-          defaultValue: `${review} in review · ${draft} draft`,
-        })}
-      </Sub>
+      <Sub>{t("activity.hero.open_prs_sub", { review, draft })}</Sub>
     </Root>
   );
 }

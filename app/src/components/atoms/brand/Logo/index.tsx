@@ -1,20 +1,20 @@
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import IconDev from "@/assets/recrest-icon-dev.svg?react";
-import IconTransparentDark from "@/assets/recrest-icon-transparent-dark.svg?react";
-import IconTransparentWhite from "@/assets/recrest-icon-transparent-white.svg?react";
+import IconDev from "@/assets/logos/recrest-icon-dev.svg?react";
+import IconTransparentDark from "@/assets/logos/recrest-icon-transparent-dark.svg?react";
+import IconTransparentWhite from "@/assets/logos/recrest-icon-transparent-white.svg?react";
 
 export interface LogoProps {
   className?: string;
-  /** Visual label read by screen readers (defaults to "Recrest"). */
   title?: string;
 }
 
-const Root = styled("span")({
+const Root = styled(Box)({
   position: "relative",
   display: "inline-block",
   lineHeight: 0,
-});
+}) as typeof Box;
 
 const DevMark = styled(IconDev)({
   display: "block",
@@ -40,29 +40,13 @@ const DarkVariant = styled(IconTransparentWhite)({
   },
 });
 
-const IS_VITE_DEV = import.meta.env.DEV;
-
-/**
- * Recrest mark used in the left sidebar's brand row.
- *
- * Variant matrix:
- *   prod, any theme → transparent wordmark, chevron colour follows theme
- *                     (dark chevrons in light mode, white chevrons in dark)
- *   dev,  any theme → `recrest-icon-dev.svg` (orange chevrons + `</>` badge).
- *                     The dev mark is already theme-neutral (orange reads on
- *                     both surfaces), so we don't need a per-theme split.
- *
- * "Dev" means **Vite dev build** (`import.meta.env.DEV`) — covers both
- * `yarn tauri:dev` and `yarn dev:web`, because both run the dev bundle.
- * The previous gating (real-Tauri only) was overly defensive and meant the
- * dev badge silently disappeared in `dev:web`, where most UI iteration
- * actually happens. The favicon (`useFaviconSync`) uses the same `DEV`
- * gate, so tab + sidebar stay in lockstep.
- */
+// `import.meta.env.DEV` is true for both `yarn tauri:dev` and `yarn dev:web`,
+// so the orange `</>` dev badge appears in every dev workflow — the favicon
+// gate in `useFaviconSync` uses the same flag so tab + sidebar stay in sync.
 function Logo({ className, title = "Recrest" }: LogoProps) {
-  if (IS_VITE_DEV) {
+  if (import.meta.env.DEV) {
     return (
-      <Root className={className} role="img" aria-label={title}>
+      <Root component="span" className={className} role="img" aria-label={title}>
         <DevMark aria-hidden />
       </Root>
     );

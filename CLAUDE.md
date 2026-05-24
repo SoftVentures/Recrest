@@ -72,6 +72,7 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 - React components avoid nested interactive elements. Row selectors use `<div role="button" tabIndex={0}>` with keyboard handlers so action buttons inside rows stay legal.
 - Do not reintroduce `postcss.config.js` or `autoprefixer` / `postcss` as deps — Tailwind v4 runs through `@tailwindcss/vite` and handles vendor prefixes internally.
 - When adding a Tauri command: declare it in the matching `commands/*.rs`, wire it into `generate_handler![...]` in `lib.rs`, mirror the return type as a TS DTO on the `@recrest/shared` side, and consume it through `invoke<T>` in a thunk (not directly in components).
+- **No magic strings.** Every `data-testid`, `recrest:*` storage key, Tauri command name, and IPC event channel must come from a constant in `app/src/lib/constants/` (or `@recrest/shared`). ESLint's `no-restricted-syntax` block enforces this — see `app/src/lib/constants/README.md` for the full layering and how to add a new constant. The only sanctioned inline exception is the anti-flash `<script>` in `app/index.html`, because it runs before any module loads.
 
 ## Known scope gaps (not bugs)
 

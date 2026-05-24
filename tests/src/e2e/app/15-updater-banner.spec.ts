@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 /**
  * The DeveloperTab's "Simulate updater event" button dispatches a
@@ -12,33 +13,33 @@ import { expect, test } from "../../fixtures/app.fixture.js";
 test.describe("app / updater banner variants", () => {
   test("canAutoInstall=true renders install button", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
-    await page.getByTestId("settings-tab-developer").click();
+    await page.getByTestId(TEST_IDS.settings.tab("developer")).click();
 
-    const canAuto = page.getByTestId("dev-updater-sim-can-auto-install");
+    const canAuto = page.getByTestId(TEST_IDS.settings.developer.updater.simCanAutoInstall);
     await expect(canAuto).toBeVisible();
     if ((await canAuto.getAttribute("aria-checked")) !== "true") {
       await canAuto.click();
     }
-    await page.getByTestId("dev-updater-emit").click();
+    await page.getByTestId(TEST_IDS.settings.developer.updater.emit).click();
 
-    await expect(page.getByTestId("updater-banner")).toBeVisible();
-    await expect(page.getByTestId("updater-banner-install")).toBeVisible();
-    await expect(page.getByTestId("updater-banner-download")).toHaveCount(0);
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.root)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.install)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.download)).toHaveCount(0);
   });
 
   test("canAutoInstall=false renders download button", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
-    await page.getByTestId("settings-tab-developer").click();
+    await page.getByTestId(TEST_IDS.settings.tab("developer")).click();
 
-    const canAuto = page.getByTestId("dev-updater-sim-can-auto-install");
+    const canAuto = page.getByTestId(TEST_IDS.settings.developer.updater.simCanAutoInstall);
     await expect(canAuto).toBeVisible();
     if ((await canAuto.getAttribute("aria-checked")) === "true") {
       await canAuto.click();
     }
-    await page.getByTestId("dev-updater-emit").click();
+    await page.getByTestId(TEST_IDS.settings.developer.updater.emit).click();
 
-    await expect(page.getByTestId("updater-banner")).toBeVisible();
-    await expect(page.getByTestId("updater-banner-download")).toBeVisible();
-    await expect(page.getByTestId("updater-banner-install")).toHaveCount(0);
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.root)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.download)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.install)).toHaveCount(0);
   });
 });

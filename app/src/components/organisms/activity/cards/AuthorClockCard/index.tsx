@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   hours: number[];
@@ -69,11 +70,11 @@ function AuthorClockCard({ hours, loading }: Props) {
 
   return (
     <GeneralCard
-      title={t("activity.cards.clock_title", { defaultValue: "Activity clock" })}
-      sub={t("activity.cards.clock_sub", { defaultValue: "hour-of-day distribution" })}
+      title={t("activity.cards.clock_title")}
+      sub={t("activity.cards.clock_sub")}
       loading={loading}
       skeleton="radial"
-      testId="activity-clock-card"
+      testId={TEST_IDS.activity.cards.authorClock}
     >
       <Wrap>
         <Svg viewBox="0 0 150 150">
@@ -123,8 +124,8 @@ function AuthorClockCard({ hours, loading }: Props) {
           })}
         </Svg>
         <Foot>
-          <strong>{peakLabel}</strong>
-          <span>{total} commits</span>
+          <Box component="strong">{peakLabel}</Box>
+          <Box component="span">{total} commits</Box>
         </Foot>
       </Wrap>
     </GeneralCard>

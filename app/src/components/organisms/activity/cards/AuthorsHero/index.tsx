@@ -5,7 +5,7 @@ import { styled } from "@mui/material/styles";
 
 import { ArrowDown, ArrowUp } from "lucide-react";
 
-import GeneralAuthorAvatar from "@/components/molecules/avatars/GeneralAuthorAvatar";
+import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import type { WeekPair } from "@/lib/activityStats";
 
 interface Props {
@@ -25,7 +25,7 @@ const Root = styled(Box)(({ theme }) => ({
   height: "100%",
 }));
 
-const Label = styled("div")(({ theme }) => ({
+const Label = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   textTransform: "uppercase",
@@ -33,7 +33,7 @@ const Label = styled("div")(({ theme }) => ({
   fontWeight: 600,
 }));
 
-const Value = styled("div")(({ theme }) => ({
+const Value = styled(Box)(({ theme }) => ({
   fontSize: 26,
   fontWeight: 700,
   color: theme.palette.text.primary,
@@ -86,35 +86,24 @@ function AuthorsHero({ authors, topAuthors }: Props) {
     authors.delta === 0 ? "flat" : authors.delta > 0 ? "up" : "down";
   const deltaLabel =
     authors.delta === 0
-      ? t("activity.kpi.delta_flat", { defaultValue: "no change vs last week" })
+      ? t("activity.kpi.delta_flat")
       : authors.delta > 0
-        ? t("activity.kpi.delta_up", {
-            delta: authors.delta,
-            defaultValue: `+${authors.delta} vs last week`,
-          })
-        : t("activity.kpi.delta_down", {
-            delta: authors.delta,
-            defaultValue: `${authors.delta} vs last week`,
-          });
+        ? t("activity.kpi.delta_up", { delta: authors.delta })
+        : t("activity.kpi.delta_down", { delta: authors.delta });
   return (
     <Root>
-      <Label>{t("activity.kpi.authors_week", { defaultValue: "Active authors" })}</Label>
+      <Label>{t("activity.kpi.authors_week")}</Label>
       <Value>{authors.current}</Value>
       <Foot>
         <AvStack aria-hidden>
           {topAuthors.slice(0, 3).map((a) => (
-            <GeneralAuthorAvatar
-              key={a.name}
-              name={a.name}
-              email={a.email ?? undefined}
-              size={22}
-            />
+            <AuthorAvatar key={a.name} name={a.name} email={a.email ?? undefined} size={22} />
           ))}
         </AvStack>
         <Delta tone={dir}>
           {dir === "up" && <ArrowUp size={11} aria-hidden />}
           {dir === "down" && <ArrowDown size={11} aria-hidden />}
-          <span>{deltaLabel}</span>
+          <Box component="span">{deltaLabel}</Box>
         </Delta>
       </Foot>
     </Root>

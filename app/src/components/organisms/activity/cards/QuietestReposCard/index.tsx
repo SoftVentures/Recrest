@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import GeneralCard from "@/components/molecules/cards/GeneralCard";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { colorForRepo } from "@/lib/activityStats";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 
 interface Props {
@@ -16,7 +17,7 @@ const ChipRow = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
   gap: 4,
-});
+}) as typeof Box;
 
 const Chip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
@@ -29,8 +30,9 @@ const Chip = styled(Box)(({ theme }) => ({
   fontSize: 11,
   fontWeight: 500,
   color: theme.palette.text.primary,
-}));
+})) as typeof Box;
 
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 const Dot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{ color: string }>(
   ({ color }) => ({
     width: 7,
@@ -41,29 +43,27 @@ const Dot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{ color:
   }),
 );
 
-const More = styled("span")(({ theme }) => ({
+const More = styled(Typography)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   padding: "2px 6px",
-}));
+})) as typeof Typography;
 
-const Empty = styled("div")(({ theme }) => ({
+const Empty = styled(Box)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.information,
   padding: "10px 0",
-}));
+})) as typeof Box;
 
 function QuietestReposCard({ quietestRepoIds, reposById }: Props) {
   const { t } = useTranslation();
   return (
     <GeneralCard
-      title={t("activity.cadence.quietest", { defaultValue: "Quietest repos" })}
-      testId="activity-quietest-card"
+      title={t("activity.cadence.quietest")}
+      testId={TEST_IDS.activity.cards.quietestRepos}
     >
       {quietestRepoIds.length === 0 ? (
-        <Empty>
-          {t("activity.cadence.quietest_none", { defaultValue: "Every repo has activity." })}
-        </Empty>
+        <Empty>{t("activity.cadence.quietest_none")}</Empty>
       ) : (
         <ChipRow>
           {quietestRepoIds.slice(0, 8).map((id) => {
@@ -75,7 +75,11 @@ function QuietestReposCard({ quietestRepoIds, reposById }: Props) {
               </Chip>
             );
           })}
-          {quietestRepoIds.length > 8 && <More>+{quietestRepoIds.length - 8}</More>}
+          {quietestRepoIds.length > 8 && (
+            <More component="span" variant="caption">
+              +{quietestRepoIds.length - 8}
+            </More>
+          )}
         </ChipRow>
       )}
     </GeneralCard>

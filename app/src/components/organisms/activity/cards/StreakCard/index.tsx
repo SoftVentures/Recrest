@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 interface Props {
@@ -27,15 +27,15 @@ const Root = styled(Box, { shouldForwardProp: (p) => p !== "hot" })<{ hot?: bool
   }),
 );
 
-const Label = styled("div")(({ theme }) => ({
+const Label = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
   fontWeight: 600,
-}));
+})) as typeof Box;
 
-const Value = styled("div", { shouldForwardProp: (p) => p !== "hot" })<{ hot?: boolean }>(
+const Value = styled(Box, { shouldForwardProp: (p) => p !== "hot" })<{ hot?: boolean }>(
   ({ theme, hot }) => ({
     fontSize: 26,
     fontWeight: 700,
@@ -49,32 +49,36 @@ const Value = styled("div", { shouldForwardProp: (p) => p !== "hot" })<{ hot?: b
   }),
 );
 
-const Fire = styled("span")({ fontSize: 18 });
+const Fire = styled(Typography)({ fontSize: 18 }) as typeof Typography;
 
-const Delta = styled("div")(({ theme }) => ({
+const Delta = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   marginTop: 4,
   fontVariantNumeric: "tabular-nums",
-}));
+})) as typeof Box;
 
 function StreakCard({ streak, longest }: Props) {
   const { t } = useTranslation();
   const onFire = streak >= 3;
   const label =
     streak === 1
-      ? t("activity.kpi.streak_days_one", { count: streak, defaultValue: `${streak} day` })
-      : t("activity.kpi.streak_days_other", { count: streak, defaultValue: `${streak} days` });
+      ? t("activity.kpi.streak_days_one", { count: streak })
+      : t("activity.kpi.streak_days_other", { count: streak });
   const bestLabel =
     longest === 1
-      ? t("activity.kpi.streak_days_one", { count: longest, defaultValue: `${longest} day` })
-      : t("activity.kpi.streak_days_other", { count: longest, defaultValue: `${longest} days` });
+      ? t("activity.kpi.streak_days_one", { count: longest })
+      : t("activity.kpi.streak_days_other", { count: longest });
   return (
     <Root hot={onFire}>
-      <Label>{t("activity.kpi.streak", { defaultValue: "Current streak" })}</Label>
+      <Label>{t("activity.kpi.streak")}</Label>
       <Value hot={onFire}>
         {streak}
-        {onFire && <Fire aria-hidden>🔥</Fire>}
+        {onFire && (
+          <Fire component="span" variant="caption" aria-hidden>
+            🔥
+          </Fire>
+        )}
       </Value>
       <Delta>
         {label}

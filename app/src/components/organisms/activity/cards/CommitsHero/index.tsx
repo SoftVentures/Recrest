@@ -23,7 +23,7 @@ const Root = styled(Box)(({ theme }) => ({
   height: "100%",
 }));
 
-const Label = styled("div")(({ theme }) => ({
+const Label = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   textTransform: "uppercase",
@@ -31,7 +31,7 @@ const Label = styled("div")(({ theme }) => ({
   fontWeight: 600,
 }));
 
-const Value = styled("div")(({ theme }) => ({
+const Value = styled(Box)(({ theme }) => ({
   fontSize: 26,
   fontWeight: 700,
   color: theme.palette.text.primary,
@@ -88,22 +88,16 @@ function CommitsHero({ commits, sparkline }: Props) {
     commits.delta === 0 ? "flat" : commits.delta > 0 ? "up" : "down";
   const deltaLabel =
     commits.delta === 0
-      ? t("activity.kpi.delta_flat", { defaultValue: "no change vs last week" })
+      ? t("activity.kpi.delta_flat")
       : commits.delta > 0
-        ? t("activity.kpi.delta_up", {
-            delta: commits.delta,
-            defaultValue: `+${commits.delta} vs last week`,
-          })
-        : t("activity.kpi.delta_down", {
-            delta: commits.delta,
-            defaultValue: `${commits.delta} vs last week`,
-          });
+        ? t("activity.kpi.delta_up", { delta: commits.delta })
+        : t("activity.kpi.delta_down", { delta: commits.delta });
   const peak = Math.max(1, ...sparkline);
   // src-old: last 7 days reversed so today is on the right.
   const last7 = sparkline.slice(0, 7).reverse();
   return (
     <Root>
-      <Label>{t("activity.kpi.commits_week", { defaultValue: "Commits · this week" })}</Label>
+      <Label>{t("activity.kpi.commits_week")}</Label>
       <Value>{commits.current}</Value>
       <Foot>
         <Spark aria-hidden>
@@ -114,7 +108,7 @@ function CommitsHero({ commits, sparkline }: Props) {
         <Delta tone={dir}>
           {dir === "up" && <ArrowUp size={11} aria-hidden />}
           {dir === "down" && <ArrowDown size={11} aria-hidden />}
-          <span>{deltaLabel}</span>
+          <Box component="span">{deltaLabel}</Box>
         </Delta>
       </Foot>
     </Root>

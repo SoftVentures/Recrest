@@ -1,11 +1,13 @@
 import { useTranslation } from "react-i18next";
 
-import { Tooltip } from "@mui/material";
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { runWindow } from "@/components/organisms/titlebars/runWindow";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { runWindow } from "@/lib/utils/window.utils";
 
-const Bar = styled("div")(({ theme }) => ({
+const Bar = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -26,11 +28,12 @@ const Bar = styled("div")(({ theme }) => ({
   zIndex: 200,
 }));
 
-const TitleSlot = styled("div")({
+const TitleSlot = styled(Box)({
   // Empty drag region — brand mark/name/version live in the sidebar.
   flex: 1,
 });
 
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const ClosePill = styled("button")(({ theme }) => ({
   width: 24,
   height: 24,
@@ -55,24 +58,24 @@ const ClosePill = styled("button")(({ theme }) => ({
  */
 function GnomeTitlebar() {
   const { t } = useTranslation("common");
-  const closeLabel = t("titlebar.close", "Close");
+  const closeLabel = t("titlebar.close");
   return (
-    <Bar data-tauri-drag-region data-testid="titlebar-gnome">
+    <Bar data-tauri-drag-region data-testid={TEST_IDS.titlebar.gnome}>
       {/* Brand mark/name/version intentionally omitted — they live in the
        *  sidebar instead. */}
       <TitleSlot data-tauri-drag-region />
-      <Tooltip title={closeLabel}>
+      <GeneralTooltip title={closeLabel}>
         <ClosePill
           type="button"
           aria-label={closeLabel}
-          data-testid="titlebar-close"
+          data-testid={TEST_IDS.titlebar.close}
           onClick={() => void runWindow((w) => w.close())}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
             <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth="1.4" />
           </svg>
         </ClosePill>
-      </Tooltip>
+      </GeneralTooltip>
     </Bar>
   );
 }
