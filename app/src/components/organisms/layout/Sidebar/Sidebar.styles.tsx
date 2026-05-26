@@ -86,7 +86,10 @@ export const Nav = styled("nav", { shouldForwardProp: SHOULD_FORWARD })<Collapsi
 // Active items get the primary-tinted background AND a visible border. Inactive
 // items keep a transparent 1px border purely to reserve layout space so the box
 // doesn't shift when the active state toggles. `forceBorder` keeps the border
-// visible regardless (used for the settings entry in the footer).
+// visible regardless (used for the settings entry in the footer) — when the
+// settings entry is *also* active we override the border with the primary
+// colour so the selected state stays visible against the always-on chip
+// border.
 export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemProps>(({
   theme,
   collapsed,
@@ -98,7 +101,11 @@ export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemPr
   // dark AND oled — `surface.interface.base` collapses to pure black in
   // oled which would leave the active state invisible against the sidebar).
   const activeBg = theme.palette.surface.interface.active;
-  const showBorder = active || forceBorder;
+  const borderColor = active
+    ? theme.palette.primary.main
+    : forceBorder
+      ? theme.palette.divider
+      : "transparent";
   return {
     display: "flex",
     alignItems: "center",
@@ -114,7 +121,7 @@ export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemPr
     fontWeight: active ? 600 : 500,
     fontFamily: "inherit",
     width: collapsed ? 38 : "100%",
-    border: `1px solid ${showBorder ? theme.palette.divider : "transparent"}`,
+    border: `1px solid ${borderColor}`,
     position: "relative",
     transition: "background 120ms, color 120ms, border-color 120ms",
     cursor: "pointer",

@@ -1,6 +1,6 @@
 # Plan 2 — Offene Lücken
 
-**Stand:** 2026-05-25
+**Stand:** 2026-05-26
 **Branch:** `feature/phase-two-mui-migration`
 **Methode:** Nur was wirklich noch offen ist. Erledigtes ist in `git log -- docs/plans/PLAN_GAPS.md` nachvollziehbar.
 
@@ -10,51 +10,38 @@ Schwere: **P1** = Plan fordert es explizit, Code fehlt · **P2** = Convenience /
 
 ## P1 — Plan fordert, Code fehlt
 
-### D14 — Repos-Domain: Aufrufer + Stories
+### Changes-Page — Follow-ups zum Redesign
 
-Die vier Components (`CreateBranchDialog`, `FindAcrossReposDialog`, `ChangedFilesList`, `RepoStats`) existieren, sind aber noch nicht überall verdrahtet.
+Die Page wurde von `<ReposPage dirtyOnly />`-Wrapper auf eine eigene expandable Repo→Files-Ansicht umgebaut: Toolbar mit Suchinput (Repo-Name + Pfad + Datei-Pfad), expandable Repo-Rows mit `ChangedFilesList` als Sub-Liste, Open- + Pull-Button pro Row. Offen:
 
-- `RepoDetail/index.tsx` rendert weiterhin die inline-`KpiGrid`/`FileList`/`FileKindBadge` statt `RepoStats`/`ChangedFilesList`. Refactor ist Backwards-kompatibel (kein Visual-Diff erwartet, nur LOC-Reduktion).
-- Branch-Button im `RepoDetail`-Header ist `disabled`; muss `CreateBranchDialog` öffnen.
-- `FindAcrossReposDialog` hat keinen Trigger. Vorschlag: `Cmd+Shift+F` global + Header-Aktion.
-- `.stories.tsx` für alle vier Components.
+- **Direct-Actions pro Repo:** Commit / Stash / Discard direkt aus der Row (heute öffnet "Open" nur das RepoDetail).
+- **File-Level Diff-Preview:** Klick auf eine Zeile in der expandierten Datei-Liste sollte ein Diff-Drawer öffnen — heute kein Click-Handler.
+- **Multi-Select:** Checkboxes auf File-Ebene für Batch-Commit / Batch-Discard.
+- **Stories:** `Changes.stories.tsx` (oder als Page-Story unter `Pages/Changes`).
+- **Tests:** Expand-Toggle, Filter-Match-über-Datei-Pfad, Empty-State.
 
-### D6 — Onboarding: ConnectProviderStep + Stories + Multi-Step-Test
+### Restliche D16-Atoms
 
-- `ConnectProviderStep` ist heute Skip-only. Plan-Soll: PAT-Input + Connect-Flow (mind. GitHub) — analog Settings/Integrations.
-- Stories pro Step fehlen.
-- `OnboardingWizard.test.tsx` deckt nur den Mount-Path ab; fehlt: Step-zu-Step-Navigation, Finish-Path.
+- `MrChip` (MR-State-Pill für `open` / `draft` / `closed` / `merged`) — heute lebt nur `DraftPill` lokal in MR-DetailPanel-Styles.
+- `BranchFilterChip` — heute liegen die ahead/behind/dirty/clean Tone-Variants als `Tag` / `Trk` in den Branches-Page-Styles. Mehrwert einer Extraktion: nur wenn ein anderer Konsument kommt.
 
-### C6 / D15 / D16 — Restliche Atoms + Migration der Inline-Kopien
-
-- `MrChip`, `BranchFilterChip`, `OpenInIdeButton` noch nicht extrahiert.
-- Die drei bereits extrahierten Primitives (`Kbd`, `AheadBehind`, `KpiCard`) sind im Code noch nicht durchgängig die Single-Source-of-Truth — Inline-Definitionen in Header, OverallSearch, ShortcutsTab, Dashboard, RepoRow, RepoCard, DetailPane, RepoDetail leben weiter.
-
-### E10 — Visual-Diff `oled` + `glassy`
-
-Light + Dark abgenommen. OLED + Glassy brauchen einen Playwright-Sweep über Dashboard, Repos, Branches, Activity, Settings, Modal-Stack. Risiko: `surface.interface.base` kollabiert in OLED zu `#000000` → Card-Konsumenten könnten Kontrast verlieren.
+Begründung warum bisher ausgelassen: tone-variants haben **keine Cross-Page-Konsumenten** — eine Extraktion würde nur das Verschieben von Code bedeuten, kein neues Behavior. Sollte erst angefasst werden, wenn ein zweiter Aufrufer dazukommt.
 
 ---
 
 ## P2 — Polish + Plan-Hygiene
 
-| Gap | Soll                                                                                              | Status                                                                  |
-| --- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| E9  | Bundle-Size dokumentiert, ≤ +30% Pre-Phase-1-Baseline                                             | Keine Messung dokumentiert.                                             |
-| E12 | `components/README.md`, `pages/README.md`, `lib/README.md`, `store/README.md`                     | Fehlen.                                                                 |
-| E13 | `02-material-ui-migration.md` als "Status: abgeschlossen" markieren                               | Nicht.                                                                  |
-| E14 | `madge --circular` 0 Zyklen verifizieren                                                          | Skript existiert (`yarn dep-graph:circular`), Lauf nicht dokumentiert.  |
-| F15 | Sidebar-Footer-Version `Recrest · v0.7.0`                                                         | Fehlt.                                                                  |
-| F17 | Visual-Drift-Microfixes (UPPERCASE-Pills, IDE-Icons 16×16, Sparkline-Größe, Pull-Button primary…) | Teilweise erledigt, nicht vollständig durchgehärtet.                    |
+| Gap | Soll                                                                              | Status                                                                 |
+| --- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| E9  | Bundle-Size dokumentiert, ≤ +30% Pre-Phase-1-Baseline                             | Keine Messung dokumentiert.                                            |
+| E13 | `02-material-ui-migration.md` als "Status: abgeschlossen" markieren               | Nicht.                                                                 |
+| E14 | `madge --circular` 0 Zyklen verifizieren                                          | Skript existiert (`yarn dep-graph:circular`), Lauf nicht dokumentiert. |
+| F17 | Visual-Drift-Microfixes (UPPERCASE-Pills, IDE-Icons 16×16, Sparkline-Größe, etc.) | Teilweise erledigt, nicht vollständig durchgehärtet.                   |
 
 ---
 
 ## Priorisierte Backlog-Empfehlung
 
-1. **D14-Wiring** — schnellster sichtbarer Gewinn (Branch-Button funktional, KpiGrid auf neues `RepoStats`).
-2. **C6/D15/D16-Migration** — Inline-Kopien durch neue Primitives ersetzen.
-3. **D6 ConnectProviderStep** — echter PAT-Flow.
-4. **Stories nachziehen** — `.stories.tsx` für D14-Dialoge + Onboarding-Steps + restliche Atoms.
-5. **MrChip / BranchFilterChip / OpenInIdeButton** extrahieren.
-6. **E10** — OLED/Glassy-Sweep.
-7. **P2-Items** danach.
+1. **Changes-Page Direct-Actions + Diff-Preview** — größter sichtbarer UX-Gewinn nach dem Redesign.
+2. **`MrChip` extrahieren**, sobald ein zweiter Konsument neben `DraftPill` aufkommt.
+3. **P2-Items** danach (Bundle-Size, READMEs, Plan-Status, madge-Lauf, Sidebar-Version, Visual-Drift).

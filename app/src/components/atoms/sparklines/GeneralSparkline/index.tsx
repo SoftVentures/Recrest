@@ -45,7 +45,7 @@ function GeneralSparkline({
 }: GeneralSparklineProps) {
   const peak = Math.max(1, ...data);
   return (
-    <Bars sx={{ width, height, gap: `${gap}px` }} data-testid={testId}>
+    <Bars style={{ width, height, gap: `${gap}px` }} data-testid={testId}>
       {data.map((v, i) => {
         const isZero = v === 0;
         return (

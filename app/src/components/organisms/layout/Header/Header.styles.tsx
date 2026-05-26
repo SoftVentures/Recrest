@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import KbdAtom from "@/components/atoms/inputs/Kbd";
+
 export const TopBar = styled(Box)(({ theme }) => ({
   display: "flex",
   flexWrap: "nowrap",
@@ -10,7 +12,12 @@ export const TopBar = styled(Box)(({ theme }) => ({
   // room to breathe.
   height: 64,
   paddingLeft: 24,
-  paddingRight: 24,
+  // Pages reserve a scrollbar gutter via `scrollbar-gutter: stable`; the
+  // header doesn't scroll, so without compensation its right edge would sit
+  // 17 px past the page content on platforms with classic scrollbars. The
+  // var is set once at mount by `useScrollbarWidth`; falls back to 0 on
+  // overlay-scrollbar platforms (macOS default) so nothing shifts there.
+  paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
   gap: 16,
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.divider}`,
@@ -92,23 +99,9 @@ export const SearchPlaceholder = styled(Typography)(({ theme }) => ({
   textAlign: "left",
 })) as typeof Typography;
 
-export const Kbd = styled(Box)(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  height: 18,
-  minWidth: 22,
-  paddingLeft: 5,
-  paddingRight: 5,
-  borderRadius: 8,
-  border: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.secondary,
-  fontSize: 10,
-  fontFamily: "inherit",
-  fontWeight: 600,
+export const Kbd = styled(KbdAtom)(({ theme }) => ({
   [theme.breakpoints.down(1024)]: { display: "none" },
-})) as typeof Box;
+}));
 
 export const RightSection = styled(Box)({
   display: "flex",
@@ -145,6 +138,28 @@ export const AddRepoButton = styled("button")(({ theme }) => ({
 export const AddRepoLabel = styled(Box)(({ theme }) => ({
   [theme.breakpoints.down(961)]: { display: "none" },
 })) as typeof Box;
+
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
+export const FindAcrossButton = styled("button")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 38,
+  height: 38,
+  padding: 0,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.secondary,
+  cursor: "pointer",
+  flexShrink: 0,
+  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+    borderColor: theme.palette.border.hover,
+    color: theme.palette.text.primary,
+  },
+}));
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 export const RefreshButton = styled("button", { shouldForwardProp: (p) => p !== "spinning" })<{

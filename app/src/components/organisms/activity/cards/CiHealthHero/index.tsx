@@ -110,7 +110,7 @@ function CiHealthHero({ summaries }: Props) {
             )}
           </RingSvg>
           <RingLabel>
-            <RingValue sx={{ color: headlineColor }}>
+            <RingValue style={{ color: headlineColor }}>
               {total === 0 ? "—" : `${Math.round(pct * 100)}%`}
             </RingValue>
             <RingSub>{total === 0 ? t("activity.hero.ci_none") : `${passed}/${total}`}</RingSub>

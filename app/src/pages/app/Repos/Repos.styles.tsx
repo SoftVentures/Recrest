@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Divider, Menu, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import {
@@ -27,8 +27,10 @@ export const ToolbarRow = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
-  padding: "12px 16px",
-  // Toolbar drops in on mount — matches src-old `.p-repos .a-content > [class*="toolbar"]`.
+  // Right padding compensates for the page-scroll gutter so the toolbar's
+  // right edge lines up with the table inside the scroll surface.
+  padding: "12px 24px",
+  paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 }) as typeof Box;
@@ -91,3 +93,15 @@ export const SectionLabel = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
   padding: "6px 12px 4px",
 })) as typeof Typography;
+
+export const FilterMenu = styled(Menu)(({ theme }) => ({
+  "& .MuiPaper-root": {
+    width: 240,
+    marginTop: theme.spacing(0.5),
+  },
+}));
+
+export const MenuSeparator = styled(Divider)(({ theme }) => ({
+  marginTop: theme.spacing(0.5),
+  marginBottom: theme.spacing(0.5),
+}));

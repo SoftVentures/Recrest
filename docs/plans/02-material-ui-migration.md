@@ -398,154 +398,9 @@ Reihenfolge bottom-up:
 
 ---
 
-## Phase F — Ordnerstruktur konsolidieren
+## Phase F — Ordnerstruktur konsolidieren (verworfen)
 
-Wird **parallel zu Phase B–D** durchgezogen, nicht davor. Begründung: Atoms/Molecules/Organisms benennen und verschieben hat **gleiche Risiko-Klasse** wie ihre Migration auf MUI (jede Component-Datei wird sowieso angefasst, Imports brechen sowieso). Beides in einem Commit pro Component → halbiert die Diff-Last.
-
-### F.1 Audit der heutigen Struktur
-
-Heute (`app/src/`):
-
-```text
-App.tsx           — Router-Root, ~30 LOC
-main.tsx          — React-Mount, StrictMode, Provider
-assets/           — SVG-Logos, Marken-Icons
-components/
-  atoms/          — Stories teilweise, Tests teilweise
-  molecules/      — kein klares Schema „warum hier nicht dort"
-  organisms/      — Domain-Gruppen (activity/brand/feedback/layout/mergeRequests/onboarding/prs/repos/search/settings)
-hooks/            — flach, useDevice/useRepos/useThemeEffect/…
-i18n/             — Setup + locales/{en,de}/{common,repos,prs,settings}.json
-lib/              — gemischt: activityAggregates, repoEnrich, charts/, dev/tauriStub, tauri/, toast, utils
-pages/            — Seiten-Komponenten, kein Sub-Folder pro Page
-scripts/          — fix-imports.js (Prettier-Hilfsskript)
-store/            — Redux Slices
-styles/           — globals/layout/tokens/views/page-anim
-test-setup.ts     — Vitest globale Mocks
-test-utils/       — Helper für Tests
-```
-
-Schmerzpunkte:
-
-- `lib/` ist die Müllhalde — Charts (Domain), Dev-Stub (Infra), Tauri-IPC-Wrapper (Infra), Domain-Logik (`repoEnrich`, `activityAggregates`) und allgemeine Utils (`utils.ts`, `initials.ts`) liegen flach nebeneinander.
-- `hooks/` mischt View-Hooks (`useDevice`, `useResponsiveSidebar`) mit Daten-Hooks (`useRepos`, `useRecentCommits`) mit Effect-Hooks (`useThemeEffect`, `useNotificationTriggers`).
-- Atoms vs. Molecules-Schnittgrenze ist unscharf — `BranchChip` ist Atom, `MrChip` ist Molecule, beides macht visuell dasselbe.
-- Stories/Tests verteilen sich uneinheitlich (manche Components haben `.test.tsx`, manche nicht; `Welcome.stories.tsx` liegt in `src/`-Root).
-- Page-Komponenten sind monolithische Dateien; page-spezifische Sub-Components (z.B. `FiltersDropdown`, `Chip` in `MergeRequestsPage.tsx`) leben inline.
-
-### F.2 Ziel-Struktur
-
-```text
-app/src/
-  app/                      — Application-Shell
-    App.tsx
-    main.tsx
-    routes.tsx              — Route-Definitionen extrahiert (heute inline in App.tsx)
-    providers/              — Theme/Redux/i18n/Tooltip-Provider-Stapel
-      AppProviders.tsx
-  assets/                   — bleibt
-  components/               — design-system, domain-neutral
-    atoms/
-    molecules/
-    organisms/              — domain-NEUTRALE Organisms (Layout-Shell, generic Drawer-Body, …)
-  features/                 — domain-spezifische Components + Hooks + State (siehe F.3)
-    repos/
-      components/           — RepoCard, RepoList, RepoFilters
-      hooks/                — useRepos, useRepoSelection
-      state/                — reposSlice + reselect Selectors
-      lib/                  — repoEnrich (domain util)
-      i18n/                 — namespace-Strings (wird i18n-bundle-bezogen, siehe F.3)
-    mergeRequests/
-    activity/
-    settings/
-    branches/
-    onboarding/
-    search/                 — cmdk-Wrapper (bleibt extern auf cmdk)
-    brand/
-    feedback/
-  hooks/                    — NUR generic View-/Effect-Hooks (useDevice, useResponsiveSidebar, useScrollRestoration, useDevFlag)
-  i18n/                     — Setup; locale-JSONs bleiben (siehe F.3 Note)
-  lib/                      — generic Utilities (keine Domain-Logik mehr)
-    cn.ts                   — classnames-Helper (heute `utils.ts`)
-    initials.ts
-    gravatar.ts
-    languages.ts
-    dates.ts                — NEU: zentrales date-Util (heute in mehreren Stellen verstreut)
-  ipc/                      — Tauri-IPC-Wrapper (heute `lib/tauri/` + `lib/dev/`)
-    index.ts                — re-exportiert invoke/listen/openExternal/isTauri
-    devStub.ts              — heute `lib/dev/tauriStub.ts`
-    events.ts               — Listener-Helper
-  pages/                    — Routen-Container, jeweils dünn (orchestriert nur features/* + components/*)
-    DashboardPage/
-      index.tsx
-      DashboardPage.test.tsx
-    ReposPage/
-    MergeRequestsPage/
-    BranchesPage/
-    ChangesPage/
-    ActivityPage/
-    SettingsPage/
-    RepoDetailPage/
-  scripts/                  — bleibt
-  store/                    — bleibt für globale Slices (ui/settings/providers); domain-Slices wandern in features/*/state
-    index.ts
-    hooks.ts
-    persistence.ts
-    slices/
-      uiSlice.ts
-      settingsSlice.ts
-      providersSlice.ts
-  styles/                   — schrumpft mit Phase D (siehe oben)
-  test/
-    setup.ts                — heute `test-setup.ts` (Root-Datei → in `test/`)
-    utils.tsx               — heute `test-utils/*`
-    fixtures/               — JSON/Object-Fixtures statt inline-in-Tests
-  theme/                    — NEU (Phase A): createRecrestTheme + cssVars + Token-Mapping
-  Welcome.stories.tsx       — entfernen ODER nach `.storybook/` schieben (Setup-Demo)
-```
-
-### F.3 Feature-First-Begründung & Edge-Cases
-
-- **Domain-Slices wandern aus `store/slices/` in `features/<domain>/state/`:** `reposSlice` → `features/repos/state/reposSlice.ts`, `prsSlice` → `features/mergeRequests/state/`. Bleiben technisch globale Redux-Slices (in `store/index.ts` registriert), wohnen aber bei ihrer Feature. Begründung: heute liegen Slice, der konsumierende Hook (`useRepos`), die Domain-Util (`repoEnrich`) und die Components (`organisms/repos/*`) in vier verschiedenen Verzeichnissen — bei einem Bug muss man ständig hin- und herspringen.
-- **`ui`, `settings`, `providers` bleiben in `store/slices/`** — sind nicht domain-gebunden sondern app-weit.
-- **`i18n/locales/`:** Locale-JSON-Bundles **bleiben zentral** (`src/i18n/locales/{en,de}/<ns>.json`). Sie pro-Feature aufzuteilen würde die i18next-Backend-Konfiguration komplizieren und löst nichts (Übersetzer wollen eine Datei pro Sprache). Pro Feature wird stattdessen dokumentiert welche Namespaces es nutzt (README in `features/<x>/`).
-- **`tests/` (E2E)** bleibt eigener Workspace (`@recrest/tests`) — unverändert.
-- **`@/`-Path-Alias** zeigt heute auf `src/*`; bleibt so. Neue Sub-Folder werden über `@/features/...`, `@/ipc`, `@/theme` etc. importiert.
-- **Welcome.stories.tsx:** entfernen wenn nur Storybook-Demo, behalten in `.storybook/` falls noch nützlich.
-
-### F.4 Vorgehen (Migration, Schritt für Schritt)
-
-**Pro Domain ein Commit.** Reihenfolge auf Risiko basierend (kleinster Blast-Radius zuerst):
-
-1. **Theme-Folder anlegen** (Phase A liefert das ohnehin).
-2. **`lib/` aufräumen + `ipc/` extrahieren** — keine UI-Änderungen, nur Imports. CI-Gate: `yarn test:ts` grün.
-   - `lib/tauri/` → `ipc/`.
-   - `lib/dev/tauriStub.ts` → `ipc/devStub.ts`.
-   - `lib/utils.ts` → `lib/cn.ts` (umbenannt; einzige Funktion ist `cn()`).
-   - `lib/repoEnrich.{ts,test.ts}` + `lib/activityAggregates.{ts,test.ts}` + `lib/activityStats.ts` + `lib/charts/` warten auf Feature-Move (Schritt 4).
-3. **`test-setup.ts` + `test-utils/` → `test/`** — Vitest-Config-Pfad (`app/vitest.config.ts`) entsprechend anpassen.
-4. **Pro Feature** (`repos`, `mergeRequests`, `activity`, `settings`, `branches`, `onboarding`, `search`, `brand`, `feedback`):
-   - `features/<x>/` anlegen.
-   - `organisms/<x>/*` → `features/<x>/components/`.
-   - `store/slices/<x>Slice.ts` → `features/<x>/state/` (sofern domain-spezifisch).
-   - Zugehörige Hooks aus `hooks/` → `features/<x>/hooks/`.
-   - Domain-Lib (`repoEnrich`, `activityAggregates`, ...) → `features/<x>/lib/`.
-   - Imports auf neue Pfade ziehen (`fix-imports.js` Script vor jedem Commit laufen lassen, dann manuelle Diff-Review).
-   - `yarn test:ts` + `yarn test` + `yarn lint` grün pro Schritt.
-5. **Pages in Sub-Folder verschieben** (`pages/ReposPage.tsx` → `pages/ReposPage/index.tsx`), inline-Sub-Components der Page extrahieren (`Chip`, `FiltersDropdown` aus `MergeRequestsPage.tsx` → `features/mergeRequests/components/`).
-6. **Atom-vs-Molecule-Schnitt klären:** Regel festschreiben in `app/src/components/README.md`:
-   - **Atom:** Single-Element, kein eigener State, keine Composition; nur `<button>`/`<input>`/`<span>` etc. mit Props.
-   - **Molecule:** ≤2 zusammengesetzte Atoms ODER Atom + interner State (z.B. Dropdown).
-   - **Organism:** ≥3 Atoms/Molecules, oft an Domain/Layout gekoppelt → wenn Domain → `features/<x>/`, wenn Layout-shell → `components/organisms/`.
-   - Nach Phase F: `BranchChip` und `MrChip` müssen auf derselben Ebene leben (beide Molecules, da sie ≥2 Atoms kombinieren).
-7. **README-Pflicht pro Feature-Folder** (`features/<x>/README.md` mit: Zweck in 1 Satz; konsumierte i18n-Namespaces; öffentliche Hooks; externe Abhängigkeiten). Hält Wissens-Drift auf.
-
-### F.5 Gates Phase F
-
-- `yarn test:ts` + `yarn test` + `yarn lint` grün **nach jedem Commit** (jeder Domain-Move ist ein Commit).
-- `madge --circular` (Script `dep-graph:circular` existiert) keine **neuen** Zyklen.
-- `rg "from \"@/lib/(tauri|dev|repoEnrich|activityAggregates|activityStats)\"" app/src` → `0` Treffer nach Phase F (alte Pfade vollständig entfernt).
-- E2E (`yarn test:e2e`) grün nach jedem Page-Move (Sub-Folder-Wechsel ist risikoreich für Test-Imports).
+**Status: verworfen.** Die heutige `components/{atoms,molecules,organisms}` + `pages/app/<Page>/components/`-Struktur reicht aus. Ein zusätzlicher `features/<x>/`-Layer wurde geprüft und als nicht-tragender Overhead eingestuft (Domain-Slices liegen weiterhin in `store/reducers/`, Domain-Hooks in `hooks/`, Domain-Libs in `lib/`). Sollte sich später ein konkreter Schmerz zeigen, wird das in einem eigenen Plan adressiert.
 
 ---
 
@@ -670,18 +525,16 @@ In `app/src/` (nicht shared — Frontend-only):
 1. **Phase 0** — Pakete fix, Verbote fix, Storybook-Decorator-Skelett.
 2. **Phase A** — Theme + Provider + Test/Storybook-Helper. App rendert mit MUI-Provider, nichts visuell geändert.
 3. **Phase G** — Magic-Strings-Inventur (G.2) + Konstanten-Module anlegen (G.3). Konsumenten-Umstellung läuft **gemischt mit B/C/D** — wenn wir eine Component sowieso anfassen, ziehen wir ihre Strings gleich auf Konstanten.
-4. **Phase F** — Ordnerstruktur (`ipc/`, `features/<x>/`, `theme/`, `test/`). Wird **parallel zu B/C/D** durchgezogen: jede Component-Migration in B/C/D ist gleichzeitig ihr Folder-Move in F.
-5. **Phase B** — Atoms (`Button` → `Icon`-Wrapper → `Badge` → `Switch`/`Checkbox` → `Input`/`Label` → Rest).
-6. **Phase C** — Molecules (`IconButton` → `Avatar` → `Drawer` → `ConfirmDialog` → `DropdownMenu` → Rest).
-7. **Phase D** — Organisms + Pages + Cleanup (Radix/Tailwind/SCSS raus).
-8. **Phase E** — Quality-Gates kontinuierlich; finale Bundle-/Snapshot-/E2E-Verifikation.
+4. **Phase B** — Atoms (`Button` → `Icon`-Wrapper → `Badge` → `Switch`/`Checkbox` → `Input`/`Label` → Rest).
+5. **Phase C** — Molecules (`IconButton` → `Avatar` → `Drawer` → `ConfirmDialog` → `DropdownMenu` → Rest).
+6. **Phase D** — Organisms + Pages + Cleanup (Radix/Tailwind/SCSS raus).
+7. **Phase E** — Quality-Gates kontinuierlich; finale Bundle-/Snapshot-/E2E-Verifikation.
 
-**Verzahnung B↔F↔G konkret:** Pro Atom/Molecule/Organism EIN Commit, der **alle drei** macht:
+**Verzahnung B↔G konkret:** Pro Atom/Molecule/Organism EIN Commit, der beides macht:
 
 - Component auf MUI umstellen (B/C/D).
-- In neuen Folder verschieben falls Domain-Component (F).
 - Inline-Strings auf Konstanten ziehen (G).
 
-So wird jede Datei genau **einmal** angefasst statt dreimal. Diff bleibt pro Commit klein genug zum reviewen (~100–300 LOC), aber wir vermeiden den „touch storm" von drei separaten Pässen über die ganze Codebase.
+So wird jede Datei nur einmal statt zweimal angefasst.
 
 Jeder Phase-Schritt **commit-fähig grün**: `test:ts`, `test`, Lint, Storybook bauen, visuelle Stichprobe. So bleibt der Rollback-Pfad an jedem Punkt klein.

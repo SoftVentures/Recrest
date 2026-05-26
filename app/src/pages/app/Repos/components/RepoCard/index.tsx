@@ -17,10 +17,11 @@ import {
 import { toast } from "sonner";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
-import IdeIcon from "@/assets/icons/IdeIcon";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import OpenInIdeButton from "@/components/atoms/buttons/OpenInIdeButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import AheadBehind from "@/components/atoms/git/AheadBehind";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
@@ -30,7 +31,6 @@ import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import {
   Actions,
-  AheadBehind,
   Body,
   BranchChip,
   BranchRow,
@@ -89,14 +89,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
       <CardTop>
         <RepoAvatar repo={repo} size={36} radius={8} />
         <Actions onClick={stop}>
-          <GeneralTooltip title="Open in VS Code" placement="top">
-            <GeneralIconButton
-              size={IconButtonSize.SM}
-              aria-label={tAria("repo.open_in_ide")}
-              onClick={() => void run(TauriCommand.OPEN_IN_IDE, "Open in IDE")}
-              icon={<IdeIcon id="vscode" size={13} />}
-            />
-          </GeneralTooltip>
+          <OpenInIdeButton repoId={repo.id} iconSize={IconButtonSize.SM} />
           <GeneralTooltip title="Open Terminal" placement="top">
             <GeneralIconButton
               size={IconButtonSize.SM}
@@ -143,12 +136,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
             <GitBranch size={11} />
             <BranchText component="span">{repo.status.branch ?? "—"}</BranchText>
           </BranchChip>
-          {(repo.status.ahead > 0 || repo.status.behind > 0) && (
-            <AheadBehind component="span" variant="caption">
-              {repo.status.ahead > 0 && <Box component="span">↑{repo.status.ahead}</Box>}
-              {repo.status.behind > 0 && <Box component="span">↓{repo.status.behind}</Box>}
-            </AheadBehind>
-          )}
+          <AheadBehind ahead={repo.status.ahead} behind={repo.status.behind} variant="compact" />
         </BranchRow>
       </Body>
 

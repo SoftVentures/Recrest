@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Divider, Menu } from "@mui/material";
+import { Box } from "@mui/material";
 
 import {
   ArrowDownFromLine,
@@ -30,8 +30,10 @@ import { lastCommitTime, statusRank } from "@/lib/utils/repoSort.utils";
 import {
   FilterBadge,
   FilterButton,
+  FilterMenu,
   ListScroll,
   MainColumn,
+  MenuSeparator,
   PageRoot,
   SectionLabel,
   ToolbarRow,
@@ -113,6 +115,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
           <GeneralButtonGroup
             value={view}
             exclusive
+            density="xs"
             onChange={(_, v: RepoView | null) => v && setView(v)}
             aria-label={tAria("repo.view_toggle")}
           >
@@ -142,13 +145,12 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             <ChevronDown size={13} style={{ marginLeft: 2 }} />
           </FilterButton>
 
-          <Menu
+          <FilterMenu
             anchorEl={filterAnchor}
             open={!!filterAnchor}
             onClose={() => setFilterAnchor(null)}
             anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             transformOrigin={{ vertical: "top", horizontal: "right" }}
-            slotProps={{ paper: { sx: { width: 240, mt: 0.5 } } }}
           >
             <SectionLabel>Status</SectionLabel>
             <ChipItem
@@ -175,7 +177,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
               active={statusChips.has("behind")}
               onSelect={() => toggleChip("behind")}
             />
-            <Divider sx={{ my: 0.5 }} />
+            <MenuSeparator />
             <SectionLabel>Sort by</SectionLabel>
             {SORT_OPTIONS.map((opt) => (
               <ChipItem
@@ -186,7 +188,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
                 indicator="radio"
               />
             ))}
-          </Menu>
+          </FilterMenu>
         </ToolbarRow>
         <ListScroll>
           <RepoList

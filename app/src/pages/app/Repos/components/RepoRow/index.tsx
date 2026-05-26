@@ -21,10 +21,11 @@ import {
 import { toast } from "sonner";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
-import IdeIcon from "@/assets/icons/IdeIcon";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import OpenInIdeButton from "@/components/atoms/buttons/OpenInIdeButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import AheadBehind from "@/components/atoms/git/AheadBehind";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -36,10 +37,11 @@ import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import {
   Actions,
   ActivityCell,
-  AheadBehind,
   BranchCell,
   BranchChip,
   BranchText,
+  DangerMenuIcon,
+  DangerMenuItem,
   Diff,
   FilesMeta,
   Name,
@@ -83,7 +85,6 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
     }
   };
 
-  const onOpenIde = () => void runCommand(TauriCommand.OPEN_IN_IDE, "Open in IDE");
   const onOpenTerminal = () => void runCommand(TauriCommand.OPEN_TERMINAL, "Terminal");
   const onOpenExplorer = () => void runCommand(TauriCommand.OPEN_IN_EXPLORER, "Explorer");
   const onOpenRemote = () => {
@@ -166,12 +167,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
             <BranchText component="span">{repo.status.branch}</BranchText>
           </BranchChip>
         )}
-        {(ahead > 0 || behind > 0) && (
-          <AheadBehind component="span" variant="caption">
-            {ahead > 0 && <Box component="span">↑{ahead}</Box>}
-            {behind > 0 && <Box component="span">↓{behind}</Box>}
-          </AheadBehind>
-        )}
+        <AheadBehind ahead={ahead} behind={behind} variant="compact" />
       </BranchCell>
 
       <StatusCell>
@@ -206,14 +202,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       </ActivityCell>
 
       <Actions onClick={stop}>
-        <GeneralTooltip title="Open in VS Code" placement="top">
-          <GeneralIconButton
-            size={IconButtonSize.MD}
-            aria-label={tAria("repo.open_in_ide")}
-            onClick={onOpenIde}
-            icon={<IdeIcon id="vscode" size={16} color="brand" />}
-          />
-        </GeneralTooltip>
+        <OpenInIdeButton repoId={repo.id} />
         <GeneralTooltip title="Open in Terminal" placement="top">
           <GeneralIconButton
             size={IconButtonSize.MD}
@@ -272,31 +261,29 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
           </ListItemIcon>
           <ListItemText>Copy path</ListItemText>
         </MenuItem>
-        <MenuItem
+        <DangerMenuItem
           onClick={() => {
             closeMenu();
             setConfirmKind("forget");
           }}
-          sx={{ color: "error.main" }}
         >
-          <ListItemIcon sx={{ color: "error.main" }}>
+          <DangerMenuIcon>
             <X size={13} />
-          </ListItemIcon>
+          </DangerMenuIcon>
           <ListItemText>Forget (keeps folder)</ListItemText>
-        </MenuItem>
-        <MenuItem
+        </DangerMenuItem>
+        <DangerMenuItem
           onClick={() => {
             closeMenu();
             setConfirmKind("delete");
           }}
-          sx={{ color: "error.main" }}
           data-testid={TEST_IDS.repos.rowDelete}
         >
-          <ListItemIcon sx={{ color: "error.main" }}>
+          <DangerMenuIcon>
             <Trash2 size={13} />
-          </ListItemIcon>
+          </DangerMenuIcon>
           <ListItemText>Delete from disk…</ListItemText>
-        </MenuItem>
+        </DangerMenuItem>
       </Menu>
 
       <ConfirmationModal

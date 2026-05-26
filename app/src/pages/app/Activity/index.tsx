@@ -83,7 +83,7 @@ const Root = styled(Box)({
 }) as typeof Box;
 
 const Page = styled(Box)({
-  padding: "18px 22px 80px",
+  padding: "18px 24px 80px",
   display: "flex",
   flexDirection: "column",
   gap: 16,
@@ -217,6 +217,8 @@ const SpanStack = styled(Span)({
   gap: 14,
 });
 
+const HeadTitleCol = styled(Box)({ minWidth: 0 });
+
 export default function ActivityPage() {
   const { t } = useTranslation();
   const repos = useEnrichedRepos();
@@ -347,13 +349,13 @@ export default function ActivityPage() {
     <Root data-testid={TEST_IDS.activity.page}>
       <Page>
         <PageHead>
-          <Box sx={{ minWidth: 0 }}>
+          <HeadTitleCol>
             <PageTitle component="h2">{t("activity.chart.title")}</PageTitle>
             <PageSub>
               {t("activity.chart.sub", { total })}
               {selectedRepo !== "all" && ` · ${repoNameById[selectedRepo] ?? ""}`}
             </PageSub>
-          </Box>
+          </HeadTitleCol>
           <FilterRow>
             <FilterSelect
               value={selectedRepo}

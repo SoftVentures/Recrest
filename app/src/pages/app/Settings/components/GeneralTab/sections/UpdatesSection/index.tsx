@@ -29,6 +29,13 @@ const VersionText = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
+const UpdateModeSelect = styled(SelectControl)({ minWidth: 200 });
+
+const MenuLabel = styled(Box)(({ theme }) => ({
+  display: "inline-block",
+  marginLeft: theme.spacing(1),
+}));
+
 export function UpdatesSection() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -43,13 +50,12 @@ export function UpdatesSection() {
         </VersionText>
       </SettingsRow>
       <SettingsRow label={t("settings.updates.mode")} sub={t("settings.updates.mode_hint")}>
-        <SelectControl
+        <UpdateModeSelect
           size="small"
           value={mode}
           onChange={(e: SelectChangeEvent<unknown>) =>
             dispatch(setUpdateMode(e.target.value as AutoUpdateMode))
           }
-          sx={{ minWidth: 200 }}
           data-testid={TEST_IDS.settings.general.updateModeSelect}
         >
           {UPDATE_MODES.map((m) => {
@@ -57,13 +63,11 @@ export function UpdatesSection() {
             return (
               <MenuItem key={m.value} value={m.value}>
                 <I size={13} />
-                <Box component="span" sx={{ ml: 1 }}>
-                  {m.label}
-                </Box>
+                <MenuLabel>{m.label}</MenuLabel>
               </MenuItem>
             );
           })}
-        </SelectControl>
+        </UpdateModeSelect>
       </SettingsRow>
       <SettingsRow label={t("settings.updates.check_now_label")}>
         <GeneralButton

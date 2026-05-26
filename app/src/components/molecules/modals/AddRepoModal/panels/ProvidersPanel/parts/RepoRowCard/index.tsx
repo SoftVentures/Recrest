@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 
 import { Box, Checkbox } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { styled, useTheme } from "@mui/material/styles";
 
 import { type RemoteRepository } from "@recrest/shared";
 
@@ -22,6 +22,8 @@ import {
 } from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/ProvidersPanel.styles";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
+const FlushCheckbox = styled(Checkbox)({ padding: 0 });
+
 interface RepoRowCardProps {
   repo: RemoteRepository;
   selected: boolean;
@@ -40,12 +42,11 @@ export function RepoRowCard({
   const theme = useTheme();
   return (
     <RepoRow selected={selected} disabled={alreadyLocal}>
-      <Checkbox
+      <FlushCheckbox
         size="small"
         checked={selected}
         disabled={alreadyLocal}
         onChange={() => !alreadyLocal && onToggle()}
-        sx={{ p: 0 }}
         data-testid={TEST_IDS.addRepoDialog.rowCheckbox}
       />
       <RepoBody>

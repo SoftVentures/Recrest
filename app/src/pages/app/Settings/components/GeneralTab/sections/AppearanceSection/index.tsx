@@ -126,6 +126,31 @@ const Swatch = styled("button", {
   "&:hover": { outline: `2px solid ${theme.palette.text.secondary}`, outlineOffset: 2 },
 }));
 
+const ThemeSelect = styled(SelectControl)({ minWidth: 200 });
+const FontSelect = styled(SelectControl)({ minWidth: 220 });
+const FontSizeSelect = styled(SelectControl)({ minWidth: 180 });
+
+const MenuLabel = styled(Box)(({ theme }) => ({
+  display: "inline-block",
+  marginLeft: theme.spacing(1),
+}));
+
+// eslint-disable-next-line no-restricted-syntax -- semantic <li> inside MUI Select listbox; Box would break a11y
+const FontGroupLabel = styled("li", {
+  shouldForwardProp: (p) => p !== "withDivider",
+})<{ withDivider?: boolean }>(({ theme, withDivider }) => ({
+  fontSize: 10,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  color: theme.palette.text.information,
+  padding: `${theme.spacing(1)} ${theme.spacing(2)}`,
+  pointerEvents: "none",
+  listStyle: "none",
+  borderTop: withDivider ? `1px solid ${theme.palette.divider}` : undefined,
+  marginTop: withDivider ? theme.spacing(0.5) : undefined,
+}));
+
 export function AppearanceSection() {
   const { t, i18n } = useTranslation();
   const dispatch = useAppDispatch();
@@ -149,12 +174,11 @@ export function AppearanceSection() {
   return (
     <SettingsSection title={t("settings.general.appearance")}>
       <SettingsRow label={t("settings.fields.theme")} sub={t("settings.fields.theme_sub")}>
-        <SelectControl
+        <ThemeSelect
           size="small"
           value={themeChoice}
           onChange={(e: SelectChangeEvent<unknown>) => onThemeChoice(e.target.value as ThemeChoice)}
           data-testid={TEST_IDS.settings.general.themeSelect}
-          sx={{ minWidth: 200 }}
           renderValue={(value) => {
             const c = value as ThemeChoice;
             const Icon = THEME_CHOICE_ICONS[c];
@@ -171,13 +195,11 @@ export function AppearanceSection() {
             return (
               <MenuItem key={c} value={c}>
                 <Icon size={13} />
-                <Box component="span" sx={{ ml: 1 }}>
-                  {themeChoiceLabel(c)}
-                </Box>
+                <MenuLabel>{themeChoiceLabel(c)}</MenuLabel>
               </MenuItem>
             );
           })}
-        </SelectControl>
+        </ThemeSelect>
       </SettingsRow>
 
       <SettingsRow label={t("settings.fields.language")} sub={t("settings.fields.language_sub")}>
@@ -222,11 +244,10 @@ export function AppearanceSection() {
       </SettingsRow>
 
       <SettingsRow label={t("settings.fields.font")} sub={t("settings.fields.font_sub")}>
-        <SelectControl
+        <FontSelect
           size="small"
           value={font}
           onChange={(e: SelectChangeEvent<unknown>) => dispatch(setFont(e.target.value as FontId))}
-          sx={{ minWidth: 220 }}
           data-testid={TEST_IDS.settings.general.fontSelect}
           renderValue={(value) => (
             <Box component="span" style={{ fontFamily: fontCssFamily(value as FontId) }}>
@@ -234,21 +255,7 @@ export function AppearanceSection() {
             </Box>
           )}
         >
-          <Box
-            component="li"
-            sx={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              color: "text.information",
-              px: 2,
-              py: 1,
-              pointerEvents: "none",
-            }}
-          >
-            Sans
-          </Box>
+          <FontGroupLabel>Sans</FontGroupLabel>
           {SANS_FONT_IDS.map((f) => (
             <MenuItem key={f} value={f}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
@@ -256,23 +263,7 @@ export function AppearanceSection() {
               </Box>
             </MenuItem>
           ))}
-          <Box
-            component="li"
-            sx={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              color: "text.information",
-              px: 2,
-              py: 1,
-              pointerEvents: "none",
-              borderTop: (th) => `1px solid ${th.palette.divider}`,
-              mt: 0.5,
-            }}
-          >
-            Monospace
-          </Box>
+          <FontGroupLabel withDivider>Monospace</FontGroupLabel>
           {MONO_FONT_IDS.map((f) => (
             <MenuItem key={f} value={f}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
@@ -280,17 +271,16 @@ export function AppearanceSection() {
               </Box>
             </MenuItem>
           ))}
-        </SelectControl>
+        </FontSelect>
       </SettingsRow>
 
       <SettingsRow label={t("settings.fields.font_size")} sub={t("settings.fields.font_size_sub")}>
-        <SelectControl
+        <FontSizeSelect
           size="small"
           value={fontSize}
           onChange={(e: SelectChangeEvent<unknown>) =>
             dispatch(setFontSize(e.target.value as FontSizeId))
           }
-          sx={{ minWidth: 180 }}
           data-testid={TEST_IDS.settings.general.fontSizeSelect}
           renderValue={(value) => {
             const Icon = FONT_SIZE_ICONS[value as FontSizeId];
@@ -307,13 +297,11 @@ export function AppearanceSection() {
             return (
               <MenuItem key={sz} value={sz}>
                 <Icon size={13} />
-                <Box component="span" sx={{ ml: 1 }}>
-                  {fontSizeLabel(sz)}
-                </Box>
+                <MenuLabel>{fontSizeLabel(sz)}</MenuLabel>
               </MenuItem>
             );
           })}
-        </SelectControl>
+        </FontSizeSelect>
       </SettingsRow>
     </SettingsSection>
   );

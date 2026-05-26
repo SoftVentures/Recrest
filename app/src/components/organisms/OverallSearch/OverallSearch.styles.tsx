@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+export { default as Kbd } from "@/components/atoms/inputs/Kbd";
+
 export const Backdrop = styled(Box)({
   position: "fixed",
   inset: 0,
@@ -51,21 +53,6 @@ export const Kbds = styled(Box)({
   display: "inline-flex",
   gap: 4,
 }) as typeof Box;
-
-export const Kbd = styled(Box)(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: 22,
-  height: 18,
-  padding: "0 5px",
-  borderRadius: 8,
-  border: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.secondary,
-  fontSize: 10,
-  fontWeight: 600,
-})) as typeof Box;
 
 export const ResultsList = styled(Box)({
   maxHeight: "60vh",

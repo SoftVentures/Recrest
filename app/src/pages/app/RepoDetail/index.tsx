@@ -26,6 +26,9 @@ import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
+import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
+import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
+import RepoStats from "@/components/organisms/repos/RepoStats";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -51,28 +54,23 @@ import {
   CommitMessage,
   CommitMeta,
   CommitRow,
+  CommitSha,
   CommitsList,
   Content,
-  FileKindBadge,
-  FileList,
-  FileRow,
   Grid2,
   Header,
   HeaderActions,
   HeaderBody,
   IconOnlyBtn,
-  KpiCard,
-  KpiGrid,
-  KpiLabel,
-  KpiSub,
-  KpiValue,
   LangDot,
   LangPill,
   MetaRow,
   MissingRoot,
   PathText,
   PrRowSlot,
+  PrScroller,
   PrimaryBtn,
+  RemoteUrlText,
   RepoName,
   Root,
   SecondaryBtn,
@@ -99,6 +97,7 @@ export default function RepoDetailPage() {
 
   const [busy, setBusy] = useState<null | "pull" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
+  const [branchDialogOpen, setBranchDialogOpen] = useState(false);
 
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
@@ -203,19 +202,7 @@ export default function RepoDetailPage() {
               ) : (
                 <Chip tone="clean">clean</Chip>
               )}
-              {repo.remoteUrl && (
-                <Box
-                  component="span"
-                  sx={{
-                    fontFamily:
-                      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                    fontSize: 11,
-                    color: "text.secondary",
-                  }}
-                >
-                  {repo.remoteUrl}
-                </Box>
-              )}
+              {repo.remoteUrl && <RemoteUrlText component="span">{repo.remoteUrl}</RemoteUrlText>}
             </MetaRow>
           </HeaderBody>
           <HeaderActions>
@@ -253,54 +240,20 @@ export default function RepoDetailPage() {
               <RefreshCw size={13} />
               {busy === "fetch" ? "Fetching…" : "Fetch"}
             </SecondaryBtn>
-            <SecondaryBtn type="button" disabled>
+            <SecondaryBtn type="button" onClick={() => setBranchDialogOpen(true)}>
               <Plus size={13} />
               Branch
             </SecondaryBtn>
           </HeaderActions>
         </Header>
 
-        <KpiGrid>
-          <KpiCard>
-            <KpiLabel>Ahead / Behind</KpiLabel>
-            <KpiValue>
-              ↑{repo.status.ahead} / ↓{repo.status.behind}
-            </KpiValue>
-            <KpiSub>across origin</KpiSub>
-          </KpiCard>
-          <KpiCard>
-            <KpiLabel>Changed lines</KpiLabel>
-            <KpiValue>
-              <Box component="span" sx={{ color: "success.dark" }}>
-                +{repo.added}
-              </Box>{" "}
-              <Box component="span" sx={{ color: "error.dark" }}>
-                −{repo.removed}
-              </Box>
-            </KpiValue>
-            <KpiSub>
-              {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
-            </KpiSub>
-          </KpiCard>
-          <KpiCard>
-            <KpiLabel>Commits · last 14 days</KpiLabel>
-            <KpiValue>{totalCommits}</KpiValue>
-            <KpiSub>peak {maxBucket}/day</KpiSub>
-          </KpiCard>
-          {repoProviderConnected ? (
-            <KpiCard>
-              <KpiLabel>Open merge requests</KpiLabel>
-              <KpiValue>{openMrs.length}</KpiValue>
-              <KpiSub>{draftMrs.length} draft</KpiSub>
-            </KpiCard>
-          ) : (
-            <KpiCard>
-              <KpiLabel>Last commit</KpiLabel>
-              <KpiValue>{repo.status.lastCommit ? "—" : "—"}</KpiValue>
-              <KpiSub>{repo.status.lastCommit?.author ?? "no provider connected"}</KpiSub>
-            </KpiCard>
-          )}
-        </KpiGrid>
+        <RepoStats
+          repo={repo}
+          totalCommits={totalCommits}
+          maxBucket={maxBucket}
+          openMrsCount={repoProviderConnected ? openMrs.length : null}
+          draftMrsCount={repoProviderConnected ? draftMrs.length : null}
+        />
 
         <Grid2>
           <Card>
@@ -342,24 +295,10 @@ export default function RepoDetailPage() {
               )}
             </CardHead>
             {repo.status.dirty ? (
-              <FileList>
-                {repo.status.changedFiles.map((f) => (
-                  <FileRow key={f.path}>
-                    <Box
-                      component="span"
-                      sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {f.path}
-                    </Box>
-                    <FileKindBadge kind={f.kind}>{f.kind}</FileKindBadge>
-                  </FileRow>
-                ))}
-                {repo.status.changedFilesTruncated && (
-                  <CommitMeta sx={{ textAlign: "center", paddingTop: 1 }}>
-                    …more files truncated
-                  </CommitMeta>
-                )}
-              </FileList>
+              <ChangedFilesList
+                files={repo.status.changedFiles}
+                truncated={repo.status.changedFilesTruncated}
+              />
             ) : (
               <CleanState>
                 <Mascot variant="celebrating" size={96} title="Nothing to commit" />
@@ -387,7 +326,7 @@ export default function RepoDetailPage() {
                   description="This repository has no open merge requests."
                 />
               ) : (
-                <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
+                <PrScroller>
                   {prs.map((pr) => (
                     <PrRowSlot
                       key={pr.number}
@@ -397,7 +336,7 @@ export default function RepoDetailPage() {
                       <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
                     </PrRowSlot>
                   ))}
-                </Box>
+                </PrScroller>
               )}
             </Card>
           )}
@@ -422,16 +361,7 @@ export default function RepoDetailPage() {
                     <CommitMain>
                       <CommitMessage>{c.summary}</CommitMessage>
                       <CommitMeta>
-                        {c.author} ·{" "}
-                        <Box
-                          component="span"
-                          sx={{
-                            fontFamily:
-                              'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                          }}
-                        >
-                          {c.sha.slice(0, 7)}
-                        </Box>
+                        {c.author} · <CommitSha component="span">{c.sha.slice(0, 7)}</CommitSha>
                       </CommitMeta>
                     </CommitMain>
                   </CommitRow>
@@ -449,6 +379,12 @@ export default function RepoDetailPage() {
         size="lg"
         onClose={() => setSelectedPr(null)}
         data-testid={TEST_IDS.repoDetail.prDrawer}
+      />
+
+      <CreateBranchDialog
+        open={branchDialogOpen}
+        repoId={repo.id}
+        onClose={() => setBranchDialogOpen(false)}
       />
     </Root>
   );

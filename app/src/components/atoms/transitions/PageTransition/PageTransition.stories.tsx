@@ -1,17 +1,20 @@
 import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import PageTransition from "@/components/atoms/transitions/PageTransition";
+
+const Stage = styled(Box)({ height: 240, width: 360 });
 
 const meta: Meta<typeof PageTransition> = {
   title: "Atoms/Transitions/PageTransition",
   component: PageTransition,
   decorators: [
     (Story) => (
-      <Box sx={{ height: 240, width: 360 }}>
+      <Stage>
         <Story />
-      </Box>
+      </Stage>
     ),
   ],
 };

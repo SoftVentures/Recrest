@@ -23,7 +23,7 @@ export interface RepoListProps {
 }
 
 const TableShell = styled(Box)(({ theme }) => ({
-  margin: theme.spacing(0, 1.5, 0, 2),
+  margin: theme.spacing(0, 3),
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(1),
@@ -32,6 +32,16 @@ const TableShell = styled(Box)(({ theme }) => ({
     borderBottom: 0,
   },
 })) as typeof Box;
+
+const CardListPadding = styled(Box)({
+  padding: "0 24px",
+}) as typeof Box;
+
+const CardGroupStack = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 0,
+}) as typeof Box;
 
 export function RepoList({
   repos,
@@ -57,14 +67,14 @@ export function RepoList({
   if (viewMode === "card") {
     if (!grouped) {
       return (
-        <Box data-testid={TEST_IDS.repos.list} sx={{ padding: "0 16px" }}>
+        <CardListPadding data-testid={TEST_IDS.repos.list}>
           <RepoListRows
             repos={repos}
             selectedRepoId={selectedRepoId}
             onSelect={onSelect}
             viewMode={viewMode}
           />
-        </Box>
+        </CardListPadding>
       );
     }
     const byGroupCard = new Map<string, EnrichedRepo[]>();
@@ -74,10 +84,7 @@ export function RepoList({
       byGroupCard.set(r.group, list);
     }
     return (
-      <Box
-        data-testid={TEST_IDS.repos.list}
-        sx={{ display: "flex", flexDirection: "column", gap: 0 }}
-      >
+      <CardGroupStack data-testid={TEST_IDS.repos.list}>
         {[...byGroupCard.entries()].map(([name, items]) => (
           <RepoListCardGroup
             key={name}
@@ -88,7 +95,7 @@ export function RepoList({
             viewMode={viewMode}
           />
         ))}
-      </Box>
+      </CardGroupStack>
     );
   }
 

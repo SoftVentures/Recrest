@@ -213,43 +213,6 @@ export const IconOnlyBtn = styled(SecondaryBtn)({
   justifyContent: "center",
 });
 
-export const KpiGrid = styled(Box)({
-  display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: 12,
-}) as typeof Box;
-
-export const KpiCard = styled(Box)(({ theme }) => ({
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  padding: 14,
-  backgroundColor: theme.palette.background.paper,
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-})) as typeof Box;
-
-export const KpiLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
-  color: theme.palette.text.information,
-})) as typeof Typography;
-
-export const KpiValue = styled(Typography)(({ theme }) => ({
-  fontSize: 26,
-  lineHeight: "30px",
-  fontWeight: 600,
-  letterSpacing: "-0.01em",
-  color: theme.palette.text.primary,
-})) as typeof Typography;
-
-export const KpiSub = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
-  color: theme.palette.text.information,
-})) as typeof Typography;
-
 export const Grid2 = styled(Box)({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -310,59 +273,6 @@ export const ActivityAxis = styled(Box)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Box;
 
-export const FileList = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  maxHeight: 240,
-  overflowY: "auto",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-  fontSize: 12,
-}) as typeof Box;
-
-export const FileRow = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
-  padding: "4px 0",
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  "&:last-child": { border: 0 },
-})) as typeof Box;
-
-// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
-export const FileKindBadge = styled("span", {
-  shouldForwardProp: (p) => p !== "kind",
-})<{ kind: string }>(({ theme, kind }) => {
-  const infoColor = theme.palette.text.information ?? theme.palette.text.secondary;
-  const palette: Record<string, { color: string; bg: string }> = {
-    added: {
-      color: theme.palette.success.dark,
-      bg: `color-mix(in srgb, ${theme.palette.success.main} 14%, transparent)`,
-    },
-    modified: {
-      color: theme.palette.primary.dark,
-      bg: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
-    },
-    deleted: {
-      color: theme.palette.error.dark,
-      bg: `color-mix(in srgb, ${theme.palette.error.main} 14%, transparent)`,
-    },
-    renamed: { color: infoColor, bg: theme.palette.surface.interface.backElevation },
-  };
-  const tone = palette[kind] ??
-    palette.modified ?? { color: infoColor, bg: theme.palette.surface.interface.backElevation };
-  return {
-    fontFamily: "inherit",
-    fontSize: 10,
-    fontWeight: 600,
-    textTransform: "capitalize",
-    padding: "1px 6px",
-    borderRadius: 8,
-    color: tone.color,
-    backgroundColor: tone.bg,
-  };
-});
-
 export const CommitsList = styled(Box)({
   display: "flex",
   flexDirection: "column",
@@ -421,3 +331,18 @@ export const CleanStateSub = styled(Typography)(({ theme }) => ({
 export const MissingRoot = styled(Box)(({ theme }) => ({
   padding: theme.spacing(4),
 })) as typeof Box;
+
+export const RemoteUrlText = styled(Box)(({ theme }) => ({
+  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontSize: 11,
+  color: theme.palette.text.secondary,
+})) as typeof Box;
+
+export const PrScroller = styled(Box)({
+  maxHeight: 320,
+  overflowY: "auto",
+}) as typeof Box;
+
+export const CommitSha = styled(Box)({
+  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+}) as typeof Box;

@@ -203,10 +203,8 @@ function OverallSearch() {
             />
           )}
           <Kbds>
-            <Kbd component="span">
-              {formatShortcut(platform, { mod: true, key: KEYBOARD_KEYS.K })}
-            </Kbd>
-            <Kbd component="span">{KEYBOARD_KEYS.ESCAPE}</Kbd>
+            <Kbd>{formatShortcut(platform, { mod: true, key: KEYBOARD_KEYS.K })}</Kbd>
+            <Kbd>{KEYBOARD_KEYS.ESCAPE}</Kbd>
           </Kbds>
         </Head>
         <ResultsList component="ul" role="listbox">

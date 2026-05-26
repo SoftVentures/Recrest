@@ -100,16 +100,6 @@ export const BranchText = styled(Box)({
   minWidth: 0,
 }) as typeof Box;
 
-export const AheadBehind = styled(Typography)(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 5,
-  fontSize: 11,
-  color: theme.palette.text.information,
-  fontVariantNumeric: "tabular-nums",
-  flexShrink: 0,
-})) as typeof Typography;
-
 export const Footer = styled(Box)({
   display: "flex",
   alignItems: "center",

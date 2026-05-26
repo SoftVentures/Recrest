@@ -113,6 +113,10 @@ const PathRow = styled(Box)(({ theme }) => ({
 
 const PathText = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 
+const AddRepoCard = styled(GeneralCard)(({ theme }) => ({
+  marginBottom: theme.spacing(1.25),
+}));
+
 export function IntegrationsSection() {
   const { t } = useTranslation();
   const [draft, setDraft] = useState("");
@@ -134,12 +138,11 @@ export function IntegrationsSection() {
         {t("settings.integrations.scan_sub")}
       </SectionDesc>
 
-      <GeneralCard
+      <AddRepoCard
         title={t("settings.integrations.add")}
         sub={t("settings.integrations.add_sub")}
         padding="14px 16px"
         flushHeight
-        sx={{ marginBottom: 1.25 }}
       >
         <InputRow>
           <TextInput
@@ -164,7 +167,7 @@ export function IntegrationsSection() {
             Add
           </AddBtn>
         </InputRow>
-      </GeneralCard>
+      </AddRepoCard>
 
       {paths.map((p) => (
         <PathRow key={p}>

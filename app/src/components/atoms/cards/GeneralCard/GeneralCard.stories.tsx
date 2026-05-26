@@ -1,8 +1,11 @@
 import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+
+const Body = styled(Box)({ height: 120 });
 
 const meta: Meta<typeof GeneralCard> = {
   title: "Atoms/Cards/GeneralCard",
@@ -10,7 +13,7 @@ const meta: Meta<typeof GeneralCard> = {
   args: {
     title: "Activity",
     sub: "Last 30 days",
-    children: <Box sx={{ height: 120 }}>Card body</Box>,
+    children: <Body>Card body</Body>,
   },
   argTypes: {
     skeleton: {

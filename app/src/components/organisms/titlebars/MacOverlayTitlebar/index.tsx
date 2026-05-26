@@ -5,11 +5,10 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 /**
  * macOS "Overlay" titlebar. The OS draws traffic-lights at the configured
- * `trafficLightPosition`. We only render an empty drag region — the brand
- * mark / name / version intentionally don't live here.
- *
- * The container stays transparent so the native traffic-lights remain
- * visible (macOS greys them when inactive but doesn't move/hide them).
+ * `trafficLightPosition` above the WebView; we paint the chrome strip behind
+ * them. The background is intentionally a touch darker than the sidebar so
+ * macOS' inactive traffic-lights (faint outlined gray circles) keep enough
+ * contrast to stay visible when the window loses focus.
  */
 const Bar = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -26,7 +25,7 @@ const Bar = styled(Box)(({ theme }) => ({
   // (lights sit at x=14 with ~58px combined width → ~72px right edge).
   paddingLeft: 84,
   paddingRight: 12,
-  background: "transparent",
+  backgroundColor: theme.palette.mode === "dark" ? "#1c1e26" : "#f4f6f8",
   borderBottom: `1px solid ${theme.palette.border.separator ?? theme.palette.divider}`,
   WebkitUserSelect: "none",
   userSelect: "none",

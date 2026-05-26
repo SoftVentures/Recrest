@@ -104,7 +104,7 @@ export default tseslint.config(
             },
             {
               group: ["tailwindcss", "tw-animate-css", "class-variance-authority", "tailwind-merge"],
-              message: "Tailwind/CVA stack is removed — use MUI sx + theme tokens.",
+              message: "Tailwind/CVA stack is removed — use MUI styled() components and theme tokens.",
             },
             {
               group: [
@@ -175,6 +175,8 @@ export default tseslint.config(
     // imports for no real fast-refresh benefit.
     files: [
       "src/components/atoms/buttons/GeneralIconButton/index.tsx",
+      "src/components/atoms/buttons/OpenInIdeButton/index.tsx",
+      "src/components/atoms/inputs/Kbd/index.tsx",
       "src/components/atoms/loaders/**/index.tsx",
     ],
     rules: {

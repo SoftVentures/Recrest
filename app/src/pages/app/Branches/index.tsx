@@ -62,7 +62,7 @@ const Page = styled(Box)({
   minHeight: 0,
   overflow: "auto",
   scrollbarGutter: "stable",
-  padding: "18px 22px 80px",
+  padding: "18px 24px 80px",
   display: "flex",
   flexDirection: "column",
   gap: 20,
@@ -134,6 +134,18 @@ const Groups = styled(Box)({
   flexDirection: "column",
   gap: 14,
 }) as typeof Box;
+
+const FilterMenu = styled(Menu)(({ theme }) => ({
+  "& .MuiPaper-root": {
+    width: 240,
+    marginTop: theme.spacing(0.5),
+  },
+}));
+
+const MenuSeparator = styled(Divider)(({ theme }) => ({
+  marginTop: theme.spacing(0.5),
+  marginBottom: theme.spacing(0.5),
+}));
 
 export default function BranchesPage() {
   const { t } = useTranslation();
@@ -250,13 +262,12 @@ export default function BranchesPage() {
             )}
             <ChevronDown size={14} aria-hidden />
           </ToolbarBtn>
-          <Menu
+          <FilterMenu
             anchorEl={filterAnchor}
             open={!!filterAnchor}
             onClose={() => setFilterAnchor(null)}
             anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             transformOrigin={{ vertical: "top", horizontal: "right" }}
-            slotProps={{ paper: { sx: { width: 240, mt: 0.5 } } }}
           >
             <SectionLabel>{t("branches.filter.tracking_label")}</SectionLabel>
             <PopoverChip
@@ -287,7 +298,7 @@ export default function BranchesPage() {
               active={tracking === TrackingFlag.CLEAN}
               onSelect={() => setTracking(TrackingFlag.CLEAN)}
             />
-            <Divider sx={{ my: 0.5 }} />
+            <MenuSeparator />
             <SectionLabel>{t("branches.filter.location_label")}</SectionLabel>
             <PopoverChip
               icon={<ListChecks size={14} />}
@@ -312,7 +323,7 @@ export default function BranchesPage() {
             />
             {activeFilterCount > 0 && (
               <>
-                <Divider sx={{ my: 0.5 }} />
+                <MenuSeparator />
                 <FilterItem
                   onClick={(e) => {
                     e.preventDefault();
@@ -324,7 +335,7 @@ export default function BranchesPage() {
                 </FilterItem>
               </>
             )}
-          </Menu>
+          </FilterMenu>
         </Toolbar>
 
         <Groups>

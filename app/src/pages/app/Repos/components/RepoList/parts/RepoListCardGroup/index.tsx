@@ -8,14 +8,17 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { RepoListRows } from "@/pages/app/Repos/components/RepoList/parts/RepoListRows";
 import { GroupCount, type GroupProps } from "@/pages/app/Repos/components/RepoList/parts/_shared";
 
-const CardGroupShell = styled(Box)({
+const CardGroupShell = styled(Box, {
+  shouldForwardProp: (p) => p !== "open",
+})<{ open: boolean }>(({ open }) => ({
   display: "flex",
   flexDirection: "column",
   padding: "0 16px",
+  paddingBottom: open ? "10px" : 0,
   "& > [data-card-group-grid]": {
     marginTop: 6,
   },
-}) as typeof Box;
+}));
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const CardGroupHead = styled("button")(({ theme }) => ({
@@ -42,7 +45,7 @@ const CardGroupHead = styled("button")(({ theme }) => ({
 export function RepoListCardGroup({ name, repos, selectedRepoId, onSelect, viewMode }: GroupProps) {
   const [open, setOpen] = useState(true);
   return (
-    <CardGroupShell sx={{ paddingBottom: open ? "10px" : 0 }}>
+    <CardGroupShell open={open}>
       <CardGroupHead type="button" onClick={() => setOpen((o) => !o)}>
         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
         {name}

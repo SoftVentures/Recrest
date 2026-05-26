@@ -35,6 +35,7 @@ import GeneralIconButton, {
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import AheadBehind from "@/components/atoms/git/AheadBehind";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -43,7 +44,6 @@ import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { timeAgo } from "@/lib/utils/timeAgo.utils";
 import {
-  AheadBehind,
   BranchCard,
   BranchChip,
   BranchQuick,
@@ -179,10 +179,12 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             <GitBranch size={12} />
             <BranchText component="span">{repo.status.branch ?? "—"}</BranchText>
           </BranchChip>
-          <AheadBehind>
-            <Box component="span">↑{repo.status.ahead}</Box>
-            <Box component="span">↓{repo.status.behind}</Box>
-          </AheadBehind>
+          <AheadBehind
+            ahead={repo.status.ahead}
+            behind={repo.status.behind}
+            variant="compact"
+            hideZero={false}
+          />
         </BranchTop>
         <BranchQuick>
           <GhostBtn type="button">

@@ -37,6 +37,7 @@ export const TEST_IDS = {
     searchTrigger: "search-trigger",
     btnRefresh: "btn-refresh",
     btnAddRepo: "btn-add-repo",
+    btnFindAcross: "btn-find-across",
   },
 
   sidebar: {
@@ -79,7 +80,6 @@ export const TEST_IDS = {
 
   repos: {
     page: "repos-page",
-    changesPage: "changes-page",
     toolbar: "repos-toolbar",
     filterTrigger: "repos-filter-trigger",
     viewToggle: {
@@ -130,6 +130,11 @@ export const TEST_IDS = {
     bulkDestBrowse: "add-repo-bulk-dest-browse",
     import: "add-repo-import",
     rowCheckbox: "add-repo-row-checkbox",
+  },
+
+  changes: {
+    page: "changes-page",
+    row: "changes-row",
   },
 
   mr: {
@@ -354,6 +359,8 @@ export const TEST_IDS = {
     providerNext: "onboarding-provider-next",
     providerBack: "onboarding-provider-back",
     providerSkip: "onboarding-provider-skip",
+    providerToken: "onboarding-provider-token",
+    providerConnect: "onboarding-provider-connect",
     scanNext: "onboarding-scan-next",
     scanBack: "onboarding-scan-back",
     doneFinish: "onboarding-done-finish",

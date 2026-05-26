@@ -11,15 +11,14 @@ interface SkeletonBoxProps {
   radius?: number;
 }
 
+const RadiusSkeleton = styled(GeneralSkeletonLoader, {
+  shouldForwardProp: (p) => p !== "radius",
+})<{ radius: number }>(({ radius }) => ({
+  borderRadius: `${radius}px`,
+}));
+
 function SkeletonBox({ w = "100%", h = 12, radius = 4 }: SkeletonBoxProps) {
-  return (
-    <GeneralSkeletonLoader
-      shape={SkeletonShape.BLOCK}
-      width={w}
-      height={h}
-      sx={{ borderRadius: `${radius}px` }}
-    />
-  );
+  return <RadiusSkeleton shape={SkeletonShape.BLOCK} width={w} height={h} radius={radius} />;
 }
 
 const KpiCardShell = styled(Box)(({ theme }) => ({
@@ -142,13 +141,19 @@ const CommitTextCol = styled(Box)({
   minWidth: 0,
 });
 
+const CommitList = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+}));
+
 export interface CommitListSkeletonProps {
   rows?: number;
 }
 
 export function CommitListSkeleton({ rows = 4 }: CommitListSkeletonProps) {
   return (
-    <Box aria-hidden sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <CommitList aria-hidden>
       {Array.from({ length: rows }).map((_, i) => (
         <CommitRow key={i}>
           <SkeletonBox w={24} h={24} radius={5} />
@@ -158,6 +163,6 @@ export function CommitListSkeleton({ rows = 4 }: CommitListSkeletonProps) {
           </CommitTextCol>
         </CommitRow>
       ))}
-    </Box>
+    </CommitList>
   );
 }

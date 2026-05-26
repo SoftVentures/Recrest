@@ -6,13 +6,14 @@ import { useTranslation } from "react-i18next";
 
 import { PrState } from "@recrest/shared";
 
-import { BookPlus, RefreshCw, Search } from "lucide-react";
+import { BookPlus, FileSearch, RefreshCw, Search } from "lucide-react";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import {
   AddRepoButton,
   AddRepoLabel,
   CenterSection,
+  FindAcrossButton,
   Kbd,
   LeftSection,
   Meta,
@@ -27,7 +28,12 @@ import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
-import { bumpRefreshNonce, setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
+import {
+  bumpRefreshNonce,
+  setFindDialogOpen,
+  setImportDialogOpen,
+  setSearchOpen,
+} from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 interface HeaderContext {
@@ -156,6 +162,8 @@ function Header() {
   const searchLabel = t("actions.search");
   const searchPlaceholder = t("actions.search_placeholder");
   const refreshLabel = t("actions.refresh");
+  const findAcrossLabel = t("actions.find_across_repos");
+  const findAcrossKbd = formatShortcut(platform, { mod: true, shift: true, key: "F" });
 
   return (
     <TopBar data-testid={TEST_IDS.header.root}>
@@ -181,11 +189,21 @@ function Header() {
           <SearchPlaceholder component="span" variant="caption">
             {searchPlaceholder}
           </SearchPlaceholder>
-          <Kbd component="kbd">{searchKbd}</Kbd>
+          <Kbd>{searchKbd}</Kbd>
         </SearchTrigger>
       </CenterSection>
 
       <RightSection>
+        <GeneralTooltip title={`${findAcrossLabel} · ${findAcrossKbd}`} arrow placement="bottom">
+          <FindAcrossButton
+            type="button"
+            aria-label={findAcrossLabel}
+            data-testid={TEST_IDS.header.btnFindAcross}
+            onClick={() => dispatch(setFindDialogOpen(true))}
+          >
+            <FileSearch size={16} aria-hidden />
+          </FindAcrossButton>
+        </GeneralTooltip>
         <GeneralTooltip title={refreshLabel} arrow placement="bottom">
           <RefreshButton
             id="btn-refresh"

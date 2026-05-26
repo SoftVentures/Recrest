@@ -43,8 +43,10 @@ const Toolbar = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
-  padding: "12px 16px",
-  // Toolbar drops in — matches src-old `.p-mrs .a-mr-toolbar`.
+  // Right padding compensates for the page-scroll gutter so the toolbar's
+  // right edge lines up with the table card inside the scroll surface.
+  padding: "12px 24px 12px 24px",
+  paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 });
@@ -72,7 +74,7 @@ const FilterBtn = styled("button")(({ theme }) => ({
 
 const Card = styled(Box)(({ theme }) => ({
   // Right margin compensates for the parent Scroll's 4px scrollbar gutter.
-  margin: theme.spacing(0, 1.5, 0, 2),
+  margin: theme.spacing(0, 3),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(1),
   backgroundColor: theme.palette.surface.interface.base,

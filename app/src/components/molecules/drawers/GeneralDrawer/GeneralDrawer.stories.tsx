@@ -1,11 +1,14 @@
 import { useState } from "react";
 
 import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralDrawer from "@/components/molecules/drawers/GeneralDrawer";
+
+const Body = styled(Box)(({ theme }) => ({ padding: theme.spacing(2) }));
 
 function DefaultDemo() {
   const [open, setOpen] = useState(false);
@@ -13,7 +16,7 @@ function DefaultDemo() {
     <>
       <GeneralButton onClick={() => setOpen(true)}>Open drawer</GeneralButton>
       <GeneralDrawer open={open} onClose={() => setOpen(false)}>
-        <Box sx={{ padding: 2 }}>Drawer content</Box>
+        <Body>Drawer content</Body>
       </GeneralDrawer>
     </>
   );

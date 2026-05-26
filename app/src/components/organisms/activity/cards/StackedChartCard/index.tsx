@@ -65,9 +65,9 @@ function StackedChartCard({ stacked, total, loading }: Props) {
             >
               <Column data-testid={TEST_IDS.activity.stacked.col}>
                 {isEmpty ? (
-                  <EmptyCol sx={{ height: `${h}%` }} />
+                  <EmptyCol style={{ height: `${h}%` }} />
                 ) : (
-                  <Stack sx={{ height: `${h}%` }}>
+                  <Stack style={{ height: `${h}%` }}>
                     {d.segments.map((s) => (
                       <Seg key={s.repoId} color={s.color} flexValue={s.count} />
                     ))}

@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-import { Box, type SxProps, type Theme, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralSkeletonLoader, {
@@ -20,13 +20,12 @@ export interface GeneralCardProps {
   skeleton?: GeneralCardSkeleton;
   /** Forwarded as `data-testid` on the outer card. */
   testId?: string;
+  /** Outer wrapper class — wrap in a `styled(GeneralCard)` for layout overrides (e.g. `gridColumn`). */
   className?: string;
   /** Overrides the default `14px 16px 12px` padding when callers need a tighter or roomier surface. */
   padding?: string | number;
   /** Disable the default `height: 100%` so the card hugs its content instead of stretching. */
   flushHeight?: boolean;
-  /** Passed through to the outer surface — use for layout overrides (e.g. `{ gridColumn: "1 / -1" }`). */
-  sx?: SxProps<Theme>;
 }
 
 interface RootProps {
@@ -119,6 +118,29 @@ const HeatmapSkel = styled(Box)({
   padding: "8px 0",
 });
 
+const LegendSkel = styled(GeneralSkeletonLoader)({
+  borderRadius: 8,
+});
+
+const HeatCellSkel = styled(GeneralSkeletonLoader)({
+  width: "100%",
+  borderRadius: 8,
+});
+
+const LineSkel = styled(GeneralSkeletonLoader)({
+  width: "100%",
+  borderRadius: 8,
+});
+
+const RadialSkel = styled(GeneralSkeletonLoader)({
+  margin: "0 auto",
+});
+
+const RowSkel = styled(GeneralSkeletonLoader)({
+  width: "100%",
+  borderRadius: 8,
+});
+
 function CardSkeleton({ shape }: { shape: GeneralCardSkeleton }) {
   if (shape === "bars") {
     const heights = [35, 70, 55, 20, 65, 45, 80, 30, 60, 50, 75, 40, 55, 25];
@@ -136,13 +158,7 @@ function CardSkeleton({ shape }: { shape: GeneralCardSkeleton }) {
         <GeneralSkeletonLoader shape={SkeletonShape.CIRCLE} width={120} height={120} />
         <DonutSkelLegend>
           {Array.from({ length: 6 }).map((_, i) => (
-            <GeneralSkeletonLoader
-              key={i}
-              shape={SkeletonShape.BLOCK}
-              width={140}
-              height={11}
-              sx={{ borderRadius: 1 }}
-            />
+            <LegendSkel key={i} shape={SkeletonShape.BLOCK} width={140} height={11} />
           ))}
         </DonutSkelLegend>
       </DonutSkel>
@@ -152,48 +168,23 @@ function CardSkeleton({ shape }: { shape: GeneralCardSkeleton }) {
     return (
       <HeatmapSkel role="status" aria-busy>
         {Array.from({ length: 7 * 24 }).map((_, i) => (
-          <GeneralSkeletonLoader
-            key={i}
-            shape={SkeletonShape.BLOCK}
-            height={10}
-            sx={{ width: "100%", borderRadius: 1 }}
-          />
+          <HeatCellSkel key={i} shape={SkeletonShape.BLOCK} height={10} />
         ))}
       </HeatmapSkel>
     );
   }
   if (shape === "line") {
-    return (
-      <GeneralSkeletonLoader
-        role="status"
-        aria-busy
-        shape={SkeletonShape.BLOCK}
-        height={80}
-        sx={{ width: "100%", borderRadius: 1 }}
-      />
-    );
+    return <LineSkel role="status" aria-busy shape={SkeletonShape.BLOCK} height={80} />;
   }
   if (shape === "radial") {
     return (
-      <GeneralSkeletonLoader
-        role="status"
-        aria-busy
-        shape={SkeletonShape.CIRCLE}
-        width={130}
-        height={130}
-        sx={{ margin: "0 auto" }}
-      />
+      <RadialSkel role="status" aria-busy shape={SkeletonShape.CIRCLE} width={130} height={130} />
     );
   }
   return (
     <RowsSkel role="status" aria-busy>
       {Array.from({ length: 4 }).map((_, i) => (
-        <GeneralSkeletonLoader
-          key={i}
-          shape={SkeletonShape.BLOCK}
-          height={12}
-          sx={{ width: "100%", borderRadius: 1 }}
-        />
+        <RowSkel key={i} shape={SkeletonShape.BLOCK} height={12} />
       ))}
     </RowsSkel>
   );
@@ -210,17 +201,10 @@ function GeneralCard({
   className,
   padding = "14px 16px 12px",
   flushHeight = false,
-  sx,
 }: GeneralCardProps) {
   const showHead = title !== undefined || right !== undefined;
   return (
-    <Root
-      data-testid={testId}
-      className={className}
-      padding={padding}
-      flushHeight={flushHeight}
-      sx={sx}
-    >
+    <Root data-testid={testId} className={className} padding={padding} flushHeight={flushHeight}>
       {showHead && (
         <Head>
           <HeadLeft>

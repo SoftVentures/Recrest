@@ -92,6 +92,14 @@ export const SectionWrap = styled(Box)({
   marginBottom: 22,
 }) as typeof Box;
 
+const PathRowBody = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
+
+const PathRowVal = styled(FactVal)({
+  display: "block",
+  marginTop: 2,
+  wordBreak: "break-all",
+});
+
 interface PathRowProps {
   label: string;
   path: string | null;
@@ -101,12 +109,10 @@ export function PathRow({ label, path }: PathRowProps) {
   const dash = "—";
   return (
     <FactRow>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
+      <PathRowBody>
         <FactKey>{label}</FactKey>
-        <FactVal sx={{ display: "block", marginTop: "2px", wordBreak: "break-all" }}>
-          {path ?? dash}
-        </FactVal>
-      </Box>
+        <PathRowVal>{path ?? dash}</PathRowVal>
+      </PathRowBody>
       <ButtonRow>
         <GeneralButton
           size="sm"

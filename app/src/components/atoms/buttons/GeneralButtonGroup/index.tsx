@@ -4,16 +4,29 @@ import { ToggleButton, ToggleButtonGroup, type ToggleButtonGroupProps } from "@m
 import { styled } from "@mui/material/styles";
 
 export type GeneralButtonGroupShape = "pill" | "square";
-export type GeneralButtonGroupSize = "md" | "sm";
+export type GeneralButtonGroupSize = "md" | "sm" | "xs";
 
 export interface GeneralButtonGroupProps extends ToggleButtonGroupProps {
   shape?: GeneralButtonGroupShape;
   /**
    * `md` (default): 38px buttons — header / page toolbars.
-   * `sm`: 32px buttons — tighter toolbars, popovers.
+   * `sm`: 32px buttons — popovers, scope rows.
+   * `xs`: 30px buttons — page toolbars that sit next to `FilterButton` etc.
    */
   density?: GeneralButtonGroupSize;
 }
+
+const HEIGHT_BY_DENSITY: Record<GeneralButtonGroupSize, number> = {
+  md: 38,
+  sm: 32,
+  xs: 30,
+};
+
+const PADDING_BY_DENSITY: Record<GeneralButtonGroupSize, string> = {
+  md: "0 14px",
+  sm: "0 12px",
+  xs: "0 10px",
+};
 
 interface StyledProps {
   shape?: GeneralButtonGroupShape;
@@ -39,15 +52,13 @@ const StyledGroup = styled(ToggleButtonGroup, { shouldForwardProp: SHOULD_FORWAR
     display: "inline-flex",
     alignItems: "stretch",
     gap: 0,
-    height: density === "sm" ? 32 : 38,
+    height: HEIGHT_BY_DENSITY[density],
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: shape === "square" ? 8 : 999,
     padding: 0,
     fontFamily: "inherit",
     flexWrap: "nowrap",
-    // Clip children so their square corners can't poke through the group's
-    // rounded outer corners.
     overflow: "hidden",
     transition: "border-color 150ms ease",
     "&:hover": {
@@ -56,7 +67,7 @@ const StyledGroup = styled(ToggleButtonGroup, { shouldForwardProp: SHOULD_FORWAR
     "&.MuiToggleButtonGroup-vertical": {
       flexDirection: "column",
       height: "auto",
-      width: density === "sm" ? 32 : 38,
+      width: HEIGHT_BY_DENSITY[density],
     },
   }),
 );
@@ -68,7 +79,7 @@ const StyledToggle = styled(ToggleButton, { shouldForwardProp: SHOULD_FORWARD })
     justifyContent: "center",
     gap: 6,
     height: "100%",
-    padding: density === "sm" ? "0 12px" : "0 14px",
+    padding: PADDING_BY_DENSITY[density],
     // No outer borders — those belong to the group. Only a 1px left
     // divider between adjacent siblings to mark segment boundaries.
     border: 0,

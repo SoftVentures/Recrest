@@ -73,6 +73,16 @@ const NotInstalledTag = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
+const WideSelect = styled(SelectControl)({ minWidth: 260 });
+
+const MenuLabel = styled(Box, {
+  shouldForwardProp: (p) => p !== "indent" && p !== "dimmed",
+})<{ indent?: boolean; dimmed?: boolean }>(({ theme, indent, dimmed }) => ({
+  display: "inline-block",
+  marginLeft: indent ? theme.spacing(1) : 0,
+  opacity: dimmed ? 0.55 : 1,
+}));
+
 export function SystemSection() {
   const { t } = useTranslation();
   const platform = usePlatform();
@@ -140,11 +150,10 @@ export function SystemSection() {
         label={t("settings.fields.default_ide")}
         sub={!firstDetected ? t("settings.ide.detection_hint") : undefined}
       >
-        <SelectControl
+        <WideSelect
           size="small"
           value={defaultIde}
           onChange={(e: SelectChangeEvent<unknown>) => setDefaultIde(e.target.value as string)}
-          sx={{ minWidth: 260 }}
           data-testid={TEST_IDS.settings.general.defaultIdeSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -166,18 +175,16 @@ export function SystemSection() {
         >
           <MenuItem value="auto">
             {firstDetected && <IdeIcon id={firstDetected} size={14} />}
-            <Box component="span" sx={{ ml: firstDetected ? 1 : 0 }}>
-              {autoLabel}
-            </Box>
+            <MenuLabel indent={!!firstDetected}>{autoLabel}</MenuLabel>
           </MenuItem>
           {IDE_IDS.map((id) => {
             const detected = detectedSet.has(id);
             return (
               <MenuItem key={id} value={id} disabled={!detected}>
                 <IdeIcon id={id} size={14} color={detected ? "brand" : "currentColor"} />
-                <Box component="span" sx={{ ml: 1, opacity: detected ? 1 : 0.55 }}>
+                <MenuLabel indent dimmed={!detected}>
                   {IDE_DEFINITIONS[id].name}
-                </Box>
+                </MenuLabel>
                 {!detected && (
                   <NotInstalledTag component="span" variant="caption">
                     {t("settings.ide.not_installed_tag")}
@@ -186,7 +193,7 @@ export function SystemSection() {
               </MenuItem>
             );
           })}
-        </SelectControl>
+        </WideSelect>
       </SettingsRow>
 
       <SettingsRow
@@ -197,11 +204,10 @@ export function SystemSection() {
             : t("settings.terminal.detection_done")
         }
       >
-        <SelectControl
+        <WideSelect
           size="small"
           value={defaultTerminal}
           onChange={(e: SelectChangeEvent<unknown>) => setDefaultTerminal(e.target.value as string)}
-          sx={{ minWidth: 260 }}
           data-testid={TEST_IDS.settings.general.defaultTerminalSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -223,30 +229,25 @@ export function SystemSection() {
         >
           <MenuItem value="auto">
             {firstTerminal && <TerminalIcon id={firstTerminal} size={16} />}
-            <Box component="span" sx={{ ml: firstTerminal ? 1 : 0 }}>
-              {terminalAutoLabel}
-            </Box>
+            <MenuLabel indent={!!firstTerminal}>{terminalAutoLabel}</MenuLabel>
           </MenuItem>
           {installedTerminalIds.map((id) => (
             <MenuItem key={id} value={id}>
               <TerminalIcon id={id} size={16} />
-              <Box component="span" sx={{ ml: 1 }}>
-                {TERMINAL_DEFINITIONS[id].name}
-              </Box>
+              <MenuLabel indent>{TERMINAL_DEFINITIONS[id].name}</MenuLabel>
             </MenuItem>
           ))}
-        </SelectControl>
+        </WideSelect>
       </SettingsRow>
 
       <SettingsRow
         label={t("settings.fields.default_shell")}
         sub={!firstShell ? t("settings.shell.detection_hint") : t("settings.shell.detection_done")}
       >
-        <SelectControl
+        <WideSelect
           size="small"
           value={defaultShell}
           onChange={(e: SelectChangeEvent<unknown>) => setDefaultShell(e.target.value as string)}
-          sx={{ minWidth: 260 }}
           data-testid={TEST_IDS.settings.general.defaultShellSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -268,19 +269,15 @@ export function SystemSection() {
         >
           <MenuItem value="auto">
             {firstShell && <ShellIcon id={firstShell} size={16} />}
-            <Box component="span" sx={{ ml: firstShell ? 1 : 0 }}>
-              {shellAutoLabel}
-            </Box>
+            <MenuLabel indent={!!firstShell}>{shellAutoLabel}</MenuLabel>
           </MenuItem>
           {installedShellIds.map((id) => (
             <MenuItem key={id} value={id}>
               <ShellIcon id={id} size={16} />
-              <Box component="span" sx={{ ml: 1 }}>
-                {SHELL_DEFINITIONS[id].name}
-              </Box>
+              <MenuLabel indent>{SHELL_DEFINITIONS[id].name}</MenuLabel>
             </MenuItem>
           ))}
-        </SelectControl>
+        </WideSelect>
       </SettingsRow>
     </SettingsSection>
   );

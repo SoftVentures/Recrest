@@ -13,7 +13,9 @@ import { FolderGit2, GitBranch as MrIcon } from "lucide-react";
 
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import AheadBehind from "@/components/atoms/git/AheadBehind";
 import StaggeredReveal from "@/components/atoms/transitions/StaggeredReveal";
+import KpiCard from "@/components/molecules/cards/KpiCard";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import ClickableRow from "@/components/molecules/rows/ClickableRow";
 import HeatmapCard from "@/components/organisms/activity/cards/HeatmapCard";
@@ -34,7 +36,6 @@ import type { EnrichedRepo } from "@/lib/repoEnrich";
 import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
 import AttentionRow from "@/pages/app/Dashboard/parts/AttentionRow";
 import CiDot from "@/pages/app/Dashboard/parts/CiDot";
-import Kpi from "@/pages/app/Dashboard/parts/Kpi";
 import QuickActionsCard from "@/pages/app/Dashboard/parts/QuickActionsCard";
 import {
   ActivityBarsSkeleton,
@@ -49,7 +50,7 @@ const Root = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: 12,
-  padding: 16,
+  padding: "16px 24px",
   backgroundColor: theme.palette.background.default,
   flex: 1,
   minHeight: 0,
@@ -64,25 +65,6 @@ const Kpis = styled(Box)({
   animation: `${pgZoom} ${PAGE_DUR_MD}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 }) as typeof Box;
-
-const AheadBehindValue = styled(Box)({
-  display: "inline-flex",
-  alignItems: "baseline",
-  gap: 4,
-  lineHeight: 1,
-}) as typeof Box;
-
-const AheadBehindArrow = styled(Box)(({ theme }) => ({
-  fontSize: 22,
-  fontWeight: 600,
-  color: theme.palette.text.information,
-})) as typeof Box;
-
-const AheadBehindSep = styled(Box)(({ theme }) => ({
-  fontWeight: 400,
-  color: theme.palette.text.informationLight,
-  margin: "0 6px",
-})) as typeof Box;
 
 const Grid = styled(Box)({
   display: "grid",
@@ -146,6 +128,19 @@ const RowSecondary = styled(Box)(({ theme }) => ({
 const Sep = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
 })) as typeof Typography;
+
+const FullSpanCard = styled(GeneralCard)({ gridColumn: "1 / -1" });
+
+const AttentionMeta = styled(Typography)(({ theme }) => ({
+  fontSize: 11.5,
+  color: theme.palette.text.information,
+})) as typeof Typography;
+
+const MrList = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 0,
+}) as typeof Box;
 
 function DashboardPage() {
   const { t } = useTranslation();
@@ -216,9 +211,9 @@ function DashboardPage() {
           <KpiSkeleton />
         </Kpis>
         <Grid>
-          <GeneralCard title={t("dash.activity.title")} sx={{ gridColumn: "1 / -1" }}>
+          <FullSpanCard title={t("dash.activity.title")}>
             <ActivityBarsSkeleton />
-          </GeneralCard>
+          </FullSpanCard>
           <CardBlockSkeleton rows={3} />
           {anyProviderConnected && <CardBlockSkeleton rows={4} />}
           <CardBlockSkeleton rows={5} />
@@ -254,14 +249,14 @@ function DashboardPage() {
   return (
     <Root data-testid={TEST_IDS.dashboard.page}>
       <StaggeredReveal component={Kpis} step={50} maxDelay={200}>
-        <Kpi
+        <KpiCard
           label={t("dash.kpi.repositories")}
           value={repos.length}
           sub={t("dash.kpi.repositories_sub", { count: dirtyRepos.length })}
           onClick={() => navigate(AppRoute.REPOS)}
         />
         {anyProviderConnected ? (
-          <Kpi
+          <KpiCard
             label={t("dash.kpi.merge_requests")}
             value={openPRs.length}
             sub={t("dash.kpi.merge_requests_sub", { count: prs.filter((p) => p.draft).length })}
@@ -269,7 +264,7 @@ function DashboardPage() {
             onClick={() => navigate(AppRoute.MERGE_REQUESTS)}
           />
         ) : (
-          <Kpi
+          <KpiCard
             label={t("dash.kpi.clean_repos")}
             value={cleanReposCount}
             sub={t("dash.kpi.clean_repos_sub", {
@@ -279,21 +274,13 @@ function DashboardPage() {
             onClick={() => navigate(AppRoute.REPOS)}
           />
         )}
-        <Kpi
+        <KpiCard
           label={t("dash.kpi.ahead_behind")}
-          value={
-            <AheadBehindValue component="span">
-              <AheadBehindArrow component="span">↑</AheadBehindArrow>
-              {totalAhead}
-              <AheadBehindSep component="span">/</AheadBehindSep>
-              <AheadBehindArrow component="span">↓</AheadBehindArrow>
-              {totalBehind}
-            </AheadBehindValue>
-          }
+          value={<AheadBehind ahead={totalAhead} behind={totalBehind} variant="separated" />}
           sub={t("dash.kpi.ahead_behind_sub")}
           onClick={() => navigate(AppRoute.BRANCHES)}
         />
-        <Kpi
+        <KpiCard
           label={t("dash.kpi.commits")}
           value={totalCommits}
           sub={t("dash.kpi.commits_sub", { count: maxDay })}
@@ -312,9 +299,9 @@ function DashboardPage() {
         <GeneralCard
           title={t("dash.attention.title")}
           right={
-            <Typography variant="caption" sx={{ fontSize: 11.5, color: "text.information" }}>
+            <AttentionMeta variant="caption">
               {Math.min(dirtyRepos.length, 3) + Math.min(behindRepos.length, 2)} items
-            </Typography>
+            </AttentionMeta>
           }
         >
           <AttnList>
@@ -349,7 +336,7 @@ function DashboardPage() {
               </CtaLink>
             }
           >
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <MrList>
               {openPRs.slice(0, 4).map((p) => (
                 <ClickableRow key={p.id} onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
                   <MrIcon
@@ -369,7 +356,7 @@ function DashboardPage() {
               {openPRs.length === 0 && (
                 <EmptyState mascot="snoozing" mascotSize={72} title={t("dash.mrs.empty")} />
               )}
-            </Box>
+            </MrList>
           </GeneralCard>
         )}
 

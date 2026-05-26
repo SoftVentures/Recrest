@@ -1,10 +1,13 @@
 import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import GeneralLinearLoader, {
   LinearLoaderThickness,
 } from "@/components/atoms/loaders/GeneralLinearLoader";
+
+const Stage = styled(Box)({ width: 320 });
 
 const meta: Meta<typeof GeneralLinearLoader> = {
   title: "Atoms/Loaders/GeneralLinearLoader",
@@ -15,9 +18,9 @@ const meta: Meta<typeof GeneralLinearLoader> = {
   },
   decorators: [
     (Story) => (
-      <Box sx={{ width: 320 }}>
+      <Stage>
         <Story />
-      </Box>
+      </Stage>
     ),
   ],
 };

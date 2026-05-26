@@ -147,16 +147,6 @@ export const BranchText = styled(Box)({
   minWidth: 0,
 }) as typeof Box;
 
-export const AheadBehind = styled(Box)(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 10,
-  fontSize: 13,
-  fontWeight: 700,
-  color: theme.palette.text.information,
-  fontVariantNumeric: "tabular-nums",
-})) as typeof Box;
-
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 export const GhostBtn = styled("button")(({ theme }) => ({
   flex: 1,

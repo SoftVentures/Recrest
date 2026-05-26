@@ -81,7 +81,7 @@ const Root = styled(Box)({
   // Right padding is intentionally 0 so the Body scrollbar sits flush against
   // the viewport edge — same visual rhythm as Activity/Repos. The Body owns
   // its own right-side breathing room via PageInner's paddingRight.
-  padding: "16px 0 16px 16px",
+  padding: "16px 0 16px 24px",
   minHeight: 0,
   height: "100%",
   overflow: "hidden",
@@ -176,9 +176,9 @@ const Body = styled(Box)({
 
 const PageInner = styled(Box)({
   // Right padding lives on the content (not the scroll container) so the
-  // scrollbar can sit at the viewport edge. Matches the breathing room the
-  // old `Body.paddingRight: 22` provided.
-  paddingRight: 22,
+  // scrollbar can sit at the viewport edge. Set to 24 so the right edge
+  // aligns with the header's `paddingRight: 24` across every page.
+  paddingRight: 24,
   paddingBottom: 40,
   // Each section block rises in with a 40ms-stagger after the 120ms head delay.
   // Matches src-old `.p-settings .a-set-page > .a-set-section`.

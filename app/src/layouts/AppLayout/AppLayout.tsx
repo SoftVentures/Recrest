@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { Outlet, useLocation } from "react-router-dom";
 
 import { Box } from "@mui/material";
@@ -10,6 +12,7 @@ import UpdaterBanner from "@/components/organisms/banners/UpdaterBanner";
 import Header from "@/components/organisms/layout/Header";
 import Sidebar from "@/components/organisms/layout/Sidebar";
 import OnboardingWizard from "@/components/organisms/onboarding/OnboardingWizard";
+import FindAcrossReposDialog from "@/components/organisms/repos/FindAcrossReposDialog";
 import Titlebar from "@/components/organisms/titlebars/Titlebar";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
@@ -17,8 +20,11 @@ import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
 import { usePrPolling } from "@/hooks/usePrPolling";
 import { useResponsiveSidebar } from "@/hooks/useResponsiveSidebar";
+import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useThemeAttribute } from "@/hooks/useThemeAttribute";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { setFindDialogOpen } from "@/store/actions/ui.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 const AppFrame = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -99,6 +105,7 @@ export function AppLayout() {
   useFaviconSync();
   useLocaleSync();
   useResponsiveSidebar();
+  useScrollbarWidth();
   usePrPolling();
   usePageSwipe();
   // Keying `PageTransition` on the current pathname makes React unmount the
@@ -108,6 +115,22 @@ export function AppLayout() {
   // state branch) compose harmlessly: a fade-in inside a fade-in is just
   // the inner one.
   const { pathname } = useLocation();
+  const dispatch = useAppDispatch();
+  const findDialogOpen = useAppSelector((s) => s.ui.findDialogOpen);
+
+  // Cmd+Shift+F / Ctrl+Shift+F opens the cross-repo search. Plain Cmd+F stays
+  // free for the host browser's find-in-page (when running under `dev:web`).
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        dispatch(setFindDialogOpen(true));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dispatch]);
 
   return (
     <AppFrame data-testid={TEST_IDS.app}>
@@ -131,6 +154,10 @@ export function AppLayout() {
       <OverallSearch />
       <AddRepoModal />
       <OnboardingWizard />
+      <FindAcrossReposDialog
+        open={findDialogOpen}
+        onClose={() => dispatch(setFindDialogOpen(false))}
+      />
     </AppFrame>
   );
 }

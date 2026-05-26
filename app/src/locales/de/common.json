@@ -30,6 +30,7 @@
     "remove": "Entfernen",
     "search": "Suchen",
     "search_placeholder": "Repos, Branches, MRs durchsuchen…",
+    "find_across_repos": "Repo-übergreifend suchen",
     "open_in_ide": "In IDE öffnen",
     "open_terminal": "Terminal öffnen",
     "open_platform": "Auf Plattform öffnen",

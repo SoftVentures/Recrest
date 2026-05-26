@@ -52,12 +52,12 @@ export function ActivityChart({ agg, maxDay, title, meta }: ActivityChartProps) 
               key={i}
               open={isActive}
               title={
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-                  <Box sx={{ fontWeight: 600 }}>
+                <TooltipBody>
+                  <TooltipMain>
                     {v} commit{v === 1 ? "" : "s"}
-                  </Box>
-                  <Box sx={{ fontSize: 10, opacity: 0.7 }}>{dayLabel}</Box>
-                </Box>
+                  </TooltipMain>
+                  <TooltipSub>{dayLabel}</TooltipSub>
+                </TooltipBody>
               }
               placement="top"
             >
@@ -174,3 +174,18 @@ const ChartAxis = styled(Box)(({ theme }) => ({
   color: theme.palette.text.information,
   padding: "0 4px",
 })) as typeof Box;
+
+const TooltipBody = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+}) as typeof Box;
+
+const TooltipMain = styled(Box)({
+  fontWeight: 600,
+}) as typeof Box;
+
+const TooltipSub = styled(Box)({
+  fontSize: 10,
+  opacity: 0.7,
+}) as typeof Box;

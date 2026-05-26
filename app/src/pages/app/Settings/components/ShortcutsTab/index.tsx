@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import Kbd, { KbdSize } from "@/components/atoms/inputs/Kbd";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
@@ -10,22 +11,6 @@ const Keys = styled(Box)({
   display: "inline-flex",
   gap: 4,
 }) as typeof Box;
-
-const Kbd = styled(Box)(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: 22,
-  height: 22,
-  padding: "0 6px",
-  borderRadius: 8,
-  border: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.primary,
-  fontSize: 10.5,
-  fontWeight: 600,
-  fontFamily: "inherit",
-})) as typeof Box;
 
 interface Row {
   label: string;
@@ -64,7 +49,7 @@ export function ShortcutsSection() {
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
               {r.keys.map((k, i) => (
-                <Kbd component="span" key={i}>
+                <Kbd size={KbdSize.MD} key={i}>
                   {k}
                 </Kbd>
               ))}
@@ -78,7 +63,7 @@ export function ShortcutsSection() {
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
               {r.keys.map((k, i) => (
-                <Kbd component="span" key={i}>
+                <Kbd size={KbdSize.MD} key={i}>
                   {k}
                 </Kbd>
               ))}
@@ -92,7 +77,7 @@ export function ShortcutsSection() {
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
               {r.keys.map((k, i) => (
-                <Kbd component="span" key={i}>
+                <Kbd size={KbdSize.MD} key={i}>
                   {k}
                 </Kbd>
               ))}
