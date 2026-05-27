@@ -1,8 +1,23 @@
 import { useTranslation } from "react-i18next";
 
-import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import {
+  Bar,
+  BarFill,
+  Body,
+  Count,
+  Empty,
+  List,
+  Name,
+  Rank,
+  Row,
+  Spark,
+  SparkBar,
+  Top,
+} from "@/components/organisms/activity/cards/LeaderboardCard/LeaderboardCard.styles";
 import type { AuthorBucket } from "@/lib/activityStats";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   buckets: AuthorBucket[];
@@ -11,60 +26,53 @@ interface Props {
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
-function MiniSpark({ values }: { values: number[] }) {
-  const peak = Math.max(1, ...values);
-  return (
-    <div className="a-act-lb-spark" aria-hidden>
-      {[...values].reverse().map((v, i) => (
-        <span
-          key={i}
-          className="a-act-lb-spark-bar"
-          style={{ height: `${Math.max(8, (v / peak) * 100)}%`, opacity: v === 0 ? 0.2 : 1 }}
-        />
-      ))}
-    </div>
-  );
-}
-
-export function LeaderboardCard({ buckets, loading }: Props) {
+function LeaderboardCard({ buckets, loading }: Props) {
   const { t } = useTranslation();
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.leaders.title")}
       sub={t("activity.leaders.sub", { count: buckets.length })}
       loading={loading}
       skeleton="rows"
+      testId={TEST_IDS.activity.cards.leaderboard}
     >
       {buckets.length === 0 ? (
-        <div className="a-act-card-empty">{t("activity.leaders.empty")}</div>
+        <Empty>{t("activity.leaders.empty")}</Empty>
       ) : (
-        <ol className="a-act-lb">
-          {buckets.map((b, idx) => (
-            <li key={b.author} className="a-act-lb-row">
-              <span className="a-act-lb-rank">{MEDALS[idx] ?? idx + 1}</span>
-              <AuthorAvatar name={b.author} email={b.email} size={22} />
-              <div className="a-act-lb-body">
-                <div className="a-act-lb-top">
-                  <span className="a-act-lb-name">{b.author}</span>
-                  <span className="a-act-lb-count">
-                    {b.count} · {Math.round(b.share * 100)}%
-                  </span>
-                </div>
-                <div className="a-act-lb-bar">
-                  <div
-                    className="a-act-lb-bar-fill a-act-anim-barh"
-                    style={{
-                      width: `${Math.max(4, b.share * 100)}%`,
-                      animationDelay: `${300 + idx * 80}ms`,
-                    }}
-                  />
-                </div>
-                <MiniSpark values={b.sparkline} />
-              </div>
-            </li>
-          ))}
-        </ol>
+        <List component="ol">
+          {buckets.map((b, idx) => {
+            const peakSpark = Math.max(1, ...b.sparkline);
+            return (
+              <Row key={b.author + (b.email ?? "")} component="li">
+                <Rank component="span" variant="caption">
+                  {MEDALS[idx] ?? idx + 1}
+                </Rank>
+                <AuthorAvatar name={b.author} email={b.email ?? undefined} size={22} />
+                <Body>
+                  <Top>
+                    <Name component="span" variant="caption">
+                      {b.author}
+                    </Name>
+                    <Count component="span" variant="caption">
+                      {b.count} · {Math.round(b.share * 100)}%
+                    </Count>
+                  </Top>
+                  <Bar>
+                    <BarFill width={b.share * 100} />
+                  </Bar>
+                  <Spark>
+                    {[...b.sparkline].reverse().map((v, i) => (
+                      <SparkBar key={i} h={v / peakSpark} />
+                    ))}
+                  </Spark>
+                </Body>
+              </Row>
+            );
+          })}
+        </List>
       )}
-    </CardShell>
+    </GeneralCard>
   );
 }
+
+export default LeaderboardCard;

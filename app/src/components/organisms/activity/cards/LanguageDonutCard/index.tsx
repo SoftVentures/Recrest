@@ -2,44 +2,98 @@ import { useMemo } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box } from "@mui/material";
+import { keyframes, styled, useTheme } from "@mui/material/styles";
+
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { LanguageSlice } from "@/lib/activityAggregates";
+import { donutArcs } from "@/lib/charts/donutArcs";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   mix: LanguageSlice[];
   loading?: boolean;
 }
 
-interface Arc {
-  slice: LanguageSlice;
-  path: string;
-}
+const Wrap = styled(Box)({
+  display: "grid",
+  gridTemplateColumns: "auto 1fr",
+  alignItems: "center",
+  gap: 16,
+});
 
-function donutArcs(mix: LanguageSlice[], radius: number, cx: number, cy: number): Arc[] {
-  const arcs: Arc[] = [];
-  let cursor = -Math.PI / 2;
-  for (const slice of mix) {
-    const angle = slice.share * 2 * Math.PI;
-    const end = cursor + angle;
-    const x1 = cx + Math.cos(cursor) * radius;
-    const y1 = cy + Math.sin(cursor) * radius;
-    const x2 = cx + Math.cos(end) * radius;
-    const y2 = cy + Math.sin(end) * radius;
-    const large = angle > Math.PI ? 1 : 0;
-    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
-    arcs.push({ slice, path });
-    cursor = end;
-  }
-  return arcs;
-}
+const Svg = styled("svg")({
+  width: 120,
+  height: 120,
+  flexShrink: 0,
+});
 
-export function LanguageDonutCard({ mix, loading }: Props) {
+const arcFadeIn = keyframes`
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+`;
+
+const Arc = styled("path")({
+  transformOrigin: "60px 60px",
+  animation: `${arcFadeIn} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+  'html[data-reduced-motion="true"] &': {
+    animation: "none",
+  },
+});
+
+const Centre = styled("text")(({ theme }) => ({
+  textAnchor: "middle",
+  fontSize: 22,
+  fontWeight: 700,
+  fill: theme.palette.text.primary,
+  fontVariantNumeric: "tabular-nums",
+}));
+
+const CentreSub = styled("text")(({ theme }) => ({
+  textAnchor: "middle",
+  fontSize: 9,
+  fill: theme.palette.text.information,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+}));
+
+const LegendList = styled(Box)({
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  maxHeight: 180,
+  overflowY: "auto",
+}) as typeof Box;
+
+const LegendItem = styled(Box)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "10px 1fr auto",
+  gap: 8,
+  alignItems: "center",
+  fontSize: 11,
+  color: theme.palette.text.primary,
+  "& > span:last-of-type": {
+    color: theme.palette.text.information,
+    fontVariantNumeric: "tabular-nums",
+  },
+})) as typeof Box;
+
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
+const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
+  color: string;
+}>(({ color }) => ({
+  width: 8,
+  height: 8,
+  borderRadius: 8,
+  backgroundColor: color,
+}));
+
+function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
-  const totalCommits = Math.round(mix.reduce((a, b) => a + b.commits, 0));
-  // Collapse the long tail (<1% share) into the existing "Other" bucket so
-  // we never render two "Other" rows — the bucketizer already emits one
-  // for lock files / archives / unknown extensions, and the tail-collapse
-  // below needs to merge into that same entry rather than create a sibling.
+  const theme = useTheme();
   const TAIL_THRESHOLD = 0.01;
   const legend = useMemo(() => {
     const result: LanguageSlice[] = [];
@@ -65,43 +119,46 @@ export function LanguageDonutCard({ mix, loading }: Props) {
     }
     return result;
   }, [mix]);
+  const totalCommits = Math.round(legend.reduce((a, b) => a + b.commits, 0));
   const arcs = useMemo(() => donutArcs(legend, 48, 60, 60), [legend]);
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.cards.language_title")}
       sub={t("activity.cards.language_sub")}
       loading={loading}
       skeleton="donut"
+      testId={TEST_IDS.activity.cards.language}
     >
-      <div className="a-act-donut-wrap">
-        <svg className="a-act-donut-svg" viewBox="0 0 120 120">
+      <Wrap>
+        <Svg viewBox="0 0 120 120">
           {arcs.map((a, i) => (
-            <path
+            <Arc
               key={a.slice.language}
               d={a.path}
               fill={a.slice.color}
-              className="a-act-donut-arc"
               style={{ animationDelay: `${220 + i * 60}ms` }}
             />
           ))}
-          <circle cx="60" cy="60" r="34" fill="var(--surface-1)" />
-          <text x="60" y="56" className="a-act-donut-centre">
+          <circle cx="60" cy="60" r="34" fill={theme.palette.surface.interface.base} />
+          <Centre x="60" y="58">
             {totalCommits}
-          </text>
-          <text x="60" y="78" className="a-act-donut-sub">
+          </Centre>
+          <CentreSub x="60" y="78">
             commits
-          </text>
-        </svg>
-        <ul className="a-act-donut-legend">
+          </CentreSub>
+        </Svg>
+        <LegendList component="ul">
           {legend.map((s) => (
-            <li key={s.language}>
-              <span className="a-act-donut-swatch" style={{ background: s.color }} />
-              <span>{s.language}</span>
-              <span>{Math.round(s.share * 100)}%</span>
-            </li>
+            <LegendItem key={s.language} component="li">
+              <Swatch color={s.color} />
+              <Box component="span">{s.language}</Box>
+              <Box component="span">{Math.round(s.share * 100)}%</Box>
+            </LegendItem>
           ))}
-        </ul>
-      </div>
-    </CardShell>
+        </LegendList>
+      </Wrap>
+    </GeneralCard>
   );
 }
+
+export default LanguageDonutCard;

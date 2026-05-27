@@ -10,8 +10,8 @@ Everything the user sees or runs: the React 19 frontend in `src/` and the Rust T
 
 From the repo root via `yarn workspace @recrest/app <script>`:
 
-- `dev` — Vite only (port 1420). Tauri IPC no-ops via `isTauri()`. Use this for pure UI work.
-- `tauri:dev` — full desktop shell. Requires Rust toolchain.
+- `dev` — Vite only. Tauri IPC no-ops via `isTauri()`. Use this for pure UI work. Port follows `TAURI_ENV_PLATFORM`: **3000** outside Tauri (matches the root `yarn dev:web` flow and Playwright's base URL), **1420** when invoked via `tauri:dev`. `strictPort: true` on both — no silent fallback.
+- `tauri:dev` — full desktop shell on port **1420**. Requires Rust toolchain.
 - `build` — `tsc -b && vite build` (production bundle).
 - `tauri:build` — wraps the desktop installer. **Will fail until `src-tauri/icons/` contains PNGs** — that's a known scope gap.
 - `test` — vitest (jsdom).
@@ -65,8 +65,78 @@ Two icon sets live under `src-tauri/`:
 ## UI conventions
 
 - No nested interactive elements. Clickable rows use `<div role="button" tabIndex={0}>` with an `onKeyDown` that handles Enter/Space, so hover-revealed action `<button>`s inside them remain legal HTML.
-- Tailwind v4 via `@tailwindcss/vite` — **do not reintroduce** `postcss.config.js`, `postcss`, or `autoprefixer`. The plugin handles everything; the original scaffold failed because of a leftover PostCSS config referring to an uninstalled `@tailwindcss/postcss`.
+- Styling is MUI v9 + Emotion (`@mui/material` + `@emotion/styled`) only. The phase-two migration removed Tailwind, PostCSS, and SCSS modules — **do not reintroduce** `postcss.config.js`, `postcss`, `autoprefixer`, or `tailwindcss`. If a third-party widget pulls in a competing styling layer, contain it in its own folder and don't let the imports leak into shared atoms/molecules.
+- **No `sx` prop.** Every styled collection lives in a `styled()` component — either inline at the top of the file or extracted to `<Name>.styles.tsx`. The `sx={{ ... }}` shorthand is forbidden because it bypasses static extraction, fragments style ownership, and makes the theme contract opaque. Single dynamic offsets that genuinely can't be styled (e.g. an animated `transform` driven by motion state) belong in a `style={{}}` prop, not `sx`.
 - `useDevice` (backed by `device-type-detection`) drives `useResponsiveSidebar` in `AppShell`. Auto-collapse preserves the user's manual preference and restores it on wider viewports.
+
+## Component conventions
+
+Full reorganisation plan: `docs/plans/PLAN_COMPONENTS_REFACTOR.md`. The rules below are what new code must follow.
+
+### Folder layout
+
+```
+ComponentName/
+├── index.tsx                  ← component, props interface, default export
+├── ComponentName.styles.tsx   ← when styled-blocks exceed ~200 LOC
+└── parts/                     ← sub-components only used by this component
+    └── PartName/index.tsx
+```
+
+- Folder name = default export name. No `BrandIcon/index.tsx` exporting `GeneralBrandIcon`.
+- One component per file. SVG decoration helpers (e.g. inside `Mascot`) are the only sanctioned exception.
+- The `<Foo>/<Foo>.tsx + <Foo>/index.ts` re-export shim is deprecated — use `<Foo>/index.tsx` directly.
+- Inline render-helpers belong in `<parent>/parts/<Name>/`. Promote to `components/` only once another route imports them.
+
+### Atom / molecule / organism
+
+- `atoms/` — single-element primitives. No business state.
+- `molecules/` — atoms composed with limited internal state. No data fetching.
+- `organisms/` — composed UI with state, Redux selectors, listeners.
+- `pages/app/` — route-level. Owns thunk dispatch and page-level effects.
+
+Card chrome lives in `molecules/cards/GeneralCard`, never in `organisms/cards/*`.
+
+### General-prefix primitives
+
+`GeneralX` is reserved for cross-cutting primitives every page composes — `GeneralButton`, `GeneralButtonGroup`, `GeneralIconButton`, `GeneralCard`, `GeneralTooltip`, `GeneralSparkline`, `GeneralSwitchInput`, `GeneralSearchInput`, `GeneralAvatar`, `GeneralDrawer`, `GeneralModal`, `GeneralLoader`, `GeneralCircularLoader`, `GeneralLinearLoader`, `GeneralSkeletonLoader`. Domain specialisations of those primitives drop the prefix: `AuthorAvatar` and `RepoAvatar` compose `GeneralAvatar`, `ConfirmationModal` composes `GeneralModal`, `MrDetailDrawer` composes `GeneralDrawer`, etc. Brand atoms (`Logo`, `Mascot`) and tag/icon helpers (`BrandIcon`, `IdeIcon`, `ShellIcon`, `TerminalIcon`) don't carry the prefix because they aren't substitutable primitives.
+
+**Modal vs. drawer vs. dialog naming:** there is no `dialogs/` folder, and modals/drawers each live in one folder regardless of complexity. Every full-screen overlay that asks for input or confirmation is a *modal* — all of them live in `molecules/modals/` (`GeneralModal`, `ConfirmationModal`, `AddRepoModal`, etc.); no separate `organisms/modals/`. Side-pane overlays are *drawers*; specialisations sit under `molecules/drawers/` alongside `GeneralDrawer`.
+
+**Buttons & button groups** live in `atoms/buttons/`. `ScopeButtonGroup` (formerly the `ScopeToggle` "molecule") sits next to `GeneralButton`/`GeneralButtonGroup`/`GeneralIconButton` because it is, structurally, a `GeneralButtonGroup` composition with two scope items — not a separate molecule kind. There is no `molecules/toggles/` folder.
+
+**Icon-only buttons** (clear, close, info-tooltip, row actions, sidebar collapse, etc.) compose `GeneralIconButton` — never an inline `styled("button")`. The primitive owns the 4 standard sizes (`XS`/`SM`/`MD`/`LG`), `variant` (`ghost`/`subtle`/`outline`), `shape` (`circle`/`square`), and `tone` (`neutral`/`primary`/`danger`). Pass the icon via the `icon` prop, not as children, so the surface stays single-responsibility. Need a new size? Extend `IconButtonSize` in `lib/constants/iconButton.constants` — don't add a one-off inline button.
+
+**Asset folders** are split:
+
+- `app/src/assets/logos/` — Recrest brand-mark SVGs (`recrest-icon-*.svg`).
+- `app/src/assets/icons/` — every other icon-related asset and the React wrappers that consume them. Domain subfolders hold the raw `*.svg` files (`assets/icons/ides/`, `assets/icons/shells/`, `assets/icons/terminals/`); sibling folders hold the React wrapper components that pick the right SVG by id and add prop-driven theming (`assets/icons/BrandIcon/`, `assets/icons/IdeIcon/`, `assets/icons/ShellIcon/`, `assets/icons/TerminalIcon/`). The wrappers used to live under `atoms/icons/` — that namespace is gone; everything icon-shaped now lives under `assets/icons/`.
+
+When building anything interactive, compose the `GeneralX` primitive first. Adding props to `GeneralButton` is preferred over re-implementing `styled("button")` inline.
+
+### Styling primitives
+
+| Need                                  | Use                                                                |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| Body text, headings, captions         | `<Typography variant component>` or `styled(Typography)`           |
+| Layout wrapper                        | `<Box sx>` or `styled(Box)`                                        |
+| Visual primitive with custom props    | `styled(Box, { shouldForwardProp })` + strict prop type            |
+| Interactive button                    | `<GeneralButton variant>`                                          |
+| Native chrome (titlebar caption etc.) | `styled("button")` **with** `// eslint-disable-next-line` + reason |
+
+`styled("h1..h6"|"p"|"span"|"div"|"button")` for text or layout is forbidden — reach for `Typography` (text) or `Box` (layout). The remaining native-chrome exceptions need an inline `eslint-disable-next-line` with a one-line reason.
+
+### Size ceiling
+
+No `.tsx` over 800 LOC. When approaching it: extract inline sub-components into `parts/<Name>/`, split styled-blocks into `<Name>.styles.tsx` at ~200 LOC, and lift data hooks into a sibling `hooks/` folder.
+
+### Helpers
+
+Generic helpers go to `app/src/lib/utils/<topic>.utils.ts`. Don't inline `timeAgo`-style functions next to a component. Domain logic (activity aggregation, repo enrichment) stays under `app/src/lib/<domain>/`.
+
+### Comments
+
+Default to writing none. Keep only the comments that explain **why** — a constraint, a workaround, or a subtle invariant. Delete visual section markers (`/* ─── Section ─── */`), JSDoc that restates the component name, and "what" comments the JSX already shows.
 
 ## Testing
 

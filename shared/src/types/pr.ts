@@ -1,5 +1,18 @@
-export type PrState = "open" | "closed" | "merged";
-export type CiStatus = "pending" | "running" | "success" | "failure" | "none";
+export const PrState = {
+  OPEN: "open",
+  CLOSED: "closed",
+  MERGED: "merged",
+} as const;
+export type PrState = (typeof PrState)[keyof typeof PrState];
+
+export const CiStatus = {
+  PENDING: "pending",
+  RUNNING: "running",
+  SUCCESS: "success",
+  FAILURE: "failure",
+  NONE: "none",
+} as const;
+export type CiStatus = (typeof CiStatus)[keyof typeof CiStatus];
 
 export interface PullRequest {
   id: string;
@@ -31,7 +44,14 @@ export interface PullRequest {
   requestedReviewers?: string[];
 }
 
-export type ReviewState = "pending" | "approved" | "changes_requested" | "commented" | "dismissed";
+export const ReviewState = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  CHANGES_REQUESTED: "changes_requested",
+  COMMENTED: "commented",
+  DISMISSED: "dismissed",
+} as const;
+export type ReviewState = (typeof ReviewState)[keyof typeof ReviewState];
 
 export interface Reviewer {
   login: string;
@@ -40,7 +60,15 @@ export interface Reviewer {
   state: ReviewState;
 }
 
-export type FileChangeStatus = "added" | "modified" | "removed" | "renamed" | "copied" | "changed";
+export const FileChangeStatus = {
+  ADDED: "added",
+  MODIFIED: "modified",
+  REMOVED: "removed",
+  RENAMED: "renamed",
+  COPIED: "copied",
+  CHANGED: "changed",
+} as const;
+export type FileChangeStatus = (typeof FileChangeStatus)[keyof typeof FileChangeStatus];
 
 export interface FileChange {
   path: string;

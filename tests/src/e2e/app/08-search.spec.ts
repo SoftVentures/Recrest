@@ -1,14 +1,15 @@
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / search overlay", () => {
   test("Ctrl+K opens the search overlay, Escape closes it", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByTestId("app")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.app)).toBeVisible();
 
     const isMac = process.platform === "darwin";
     await page.keyboard.press(isMac ? "Meta+k" : "Control+k");
 
-    const overlay = page.getByTestId("search-overlay");
+    const overlay = page.getByTestId(TEST_IDS.searchOverlay.root);
     await expect(overlay).toBeVisible({ timeout: 5_000 });
 
     await page.keyboard.press("Escape");

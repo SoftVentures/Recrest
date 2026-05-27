@@ -1,0 +1,638 @@
+{
+  "app": {
+    "name": "Recrest",
+    "tagline": "Lightweight developer dashboard"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "repos": "Repositories",
+    "prs": "Merge Requests",
+    "merge_requests": "Merge Requests",
+    "changes": "Changes",
+    "branches": "Branches",
+    "activity": "Activity",
+    "settings": "Settings",
+    "groups": "Groups",
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "breadcrumb": {
+    "repos": "Repositories",
+    "repos_selected": "Repositories › {{name}}",
+    "prs": "Merge Requests",
+    "settings": "Settings"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "add": "Add",
+    "browse": "Browse…",
+    "add_repo": "Add Repository",
+    "remove": "Remove",
+    "search": "Search",
+    "search_placeholder": "Search repositories, branches, MRs…",
+    "find_across_repos": "Find across repositories",
+    "open_in_ide": "Open in IDE",
+    "open_terminal": "Open terminal",
+    "open_platform": "Open on platform",
+    "open_remote": "Open remote",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "clear": "Clear",
+    "add_scope_label": "Add scope",
+    "add_scope": {
+      "local": "Local",
+      "global": "Global"
+    },
+    "adding": "Adding…",
+    "clone": "Clone",
+    "cloning": "Cloning…",
+    "importing": "Importing…",
+    "search_group_branches": "Branches",
+    "search_group_mrs": "Merge requests",
+    "search_group_nav": "Go to",
+    "search_group_repos": "Repositories",
+    "clear_search": "Clear search"
+  },
+  "toast": {
+    "reload": {
+      "success": "Refreshed",
+      "error": "Refresh failed: {{detail}}"
+    }
+  },
+  "states": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet",
+    "error": "Something went wrong"
+  },
+  "view": {
+    "dashboard": {
+      "title": "Dashboard",
+      "meta": "{{count}} repos"
+    },
+    "repos": {
+      "title": "Repositories",
+      "meta": "{{count}} repos"
+    },
+    "mrs": {
+      "title": "Merge Requests",
+      "meta": "{{count}} open"
+    },
+    "changes": {
+      "title": "Changes",
+      "meta": "{{count}} with uncommitted changes"
+    },
+    "branches": {
+      "title": "Branches",
+      "meta": "across {{count}} repos"
+    },
+    "activity": {
+      "title": "Activity",
+      "meta": "last 14 days"
+    },
+    "settings": {
+      "title": "Settings"
+    }
+  },
+  "repos": {
+    "col": {
+      "repository": "Repository",
+      "branch": "Branch",
+      "status": "Status",
+      "activity": "Activity · 14d",
+      "actions": "Actions"
+    },
+    "group": {
+      "pinned": "Pinned"
+    },
+    "view": {
+      "toggle_label": "View mode",
+      "grouped": "Grouped",
+      "flat": "Flat",
+      "card": "Card"
+    },
+    "filter": {
+      "label": "Status filter",
+      "dirty": "Dirty",
+      "clean": "Clean",
+      "ahead": "Ahead",
+      "behind": "Behind"
+    },
+    "sort": {
+      "label": "Sort by",
+      "options": {
+        "default": "Default",
+        "name_asc": "Name (A → Z)",
+        "name_desc": "Name (Z → A)",
+        "modified_desc": "Last modified",
+        "status": "Status"
+      }
+    }
+  },
+  "dash": {
+    "kpi": {
+      "repositories": "Repositories",
+      "repositories_sub": "{{count}} with changes",
+      "merge_requests": "Merge Requests",
+      "merge_requests_sub": "{{count}} draft",
+      "ahead_behind": "Ahead / behind",
+      "ahead_behind_sub": "across all remotes",
+      "commits": "Commits · 14d",
+      "commits_sub": "peak day {{count}}",
+      "clean_repos": "Clean repos",
+      "clean_repos_sub": "{{count}} of {{total}} fully in sync"
+    },
+    "activity": {
+      "title": "Activity · last 14 days",
+      "meta": "{{total}} commits across {{repos}} repos"
+    },
+    "attention": {
+      "title": "Needs your attention",
+      "empty": "Everything is clean and in sync."
+    },
+    "empty": {
+      "title": "No repositories yet",
+      "hint": "Add a folder to start tracking. Recrest scans for git repos and surfaces dirty trees, ahead/behind status and open MRs.",
+      "cta": "Add repositories →"
+    },
+    "mrs": {
+      "title": "Open merge requests",
+      "all": "View all →",
+      "empty": "No open merge requests."
+    },
+    "commits": {
+      "title": "Recent commits",
+      "all": "All activity →",
+      "empty": "—"
+    },
+    "langs": {
+      "title": "Languages"
+    },
+    "quick": {
+      "title": "Quick actions",
+      "fetch_all": "Fetch all",
+      "clone": "Clone repo",
+      "clone_tooltip": "Clone from a URL or import from GitHub / GitLab / Bitbucket",
+      "find": "Find across repos",
+      "workspace": "Open workspace",
+      "workspace_tooltip": "Open a multi-root IDE workspace with all scanned repos",
+      "open_ide": "Open in IDE",
+      "open_ide_tooltip": "Open the most recently active repo in your default IDE",
+      "open_ide_error": "Could not open the repo in your IDE",
+      "recent_commits": "Recent commits",
+      "create_branch": "Create branch",
+      "pull_all": "Pull all",
+      "coming_soon": "Coming soon"
+    }
+  },
+  "titlebar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close"
+  },
+  "mrs": {
+    "filter": {
+      "open": "Open",
+      "draft": "Draft",
+      "merged": "Merged",
+      "closed": "Closed"
+    },
+    "filters": "Filters",
+    "actions": {
+      "merge": "Merge",
+      "checkout": "Checkout"
+    },
+    "strip": {
+      "branch": "Branch",
+      "changes": "Changes",
+      "ci": "CI"
+    },
+    "drawer": {
+      "meta": "Metadata",
+      "opened_on": "Opened on {{date}}",
+      "updated_on": "Last updated {{date}}",
+      "reviewers_empty": "No reviewers requested",
+      "files_empty": "No file changes to show",
+      "files_unavailable": "Files unavailable for this PR",
+      "timeline_empty": "No activity yet",
+      "timeline_unavailable": "Timeline unavailable for this PR",
+      "reviewers": "Reviewers",
+      "files": "Files",
+      "timeline": "Timeline",
+      "open_on_host": "Open on host"
+    },
+    "filter_placeholder": "Filter merge requests…"
+  },
+  "branches": {
+    "filter": {
+      "label": "Branch filter",
+      "all": "All",
+      "ahead": "Ahead",
+      "behind": "Behind",
+      "clean": "Clean",
+      "local": "Local",
+      "remote": "Remote only",
+      "button": "Filter",
+      "location_label": "Location",
+      "reset": "Reset filters",
+      "tracking_label": "Tracking"
+    },
+    "branches": "branches",
+    "branches_count_one": "{{count}} branch",
+    "branches_count_other": "{{count}} branches",
+    "loading": "Loading branches…",
+    "empty": "No branches match your filter.",
+    "search_placeholder": "Filter branches by name…",
+    "no_repos": "No repositories yet — add one to see its branches.",
+    "tag": {
+      "current": "current",
+      "dirty": "dirty",
+      "clean": "clean",
+      "remote": "remote"
+    },
+    "last_commit_by": "by {{author}}",
+    "actions": {
+      "pull": "Pull",
+      "push": "Push",
+      "checkout": "Checkout",
+      "checkout_remote": "Checkout",
+      "fetch": "Fetch",
+      "fetch_all": "Fetch all",
+      "fetch_tooltip": "Fetch from all remotes",
+      "fetching": "Fetching…",
+      "fetched": "Fetched {{repo}}",
+      "fetched_all": "Fetched all repos"
+    },
+    "row": {
+      "upstream_tracking": "tracks {{upstream}}",
+      "no_upstream": "no upstream"
+    }
+  },
+  "activity": {
+    "chart": {
+      "title": "Commits · last 14 days",
+      "sub": "{{total}} commits"
+    },
+    "filter": {
+      "all_repos": "All repositories",
+      "all_authors": "All authors"
+    },
+    "commits": "commits",
+    "empty": "No commits match your filter.",
+    "kpi": {
+      "commits_week": "Commits · this week",
+      "authors_week": "Active authors",
+      "repos_week": "Active repos",
+      "streak": "Current streak",
+      "delta_up": "+{{delta}} vs last week",
+      "delta_down": "{{delta}} vs last week",
+      "delta_flat": "no change vs last week",
+      "streak_days_one": "{{count}} day",
+      "streak_days_other": "{{count}} days",
+      "on_fire": "on fire"
+    },
+    "leaders": {
+      "title": "Top contributors",
+      "sub": "last 14 days · {{count}} authors",
+      "empty": "No contributors in range.",
+      "share": "{{pct}}% share"
+    },
+    "cadence": {
+      "title": "Cadence",
+      "longest_streak": "Longest streak",
+      "busiest_day": "Busiest day",
+      "peak_hour": "Peak hour",
+      "quietest": "Quietest repos",
+      "quietest_none": "Every repo has activity.",
+      "none": "—"
+    },
+    "hero": {
+      "open_prs": "Open MRs",
+      "open_prs_sub": "{{review}} in review · {{draft}} draft",
+      "ci_health": "CI health",
+      "ci_failing_one": "{{count}} failing",
+      "ci_failing_other": "{{count}} failing",
+      "ci_none": "no check runs yet",
+      "ci_runs": "{{passed}} / {{total}} runs",
+      "ci_legend_passed": "{{count}} passed",
+      "ci_legend_failed": "{{count}} failed",
+      "ci_legend_other": "{{count}} other"
+    },
+    "cards": {
+      "chart_title": "Commit activity · 14 days",
+      "heatmap_title": "Weekday × hour heatmap",
+      "heatmap_sub": "when the team commits",
+      "heatmap_none": "low",
+      "heatmap_high": "high",
+      "clock_title": "Activity clock",
+      "clock_sub": "hour-of-day distribution",
+      "language_title": "Language mix",
+      "language_sub": "weighted by commits",
+      "churn_title": "Churn · working tree",
+      "churn_sub": "added + removed lines",
+      "pr_velocity_title": "MR velocity",
+      "pr_velocity_sub": "opened vs merged · 14 days",
+      "pr_velocity_opened": "Opened",
+      "pr_velocity_merged": "Merged",
+      "time_to_merge_title": "Time to merge",
+      "time_to_merge_sub": "last 14 days",
+      "review_queue_title": "Review queue",
+      "review_queue_sub": "oldest open MRs",
+      "review_queue_empty": "No open MRs waiting.",
+      "ci_trend_title": "CI pass rate · 14 days",
+      "ci_trend_sub": "daily % pass",
+      "flaky_title": "Flakiest repos",
+      "flaky_sub": "failure rate · last 14 days",
+      "flaky_empty": "No check-run data yet.",
+      "busiest_peak_title": "Busiest & peak",
+      "busiest_label": "Busiest day",
+      "peak_label": "Peak hours",
+      "age_days_one": "{{count}} day old",
+      "age_days_other": "{{count}} days old",
+      "ci_trend_sub_window": "last 14 days"
+    },
+    "timeline": {
+      "title": "History",
+      "sub": "{{count}} events across {{days}} days",
+      "filter_all": "All",
+      "filter_commits": "Commits",
+      "filter_prs": "Merge requests",
+      "filter_checks": "CI checks",
+      "empty_filter": "No events match this filter.",
+      "chip_commits_one": "{{count}} commit",
+      "chip_commits_other": "{{count}} commits",
+      "chip_prs_merged_one": "{{count}} MR merged",
+      "chip_prs_merged_other": "{{count}} MRs merged",
+      "chip_prs_opened_one": "{{count}} MR opened",
+      "chip_prs_opened_other": "{{count}} MRs opened",
+      "chip_checks_failed": {
+        "github": {
+          "one": "{{count}} check failed",
+          "other": "{{count}} checks failed"
+        },
+        "gitlab": {
+          "one": "{{count}} pipeline failed",
+          "other": "{{count}} pipelines failed"
+        },
+        "bitbucket": {
+          "one": "{{count}} pipeline failed",
+          "other": "{{count}} pipelines failed"
+        },
+        "default": {
+          "one": "{{count}} check failed",
+          "other": "{{count}} checks failed"
+        }
+      }
+    }
+  },
+  "settings": {
+    "tab": {
+      "general": "General",
+      "accounts": "Accounts",
+      "integrations": "Integrations",
+      "shortcuts": "Shortcuts",
+      "storage": "Storage",
+      "about": "About",
+      "developer": "Developer"
+    },
+    "general": {
+      "title": "General",
+      "intro": "Application behaviour, appearance, and notifications.",
+      "appearance": "Appearance",
+      "theme": "Theme",
+      "theme_sub": "Light / Dark / follow the OS.",
+      "accent": "Accent",
+      "accent_sub": "Pick the highlight colour used across the app."
+    },
+    "accounts": {
+      "title": "Accounts",
+      "intro": "Remotes you've signed in to.",
+      "providers": "Providers",
+      "providers_sub": "Connect a Personal Access Token to list merge requests."
+    },
+    "integrations": {
+      "title": "Integrations",
+      "intro": "Where Recrest looks for git repositories on your machine.",
+      "add": "Add scan path",
+      "add_sub": "Recrest scans this folder and every sub-folder for git repositories.",
+      "scan": "Scan sources",
+      "scan_sub": "Folders Recrest scans recursively for git repositories."
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "intro": "Keyboard bindings.",
+      "navigation": "Navigation",
+      "jump": "Jump to repo",
+      "pull": "Pull current branch",
+      "fetch_all": "Fetch all",
+      "toggle_detail": "Toggle detail pane",
+      "next_prev_repo": "Next / previous repo",
+      "open_editor": "Open in editor",
+      "open_terminal": "Open terminal",
+      "editor": "Editor & terminal",
+      "git": "Git operations",
+      "open_settings": "Open settings"
+    },
+    "storage": {
+      "title": "Storage",
+      "intro": "Where Recrest keeps caches, indexes, and clone targets.",
+      "crash_reporting": "Crash reporting",
+      "crash_reporting_info": "Crash reports are sent over HTTPS to our error tracker. No personal data is included.",
+      "crash_reporting_sub": "Send anonymised crash reports to help us fix bugs.",
+      "diagnostics": "Diagnostics",
+      "git_info": "Detected system git used by Recrest for shell-out operations."
+    },
+    "about": {
+      "title": "About Recrest",
+      "intro": "Version information, licenses, and credits.",
+      "version": "Version",
+      "app_version": "Application",
+      "arch": "Architecture",
+      "build_mode": "Build",
+      "build_time": "Build time",
+      "commit": "Commit",
+      "git": "System git",
+      "license": "License",
+      "link_github": "Source code",
+      "link_issues": "Report a bug",
+      "link_licenses": "License",
+      "links_title": "Links",
+      "os": "Operating system",
+      "repository": "Repository",
+      "tauri_version": "Tauri runtime"
+    },
+    "developer": {
+      "title": "Developer",
+      "intro": "Debug-only tools. These settings are hidden in production builds."
+    },
+    "accessibility": {
+      "high_contrast": "High contrast",
+      "high_contrast_sub": "Reinforce borders and dim text for better legibility.",
+      "reduced_motion": "Reduce motion",
+      "reduced_motion_sub": "Disable non-essential animations and transitions.",
+      "title": "Accessibility",
+      "underline_links": "Underline links",
+      "underline_links_sub": "Always underline links instead of only on hover."
+    },
+    "desktop": {
+      "auto_start": "Start on system login",
+      "auto_start_desc": "Launch Recrest automatically when you sign in to your OS.",
+      "close_to_tray": "Close to tray",
+      "close_to_tray_desc": "Closing the window keeps Recrest running in the tray. Quit from the tray menu.",
+      "start_minimized": "Start minimized",
+      "start_minimized_desc": "Open silently to the tray instead of foregrounding the window."
+    },
+    "fields": {
+      "accent": "Accent",
+      "accent_sub": "Pick the highlight colour used across the app.",
+      "default_ide": "Default IDE",
+      "default_shell": "Default shell",
+      "default_terminal": "Default terminal",
+      "font": "Font",
+      "font_size": "Font size",
+      "font_size_sub": "Scale text everywhere from compact to spacious.",
+      "font_sub": "Typeface used across the interface. OpenDyslexic is a dyslexia-friendly font.",
+      "language": "Language",
+      "language_sub": "Interface language.",
+      "polling_interval": "Polling interval (minutes)",
+      "polling_interval_hint": "How often Recrest refreshes git state in the background.",
+      "theme": "Theme",
+      "theme_sub": "Light, dark, or follow the OS."
+    },
+    "ide": {
+      "auto_system_default": "System default ({{ide}})",
+      "detection_hint": "We didn't find a known IDE on $PATH. Install one or pick manually below.",
+      "no_ide_detected": "No IDE detected",
+      "not_installed_tag": "not installed"
+    },
+    "notifications": {
+      "ci_failed": "CI failed",
+      "enabled": "Desktop notifications",
+      "enabled_desc": "Surface new MRs and CI failures as system notifications.",
+      "merge_ready": "Ready to merge",
+      "new_pr": "New merge request"
+    },
+    "providers": {
+      "base_url_hint": "Override only if you self-host. Leave empty to revert to the default endpoint.",
+      "base_url_label": "API base URL",
+      "bitbucket_scope_note": "Bitbucket requires selecting these manually in the app-password form.",
+      "bitbucket_username_hint": "Bitbucket app-passwords require the username separately.",
+      "bitbucket_username_label": "Bitbucket username",
+      "bitbucket_username_placeholder": "your-bitbucket-username",
+      "connect_browser": "Connect via browser",
+      "connect_with": "Connect with {{name}}",
+      "disconnect": "Disconnect",
+      "edit_base_url": "Change API base URL",
+      "paste_here": "Paste the token you just created — we store it encrypted in your OS keychain.",
+      "required_scopes": "Required scopes",
+      "save": "Save",
+      "self_hosted": "Self-hosted",
+      "status_connected": "Connected",
+      "status_disconnected": "Not connected",
+      "token_placeholder": "Paste your personal access token"
+    },
+    "sections": {
+      "desktop": "Desktop",
+      "notifications": "Notifications",
+      "system": "System",
+      "updates": "Updates"
+    },
+    "shell": {
+      "auto_system_default": "System default ({{shell}})",
+      "detection_done": "Shell launched inside the terminal above.",
+      "detection_hint": "No shells were detected on $PATH. Install one or pick manually below.",
+      "no_shell_detected": "No shell detected"
+    },
+    "terminal": {
+      "auto_system_default": "System default ({{terminal}})",
+      "detection_done": "Opens this terminal when you trigger “Open terminal”.",
+      "detection_hint": "No installed terminal emulators were detected. Install one to enable this dropdown.",
+      "no_terminal_detected": "No terminal detected"
+    },
+    "updates": {
+      "check_now_label": "Check for updates",
+      "check_now": "Check now",
+      "checking": "Checking…",
+      "current_version_label": "Current version",
+      "mode": "Update mode",
+      "mode_hint": "Automatic downloads + installs silently. Manual prompts a banner. Off disables checks."
+    }
+  },
+  "notifications": {
+    "new_pr": {
+      "title": "New merge request",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "ci_failed": {
+      "github": {
+        "title": "Checks failed",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "gitlab": {
+        "title": "Pipelines failed",
+        "body": "{{repo}} · !{{number}} {{pr_title}}"
+      },
+      "bitbucket": {
+        "title": "Pipelines failed",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      },
+      "default": {
+        "title": "CI failed",
+        "body": "{{repo}} · #{{number}} {{pr_title}}"
+      }
+    },
+    "merge_ready": {
+      "title": "Ready to merge",
+      "body": "{{repo}} · #{{number}} {{pr_title}}"
+    },
+    "generic": {
+      "title": "Recrest",
+      "clone_done": {
+        "title": "Clone complete",
+        "body": "{{repo}}"
+      },
+      "update_available": {
+        "title": "Update available",
+        "body": "v{{version}}"
+      },
+      "test_body": "Test notification from Recrest"
+    },
+    "burst": {
+      "new_pr": "{{count}} new merge requests",
+      "ci_failed": "{{count}} CI failures",
+      "merge_ready": "{{count}} merge requests are ready"
+    },
+    "test": "Test",
+    "test_sent": "Test notification sent"
+  },
+  "import": {
+    "dest_placeholder": "Destination folder (/Users/you/Code)",
+    "field": {
+      "dest": "Destination folder",
+      "path": "Repository folder",
+      "sub": "Subfolder name (optional)",
+      "url": "Repository URL",
+      "dest_hint": "Parent folder. The clone lands in a subfolder named after the URL unless you override below.",
+      "path_hint": "Absolute path to a folder that already contains a .git directory."
+    },
+    "group": {
+      "added": "Already on system",
+      "available": "Available — recently active"
+    },
+    "loading": "Loading repositories…",
+    "no_results": "No repositories.",
+    "pick_dest": "Pick a destination folder first.",
+    "providers_heading": "Providers",
+    "search_placeholder": "Search repositories…",
+    "tab": {
+      "clone": "Clone from URL",
+      "local": "Existing folder",
+      "providers": "From providers"
+    },
+    "title": "Add repository",
+    "url_hint": "HTTPS or SSH — GitHub, GitLab, Bitbucket, or self-hosted.",
+    "connect_first": "Connect GitHub, GitLab or Bitbucket in Settings to browse your remote repositories here.",
+    "desc": "Import from a connected provider, add an existing folder, or clone from any URL."
+  }
+}

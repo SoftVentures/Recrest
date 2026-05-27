@@ -2,31 +2,48 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/atoms/Button";
-import { Checkbox } from "@/components/atoms/Checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/molecules/compounds/Dialog";
-import { toast } from "@/lib/toast";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { gitBranchCreate } from "@/store/slices/reposSlice";
+import { Box, FormControlLabel, Switch, TextField } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-interface Props {
+import type { RepositoryId } from "@recrest/shared";
+
+import { toast } from "sonner";
+
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralModal from "@/components/molecules/modals/GeneralModal";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { gitBranchCreate } from "@/store/actions/repos.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+
+export interface CreateBranchDialogProps {
   open: boolean;
-  repoId: string | null;
+  repoId: RepositoryId | null;
   onClose: () => void;
 }
 
-/** Modal asking for a new branch name and whether to check it out after
- *  creation. The source branch defaults to the repo's current HEAD so
- *  behaviour matches a plain `git checkout -b`. */
-export function CreateBranchDialog({ open, repoId, onClose }: Props) {
-  const { t } = useTranslation();
+// Need an actual <form> element so the submit button + Enter-in-input
+// dispatch submit events that the parent picks up via `form="..."`.
+// eslint-disable-next-line no-restricted-syntax -- native <form> for submit semantics
+const Form = styled("form")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(1.5),
+  paddingTop: theme.spacing(0.5),
+}));
+
+const Description = styled(Box)(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.text.information,
+})) as typeof Box;
+
+/**
+ * Modal asking for a new branch name and whether to check out after creation.
+ * The source branch defaults to the repo's current HEAD so the result matches
+ * a plain `git checkout -b` from the same starting point.
+ */
+function CreateBranchDialog({ open, repoId, onClose }: CreateBranchDialogProps) {
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const dispatch = useAppDispatch();
   const repo = useAppSelector((s) => (repoId ? s.repos.items[repoId] : null));
   const currentBranch = repo?.status.branch ?? null;
@@ -39,16 +56,18 @@ export function CreateBranchDialog({ open, repoId, onClose }: Props) {
     if (open) {
       setName("");
       setCheckout(true);
+      setSubmitting(false);
     }
   }, [open]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!repoId || !name.trim()) return;
+    const trimmed = name.trim();
     setSubmitting(true);
     try {
-      await dispatch(gitBranchCreate({ repoId, name: name.trim(), from: null, checkout })).unwrap();
-      toast.success(t("branch.created", { name: name.trim(), defaultValue: "Created '{{name}}'" }));
+      await dispatch(gitBranchCreate({ repoId, name: trimmed, from: null, checkout })).unwrap();
+      toast.success(t("branch.created", { name: trimmed }));
       onClose();
     } catch (err) {
       toast.error(String((err as Error)?.message ?? err));
@@ -58,46 +77,77 @@ export function CreateBranchDialog({ open, repoId, onClose }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("branch.create_title", { defaultValue: "Create branch" })}</DialogTitle>
-          <DialogDescription>
-            {currentBranch
-              ? t("branch.create_desc_from", {
-                  from: currentBranch,
-                  defaultValue: "Branches from '{{from}}'.",
-                })
-              : t("branch.create_desc", { defaultValue: "Branches from HEAD." })}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-3">
-          <input
+    <GeneralModal
+      open={open}
+      modalWidth={460}
+      customTitle={t("branch.create_title")}
+      subtitle={
+        currentBranch
+          ? t("branch.create_desc_from", { from: currentBranch })
+          : t("branch.create_desc")
+      }
+      textCapitalize={false}
+      onCloseModal={onClose}
+      data-testid={TEST_IDS.createBranchDialog.root}
+      contentChildren={
+        <Form
+          onSubmit={(e) => {
+            void onSubmit(e);
+          }}
+          id="create-branch-form"
+        >
+          <TextField
             autoFocus
             required
-            type="text"
+            size="small"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={t("branch.name_placeholder", {
-              defaultValue: "feat/my-new-feature",
-            })}
-            pattern="[A-Za-z0-9._/\-]+"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            label={t("branch.name_label")}
+            placeholder={t("branch.name_placeholder")}
+            slotProps={{
+              htmlInput: { "data-testid": TEST_IDS.createBranchDialog.name },
+            }}
           />
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Checkbox checked={checkout} onCheckedChange={(v) => setCheckout(v === true)} />
-            <span>{t("branch.checkout_after", { defaultValue: "Check out after creation" })}</span>
-          </label>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              {t("actions.cancel", { ns: "common", defaultValue: "Cancel" })}
-            </Button>
-            <Button type="submit" loading={submitting} disabled={!name.trim()}>
-              {t("branch.create_submit", { defaultValue: "Create" })}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={checkout}
+                onChange={(_, v) => setCheckout(v)}
+                slotProps={{
+                  input: {
+                    "aria-label": t("branch.checkout_label"),
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    ...({ "data-testid": TEST_IDS.createBranchDialog.checkout } as any),
+                  },
+                }}
+              />
+            }
+            label={<Description component="span">{t("branch.checkout_label")}</Description>}
+          />
+        </Form>
+      }
+      actionsChildren={
+        <>
+          <GeneralButton
+            variant="ghost"
+            onClick={onClose}
+            data-testid={TEST_IDS.createBranchDialog.cancel}
+          >
+            {t("branch.cancel")}
+          </GeneralButton>
+          <GeneralButton
+            type="submit"
+            form="create-branch-form"
+            loading={submitting}
+            disabled={!name.trim() || !repoId}
+            data-testid={TEST_IDS.createBranchDialog.submit}
+          >
+            {t("branch.submit")}
+          </GeneralButton>
+        </>
+      }
+    />
   );
 }
+
+export default CreateBranchDialog;

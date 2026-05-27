@@ -11,17 +11,54 @@ export const ACCENTS = ["coral", "blue", "green", "purple", "pink", "amber"] as 
 export type AccentId = (typeof ACCENTS)[number];
 export const DEFAULT_ACCENT: AccentId = "coral";
 
-export const FONTS = ["inter", "manrope", "plex", "system", "opendyslexic"] as const;
+export const FONTS = [
+  // Sans
+  "inter",
+  "manrope",
+  "plex",
+  "geist",
+  "system",
+  "opendyslexic",
+  // Mono / code
+  "jetbrains-mono",
+  "fira-code",
+  "geist-mono",
+  "plex-mono",
+  "sf-mono",
+] as const;
 export type FontId = (typeof FONTS)[number];
 export const DEFAULT_FONT: FontId = "inter";
+
+/** Sans vs mono grouping — drives the optgroup split in the font picker. */
+export const SANS_FONT_IDS = [
+  "inter",
+  "manrope",
+  "plex",
+  "geist",
+  "system",
+  "opendyslexic",
+] as const;
+export const MONO_FONT_IDS = [
+  "jetbrains-mono",
+  "fira-code",
+  "geist-mono",
+  "plex-mono",
+  "sf-mono",
+] as const;
 
 /** Human-readable labels for the font picker. Paired with CSS `data-font` rules in tokens.css. */
 export const FONT_LABELS: Record<FontId, string> = {
   inter: "Inter",
   manrope: "Manrope",
   plex: "IBM Plex Sans",
+  geist: "Geist",
   system: "System UI",
   opendyslexic: "OpenDyslexic",
+  "jetbrains-mono": "JetBrains Mono",
+  "fira-code": "Fira Code",
+  "geist-mono": "Geist Mono",
+  "plex-mono": "IBM Plex Mono",
+  "sf-mono": "SF Mono",
 };
 
 export const FONT_SIZES = ["sm", "md", "lg", "xl"] as const;

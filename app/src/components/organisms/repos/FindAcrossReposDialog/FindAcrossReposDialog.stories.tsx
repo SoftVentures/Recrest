@@ -1,34 +1,52 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Provider } from "react-redux";
 
-import { FindAcrossReposDialog } from "@/components/organisms/repos/FindAcrossReposDialog";
-import { store } from "@/store";
-import { setFindDialogOpen } from "@/store/slices/uiSlice";
+import FindAcrossReposDialog from "@/components/organisms/repos/FindAcrossReposDialog";
 
 const meta: Meta<typeof FindAcrossReposDialog> = {
   title: "Organisms/Repos/FindAcrossReposDialog",
   component: FindAcrossReposDialog,
-  parameters: { layout: "fullscreen" },
-  decorators: [
-    (Story) => (
-      <Provider store={store}>
-        <Story />
-      </Provider>
-    ),
-  ],
+  parameters: { layout: "centered" },
+  args: {
+    open: true,
+    onClose: () => undefined,
+    search: async (q) =>
+      q.length < 2
+        ? []
+        : [
+            {
+              repoId: "demo-repo",
+              repoName: "demo-repo",
+              path: `src/util/${q}.ts`,
+              line: 42,
+              column: 1,
+              snippet: `export function ${q}() { /* … */ }`,
+            },
+          ],
+  },
 };
 export default meta;
 
-export const Open: StoryObj<typeof FindAcrossReposDialog> = {
-  render: () => {
-    store.dispatch(setFindDialogOpen(true));
-    return <FindAcrossReposDialog />;
-  },
-};
-
-export const Closed: StoryObj<typeof FindAcrossReposDialog> = {
-  render: () => {
-    store.dispatch(setFindDialogOpen(false));
-    return <FindAcrossReposDialog />;
+type Story = StoryObj<typeof FindAcrossReposDialog>;
+export const Empty: Story = {};
+export const WithResults: Story = {
+  args: {
+    search: async () => [
+      {
+        repoId: "demo-repo",
+        repoName: "demo-repo",
+        path: "src/util/format.ts",
+        line: 12,
+        column: 1,
+        snippet: "return value.toString();",
+      },
+      {
+        repoId: "other-repo",
+        repoName: "other-repo",
+        path: "src/lib/git.ts",
+        line: 88,
+        column: 1,
+        snippet: "const hash = revParse(ref);",
+      },
+    ],
   },
 };

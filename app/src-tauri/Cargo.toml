@@ -26,6 +26,13 @@ tauri-plugin-deep-link = "2.4"
 tauri-plugin-process = "2.3"
 tauri-plugin-single-instance = "2.3"
 tauri-plugin-dialog = "2.3"
+# Native vibrancy / blurred backdrop. On macOS we always apply HudWindow
+# vibrancy on startup — when the active theme uses an opaque background it's
+# simply invisible; the Glassy theme renders translucent surfaces so the
+# vibrancy shows through. On Windows we apply Acrylic for the same reason.
+# Linux has no compositor blur, so Glassy falls back to a semi-transparent
+# surface without blur — documented as a platform limitation.
+window-vibrancy = "0.7"
 sentry = "0.38"
 os_info = "3"
 serde = { version = "1.0", features = ["derive"] }

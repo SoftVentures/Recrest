@@ -1,11 +1,24 @@
-import { useState } from "react";
-
 import { useTranslation } from "react-i18next";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box } from "@mui/material";
+
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import {
+  Axis,
+  Chart,
+  Column,
+  EmptyCol,
+  Seg,
+  Stack,
+  TooltipBody,
+  TooltipDot,
+  TooltipRow,
+  TooltipTitle,
+} from "@/components/organisms/activity/cards/StackedChartCard/StackedChartCard.styles";
 import { dayLabel } from "@/lib/activityStats";
 import type { StackedDay } from "@/lib/activityStats";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   stacked: StackedDay[];
@@ -13,82 +26,65 @@ interface Props {
   loading?: boolean;
 }
 
-export function StackedChartCard({ stacked, total, loading }: Props) {
+function StackedChartCard({ stacked, total, loading }: Props) {
   const { t } = useTranslation();
   const peak = Math.max(1, ...stacked.map((d) => d.total));
   const reversed = [...stacked].reverse();
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.cards.chart_title")}
       sub={t("activity.chart.sub", { total })}
       loading={loading}
       skeleton="bars"
+      testId={TEST_IDS.activity.stacked.card}
     >
-      <div className="a-act-chart" data-testid="activity-stacked-chart">
-        {reversed.map((d) => (
-          <ChartColumn key={d.day} day={d} peak={peak} />
-        ))}
-      </div>
-      <div className="a-act-chart-axis">
-        <span>14d ago</span>
-        <span>7d</span>
-        <span>today</span>
-      </div>
-    </CardShell>
+      <Chart data-testid={TEST_IDS.activity.stacked.chart}>
+        {reversed.map((d) => {
+          const h = Math.max(4, (d.total / peak) * 100);
+          const isEmpty = d.total === 0;
+          const labelTotal = `${d.total} ${d.total === 1 ? "commit" : "commits"}`;
+          return (
+            <GeneralTooltip
+              key={d.day}
+              arrow
+              placement="top"
+              title={
+                <TooltipBody>
+                  <TooltipTitle>
+                    {dayLabel(d.day)} · {labelTotal}
+                  </TooltipTitle>
+                  {d.segments.map((s) => (
+                    <TooltipRow key={s.repoId}>
+                      <TooltipDot color={s.color} />
+                      <Box component="span">{s.repoName}</Box>
+                      <Box component="span">{s.count}</Box>
+                    </TooltipRow>
+                  ))}
+                </TooltipBody>
+              }
+            >
+              <Column data-testid={TEST_IDS.activity.stacked.col}>
+                {isEmpty ? (
+                  <EmptyCol style={{ height: `${h}%` }} />
+                ) : (
+                  <Stack style={{ height: `${h}%` }}>
+                    {d.segments.map((s) => (
+                      <Seg key={s.repoId} color={s.color} flexValue={s.count} />
+                    ))}
+                  </Stack>
+                )}
+              </Column>
+            </GeneralTooltip>
+          );
+        })}
+      </Chart>
+      <Axis>
+        <Box component="span">14d ago</Box>
+        <Box component="span">7d</Box>
+        <Box component="span">today</Box>
+      </Axis>
+    </GeneralCard>
   );
 }
 
-interface ChartColumnProps {
-  day: StackedDay;
-  peak: number;
-}
-
-function ChartColumn({ day, peak }: ChartColumnProps) {
-  const [open, setOpen] = useState(false);
-  const h = Math.max(4, (day.total / peak) * 100);
-  return (
-    <Tooltip open={open} onOpenChange={setOpen}>
-      <div
-        className="a-act-chart-col"
-        data-testid="activity-stacked-col"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-      >
-        <TooltipTrigger asChild>
-          {day.total === 0 ? (
-            <div
-              className="a-act-chart-bar a-act-chart-empty"
-              style={{ height: `${h}%`, opacity: 0.25 }}
-            />
-          ) : (
-            <div className="a-act-chart-stack" style={{ height: `${h}%` }}>
-              {day.segments.map((s) => (
-                <div
-                  key={s.repoId}
-                  className="a-act-chart-seg"
-                  style={{ flex: s.count, background: s.color }}
-                />
-              ))}
-            </div>
-          )}
-        </TooltipTrigger>
-      </div>
-      <TooltipContent side="top" sideOffset={8}>
-        <div className="a-act-tt-title">
-          {dayLabel(day.day)} · {day.total} {day.total === 1 ? "commit" : "commits"}
-        </div>
-        {day.segments.length > 0 && (
-          <div className="a-act-tt-body">
-            {day.segments.map((s) => (
-              <div key={s.repoId} className="a-act-tt-row">
-                <span className="a-act-tt-dot" style={{ background: s.color }} aria-hidden />
-                <span className="a-act-tt-name">{s.repoName}</span>
-                <span className="a-act-tt-num">{s.count}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+export default StackedChartCard;

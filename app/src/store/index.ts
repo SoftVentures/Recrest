@@ -1,109 +1,36 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import {
-  DEFAULT_ACCENT,
-  DEFAULT_FONT,
-  DEFAULT_FONT_SIZE,
-  POLLING_INTERVAL_DEFAULT_MS,
-} from "@recrest/shared";
+import { settingsBackendSync } from "@/store/backendSync";
+import { providersReducer } from "@/store/reducers/providersReducer";
+import { prsReducer } from "@/store/reducers/prsReducer";
+import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
+import { reposReducer } from "@/store/reducers/reposReducer";
+import { settingsReducer } from "@/store/reducers/settingsReducer";
+import { uiReducer } from "@/store/reducers/uiReducer";
 
-import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
-import { registerSettingsResetListener } from "@/store/resetListener";
-import { providersReducer } from "@/store/slices/providersSlice";
-import { prsReducer } from "@/store/slices/prsSlice";
-import { remoteImportReducer } from "@/store/slices/remoteImportSlice";
-import { reposReducer } from "@/store/slices/reposSlice";
-import type { SettingsState } from "@/store/slices/settingsSlice";
-import { settingsReducer } from "@/store/slices/settingsSlice";
-import { uiDevFlagsReducer } from "@/store/slices/uiDevFlagsSlice";
-import { uiReducer } from "@/store/slices/uiSlice";
-
-const persisted = loadPersisted();
-
+/**
+ * Phase 2: Redux is the only renderer-side source of truth for app state.
+ * Cross-session persistence is owned exclusively by the Tauri backend
+ * (`settings.json`), so there's no `preloadedState` hydration from
+ * `localStorage` here — `useAppBootstrap` dispatches `loadSettings()` on
+ * mount and both `settingsReducer` + `uiReducer` listen to the
+ * `loadSettings.fulfilled` / `saveSettings.fulfilled` action to hydrate
+ * theme, sidebar, pinned repos, accessibility flags, etc. from the backend
+ * payload. The only renderer-side persistence that survives is i18next's
+ * own locale detector (intentional — it predates Redux in the boot order
+ * and is needed before the store is constructed).
+ */
 export const store = configureStore({
   reducer: {
+    ui: uiReducer,
+    settings: settingsReducer,
+    providers: providersReducer,
     repos: reposReducer,
     prs: prsReducer,
-    providers: providersReducer,
     remoteImport: remoteImportReducer,
-    settings: settingsReducer,
-    ui: uiReducer,
-    // Developer-only flags slice — conditionally registered behind
-    // `import.meta.env.DEV` so production bundles don't ship the reducer.
-    // `useDevFlag` returns the default inline when not in dev, so attempts
-    // to access `state.uiDevFlags` in prod are never reached.
-    ...(import.meta.env.DEV ? { uiDevFlags: uiDevFlagsReducer } : {}),
   },
-  preloadedState: persisted
-    ? {
-        ui: {
-          sidebarCollapsed: persisted.sidebarCollapsed ?? false,
-          searchOpen: false,
-          activeView: "dashboard" as const,
-          selectedRepoId: null,
-          selectedPrKey: null,
-          pinnedRepoIds: [],
-          refreshNonce: 0,
-          importDialogOpen: false,
-          findDialogOpen: false,
-          updaterBanner: null,
-          updaterProgress: null,
-          repoFilters: {
-            repos: { sort: { field: "", direction: "asc" as const }, statusChips: [] },
-            changes: { sort: { field: "", direction: "asc" as const }, statusChips: [] },
-          },
-        },
-        settings: {
-          pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,
-          defaultIde: null,
-          theme: persisted.theme ?? "system",
-          locale: "en",
-          scanPaths: [],
-          autoStart: false,
-          autoUpdate: "manual",
-          startMinimized: false,
-          closeToTray: false,
-          notifications: {
-            enabled: false,
-            newPr: true,
-            ciFailed: true,
-            mergeReady: true,
-          },
-          crashReporting: false,
-          // Phase 0.1 additive defaults — keep in sync with settingsSlice and
-          // Rust `AppSettings::default()`.
-          pinnedRepoIds: [],
-          authorAliases: {},
-          uiScale: 1.0,
-          repoListViewMode: "grouped",
-          repoListSort: { field: "", direction: "asc" },
-          repoImportDefaults: { groupId: null, providerId: null },
-          defaultScanPath: null,
-          terminal: { id: null, profile: null, customCommand: null },
-          commitMessageTemplate: "{{author}}: {{date}}",
-          privacy: { fetchFavicons: false },
-          accent: persisted.accent ?? DEFAULT_ACCENT,
-          font: persisted.font ?? DEFAULT_FONT,
-          fontSize: persisted.fontSize ?? DEFAULT_FONT_SIZE,
-          highContrast: persisted.highContrast ?? false,
-          reducedMotion: persisted.reducedMotion ?? false,
-          underlineLinks: persisted.underlineLinks ?? false,
-          loading: false,
-          error: null,
-          detectedIdes: [],
-        } satisfies SettingsState,
-      }
-    : undefined,
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistenceMiddleware),
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(settingsBackendSync),
 });
-
-// Wire the global `settings://reset` listener once at module load. The Rust
-// `factory_reset` command emits this event after wiping on-disk state, so
-// the renderer always mirrors the wipe (recrest:* storage + reload) even
-// when the IPC was triggered outside the Developer tab — e.g. from a CLI
-// flag in the future. `safeListen` no-ops outside the Tauri runtime, so
-// this is a free hook in pure-web dev / tests.
-void registerSettingsResetListener();
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

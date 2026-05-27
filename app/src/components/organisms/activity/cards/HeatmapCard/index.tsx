@@ -1,8 +1,15 @@
+import type { CSSProperties } from "react";
+
 import { useTranslation } from "react-i18next";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box, Typography } from "@mui/material";
+import { keyframes, styled } from "@mui/material/styles";
+
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   matrix: HeatmapMatrix;
@@ -11,55 +18,106 @@ interface Props {
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
 
-export function HeatmapCard({ matrix, loading }: Props) {
+function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
   const peak = Math.max(1, ...matrix.flat());
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.cards.heatmap_title")}
       sub={t("activity.cards.heatmap_sub")}
       loading={loading}
       skeleton="heatmap"
+      testId={TEST_IDS.activity.heatmap.card}
     >
-      <div className="a-act-heatmap" data-testid="activity-heatmap" role="img" aria-label="heatmap">
+      <Grid
+        data-testid={TEST_IDS.activity.heatmap.root}
+        role="img"
+        aria-label={t("repo.heatmap", { ns: I18nNamespace.ARIA })}
+      >
         {matrix.map((row, dayIdx) => (
-          <div key={dayIdx} className="a-act-heatmap-row">
-            <span className="a-act-heatmap-label" aria-hidden>
+          <Row key={dayIdx}>
+            <Label variant="caption" component="span" aria-hidden>
               {WEEKDAYS[dayIdx]}
-            </span>
+            </Label>
             {row.map((v, hourIdx) => {
-              // Empty cells keep the base surface tone; every active cell
-              // floors at 0.35 so a single commit is still visibly warmer
-              // than an empty hour, even when `peak` is much larger.
               const intensity = v === 0 ? 0 : 0.35 + 0.65 * (v / peak);
               return (
-                <Tooltip key={hourIdx}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="a-act-heatmap-cell"
-                      data-testid="activity-heatmap-cell"
-                      style={{
-                        ["--intensity" as string]: intensity,
-                        ["--cell-delay" as string]: dayIdx * 24 + hourIdx,
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {WEEKDAYS[dayIdx]} · {String(hourIdx).padStart(2, "0")}:00 · {v}
-                  </TooltipContent>
-                </Tooltip>
+                <GeneralTooltip
+                  key={hourIdx}
+                  arrow
+                  placement="top"
+                  title={`${WEEKDAYS[dayIdx]} · ${String(hourIdx).padStart(2, "0")}:00 · ${v}`}
+                >
+                  <Cell
+                    intensity={intensity}
+                    style={{ "--cell-delay": dayIdx * 24 + hourIdx } as CSSProperties}
+                    data-testid={TEST_IDS.activity.heatmap.cell}
+                  />
+                </GeneralTooltip>
               );
             })}
-          </div>
+          </Row>
         ))}
-      </div>
-      <div className="a-act-heatmap-foot" aria-hidden>
-        <span>00</span>
-        <span>06</span>
-        <span>12</span>
-        <span>18</span>
-        <span>23</span>
-      </div>
-    </CardShell>
+      </Grid>
+      <Foot aria-hidden>
+        <Box component="span">00</Box>
+        <Box component="span">06</Box>
+        <Box component="span">12</Box>
+        <Box component="span">18</Box>
+        <Box component="span">23</Box>
+      </Foot>
+    </GeneralCard>
   );
 }
+
+export default HeatmapCard;
+
+const Grid = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 3,
+});
+
+const Row = styled(Box)({
+  display: "grid",
+  gridTemplateColumns: "18px repeat(24, 1fr)",
+  gap: 3,
+  alignItems: "center",
+});
+
+const Label = styled(Typography)(({ theme }) => ({
+  fontSize: 9.5,
+  color: theme.palette.text.information,
+  textAlign: "right",
+  paddingRight: 2,
+})) as typeof Typography;
+
+const cellFade = keyframes`
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+`;
+
+const Cell = styled(Box, { shouldForwardProp: (p) => p !== "intensity" })<{
+  intensity: number;
+}>(({ theme, intensity }) => ({
+  height: 12,
+  borderRadius: 2,
+  backgroundColor:
+    intensity === 0
+      ? theme.palette.surface.interface.backElevation
+      : `color-mix(in srgb, ${theme.palette.primary.main} ${intensity * 100}%, ${theme.palette.surface.interface.backElevation})`,
+  animation: `${cellFade} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+  animationDelay: "calc(var(--cell-delay, 0) * 4ms)",
+  'html[data-reduced-motion="true"] &': {
+    animation: "none",
+  },
+}));
+
+const Foot = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  fontSize: 10,
+  color: theme.palette.text.information,
+  marginTop: 4,
+  paddingLeft: 21,
+}));

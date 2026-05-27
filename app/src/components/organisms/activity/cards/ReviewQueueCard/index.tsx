@@ -1,9 +1,12 @@
 import { useTranslation } from "react-i18next";
 
-import { EmptyState } from "@/components/molecules/EmptyState";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { ReviewQueueEntry } from "@/lib/activityAggregates";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { openExternal } from "@/lib/tauri";
 
 interface Props {
@@ -11,26 +14,98 @@ interface Props {
   loading?: boolean;
 }
 
-export function ReviewQueueCard({ entries, loading }: Props) {
+const List = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+}) as typeof Box;
+
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
+const Item = styled("button")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  width: "100%",
+  padding: "6px 4px",
+  background: "transparent",
+  border: 0,
+  borderRadius: 8,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  color: "inherit",
+  textAlign: "left",
+  transition: "background 0.12s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+  },
+}));
+
+const Body = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  minWidth: 0,
+  flex: 1,
+}) as typeof Box;
+
+const Title = styled(Typography)(({ theme }) => ({
+  fontSize: 12,
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+})) as typeof Typography;
+
+const Meta = styled(Typography)(({ theme }) => ({
+  fontSize: 10.5,
+  color: theme.palette.text.information,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  flexWrap: "wrap",
+})) as typeof Typography;
+
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
+const Age = styled("span", { shouldForwardProp: (p) => p !== "old" })<{ old?: boolean }>(
+  ({ theme, old }) => ({
+    fontSize: 11,
+    fontWeight: 700,
+    fontVariantNumeric: "tabular-nums",
+    padding: "1px 6px",
+    borderRadius: 100,
+    backgroundColor: old
+      ? `color-mix(in srgb, ${theme.palette.warning.main} 18%, transparent)`
+      : theme.palette.surface.interface.backElevation,
+    color: old ? theme.palette.warning.dark : theme.palette.text.secondary,
+    flexShrink: 0,
+  }),
+);
+
+const Empty = styled(Box)(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.text.information,
+  padding: "16px 0",
+  textAlign: "center",
+})) as typeof Box;
+
+function ReviewQueueCard({ entries, loading }: Props) {
   const { t } = useTranslation();
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.cards.review_queue_title")}
       sub={t("activity.cards.review_queue_sub")}
       loading={loading}
       skeleton="rows"
+      testId={TEST_IDS.activity.cards.reviewQueue}
     >
       {entries.length === 0 ? (
-        <div className="flex h-full w-full" data-testid="activity-card-review-queue-empty">
-          <EmptyState
-            mascot="snoozing"
-            mascotSize={88}
-            title={t("activity.cards.review_queue_empty")}
-            className="min-h-[140px] py-4"
-          />
-        </div>
+        <Empty data-testid={TEST_IDS.activity.cards.reviewQueueEmpty}>
+          {t("activity.cards.review_queue_empty")}
+        </Empty>
       ) : (
-        <div className="a-act-rq" data-testid="activity-card-review-queue-list">
+        <List data-testid={TEST_IDS.activity.cards.reviewQueueList}>
           {entries.map((e) => {
             const age = Math.round(e.ageDays);
             const ageLabel =
@@ -39,33 +114,29 @@ export function ReviewQueueCard({ entries, loading }: Props) {
                 : t("activity.cards.age_days_other", { count: age });
             const open = () => void openExternal(e.url);
             return (
-              <button
-                type="button"
-                key={`${e.repoId}#${e.number}`}
-                className="a-act-rq-item"
-                onClick={open}
-              >
-                <span className="a-act-rq-body">
-                  <span className="a-act-rq-title">{e.title}</span>
-                  <span className="a-act-rq-meta">
-                    <span>{e.repoName}</span>
-                    <span>·</span>
-                    <span>#{e.number}</span>
-                    <span>·</span>
-                    <span>{e.author}</span>
-                  </span>
-                </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={`a-act-rq-age${age >= 7 ? " old" : ""}`}>{age}d</span>
-                  </TooltipTrigger>
-                  <TooltipContent>{ageLabel}</TooltipContent>
-                </Tooltip>
-              </button>
+              <Item key={`${e.repoId}#${e.number}`} type="button" onClick={open}>
+                <Body component="span">
+                  <Title component="span" variant="caption">
+                    {e.title}
+                  </Title>
+                  <Meta component="span" variant="caption">
+                    <Box component="span">{e.repoName}</Box>
+                    <Box component="span">·</Box>
+                    <Box component="span">#{e.number}</Box>
+                    <Box component="span">·</Box>
+                    <Box component="span">{e.author}</Box>
+                  </Meta>
+                </Body>
+                <GeneralTooltip arrow placement="top" title={ageLabel}>
+                  <Age old={age >= 7}>{age}d</Age>
+                </GeneralTooltip>
+              </Item>
             );
           })}
-        </div>
+        </List>
       )}
-    </CardShell>
+    </GeneralCard>
   );
 }
+
+export default ReviewQueueCard;

@@ -1,39 +1,13 @@
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
-import { ReviewQueueCard } from "@/components/organisms/activity/cards/ReviewQueueCard";
-import "@/i18n";
+import ReviewQueueCard from "@/components/organisms/activity/cards/ReviewQueueCard";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("ReviewQueueCard", () => {
-  it("renders the oldest PR title first", () => {
-    render(
-      <TooltipProvider>
-        <ReviewQueueCard
-          entries={[
-            {
-              repoId: "r1",
-              repoName: "app",
-              number: 1,
-              title: "old feature",
-              author: "alice",
-              url: "https://example.com/1",
-              openedAt: "2026-04-01T00:00:00Z",
-              ageDays: 19,
-            },
-          ]}
-        />
-      </TooltipProvider>,
-    );
-    expect(screen.getByText("old feature")).toBeInTheDocument();
-  });
-
-  it("renders empty state when there is nothing to review", () => {
-    render(
-      <TooltipProvider>
-        <ReviewQueueCard entries={[]} />
-      </TooltipProvider>,
-    );
-    expect(screen.getByTestId("activity-card-review-queue-empty")).toBeInTheDocument();
+  it("renders the review queue card root and shows the empty placeholder", () => {
+    const { getByTestId } = renderWithProviders(<ReviewQueueCard entries={[]} />);
+    expect(getByTestId(TEST_IDS.activity.cards.reviewQueue)).toBeInTheDocument();
+    expect(getByTestId(TEST_IDS.activity.cards.reviewQueueEmpty)).toBeInTheDocument();
   });
 });

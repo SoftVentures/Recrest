@@ -1,27 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { AuthorsHero } from "@/components/organisms/activity/cards/AuthorsHero";
+import AuthorsHero from "@/components/organisms/activity/cards/AuthorsHero";
 
-const meta: Meta<typeof AuthorsHero> = {
-  title: "Organisms/Activity/AuthorsHero",
+const meta = {
+  title: "Organisms/Activity/Cards/AuthorsHero",
   component: AuthorsHero,
-};
-export default meta;
-
-export const Default: StoryObj<typeof AuthorsHero> = {
   args: {
-    authors: { current: 5, previous: 3, delta: 2 },
+    authors: { current: 6, previous: 4, delta: 2 },
     topAuthors: [
-      { name: "alice", email: "alice@example.com" },
-      { name: "bob", email: "bob@example.com" },
-      { name: "carol", email: null },
+      { name: "Valentin", email: "v@example.com" },
+      { name: "Alice", email: "a@example.com" },
+      { name: "Bob", email: null },
     ],
   },
-};
+} satisfies Meta<typeof AuthorsHero>;
 
-export const Single: StoryObj<typeof AuthorsHero> = {
-  args: {
-    authors: { current: 1, previous: 1, delta: 0 },
-    topAuthors: [{ name: "solo", email: null }],
-  },
-};
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};

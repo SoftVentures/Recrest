@@ -1,4 +1,6 @@
-import type { PullRequest, RepositoryId } from "@recrest/shared";
+import { CiStatus, PrState, type PullRequest, type RepositoryId } from "@recrest/shared";
+
+import { daysAgo } from "@/lib/dev/seed/time";
 
 /**
  * Dev-stub PR/MR data, mirrored from `tests/src/helpers/seed/prs.ts`.
@@ -7,9 +9,6 @@ import type { PullRequest, RepositoryId } from "@recrest/shared";
  * Timestamps are computed relative to `Date.now()` at module-load time so
  * Activity / velocity widgets stay populated regardless of the calendar date.
  */
-function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 86_400_000).toISOString();
-}
 
 export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
   "repo-recrest": [
@@ -19,7 +18,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "feat(landing): realistic hero demo with DE/EN copy",
       url: "https://github.com/SoftVentures/Recrest/pull/41",
       author: "valentin",
-      state: "open",
+      state: PrState.OPEN,
       draft: false,
       sourceBranch: "feat/landing-hero",
       targetBranch: "main",
@@ -27,7 +26,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(1),
       additions: 482,
       deletions: 117,
-      ciStatus: "success",
+      ciStatus: CiStatus.SUCCESS,
     },
     {
       id: "pr-recrest-38",
@@ -35,7 +34,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "ci(tests): bootstrap Playwright suite",
       url: "https://github.com/SoftVentures/Recrest/pull/38",
       author: "valentin",
-      state: "open",
+      state: PrState.OPEN,
       draft: true,
       sourceBranch: "ci/playwright",
       targetBranch: "main",
@@ -43,7 +42,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(0),
       additions: 912,
       deletions: 14,
-      ciStatus: "running",
+      ciStatus: CiStatus.RUNNING,
     },
   ],
   "repo-local-dev-stacks": [
@@ -53,7 +52,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "compose-v2: split profiles",
       url: "https://github.com/SoftVentures/local-dev-stacks/pull/22",
       author: "valentin",
-      state: "open",
+      state: PrState.OPEN,
       draft: false,
       sourceBranch: "feat/compose-v2",
       targetBranch: "main",
@@ -61,7 +60,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(2),
       additions: 112,
       deletions: 48,
-      ciStatus: "failure",
+      ciStatus: CiStatus.FAILURE,
     },
   ],
   "repo-ledger-api": [],
@@ -72,7 +71,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "feat(home): redesign hero timeline",
       url: "https://gitlab.com/acme-labs/pulse-ios/-/merge_requests/117",
       author: "tomi",
-      state: "open",
+      state: PrState.OPEN,
       draft: false,
       sourceBranch: "feat/home-v2",
       targetBranch: "main",
@@ -80,7 +79,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(1),
       additions: 398,
       deletions: 142,
-      ciStatus: "pending",
+      ciStatus: CiStatus.PENDING,
     },
     {
       id: "pr-pulse-115",
@@ -88,7 +87,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "fix(alerts): respect notification throttling",
       url: "https://gitlab.com/acme-labs/pulse-ios/-/merge_requests/115",
       author: "luis",
-      state: "open",
+      state: PrState.OPEN,
       draft: false,
       sourceBranch: "fix/alert-throttle",
       targetBranch: "main",
@@ -96,7 +95,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(3),
       additions: 74,
       deletions: 21,
-      ciStatus: "success",
+      ciStatus: CiStatus.SUCCESS,
     },
   ],
   "repo-starlight-ui": [
@@ -106,7 +105,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "fix(button): retain focus ring after click",
       url: "https://github.com/acme-labs/starlight-ui/pull/204",
       author: "lea",
-      state: "open",
+      state: PrState.OPEN,
       draft: false,
       sourceBranch: "fix/button-focus",
       targetBranch: "main",
@@ -114,7 +113,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(3),
       additions: 12,
       deletions: 4,
-      ciStatus: "success",
+      ciStatus: CiStatus.SUCCESS,
     },
     {
       id: "pr-star-201",
@@ -122,7 +121,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "feat(table): sticky header with shadow on scroll",
       url: "https://github.com/acme-labs/starlight-ui/pull/201",
       author: "lea",
-      state: "open",
+      state: PrState.OPEN,
       draft: true,
       sourceBranch: "feat/sticky-table",
       targetBranch: "main",
@@ -130,7 +129,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(6),
       additions: 188,
       deletions: 34,
-      ciStatus: "none",
+      ciStatus: CiStatus.NONE,
     },
     {
       id: "pr-star-198",
@@ -138,7 +137,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "ci(deps): bump storybook to 8.3",
       url: "https://github.com/acme-labs/starlight-ui/pull/198",
       author: "renovate-bot",
-      state: "merged",
+      state: PrState.MERGED,
       draft: false,
       sourceBranch: "renovate/storybook-8.3",
       targetBranch: "main",
@@ -146,7 +145,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(8),
       additions: 214,
       deletions: 89,
-      ciStatus: "success",
+      ciStatus: CiStatus.SUCCESS,
     },
   ],
   "repo-octo-notes": [],
@@ -158,7 +157,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       title: "ci(deps): quarterly bump",
       url: "https://bitbucket.org/valentin/signal-lab/pull-requests/9",
       author: "valentin",
-      state: "open",
+      state: PrState.OPEN,
       draft: false,
       sourceBranch: "ci/deps",
       targetBranch: "main",
@@ -166,7 +165,7 @@ export const SEED_PRS: Record<RepositoryId, PullRequest[]> = {
       updatedAt: daysAgo(13),
       additions: 28,
       deletions: 22,
-      ciStatus: "none",
+      ciStatus: CiStatus.NONE,
     },
   ],
 };

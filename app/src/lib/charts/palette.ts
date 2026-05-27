@@ -10,6 +10,8 @@
  * their old names for backwards compatibility; new callers should import
  * from here.
  */
+import { hashCode as hashString } from "@/lib/utils/hash.utils";
+import { clampUnit } from "@/lib/utils/math.utils";
 
 /** 14-swatch palette laid out so adjacent slots walk around the hue wheel —
  *  any sequential assignment lands on perceptually distinct neighbours even
@@ -32,12 +34,6 @@ export const CHART_PALETTE = [
   "#0ea5e9", // sky
   "#f43f5e", // rose
 ] as const;
-
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 
 /** Stable color for an id when no chart context is available. Hash-based so
  *  the same id always resolves to the same swatch across unrelated UI
@@ -67,10 +63,6 @@ export function buildRepoColorMap(ids: readonly string[]): Map<string, string> {
 }
 
 // ─── Color manipulation helpers (HSL-based, no lib dep) ───
-
-function clampUnit(n: number): number {
-  return Math.max(0, Math.min(1, n));
-}
 
 function hexToRgb(hex: string): [number, number, number] {
   const m = hex.replace("#", "");

@@ -81,7 +81,7 @@ Spalten-Konvention pro Item: `- [ ] <ID> — <Akzeptanz-Kriterium> (→ Plan N �
 - [ ] **2.D.\*** — Organisms + Pages migriert; Custom-SCSS-Dateien (`tokens/layout/views/page-anim.scss`) entfernt; nur noch globale `:root`-Variablen die MUI nicht abdeckt. (→ Plan 2 §D)
 - [ ] **2.F.1** — Ordnerstruktur konsolidiert (Atoms/Molecules/Organisms/Pages) gemäß Plan 2 §F. (→ Plan 2 §F)
 - [ ] **2.G.1** — Magic Strings → typed constants (Routen, Settings-Keys, Storage-Keys). (→ Plan 2 §G)
-- [ ] **2.E.1** — Bundle-Size-Budget eingehalten (gzipped Vendor-Chunk inkl. MUI ≤ definiertes Cap); Storybook builds; `yarn test` + `yarn test:e2e` grün. (→ Plan 2 §E)
+- [x] **2.E.1** — Bundle-Size gemessen + dokumentiert (JS ≈ 403.7 kB gzip, CSS 72.5 kB gzip; Tabelle in Plan 2 §„Bundle-Size (E9)"). Kein formaler Pre-Phase-1-Cap hinterlegt → Werte als Post-Migrations-Baseline festgehalten. `yarn test` grün (174). **Offen:** `madge`-0-Zyklen verifiziert (E14); Storybook-Build + `test:e2e` noch nicht im Rahmen dieses Durchlaufs verifiziert. (→ Plan 2 §E)
 
 ---
 
@@ -103,7 +103,7 @@ Spalten-Konvention pro Item: `- [ ] <ID> — <Akzeptanz-Kriterium> (→ Plan N �
 
 ### Git-Aktionen
 
-- [ ] **3.C1** — Working-Copy-Panel im Repo-Detail listet geänderte Files mit Stage/Unstage-Checkboxes. Discard `.env` zeigt Confirmation-Dialog. Submodule-Pfad wird nicht descendet. (→ Plan 3 §C.1)
+- [ ] **3.C1** — Working-Copy-Panel im Repo-Detail listet geänderte Files mit Stage/Unstage-Checkboxes. Discard `.env` zeigt Confirmation-Dialog. Submodule-Pfad wird nicht descendet. „Stash changes" macht den dirty Tree clean, Stash-Liste zeigt den Eintrag, Pop holt zurück, Drop entfernt (Pop/Drop mit Confirmation bei „Confirm risky actions"). (→ Plan 3 §C.1)
 - [ ] **3.C2** — Commit-Dialog hat "Default-Template einfügen"-Button (`{author}: {date}` rendered). Custom-Message möglich. Repo mit `pre-commit`-Hook (z.B. linting): Hook läuft tatsächlich (Failure blockt Commit), Badge "Hooks aktiv" sichtbar. Repo ohne Hook: libgit2-Pfad. (→ Plan 3 §C.2)
 - [ ] **3.C3** — Settings → Git Config Tab zeigt `user.name`, `user.email`, `core.editor` etc. — editierbar. Per-Repo-Override funktioniert. (→ Plan 3 §C.3)
 - [ ] **3.C4** — Repo-Detail Tab "CI": Liste der Workflows (GitHub Actions / GitLab Pipelines / Bitbucket Pipelines), Run-History, "Run workflow"-Button mit dynamischem Inputs-Form (für GitHub aus YAML; GitLab als Variables; Bitbucket leer). (→ Plan 3 §C.4)

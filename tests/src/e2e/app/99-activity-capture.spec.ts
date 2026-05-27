@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 // Ad-hoc capture spec — produces screenshots of the Activity page at several
 // viewport widths into `.screenshots/activity/` so design iteration has real
@@ -33,7 +34,7 @@ test.describe("activity capture", () => {
     await page.goto(AppRoute.ACTIVITY);
     await page.waitForTimeout(2800);
     // Hover the first stacked-chart column to trigger its tooltip.
-    const col = page.locator('[data-testid="activity-stacked-col"]').first();
+    const col = page.locator(`[data-testid="${TEST_IDS.activity.stacked.col}"]`).first();
     await col.hover();
     await page.waitForTimeout(400);
     await page.screenshot({

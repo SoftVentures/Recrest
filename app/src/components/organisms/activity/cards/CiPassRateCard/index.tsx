@@ -2,62 +2,47 @@ import { useMemo } from "react";
 
 import { useTranslation } from "react-i18next";
 
+import { Box } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+
 import type { CheckRunSummary } from "@recrest/shared";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
-import type { PassRateDay } from "@/lib/activityAggregates";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import {
+  Axis,
+  AxisLine,
+  Breakdown,
+  Chart,
+  Fill,
+  Headline,
+  Plot,
+  RepoBar,
+  RepoBarFill,
+  RepoName,
+  RepoPct,
+  RepoRow,
+  RepoRuns,
+  Series,
+  Svg,
+} from "@/components/organisms/activity/cards/CiPassRateCard/CiPassRateCard.styles";
+import {
+  type CiRepoBreakdown,
+  type PassRateDay,
+  computeCiRepoBreakdown,
+} from "@/lib/activityAggregates";
 import { monotoneCubic } from "@/lib/charts/smoothLine";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   rows: PassRateDay[];
-  /** Raw per-repo/day summaries — used for the per-repo breakdown below the
-   *  chart so users can actually see *which* repos were green (or red). */
   summaries?: readonly CheckRunSummary[];
   loading?: boolean;
 }
 
-interface RepoBreakdown {
-  repoId: string;
-  repoName: string;
-  passed: number;
-  total: number;
-  rate: number;
-}
-
-function buildRepoBreakdown(summaries: readonly CheckRunSummary[]): RepoBreakdown[] {
-  const byRepo = new Map<string, RepoBreakdown>();
-  for (const s of summaries) {
-    const existing = byRepo.get(s.repoId);
-    if (existing) {
-      existing.passed += s.passed;
-      existing.total += s.total;
-    } else {
-      byRepo.set(s.repoId, {
-        repoId: s.repoId,
-        repoName: s.repoName,
-        passed: s.passed,
-        total: s.total,
-        rate: 0,
-      });
-    }
-  }
-  const out: RepoBreakdown[] = [];
-  for (const r of byRepo.values()) {
-    r.rate = r.total === 0 ? 1 : r.passed / r.total;
-    out.push(r);
-  }
-  out.sort((a, b) => b.total - a.total);
-  return out;
-}
-
-export function CiPassRateCard({ rows, summaries, loading }: Props) {
+function CiPassRateCard({ rows, summaries, loading }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const chronological = [...rows].reverse();
-
-  // SVG plot uses `preserveAspectRatio="none"` because we want the line to
-  // stretch across whatever width the card ends up at. That stretching
-  // distorts any in-SVG `<text>`, so axis labels live in an HTML gutter
-  // next to the plot instead.
   const w = 320;
   const h = 140;
   const padT = 10;
@@ -71,9 +56,6 @@ export function CiPassRateCard({ rows, summaries, loading }: Props) {
     return { x, y };
   });
   const line = monotoneCubic(points);
-  // Close the smoothed line to the baseline so the area fill picks up the
-  // same curve shape as the stroke (no straight-line bottom under a smooth
-  // top).
   const area =
     points.length > 0
       ? `${line} L${points[points.length - 1]!.x.toFixed(3)},${(padT + plotH).toFixed(3)} L${points[0]!.x.toFixed(3)},${(padT + plotH).toFixed(3)} Z`
@@ -83,110 +65,99 @@ export function CiPassRateCard({ rows, summaries, loading }: Props) {
   const totalRuns = rows.reduce((a, r) => a + r.total, 0);
   const avgRate = totalRuns === 0 ? null : totalPassed / totalRuns;
 
-  const breakdown = useMemo<RepoBreakdown[]>(
-    () => (summaries ? buildRepoBreakdown(summaries) : []),
+  const breakdown = useMemo<CiRepoBreakdown[]>(
+    () => (summaries ? computeCiRepoBreakdown(summaries) : []),
     [summaries],
   );
   const repoCount = breakdown.length;
 
-  // Headline: use the exact fraction (2 decimals) so 97.5% ≠ 97.9% ≠ 98.1%
-  // don't all collapse to "98%". Trim trailing zeros so whole numbers read
-  // cleanly ("100%" rather than "100.00%").
   const exactPct = avgRate == null ? null : avgRate * 100;
   const headlineText =
     exactPct == null
       ? null
       : `${(Math.round(exactPct * 100) / 100).toFixed(2).replace(/\.?0+$/, "")}%`;
-  const headline =
-    headlineText == null ? null : (
-      <div className="a-act-ci-headline">
-        <span className="a-act-line-headline">{headlineText}</span>
-        <span className="a-act-ci-headline-label">avg pass</span>
-      </div>
-    );
 
   const subBits: string[] = [];
-  if (repoCount > 0) {
-    subBits.push(`across ${repoCount} ${repoCount === 1 ? "repo" : "repos"}`);
-  }
+  if (repoCount > 0) subBits.push(`across ${repoCount} ${repoCount === 1 ? "repo" : "repos"}`);
   if (totalRuns > 0) subBits.push(`${totalRuns} runs`);
-  subBits.push(t("activity.cards.ci_trend_sub_window", "last 14 days"));
+  subBits.push(t("activity.cards.ci_trend_sub_window"));
   const sub = subBits.join(" · ");
 
+  const greenColor = theme.palette.success.main;
+
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.cards.ci_trend_title")}
       sub={sub}
-      right={headline}
       loading={loading}
       skeleton="line"
+      testId={TEST_IDS.activity.cards.ciPassRate}
+      right={
+        headlineText && (
+          <Headline>
+            <Box component="strong">{headlineText}</Box>
+            <Box component="span">avg pass</Box>
+          </Headline>
+        )
+      }
     >
-      <div className="a-act-ci-chart">
-        {/* HTML axis gutter — text stays crisp at its declared font-size
-         * regardless of how the SVG stretches. */}
-        <div className="a-act-ci-axis" aria-hidden>
-          <span>100%</span>
-          <span>50%</span>
-          <span>0%</span>
-        </div>
-        <div className="a-act-ci-plot">
-          <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-            <line
-              x1={padX}
-              x2={w - padX}
-              y1={padT + plotH}
-              y2={padT + plotH}
-              className="a-act-line-axis"
-            />
-            <line
+      <Chart>
+        <Axis aria-hidden>
+          <Box component="span">100%</Box>
+          <Box component="span">50%</Box>
+          <Box component="span">0%</Box>
+        </Axis>
+        <Plot>
+          <Svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+            <AxisLine x1={padX} x2={w - padX} y1={padT + plotH} y2={padT + plotH} />
+            <AxisLine
               x1={padX}
               x2={w - padX}
               y1={padT}
               y2={padT}
-              className="a-act-line-axis"
               strokeDasharray="2 3"
+              opacity={0.6}
             />
-            <line
+            <AxisLine
               x1={padX}
               x2={w - padX}
               y1={padT + plotH / 2}
               y2={padT + plotH / 2}
-              className="a-act-line-axis"
               strokeDasharray="2 3"
               opacity={0.5}
             />
-            <path d={area} className="a-act-line-fill a-act-anim-area" fill="var(--green)" />
-            <path
-              d={line}
-              className="a-act-line-series a-act-anim-line"
-              style={{ ["--line-len" as string]: 600 }}
-              stroke="var(--green)"
-            />
-          </svg>
-        </div>
-      </div>
+            <Fill d={area} fill={greenColor} />
+            <Series d={line} stroke={greenColor} />
+          </Svg>
+        </Plot>
+      </Chart>
 
       {breakdown.length > 0 && (
-        <div className="a-act-ci-repos">
+        <Breakdown>
           {breakdown.map((r) => {
             const pct = Math.round(r.rate * 100);
-            const tone = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "fail";
+            const tone: "ok" | "warn" | "fail" = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "fail";
             return (
-              <div key={r.repoId} className={`a-act-ci-repo tone-${tone}`}>
-                <span className="a-act-ci-repo-name">{r.repoName}</span>
-                <span className="a-act-ci-repo-bar">
-                  <span
-                    className="a-act-ci-repo-bar-fill a-act-anim-barh"
-                    style={{ width: `${pct}%` }}
-                  />
-                </span>
-                <span className="a-act-ci-repo-pct">{pct}%</span>
-                <span className="a-act-ci-repo-runs">{r.total}</span>
-              </div>
+              <RepoRow key={r.repoId}>
+                <RepoName component="span" variant="caption">
+                  {r.repoName}
+                </RepoName>
+                <RepoBar>
+                  <RepoBarFill width={pct} tone={tone} />
+                </RepoBar>
+                <RepoPct component="span" variant="caption">
+                  {pct}%
+                </RepoPct>
+                <RepoRuns component="span" variant="caption">
+                  {r.total}
+                </RepoRuns>
+              </RepoRow>
             );
           })}
-        </div>
+        </Breakdown>
       )}
-    </CardShell>
+    </GeneralCard>
   );
 }
+
+export default CiPassRateCard;

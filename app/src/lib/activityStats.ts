@@ -222,20 +222,82 @@ export function computeLeaderboard(
   limit = 5,
   authorAliases: Readonly<Record<string, string>> = {},
 ): AuthorBucket[] {
-  const byKey = new Map<
-    string,
-    { email: string | null; count: number; spark: number[]; nameCounts: Map<string, number> }
-  >();
-  const resolveKey = (raw: string): string => authorAliases[raw] ?? raw;
+  // Union-Find over name-key / email-local-key fragments so identities with the
+  // same name but different emails (or same email but different name spellings)
+  // collapse into one bucket. Plain `${nameKey}|${emailKey}` keys would treat
+  // "Valentin Röhle" + valentin@… and "valentin.roehle" + valentin.roehle@…
+  // as two different people even though they normalise to the same name.
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    let cur = x;
+    while ((parent.get(cur) ?? cur) !== cur) {
+      const p = parent.get(cur) ?? cur;
+      const gp = parent.get(p) ?? p;
+      parent.set(cur, gp);
+      cur = gp;
+    }
+    return cur;
+  };
+  const union = (a: string, b: string): void => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent.set(ra, rb);
+  };
+  const ensure = (x: string): void => {
+    if (!parent.has(x)) parent.set(x, x);
+  };
 
-  for (const c of commits) {
+  // Manual aliases from settings are injected as explicit unions so source
+  // and target identities share a root with the auto-merged buckets.
+  const tokenize = (rawKey: string): { nameTok: string; emailTok: string } => {
+    const [nameKey = "", emailKey = ""] = rawKey.split("|");
+    return {
+      nameTok: nameKey ? `n:${nameKey}` : "",
+      emailTok: emailKey ? `e:${emailKey}` : "",
+    };
+  };
+  for (const [source, target] of Object.entries(authorAliases)) {
+    const src = tokenize(source);
+    const tgt = tokenize(target);
+    const tokens = [src.nameTok, src.emailTok, tgt.nameTok, tgt.emailTok].filter(Boolean);
+    for (const tok of tokens) ensure(tok);
+    for (let i = 1; i < tokens.length; i += 1) union(tokens[0]!, tokens[i]!);
+  }
+
+  interface Frag {
+    nameTok: string;
+    emailTok: string;
+    rawKey: string;
+  }
+  const fragments: Frag[] = new Array(commits.length);
+  for (let i = 0; i < commits.length; i += 1) {
+    const c = commits[i]!;
     const d = daysAgo(c.timestamp, today);
-    if (d < 0) continue;
+    if (d < 0) {
+      fragments[i] = { nameTok: "", emailTok: "", rawKey: "" };
+      continue;
+    }
     // Prefer the backend-computed `signatureKey` (canonical source); fall
     // back to recomputing in JS for legacy fixtures or pre-A.4 caches that
     // don't carry the field.
     const rawKey = c.signatureKey ?? signatureKey(c.author, c.authorEmail ?? null);
-    const key = resolveKey(rawKey);
+    const { nameTok, emailTok } = tokenize(rawKey);
+    fragments[i] = { nameTok, emailTok, rawKey };
+    if (nameTok) ensure(nameTok);
+    if (emailTok) ensure(emailTok);
+    if (nameTok && emailTok) union(nameTok, emailTok);
+  }
+
+  const byKey = new Map<
+    string,
+    { email: string | null; count: number; spark: number[]; nameCounts: Map<string, number> }
+  >();
+  for (let i = 0; i < commits.length; i += 1) {
+    const c = commits[i]!;
+    const d = daysAgo(c.timestamp, today);
+    if (d < 0) continue;
+    const frag = fragments[i]!;
+    const key = frag.nameTok ? find(frag.nameTok) : frag.emailTok ? find(frag.emailTok) : "anon";
     let bucket = byKey.get(key);
     if (!bucket) {
       bucket = {

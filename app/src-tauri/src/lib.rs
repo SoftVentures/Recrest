@@ -468,12 +468,25 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 use tauri::TitleBarStyle;
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.set_decorations(true);
                     let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
+                    // Vibrancy is applied unconditionally — the Glassy theme makes
+                    // the React surfaces translucent so it shows through; opaque
+                    // themes simply cover it.
+                    let _ = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None);
                 }
                 set_macos_app_icon();
                 observe_macos_appearance();
+            }
+
+            #[cfg(target_os = "windows")]
+            {
+                use window_vibrancy::apply_acrylic;
+                if let Some(window) = handle.get_webview_window("main") {
+                    let _ = apply_acrylic(&window, None);
+                }
             }
 
             // Initial Windows icon swap runs AFTER the tray is created

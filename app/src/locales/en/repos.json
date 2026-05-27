@@ -1,0 +1,88 @@
+{
+  "title": "Repositories",
+  "actions": {
+    "open_terminal_tooltip": "Open terminal at repository",
+    "create_branch_tooltip": "Create a new branch from HEAD",
+    "avatar_upload_hint": "Click to set a custom logo"
+  },
+  "summary": {
+    "total": "Total",
+    "dirty": "With changes",
+    "behind": "Behind remote",
+    "ahead": "Ahead of remote",
+    "open_prs": "Open MRs"
+  },
+  "columns": {
+    "name": "Repository",
+    "branch": "Branch",
+    "status": "Status",
+    "pull_requests": "MRs",
+    "ci": "CI",
+    "last_commit": "Last commit"
+  },
+  "status": {
+    "clean": "Clean",
+    "dirty": "Uncommitted changes",
+    "conflicted": "Conflicts"
+  },
+  "detail": {
+    "branch": "Branch",
+    "changes": "Changes",
+    "clean": "clean",
+    "close": "Close",
+    "open_full_view": "Open full view",
+    "files": "{{count}} file",
+    "files_other": "{{count}} files",
+    "last_commit": "Last commit",
+    "open_prs": "Open merge requests",
+    "open_prs_empty_desc": "Connect a provider in Settings to see merge requests here.",
+    "changes_title": "Working tree",
+    "working_tree_clean": "Working tree clean.",
+    "changes_truncated": "More files changed — showing the first entries.",
+    "also_unstaged": "Also has unstaged modifications",
+    "marker": {
+      "staged": "Staged for commit",
+      "unstaged": "Modified in working tree",
+      "untracked": "Untracked",
+      "conflicted": "Merge conflict"
+    }
+  },
+  "pr_count_one": "{{count}} MR",
+  "pr_count_other": "{{count}} MRs",
+  "empty": "No repositories yet",
+  "empty_desc": "Add one or more scan paths in Settings to discover your local git repositories.",
+  "branch": {
+    "create_title": "Create branch",
+    "create_desc_from": "Branches from '{{from}}'.",
+    "create_desc": "Branches from HEAD.",
+    "name_label": "Branch name",
+    "name_placeholder": "feature/my-change",
+    "checkout_label": "Check out the new branch after creating",
+    "submit": "Create branch",
+    "cancel": "Cancel",
+    "created": "Created '{{name}}'"
+  },
+  "find_across": {
+    "title": "Find across repositories",
+    "placeholder": "Search file contents…",
+    "no_results": "No matches",
+    "hint": "Searches all tracked repositories. Type at least two characters.",
+    "result_aria": "{{repo}} — {{path}}:{{line}}"
+  },
+  "stats": {
+    "ahead_behind": "Ahead / Behind",
+    "ahead_behind_sub": "across origin",
+    "changed_lines": "Changed lines",
+    "changed_files_one": "{{count}} file",
+    "changed_files_other": "{{count}} files",
+    "commits_14d": "Commits · last 14 days",
+    "commits_14d_sub": "peak {{count}}/day",
+    "open_mrs": "Open merge requests",
+    "open_mrs_sub": "{{count}} draft",
+    "last_commit": "Last commit",
+    "last_commit_empty": "no provider connected"
+  },
+  "changed_files": {
+    "truncated": "…more files truncated"
+  }
+}

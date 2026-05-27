@@ -1,24 +1,40 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { CiHealthHero } from "@/components/organisms/activity/cards/CiHealthHero";
-import { fakeCheckRun } from "@/components/organisms/activity/cards/_fixtures";
+import CiHealthHero from "@/components/organisms/activity/cards/CiHealthHero";
 
-const meta: Meta<typeof CiHealthHero> = {
-  title: "Organisms/Activity/CiHealthHero",
+const meta = {
+  title: "Organisms/Activity/Cards/CiHealthHero",
   component: CiHealthHero,
-};
+  args: { summaries: [] },
+} satisfies Meta<typeof CiHealthHero>;
+
 export default meta;
 
-export const Healthy: StoryObj<typeof CiHealthHero> = {
-  args: { summaries: [fakeCheckRun({ total: 50, passed: 49, failed: 1 })] },
-};
+type Story = StoryObj<typeof meta>;
 
-export const Degraded: StoryObj<typeof CiHealthHero> = {
-  args: { summaries: [fakeCheckRun({ total: 20, passed: 14, failed: 6 })] },
-};
+export const Empty: Story = {};
 
-export const Failing: StoryObj<typeof CiHealthHero> = {
-  args: { summaries: [fakeCheckRun({ total: 10, passed: 3, failed: 7 })] },
+export const WithRuns: Story = {
+  args: {
+    summaries: [
+      {
+        repoId: "r1",
+        repoName: "recrest",
+        day: "2025-02-15",
+        total: 30,
+        passed: 27,
+        failed: 3,
+        shaSamples: [],
+      },
+      {
+        repoId: "r2",
+        repoName: "shared",
+        day: "2025-02-15",
+        total: 18,
+        passed: 17,
+        failed: 1,
+        shaSamples: [],
+      },
+    ],
+  },
 };
-
-export const Empty: StoryObj<typeof CiHealthHero> = { args: { summaries: [] } };

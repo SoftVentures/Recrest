@@ -69,6 +69,7 @@ export const TauriCommand = {
   SAVE_WINDOW_STATE: "save_window_state",
   LOAD_WINDOW_STATE: "load_window_state",
   VALIDATE_WINDOW_POSITION: "validate_window_position",
+  SET_CAPTION_BUTTON_BOUNDS: "set_caption_button_bounds",
 
   // system
   GET_PLATFORM_INFO: "get_platform_info",

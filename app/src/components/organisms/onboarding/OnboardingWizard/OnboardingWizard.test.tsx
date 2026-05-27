@@ -1,37 +1,56 @@
-import { render } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { describe, expect, it, vi } from "vitest";
+import { StorageKey } from "@recrest/shared";
 
-import { OnboardingWizard } from "@/components/organisms/onboarding/OnboardingWizard";
-import { useFirstRun } from "@/hooks/useFirstRun";
-import "@/i18n";
-import { store } from "@/store";
+import { fireEvent, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
-vi.mock("@/hooks/useFirstRun", () => ({
-  useFirstRun: vi.fn(),
-}));
+import OnboardingWizard from "@/components/organisms/onboarding/OnboardingWizard";
+import { OnboardingStep } from "@/lib/constants/onboarding.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
-const mockedUseFirstRun = vi.mocked(useFirstRun);
+afterEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    // ignore
+  }
+});
 
 describe("OnboardingWizard", () => {
-  it("renders nothing when first-run conditions do not apply", () => {
-    mockedUseFirstRun.mockReturnValue({ shouldShow: false, dismiss: () => {}, reopen: () => {} });
-    const { container } = render(
-      <Provider store={store}>
-        <OnboardingWizard />
-      </Provider>,
-    );
-    expect(container.firstChild).toBeNull();
+  it("does not render when the user has dismissed it before", () => {
+    localStorage.setItem(StorageKey.ONBOARDING_DISMISSED, "true");
+    const { queryByTestId } = renderWithProviders(<OnboardingWizard />);
+    expect(queryByTestId(TEST_IDS.onboarding.root)).toBeNull();
   });
 
-  it("opens the dialog when first-run conditions apply", () => {
-    mockedUseFirstRun.mockReturnValue({ shouldShow: true, dismiss: () => {}, reopen: () => {} });
-    render(
-      <Provider store={store}>
-        <OnboardingWizard />
-      </Provider>,
-    );
-    // Radix portals the dialog into body — the heading is the simplest signal.
-    expect(document.querySelector("[role='dialog']")).not.toBeNull();
+  it("renders the welcome step when first-run conditions are met", () => {
+    localStorage.removeItem(StorageKey.ONBOARDING_DISMISSED);
+    const { queryByTestId } = renderWithProviders(<OnboardingWizard />);
+    const root = queryByTestId(TEST_IDS.onboarding.root);
+    expect(root).toBeTruthy();
+    expect(queryByTestId(TEST_IDS.onboarding.step(OnboardingStep.WELCOME))).toBeTruthy();
+  });
+
+  it("navigates Welcome → Basics → Folders → Provider via the Continue buttons", () => {
+    localStorage.removeItem(StorageKey.ONBOARDING_DISMISSED);
+    renderWithProviders(<OnboardingWizard />);
+
+    fireEvent.click(screen.getByTestId(TEST_IDS.onboarding.welcomeNext));
+    expect(screen.getByTestId(TEST_IDS.onboarding.step(OnboardingStep.BASICS))).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(TEST_IDS.onboarding.basicsNext));
+    expect(
+      screen.getByTestId(TEST_IDS.onboarding.step(OnboardingStep.FOLDERS)),
+    ).toBeInTheDocument();
+  });
+
+  it("Back from Basics returns to Welcome", () => {
+    localStorage.removeItem(StorageKey.ONBOARDING_DISMISSED);
+    renderWithProviders(<OnboardingWizard />);
+    fireEvent.click(screen.getByTestId(TEST_IDS.onboarding.welcomeNext));
+    fireEvent.click(screen.getByTestId(TEST_IDS.onboarding.basicsBack));
+    expect(
+      screen.getByTestId(TEST_IDS.onboarding.step(OnboardingStep.WELCOME)),
+    ).toBeInTheDocument();
   });
 });

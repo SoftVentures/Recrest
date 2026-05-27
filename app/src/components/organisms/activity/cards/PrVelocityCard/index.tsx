@@ -1,28 +1,65 @@
 import { useTranslation } from "react-i18next";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import { Box } from "@mui/material";
+import { styled, useTheme } from "@mui/material/styles";
+
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { VelocityDay } from "@/lib/activityAggregates";
-import { monotoneCubic } from "@/lib/charts/smoothLine";
+import { smoothSeries } from "@/lib/charts/smoothLine";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   rows: VelocityDay[];
   loading?: boolean;
 }
 
-function smoothSeries(values: number[], peak: number, w: number, h: number, pad: number): string {
-  const n = values.length;
-  if (n === 0) return "";
-  const stepX = (w - pad * 2) / Math.max(1, n - 1);
-  const points = values.map((v, i) => ({
-    x: pad + i * stepX,
-    y: h - pad - (v / Math.max(1, peak)) * (h - pad * 2),
-  }));
-  return monotoneCubic(points);
-}
+const ChartWrap = styled(Box)({
+  width: "100%",
+});
 
-export function PrVelocityCard({ rows, loading }: Props) {
+const Svg = styled("svg")({
+  width: "100%",
+  height: 140,
+});
+
+const Axis = styled("line")(({ theme }) => ({
+  stroke: theme.palette.divider,
+  strokeWidth: 1,
+}));
+
+const Series = styled("path")({
+  fill: "none",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+});
+
+const Legend = styled(Box)(({ theme }) => ({
+  display: "flex",
+  gap: 12,
+  marginTop: 6,
+  fontSize: 11,
+  color: theme.palette.text.information,
+  "& > span": {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+  },
+}));
+
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
+const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
+  color: string;
+}>(({ color }) => ({
+  width: 8,
+  height: 8,
+  borderRadius: "50%",
+  backgroundColor: color,
+}));
+
+function PrVelocityCard({ rows, loading }: Props) {
   const { t } = useTranslation();
-  // index 0 = today → render oldest-first for left-to-right time axis
+  const theme = useTheme();
   const chronological = [...rows].reverse();
   const opened = chronological.map((r) => r.opened);
   const merged = chronological.map((r) => r.merged);
@@ -30,40 +67,35 @@ export function PrVelocityCard({ rows, loading }: Props) {
   const w = 320;
   const h = 140;
   const pad = 12;
+  const openedColor = theme.palette.primary.main;
+  const mergedColor = theme.palette.success.main;
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.cards.pr_velocity_title")}
       sub={t("activity.cards.pr_velocity_sub")}
       loading={loading}
       skeleton="line"
+      testId={TEST_IDS.activity.cards.prVelocity}
     >
-      <div className="a-act-line">
-        <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-          <line x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} className="a-act-line-axis" />
-          <path
-            d={smoothSeries(opened, peak, w, h, pad)}
-            className="a-act-line-series a-act-anim-line"
-            style={{ ["--line-len" as string]: 600 }}
-            stroke="var(--accent)"
-          />
-          <path
-            d={smoothSeries(merged, peak, w, h, pad)}
-            className="a-act-line-series a-act-anim-line"
-            style={{ ["--line-len" as string]: 600, animationDelay: "450ms" }}
-            stroke="var(--green)"
-          />
-        </svg>
-      </div>
-      <div className="a-act-line-legend">
-        <span>
-          <span className="a-act-line-dot bg-(--accent)" />
+      <ChartWrap>
+        <Svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+          <Axis x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} />
+          <Series d={smoothSeries(opened, peak, w, h, pad)} stroke={openedColor} />
+          <Series d={smoothSeries(merged, peak, w, h, pad)} stroke={mergedColor} />
+        </Svg>
+      </ChartWrap>
+      <Legend>
+        <Box component="span">
+          <LegendDot color={openedColor} />
           {t("activity.cards.pr_velocity_opened")}
-        </span>
-        <span>
-          <span className="a-act-line-dot bg-(--green)" />
+        </Box>
+        <Box component="span">
+          <LegendDot color={mergedColor} />
           {t("activity.cards.pr_velocity_merged")}
-        </span>
-      </div>
-    </CardShell>
+        </Box>
+      </Legend>
+    </GeneralCard>
   );
 }
+
+export default PrVelocityCard;

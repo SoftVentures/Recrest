@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 
+import {
+  PLATFORM_LABELS,
+  PLATFORM_MODIFIER_LABELS,
+  PLATFORM_WINDOW_CHROME,
+  Platform,
+  WindowChrome,
+} from "@/lib/constants/platform.constants";
 import { isTauri } from "@/lib/tauri";
 
-export type Platform = "mac" | "windows" | "linux";
-
-/** Which window-chrome style to render. `"none"` = no custom chrome (web dev). */
-export type WindowChrome = "macos-overlay" | "win11" | "gnome" | "none";
+export { Platform, type WindowChrome } from "@/lib/constants/platform.constants";
 
 function detectFromUserAgent(): Platform {
-  if (typeof navigator === "undefined") return "windows";
+  if (typeof navigator === "undefined") return Platform.WINDOWS;
   const ua = navigator.userAgent;
-  if (/Mac|iPhone|iPad/i.test(ua)) return "mac";
-  if (/Linux|X11/i.test(ua) && !/Win/i.test(ua)) return "linux";
-  return "windows";
+  if (/Mac|iPhone|iPad/i.test(ua)) return Platform.MAC;
+  if (/Linux|X11/i.test(ua) && !/Win/i.test(ua)) return Platform.LINUX;
+  return Platform.WINDOWS;
 }
 
 /** Platform detection. In Tauri we prefer the OS plugin (accurate even when
@@ -27,11 +31,11 @@ export function usePlatform(): Platform {
         const { platform: getPlatform } = await import("@tauri-apps/plugin-os");
         const p = await getPlatform();
         if (cancelled) return;
-        if (p === "macos") setPlatform("mac");
-        else if (p === "windows") setPlatform("windows");
-        else setPlatform("linux");
+        if (p === "macos") setPlatform(Platform.MAC);
+        else if (p === "windows") setPlatform(Platform.WINDOWS);
+        else setPlatform(Platform.LINUX);
       } catch {
-        // Not in Tauri — the UA-based initial value is fine.
+        /* Not in Tauri — the UA-based initial value is fine. */
       }
     })();
     return () => {
@@ -49,12 +53,21 @@ export function usePlatform(): Platform {
  */
 export function useWindowChrome(): WindowChrome {
   const platform = usePlatform();
-  const [inTauri, setInTauri] = useState(false);
-  useEffect(() => setInTauri(isTauri()), []);
-  if (!inTauri) return "none";
-  if (platform === "mac") return "macos-overlay";
-  if (platform === "windows") return "win11";
-  return "gnome";
+  // In the pure-web dev mode (`yarn dev:web`) the browser already paints
+  // its own chrome — rendering ours on top would just steal vertical space
+  // for no benefit. The dev stub installs `__TAURI_INTERNALS__` so the seed
+  // IPC works, but tags itself with `__RECREST_DEV_STUB__`; we explicitly
+  // check that here so only the real Tauri runtime triggers the bespoke
+  // titlebar.
+  const isRealTauri =
+    isTauri() && !(typeof window !== "undefined" && "__RECREST_DEV_STUB__" in window);
+  if (!isRealTauri) return WindowChrome.NONE;
+  return PLATFORM_WINDOW_CHROME[platform];
+}
+
+/** Human-readable label for the active platform — used in About/Settings copy. */
+export function platformLabel(p: Platform): string {
+  return PLATFORM_LABELS[p];
 }
 
 /** Returns the user-facing text for a cross-platform modifier + key combo. */
@@ -62,11 +75,11 @@ export function formatShortcut(
   platform: Platform,
   keys: { mod?: boolean; shift?: boolean; alt?: boolean; key: string },
 ): string {
+  const mods = PLATFORM_MODIFIER_LABELS[platform];
   const parts: string[] = [];
-  if (keys.mod) parts.push(platform === "mac" ? "⌘" : "Ctrl");
-  if (keys.shift) parts.push(platform === "mac" ? "⇧" : "Shift");
-  if (keys.alt) parts.push(platform === "mac" ? "⌥" : "Alt");
+  if (keys.mod) parts.push(mods.mod);
+  if (keys.shift) parts.push(mods.shift);
+  if (keys.alt) parts.push(mods.alt);
   parts.push(keys.key);
-  // Mac traditionally uses "+", Win/Linux use "+" too but with spaces.
-  return platform === "mac" ? parts.join("") : parts.join("+");
+  return parts.join(mods.joiner);
 }

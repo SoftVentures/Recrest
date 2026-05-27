@@ -2,22 +2,10 @@ import { useEffect } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useDrag } from "@use-gesture/react";
-
 import { AppRoute, type AppRoutePath } from "@recrest/shared";
 
-/** D.5: ordered list of top-level pages that participate in horizontal-swipe
- *  navigation. Two documented use-cases for this hook:
- *
- *   1. **Dashboard tablet/mobile flow** — quick swipe between Activity →
- *      Repos → MRs → Branches without lifting fingers off the screen.
- *      The order tracks the most-used flow: "what changed today" →
- *      "where did it land" → "open reviews" → "branches awaiting cleanup".
- *
- *   2. **Demo / video walkthroughs** — repeatable left-to-right scroll
- *      through the dashboard, repo browser, MRs and branches without a
- *      keyboard. Useful for marketing captures that need a calm,
- *      single-touch path. */
+import { useDrag } from "@use-gesture/react";
+
 const ROUTE_ORDER: AppRoutePath[] = [
   AppRoute.ACTIVITY,
   AppRoute.REPOS,
@@ -26,19 +14,14 @@ const ROUTE_ORDER: AppRoutePath[] = [
 ];
 
 interface PageSwipeOptions {
-  /** Pixel threshold below which the swipe is ignored. */
   threshold?: number;
-  /** Disable temporarily (e.g. while a drawer owns the gesture). */
   enabled?: boolean;
 }
 
-/** Listens for horizontal touch swipes on the document body and navigates
- *  forward/backward through `ROUTE_ORDER`. Mouse drags are ignored.
- *
- *  The hook deliberately attaches at the document level rather than
- *  through props on a particular layout container so the page stack
- *  doesn't have to thread refs through every page. The cost is one
- *  global handler per session; it's removed cleanly on unmount. */
+/**
+ * Document-level horizontal swipe nav. Right swipe = previous page,
+ * left swipe = next page within ROUTE_ORDER. Mouse drags are ignored.
+ */
 export function usePageSwipe({ threshold = 80, enabled = true }: PageSwipeOptions = {}): void {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,9 +38,7 @@ export function usePageSwipe({ threshold = 80, enabled = true }: PageSwipeOption
       const flicked = Math.abs(vx) > 0.4;
       if (!movedFar && !flicked) return;
       const idx = ROUTE_ORDER.indexOf(location.pathname as AppRoutePath);
-      if (idx < 0) return; // page not in the swipe ring — silently ignore
-      // Right swipe = go to the *previous* page (consistent with iOS' back
-      // gesture); left swipe = forward.
+      if (idx < 0) return;
       const next = dx > 0 || mx > 0 ? idx - 1 : idx + 1;
       if (next < 0 || next >= ROUTE_ORDER.length) return;
       navigate(ROUTE_ORDER[next]!);

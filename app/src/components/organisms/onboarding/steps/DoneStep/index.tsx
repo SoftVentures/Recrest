@@ -1,42 +1,60 @@
-import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/atoms/Button";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/molecules/compounds/Dialog";
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-interface Props {
-  onBack: () => void;
+import Mascot from "@/components/atoms/brand/Mascot";
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import {
+  StepBody,
+  StepContent,
+  StepFooter,
+  StepRoot,
+  StepTitle,
+} from "@/components/organisms/onboarding/steps/_shared";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { OnboardingStep } from "@/lib/constants/onboarding.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+
+export interface DoneStepProps {
   onFinish: () => void;
 }
 
-export function DoneStep({ onBack, onFinish }: Props) {
-  const { t } = useTranslation("onboarding");
+const Celebrate = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  textAlign: "center",
+  gap: 14,
+  paddingTop: 24,
+  paddingBottom: 16,
+  flex: 1,
+  justifyContent: "center",
+}) as typeof Box;
+
+const Body = styled(StepBody)({
+  textAlign: "center",
+  maxWidth: 380,
+}) as typeof StepBody;
+
+function DoneStep({ onFinish }: DoneStepProps) {
+  const { t } = useTranslation(I18nNamespace.ONBOARDING);
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{t("done.title")}</DialogTitle>
-        <DialogDescription>{t("done.body")}</DialogDescription>
-      </DialogHeader>
-      <div className="flex items-center justify-center py-6">
-        <CheckCircle2 className="h-14 w-14 text-status-success" aria-hidden />
-      </div>
-      <DialogFooter>
-        {/* W.6: every non-welcome step now exposes Back so the user can
-         *  amend earlier choices without restarting onboarding. The history
-         *  stack in OnboardingWizard already preserves form state.
-         *  M9: `done.back` exists in both en and de locales — no defaultValue
-         *  fallback chain needed (was a leftover from the `welcome.back`-
-         *  only era). */}
-        <Button variant="ghost" onClick={onBack}>
-          {t("done.back")}
-        </Button>
-        <Button onClick={onFinish}>{t("done.cta")}</Button>
-      </DialogFooter>
-    </>
+    <StepRoot data-testid={TEST_IDS.onboarding.step(OnboardingStep.DONE)}>
+      <StepContent>
+        <Celebrate>
+          <Mascot variant="celebrating" size={104} title={t("done.title")} />
+          <StepTitle component="h1">{t("done.title")}</StepTitle>
+          <Body component="p">{t("done.body")}</Body>
+        </Celebrate>
+      </StepContent>
+      <StepFooter>
+        <GeneralButton onClick={onFinish} data-testid={TEST_IDS.onboarding.doneFinish}>
+          {t("done.cta")}
+        </GeneralButton>
+      </StepFooter>
+    </StepRoot>
   );
 }
+
+export default DoneStep;

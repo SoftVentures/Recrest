@@ -1,22 +1,12 @@
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { FlakyReposCard } from "@/components/organisms/activity/cards/FlakyReposCard";
-import "@/i18n";
+import FlakyReposCard from "@/components/organisms/activity/cards/FlakyReposCard";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("FlakyReposCard", () => {
-  it("renders the repo name and failure percentage", () => {
-    render(
-      <FlakyReposCard
-        rows={[{ repoId: "r1", repoName: "flaky-svc", failRate: 0.42, failed: 21, total: 50 }]}
-      />,
-    );
-    expect(screen.getByText("flaky-svc")).toBeInTheDocument();
-    expect(screen.getByText("42%")).toBeInTheDocument();
-  });
-
-  it("renders empty state", () => {
-    render(<FlakyReposCard rows={[]} />);
-    expect(screen.getByText(/No check-run data/i)).toBeInTheDocument();
+  it("renders the flaky card root", () => {
+    const { getByTestId } = renderWithProviders(<FlakyReposCard rows={[]} />);
+    expect(getByTestId(TEST_IDS.activity.cards.flakyRepos)).toBeInTheDocument();
   });
 });

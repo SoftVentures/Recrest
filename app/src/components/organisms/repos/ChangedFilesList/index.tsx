@@ -1,86 +1,121 @@
 import { useTranslation } from "react-i18next";
 
-import type { ChangedFile, ChangedFileStatus } from "@recrest/shared";
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
-import { cn } from "@/lib/utils";
+import type { ChangedFile } from "@recrest/shared";
 
-interface ChangedFilesListProps {
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+
+export interface ChangedFilesListProps {
   files: ChangedFile[];
-  truncated: boolean;
+  truncated?: boolean;
+  /** Override the height — default is 240. Pass `"auto"` to let the list grow
+   *  to its natural height (used inside drawers that scroll themselves). */
+  maxHeight?: number | "auto";
+  className?: string;
 }
 
-const MARKER: Record<ChangedFileStatus, { label: string; tone: string }> = {
-  staged: { label: "A", tone: "bg-status-success/15 text-status-success" },
-  unstaged: { label: "M", tone: "bg-status-warning/15 text-status-warning" },
-  untracked: { label: "??", tone: "bg-status-info/15 text-status-info" },
-  conflicted: { label: "!!", tone: "bg-status-error/15 text-status-error" },
-};
+const Root = styled(Box, {
+  shouldForwardProp: (p) => p !== "maxHeight",
+})<{ maxHeight: number | "auto" }>(({ maxHeight }) => ({
+  display: "flex",
+  flexDirection: "column",
+  maxHeight: maxHeight === "auto" ? undefined : maxHeight,
+  overflowY: maxHeight === "auto" ? "visible" : "auto",
+  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontSize: 12,
+}));
+
+const Row = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  padding: "4px 0",
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  "&:last-child": { border: 0 },
+})) as typeof Box;
+
+const Path = styled(Box)({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0,
+}) as typeof Box;
+
+// eslint-disable-next-line no-restricted-syntax -- typed prop variant requires generic element form
+const KindBadge = styled("span", {
+  shouldForwardProp: (p) => p !== "kind",
+})<{ kind: string }>(({ theme, kind }) => {
+  const infoColor = theme.palette.text.information ?? theme.palette.text.secondary;
+  const palette: Record<string, { color: string; bg: string }> = {
+    added: {
+      color: theme.palette.success.dark,
+      bg: `color-mix(in srgb, ${theme.palette.success.main} 14%, transparent)`,
+    },
+    modified: {
+      color: theme.palette.primary.dark,
+      bg: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
+    },
+    deleted: {
+      color: theme.palette.error.dark,
+      bg: `color-mix(in srgb, ${theme.palette.error.main} 14%, transparent)`,
+    },
+    renamed: { color: infoColor, bg: theme.palette.surface.interface.backElevation },
+  };
+  const tone = palette[kind] ??
+    palette.modified ?? { color: infoColor, bg: theme.palette.surface.interface.backElevation };
+  return {
+    fontFamily: "inherit",
+    fontSize: 10,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    padding: "1px 6px",
+    borderRadius: 8,
+    color: tone.color,
+    backgroundColor: tone.bg,
+    flexShrink: 0,
+  };
+});
+
+const Truncated = styled(Box)(({ theme }) => ({
+  textAlign: "center",
+  paddingTop: theme.spacing(1),
+  fontSize: 11,
+  color: theme.palette.text.information,
+})) as typeof Box;
 
 /**
- * Condensed CLI-style list of the working-tree entries from libgit2.
- * Markers mirror `git status`'s conventions (A/M/??/!!).
+ * Renders a working-tree change list (path + change-kind badge) with the same
+ * monospace styling that was historically inlined in RepoDetail. Used both by
+ * the RepoDetail page and the RepoStats card; will also back the future
+ * Cross-repo "files of interest" view.
  */
-export function ChangedFilesList({ files, truncated }: ChangedFilesListProps) {
-  const { t } = useTranslation("repos");
-
-  if (files.length === 0) {
-    return (
-      <p className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
-        {t("detail.working_tree_clean")}
-      </p>
-    );
-  }
-
+function ChangedFilesList({
+  files,
+  truncated = false,
+  maxHeight = 240,
+  className,
+}: ChangedFilesListProps) {
+  const { t } = useTranslation(I18nNamespace.REPOS);
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <ul className="max-h-64 divide-y divide-border overflow-y-auto">
-        {files.map((file, i) => {
-          const marker = MARKER[file.status];
-          const markerLabel = t(`detail.marker.${file.status}`);
-          return (
-            <li key={`${file.path}-${i}`} className="flex items-center gap-2 px-2.5 py-1.5 text-xs">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    aria-label={markerLabel}
-                    data-testid="changed-files-marker"
-                    className={cn(
-                      "inline-flex h-5 min-w-[1.75rem] shrink-0 items-center justify-center rounded-sm px-1 font-mono text-[10px] font-bold",
-                      marker.tone,
-                    )}
-                  >
-                    {marker.label}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{markerLabel}</TooltipContent>
-              </Tooltip>
-              <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
-                {file.path}
-              </span>
-              {file.hasUnstagedChanges && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      aria-label={t("detail.also_unstaged")}
-                      data-testid="changed-files-also-unstaged"
-                      className="shrink-0 rounded-sm bg-status-warning/15 px-1 py-0.5 font-mono text-[9px] font-bold text-status-warning"
-                    >
-                      M
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("detail.also_unstaged")}</TooltipContent>
-                </Tooltip>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+    <Root maxHeight={maxHeight} className={className} data-testid={TEST_IDS.changedFilesList.root}>
+      {files.map((f) => (
+        <Row key={f.path} data-testid={TEST_IDS.changedFilesList.row}>
+          <Path component="span">{f.path}</Path>
+          <KindBadge kind={f.kind}>{f.kind}</KindBadge>
+        </Row>
+      ))}
       {truncated && (
-        <div className="border-t border-border bg-muted/40 px-2.5 py-1 text-[11px] text-muted-foreground">
-          {t("detail.changes_truncated")}
-        </div>
+        <Truncated data-testid={TEST_IDS.changedFilesList.truncated}>
+          {t("changed_files.truncated")}
+        </Truncated>
       )}
-    </div>
+    </Root>
   );
 }
+
+export default ChangedFilesList;

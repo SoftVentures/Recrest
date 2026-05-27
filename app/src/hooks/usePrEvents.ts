@@ -1,69 +1,69 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { type PrEvent, TauriCommand } from "@recrest/shared";
 
-import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { invoke, isTauri } from "@/lib/tauri";
 import { useAppSelector } from "@/store/hooks";
 
 interface Args {
+  repoId?: string;
   days?: number;
 }
 
-/** Fans out `list_pr_events` to every repo that has a provider assigned and
- *  flattens the result. Refetches on the shared `refreshNonce`. Returns an
- *  empty list outside Tauri. Providers that don't implement PR events yet
- *  return `[]` on the Rust side (default trait impl). */
-export function usePrEvents({ days = 14 }: Args = {}): {
+/** Aggregates PR life-cycle events. The Rust `list_pr_events` command is
+ *  per-repo (`repoId` is required, not optional), so when no `repoId` is
+ *  passed the hook fans out one invoke per repo in the Redux store and
+ *  merges the results. */
+export function usePrEvents({ repoId, days = 14 }: Args = {}): {
   events: PrEvent[];
   loading: boolean;
 } {
-  const repos = useEnrichedRepos();
   const [events, setEvents] = useState<PrEvent[]>([]);
   const [loading, setLoading] = useState(isTauri());
   const nonce = useAppSelector((s) => s.ui.refreshNonce);
-
-  // `useRepos` returns a fresh array every render, so we lean on the joined
-  // id string (stable per repo-set) as the sole array-shaped dependency —
-  // otherwise `repos`' reference change would re-run the effect on every
-  // render and trigger an update loop.
-  const repoKey = useMemo(
-    () =>
-      repos
-        .filter((r) => r.remoteUrl && r.providerId)
-        .map((r) => r.id)
-        .join(","),
-    [repos],
-  );
+  const reposItems = useAppSelector((s) => s.repos.items);
+  const allRepoIds = Object.keys(reposItems);
+  const allRepoIdsKey = allRepoIds.join("|");
 
   useEffect(() => {
-    if (!isTauri() || repoKey === "") {
+    if (!isTauri()) {
       setEvents([]);
       setLoading(false);
       return;
     }
-    const repoIds = repoKey.split(",");
+    const ids = repoId ? [repoId] : allRepoIds;
+    if (ids.length === 0) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
-    Promise.allSettled(
-      repoIds.map((repoId) => invoke<PrEvent[]>(TauriCommand.LIST_PR_EVENTS, { repoId, days })),
-    )
+
+    const calls = ids.map((id) =>
+      invoke<PrEvent[]>(TauriCommand.LIST_PR_EVENTS, { repoId: id, days }).catch(
+        () => [] as PrEvent[],
+      ),
+    );
+
+    Promise.all(calls)
       .then((results) => {
         if (cancelled) return;
-        const merged: PrEvent[] = [];
-        for (const r of results) {
-          if (r.status === "fulfilled") merged.push(...r.value);
-        }
-        merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
-        setEvents(merged);
+        setEvents(results.flat());
+      })
+      .catch(() => {
+        if (!cancelled) setEvents([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [repoKey, days, nonce]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repoId, days, allRepoIdsKey, nonce]);
 
   return { events, loading };
 }

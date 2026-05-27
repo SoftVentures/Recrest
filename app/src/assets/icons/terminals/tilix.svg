@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Tilix">
+  <rect x="1.5" y="3.5" width="21" height="17" rx="2.2" fill="#2E3436"/>
+  <rect x="3.5" y="5.5" width="8" height="13" rx="0.6" fill="#3465A4"/>
+  <rect x="12.5" y="5.5" width="8" height="6" rx="0.6" fill="#729FCF"/>
+  <rect x="12.5" y="12.5" width="8" height="6" rx="0.6" fill="#204A87"/>
+</svg>

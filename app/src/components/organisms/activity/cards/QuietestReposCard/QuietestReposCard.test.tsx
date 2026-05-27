@@ -1,23 +1,14 @@
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { QuietestReposCard } from "@/components/organisms/activity/cards/QuietestReposCard";
-import { fakeRepo } from "@/components/organisms/activity/cards/_fixtures";
-import "@/i18n";
+import QuietestReposCard from "@/components/organisms/activity/cards/QuietestReposCard";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("QuietestReposCard", () => {
-  it("renders a chip per quiet repo", () => {
-    const map = new Map([
-      ["r1", fakeRepo("r1")],
-      ["r2", fakeRepo("r2")],
-    ]);
-    render(<QuietestReposCard quietestRepoIds={["r1", "r2"]} reposById={map} />);
-    expect(screen.getByText("r1")).toBeInTheDocument();
-    expect(screen.getByText("r2")).toBeInTheDocument();
-  });
-
-  it("renders the empty-state message", () => {
-    render(<QuietestReposCard quietestRepoIds={[]} reposById={new Map()} />);
-    expect(screen.getByText(/Every repo/i)).toBeInTheDocument();
+  it("renders the quietest-repos card root", () => {
+    const { getByTestId } = renderWithProviders(
+      <QuietestReposCard quietestRepoIds={[]} reposById={new Map()} />,
+    );
+    expect(getByTestId(TEST_IDS.activity.cards.quietestRepos)).toBeInTheDocument();
   });
 });

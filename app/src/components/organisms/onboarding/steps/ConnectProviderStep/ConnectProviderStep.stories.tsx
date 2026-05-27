@@ -1,21 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { OnboardingStepHarness } from "@/components/organisms/onboarding/_test-helpers";
-import { ConnectProviderStep } from "@/components/organisms/onboarding/steps/ConnectProviderStep";
+import ConnectProviderStep from "@/components/organisms/onboarding/steps/ConnectProviderStep";
 
 const meta: Meta<typeof ConnectProviderStep> = {
-  title: "Organisms/Onboarding/Steps/ConnectProviderStep",
+  title: "Organisms/Onboarding/ConnectProviderStep",
   component: ConnectProviderStep,
-  decorators: [
-    (Story) => (
-      <OnboardingStepHarness>
-        <Story />
-      </OnboardingStepHarness>
-    ),
-  ],
+  parameters: { layout: "centered" },
+  args: { onBack: () => undefined, onNext: () => undefined },
 };
 export default meta;
 
-export const Default: StoryObj<typeof ConnectProviderStep> = {
-  args: { onBack: () => {}, onNext: () => {} },
-};
+type Story = StoryObj<typeof ConnectProviderStep>;
+export const Default: Story = {};

@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 const EXPECTED_TABS = [
   "settings-tab-general",
@@ -14,17 +15,17 @@ const EXPECTED_TABS = [
 test.describe("app / settings", () => {
   test("Settings route renders the header + tab landmarks", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
-    await expect(page.getByTestId("app-header-title")).toBeVisible();
-    await expect(page.getByTestId("settings-tabs")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.header.title)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.tabs)).toBeVisible();
     for (const tabId of EXPECTED_TABS) {
       await expect(page.getByTestId(tabId)).toBeVisible();
     }
-    await expect(page.getByTestId("settings-panel-general")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.panel("general"))).toBeVisible();
   });
 
   test("clicking a tab switches the active panel", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
-    await page.getByTestId("settings-tab-about").click();
-    await expect(page.getByTestId("settings-panel-about")).toBeVisible();
+    await page.getByTestId(TEST_IDS.settings.tab("about")).click();
+    await expect(page.getByTestId(TEST_IDS.settings.panel("about"))).toBeVisible();
   });
 });

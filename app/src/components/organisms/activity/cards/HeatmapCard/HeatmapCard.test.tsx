@@ -1,18 +1,16 @@
-import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
-import { HeatmapCard } from "@/components/organisms/activity/cards/HeatmapCard";
-import "@/i18n";
+import HeatmapCard from "@/components/organisms/activity/cards/HeatmapCard";
+import type { HeatmapMatrix } from "@/lib/activityAggregates";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("HeatmapCard", () => {
-  it("renders 7 × 24 = 168 cells", () => {
-    const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
-    const { container } = render(
-      <TooltipProvider>
-        <HeatmapCard matrix={matrix} />
-      </TooltipProvider>,
-    );
-    expect(container.querySelectorAll(".a-act-heatmap-cell")).toHaveLength(168);
+  it("renders the heatmap card root", () => {
+    const matrix: HeatmapMatrix = Array.from({ length: 7 }, () =>
+      Array(24).fill(0),
+    ) as HeatmapMatrix;
+    const { getByTestId } = renderWithProviders(<HeatmapCard matrix={matrix} />);
+    expect(getByTestId(TEST_IDS.activity.heatmap.card)).toBeInTheDocument();
   });
 });

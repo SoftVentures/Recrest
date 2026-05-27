@@ -1,5 +1,7 @@
 import type { RecentCommit, Repository, RepositoryGroup, RepositoryStatus } from "@recrest/shared";
 
+import { daysAgo } from "@/lib/dev/seed/time";
+
 /**
  * Dev-stub repos, mirrored from `tests/src/helpers/seed/repos.ts`.
  * Only `Recrest` and `local-dev-stacks` are real project names — everything
@@ -10,9 +12,6 @@ import type { RecentCommit, Repository, RepositoryGroup, RepositoryStatus } from
  * regardless of when the dev server is started. Hard-coded ISO strings used
  * to drift outside the window once the calendar advanced past the seed date.
  */
-function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 86_400_000).toISOString();
-}
 
 export const SEED_GROUPS: Record<string, RepositoryGroup> = {
   "open-source": { id: "open-source", name: "Open Source", color: "#d97757" },
@@ -463,8 +462,46 @@ function emailFor(author: string): string | null {
   return AUTHOR_EMAILS[author] ?? null;
 }
 
+// Rotating commit summaries so each repo's history reads like real work rather
+// than three copies of "refactor: extract shared helpers". Picked by index so
+// the dataset stays deterministic across reloads.
+const COMMIT_SUMMARIES = [
+  "refactor: extract shared helpers",
+  "docs: README polish",
+  "fix: edge case in pagination",
+  "feat: add keyboard shortcut",
+  "chore: bump dev deps",
+  "test: cover error path",
+  "style: align spacing in header",
+  "perf: memoize expensive selector",
+  "feat: light/dark toggle",
+  "fix(a11y): aria-label on icon button",
+  "refactor: split util module",
+  "docs: changelog entry",
+] as const;
+
+const CO_AUTHORS = ["valentin", "maren", "tomi", "lea"] as const;
+
+// Spread commits across the 14-day window AND across varied weekday hours so
+// the heatmap/author-clock cards light up in multiple cells. Twelve commits
+// per repo × 8 repos ≈ 96 data points, enough for visible texture.
+const COMMIT_SCHEDULE: ReadonlyArray<{ days: number; hour: number; minute: number }> = [
+  { days: 0, hour: 10, minute: 12 },
+  { days: 1, hour: 14, minute: 38 },
+  { days: 2, hour: 9, minute: 5 },
+  { days: 3, hour: 16, minute: 27 },
+  { days: 4, hour: 11, minute: 51 },
+  { days: 5, hour: 17, minute: 8 },
+  { days: 6, hour: 13, minute: 33 },
+  { days: 7, hour: 20, minute: 15 },
+  { days: 8, hour: 8, minute: 47 },
+  { days: 10, hour: 15, minute: 22 },
+  { days: 11, hour: 12, minute: 4 },
+  { days: 13, hour: 18, minute: 41 },
+];
+
 export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEntries(
-  SEED_REPOS.map((repo) => {
+  SEED_REPOS.map((repo, repoIdx) => {
     const lc = repo.status.lastCommit;
     const commits: RecentCommit[] = lc
       ? [
@@ -479,26 +516,23 @@ export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEn
           },
         ]
       : [];
-    commits.push(
-      {
-        sha: `${repo.id.slice(-6)}0a`,
-        summary: "refactor: extract shared helpers",
-        author: lc?.author ?? "valentin",
-        authorEmail: emailFor(lc?.author ?? "valentin"),
-        timestamp: daysAgo(7),
+    for (let i = 0; i < COMMIT_SCHEDULE.length; i += 1) {
+      const slot = COMMIT_SCHEDULE[i]!;
+      const author = CO_AUTHORS[(repoIdx + i) % CO_AUTHORS.length]!;
+      const summary = COMMIT_SUMMARIES[(repoIdx * 3 + i) % COMMIT_SUMMARIES.length]!;
+      commits.push({
+        // `r{idx}c{i}` keeps shas unique across repos even when two repos share
+        // a tail in their id (`repo.id.slice(-6)` previously came close to
+        // colliding for similarly-named repos).
+        sha: `r${repoIdx}c${i.toString(16)}${repo.id.slice(-4)}`,
+        summary,
+        author,
+        authorEmail: emailFor(author),
+        timestamp: daysAgo(slot.days, slot.hour, slot.minute),
         repoId: repo.id,
         repoName: repo.name,
-      },
-      {
-        sha: `${repo.id.slice(-6)}1b`,
-        summary: "docs: README polish",
-        author: lc?.author ?? "valentin",
-        authorEmail: emailFor(lc?.author ?? "valentin"),
-        timestamp: daysAgo(11),
-        repoId: repo.id,
-        repoName: repo.name,
-      },
-    );
+      });
+    }
     return [repo.id, commits];
   }),
 );

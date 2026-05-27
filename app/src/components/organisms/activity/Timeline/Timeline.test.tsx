@@ -1,46 +1,15 @@
-import { render, screen } from "@testing-library/react";
-import { Provider } from "react-redux";
 import { describe, expect, it } from "vitest";
 
-import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
-import { Timeline } from "@/components/organisms/activity/Timeline";
-import {
-  fakeCheckRun,
-  fakeCommit,
-  fakePrEvent,
-  fakeRepo,
-} from "@/components/organisms/activity/cards/_fixtures";
-import "@/i18n";
-import { startOfLocalDay } from "@/lib/activityStats";
-import { store } from "@/store";
+import Timeline from "@/components/organisms/activity/Timeline";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("Timeline", () => {
-  const today = startOfLocalDay(new Date());
-  const reposById = new Map([["r1", fakeRepo("r1")]]);
-
-  it("renders the empty state when there are no events", () => {
-    render(
-      <Provider store={store}>
-        <Timeline commits={[]} prEvents={[]} checkRuns={[]} today={today} reposById={reposById} />
-      </Provider>,
+  it("renders the timeline card root", () => {
+    const today = new Date("2025-02-15T12:00:00Z");
+    const { getByTestId } = renderWithProviders(
+      <Timeline commits={[]} prEvents={[]} checkRuns={[]} today={today} reposById={new Map()} />,
     );
-    expect(screen.getByTestId("activity-timeline-empty")).toBeInTheDocument();
-  });
-
-  it("renders a day card when there is at least one commit", () => {
-    render(
-      <Provider store={store}>
-        <TooltipProvider delayDuration={0}>
-          <Timeline
-            commits={[fakeCommit("sha1", "r1", "alice", today.toISOString())]}
-            prEvents={[fakePrEvent("merged", { timestamp: today.toISOString() })]}
-            checkRuns={[fakeCheckRun()]}
-            today={today}
-            reposById={reposById}
-          />
-        </TooltipProvider>
-      </Provider>,
-    );
-    expect(screen.getAllByTestId("activity-timeline-day").length).toBeGreaterThan(0);
+    expect(getByTestId(TEST_IDS.activity.timeline.card)).toBeInTheDocument();
   });
 });

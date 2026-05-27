@@ -1,180 +1,236 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import ReactCountryFlag from "react-country-flag";
 import { useTranslation } from "react-i18next";
 
-import type { ThemeMode } from "@recrest/shared";
+import { MenuItem, type SelectChangeEvent } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-import { Button } from "@/components/atoms/Button";
-import { Label } from "@/components/atoms/Label";
-import { Switch } from "@/components/atoms/Switch";
+import { Layers, Monitor, Moon, Sparkles, Sun } from "lucide-react";
+
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/molecules/compounds/Dialog";
+  StepBody,
+  StepContent,
+  StepFooter,
+  StepHead,
+  StepRoot,
+  StepTitle,
+  Tile,
+  TileLabel,
+  TileLeft,
+  TileRight,
+  TileStack,
+  TileSub,
+} from "@/components/organisms/onboarding/steps/_shared";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { OnboardingStep } from "@/lib/constants/onboarding.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { type ThemeId } from "@/lib/constants/theme.constants";
+import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/molecules/compounds/Select";
-import i18n from "@/i18n";
-import { isTauri } from "@/lib/tauri";
-import { toast } from "@/lib/toast";
+  setDesktopAutoStart,
+  setDesktopCloseToTray,
+  setFollowsSystem,
+  setLocale,
+  setNotificationsEnabled,
+  setThemeId,
+} from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { saveSettings } from "@/store/slices/settingsSlice";
 
-interface Props {
+export interface BasicsStepProps {
   onBack: () => void;
   onNext: () => void;
 }
 
-export function BasicsStep({ onBack, onNext }: Props) {
-  const { t } = useTranslation("onboarding");
-  const dispatch = useAppDispatch();
-  const settings = useAppSelector((s) => s.settings);
-  const tauri = isTauri();
+type ThemeChoice = "system" | "light" | "dark" | "oled" | "glassy";
 
-  const save = async (patch: Record<string, unknown>) => {
-    try {
-      await dispatch(saveSettings(patch)).unwrap();
-    } catch {
-      toast.error(t("errors.internal", { ns: "errors" }));
-    }
+const THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled", "glassy"];
+
+const THEME_ICONS: Record<ThemeChoice, typeof Monitor> = {
+  system: Monitor,
+  light: Sun,
+  dark: Moon,
+  oled: Layers,
+  glassy: Sparkles,
+};
+
+interface LocaleEntry {
+  code: string;
+  label: string;
+  countryCode: string;
+}
+
+const LOCALES: LocaleEntry[] = [
+  { code: "en", label: "English", countryCode: "GB" },
+  { code: "de", label: "Deutsch", countryCode: "DE" },
+];
+
+const LocaleFlag = styled(ReactCountryFlag)({
+  marginRight: 8,
+  width: 16,
+  height: 12,
+  borderRadius: 2,
+  flexShrink: 0,
+  display: "inline-block",
+});
+
+function themeLabel(choice: ThemeChoice, t: (key: string) => string): string {
+  switch (choice) {
+    case "system":
+      return t("basics.theme_system");
+    case "light":
+      return t("basics.theme_light");
+    case "dark":
+      return t("basics.theme_dark");
+    case "oled":
+      return t("basics.theme_oled");
+    case "glassy":
+      return t("basics.theme_glassy");
+  }
+}
+
+function BasicsStep({ onBack, onNext }: BasicsStepProps) {
+  const { t, i18n } = useTranslation(I18nNamespace.ONBOARDING);
+  const dispatch = useAppDispatch();
+
+  const themeId = useAppSelector((s) => s.settings.themeId);
+  const followsSystem = useAppSelector((s) => s.settings.followsSystem);
+  const themeChoice: ThemeChoice = followsSystem ? "system" : themeId;
+  const autoStart = useAppSelector((s) => s.settings.desktop.autoStart);
+  const closeToTray = useAppSelector((s) => s.settings.desktop.closeToTray);
+  const notifEnabled = useAppSelector((s) => s.settings.notifications.enabled);
+
+  const onThemeChoice = (choice: ThemeChoice) => {
+    if (choice === "system") dispatch(setFollowsSystem(true));
+    else dispatch(setThemeId(choice as ThemeId));
+  };
+
+  const onLocaleChoice = (code: string) => {
+    void i18n.changeLanguage(code);
+    dispatch(setLocale(code));
   };
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{t("basics.title")}</DialogTitle>
-        <DialogDescription>{t("basics.body")}</DialogDescription>
-      </DialogHeader>
-
-      <div className="space-y-5">
-        {/* Theme */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="ob-theme">{t("basics.theme")}</Label>
-            <p className="text-xs text-muted-foreground">{t("basics.theme_desc")}</p>
-          </div>
-          <Select
-            value={settings.theme}
-            onValueChange={(v) => void save({ theme: v as ThemeMode })}
-          >
-            {/* W.1: widened so the longest German option ("Systemdesign") fits
-             *  without truncation. Width was sm:w-44 (~11rem), but
-             *  "Folge dem System" / "Systemstandard" need ~14rem. */}
-            <SelectTrigger id="ob-theme" className="sm:min-w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="min-w-[14rem]">
-              <SelectItem value="system">
-                <span className="inline-flex items-center gap-2">
-                  <Monitor className="h-3.5 w-3.5" aria-hidden />
-                  {t("theme.system", { ns: "settings" })}
-                </span>
-              </SelectItem>
-              <SelectItem value="light">
-                <span className="inline-flex items-center gap-2">
-                  <Sun className="h-3.5 w-3.5" aria-hidden />
-                  {t("theme.light", { ns: "settings" })}
-                </span>
-              </SelectItem>
-              <SelectItem value="dark">
-                <span className="inline-flex items-center gap-2">
-                  <Moon className="h-3.5 w-3.5" aria-hidden />
-                  {t("theme.dark", { ns: "settings" })}
-                </span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Language */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="ob-locale">{t("basics.language")}</Label>
-            <p className="text-xs text-muted-foreground">{t("basics.language_desc")}</p>
-          </div>
-          <Select
-            value={settings.locale}
-            onValueChange={(v) => {
-              void save({ locale: v });
-              void i18n.changeLanguage(v);
-            }}
-          >
-            <SelectTrigger id="ob-locale" className="sm:min-w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="min-w-[14rem]">
-              <SelectItem value="en">
-                {/* W.2: emoji flag prefix so the dropdown options aren't
-                 *  bare "English" / "Deutsch" rows. We pair with a sibling
-                 *  <span> rather than an <img> because we want to ship no
-                 *  binary asset — Unicode flag emoji render natively. */}
-                <span className="inline-flex items-center gap-2">
-                  <span aria-hidden>🇬🇧</span>
-                  English
-                </span>
-              </SelectItem>
-              <SelectItem value="de">
-                <span className="inline-flex items-center gap-2">
-                  <span aria-hidden>🇩🇪</span>
-                  Deutsch
-                </span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Desktop preferences — only relevant inside Tauri */}
-        {tauri && (
-          <>
-            <div className="flex items-start justify-between gap-6">
-              <div className="min-w-0 space-y-0.5">
-                <Label>{t("basics.auto_start")}</Label>
-                <p className="text-xs text-muted-foreground">{t("basics.auto_start_desc")}</p>
-              </div>
-              <Switch
-                checked={settings.autoStart}
-                onCheckedChange={(v) => void save({ autoStart: v })}
-              />
-            </div>
-
-            <div className="flex items-start justify-between gap-6">
-              <div className="min-w-0 space-y-0.5">
-                <Label>{t("basics.close_to_tray")}</Label>
-                <p className="text-xs text-muted-foreground">{t("basics.close_to_tray_desc")}</p>
-              </div>
-              <Switch
-                checked={settings.closeToTray}
-                onCheckedChange={(v) => void save({ closeToTray: v })}
-              />
-            </div>
-
-            <div className="flex items-start justify-between gap-6">
-              <div className="min-w-0 space-y-0.5">
-                <Label>{t("basics.notifications")}</Label>
-                <p className="text-xs text-muted-foreground">{t("basics.notifications_desc")}</p>
-              </div>
-              <Switch
-                checked={settings.notifications.enabled}
-                onCheckedChange={(v) =>
-                  void save({ notifications: { ...settings.notifications, enabled: v } })
+    <StepRoot data-testid={TEST_IDS.onboarding.step(OnboardingStep.BASICS)}>
+      <StepHead>
+        <StepTitle component="h1">{t("basics.title")}</StepTitle>
+        <StepBody component="p">{t("basics.body")}</StepBody>
+      </StepHead>
+      <StepContent>
+        <TileStack>
+          <Tile>
+            <TileLeft>
+              <TileLabel>{t("basics.theme")}</TileLabel>
+              <TileSub>{t("basics.theme_desc")}</TileSub>
+            </TileLeft>
+            <TileRight>
+              <SelectControl
+                size="small"
+                value={themeChoice}
+                onChange={(e: SelectChangeEvent<unknown>) =>
+                  onThemeChoice(e.target.value as ThemeChoice)
                 }
-              />
-            </div>
-          </>
-        )}
-      </div>
+                renderValue={(value) => {
+                  const c = value as ThemeChoice;
+                  const Icon = THEME_ICONS[c];
+                  return (
+                    <>
+                      <Icon size={13} />
+                      {themeLabel(c, t)}
+                    </>
+                  );
+                }}
+              >
+                {THEME_CHOICES.map((c) => {
+                  const Icon = THEME_ICONS[c];
+                  return (
+                    <MenuItem key={c} value={c}>
+                      <Icon size={13} style={{ marginRight: 8 }} />
+                      {themeLabel(c, t)}
+                    </MenuItem>
+                  );
+                })}
+              </SelectControl>
+            </TileRight>
+          </Tile>
 
-      <DialogFooter>
-        <Button variant="ghost" onClick={onBack}>
-          {t("welcome.back", { defaultValue: t("pickFolder.back") })}
-        </Button>
-        <Button onClick={onNext}>{t("basics.next")}</Button>
-      </DialogFooter>
-    </>
+          <Tile>
+            <TileLeft>
+              <TileLabel>{t("basics.language")}</TileLabel>
+              <TileSub>{t("basics.language_desc")}</TileSub>
+            </TileLeft>
+            <TileRight>
+              <SelectControl
+                size="small"
+                value={i18n.language.split("-")[0] ?? "en"}
+                onChange={(e: SelectChangeEvent<unknown>) =>
+                  onLocaleChoice(e.target.value as string)
+                }
+              >
+                {LOCALES.map((l) => (
+                  <MenuItem key={l.code} value={l.code}>
+                    <LocaleFlag countryCode={l.countryCode} svg aria-hidden />
+                    {l.label}
+                  </MenuItem>
+                ))}
+              </SelectControl>
+            </TileRight>
+          </Tile>
+
+          <Tile>
+            <TileLeft>
+              <TileLabel>{t("basics.auto_start")}</TileLabel>
+              <TileSub>{t("basics.auto_start_desc")}</TileSub>
+            </TileLeft>
+            <TileRight>
+              <GeneralSwitchInput
+                checked={autoStart}
+                onCheckedChange={(v) => dispatch(setDesktopAutoStart(v))}
+              />
+            </TileRight>
+          </Tile>
+
+          <Tile>
+            <TileLeft>
+              <TileLabel>{t("basics.close_to_tray")}</TileLabel>
+              <TileSub>{t("basics.close_to_tray_desc")}</TileSub>
+            </TileLeft>
+            <TileRight>
+              <GeneralSwitchInput
+                checked={closeToTray}
+                onCheckedChange={(v) => dispatch(setDesktopCloseToTray(v))}
+              />
+            </TileRight>
+          </Tile>
+
+          <Tile>
+            <TileLeft>
+              <TileLabel>{t("basics.notifications")}</TileLabel>
+              <TileSub>{t("basics.notifications_desc")}</TileSub>
+            </TileLeft>
+            <TileRight>
+              <GeneralSwitchInput
+                checked={notifEnabled}
+                onCheckedChange={(v) => dispatch(setNotificationsEnabled(v))}
+              />
+            </TileRight>
+          </Tile>
+        </TileStack>
+      </StepContent>
+      <StepFooter>
+        <GeneralButton
+          variant="ghost"
+          onClick={onBack}
+          data-testid={TEST_IDS.onboarding.basicsBack}
+        >
+          {t("welcome.back")}
+        </GeneralButton>
+        <GeneralButton onClick={onNext} data-testid={TEST_IDS.onboarding.basicsNext}>
+          {t("basics.next")}
+        </GeneralButton>
+      </StepFooter>
+    </StepRoot>
   );
 }
+
+export default BasicsStep;

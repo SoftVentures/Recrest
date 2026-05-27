@@ -185,11 +185,11 @@ Ergänzt zur Settings-Erweiterung in Plan 4 (Terminal-Wahl löst auch A.1 hier).
 
 ## Phase C — Git-Aktionen (Features)
 
-### C.1 Stage / Unstage einzelner Files
+### C.1 Stage / Unstage / Stash einzelner Files
 
-- **Symptom:** "Man soll stagen und unstagen können."
+- **Symptom:** "Man soll stagen und unstagen können." + "Schnell die uncommitteten Änderungen wegpacken können, ohne committen zu müssen — und später zurückholen."
 - **Neue Dateien:**
-  - `app/src-tauri/src/commands/git_index.rs` — `git_stage(repoId, paths)`, `git_unstage(repoId, paths)`, `git_discard(repoId, paths)`.
+  - `app/src-tauri/src/commands/git_index.rs` — `git_stage(repoId, paths)`, `git_unstage(repoId, paths)`, `git_discard(repoId, paths)`, `git_stash(repoId, message?)`, `git_stash_list(repoId)`, `git_stash_pop(repoId, index)`, `git_stash_drop(repoId, index)`.
   - `app/src/components/organisms/repos/WorkingCopyPanel/index.tsx` — UI.
 - **Bestehende Quellen:**
   - `app/src-tauri/src/git/status.rs:1-200` — `RepoStatusDto.changedFiles` mit `status: [Staged|Unstaged|Untracked|Conflicted]`.
@@ -203,12 +203,18 @@ Ergänzt zur Settings-Erweiterung in Plan 4 (Terminal-Wahl löst auch A.1 hier).
      - `git_discard`: **gefährlich** — zwei-Phasen-Approach:
        1. Tracked Files: `CheckoutBuilder::new().force().path(p)`, `Repository::checkout_head(Some(&mut builder))`.
        2. Untracked Files: `std::fs::remove_file(p)` **nur** wenn `repo.status_file(p)` `WT_NEW` zurückgibt UND der Pfad nicht ignoriert ist UND der File nicht in einer hardcoded-deny-Liste (`.env`, `.env.local`, `id_*`, `*.pem`) liegt. Bei deny-Match: Tauri-Result `RequiresUserConfirmation` → Frontend zeigt Confirmation-Dialog (siehe Plan 1 §D.3) der den Filename nennt.
+     - **Stash:**
+       - `git_stash`: `repo.stash_save2(&signature, message.as_deref(), Some(StashFlags::INCLUDE_UNTRACKED))`. Signature aus der Repo-Config (Fallback wie bei `git_commit`).
+       - `git_stash_list`: `repo.stash_foreach(|index, message, oid| …)` → `Vec<StashEntryDto { index, message, oid }>`.
+       - `git_stash_pop`: `repo.stash_pop(index, None)`; bei Merge-Konflikt den `git2`-Fehler als `CommandError::bad_request` mit klarer Message zurückgeben (Working-Tree dirty / Konflikt).
+       - `git_stash_drop`: `repo.stash_drop(index)`.
      - Alle Commands triggern `repo://status`-Refresh via existierendem Watcher.
      - **Hooks:** `git2` führt keine Hooks aus — siehe C.2 für die Diskussion.
   2. **Frontend:**
      - `WorkingCopyPanel` listet `changedFiles` mit Checkboxes (zwei Sektionen: Staged, Unstaged/Untracked).
      - Bulk-Actions "Stage all", "Unstage all", "Discard all" (mit Confirmation-Dialog).
      - Diff-Preview pro File via Hover/Click (Renderer aus C.5).
+     - Stash-Affordance: Button „Stash changes" + Dropdown der vorhandenen Stashes mit Pop/Drop. Pop/Drop sind destruktiv → bei aktivem „Confirm risky actions" (Plan 1 §D.3) Confirmation-Dialog.
      - Bei `RequiresUserConfirmation`: ConfirmDialog mit Liste der gefährdeten Dateien.
 - **Test:**
   - Rust-Unit mit Tmp-Repo (Pattern aus `git/scanner.rs` Tests — falls keine vorhanden, neu mit `tempfile`-crate):
@@ -217,7 +223,8 @@ Ergänzt zur Settings-Erweiterung in Plan 4 (Terminal-Wahl löst auch A.1 hier).
     - Discard tracked → reset auf HEAD.
     - Discard untracked `.env` → `RequiresUserConfirmation`.
     - Submodule-Pfad → kein descent.
-  - Component-Test mit Mock-Status.
+    - Stash dirty tree → tree clean; pop → Änderungen zurück; pop bei Konflikt → Fehler; drop entfernt Eintrag.
+  - Component-Test mit Mock-Status (inkl. Stash-Liste rendern, Pop/Drop-Confirmation).
   - E2E: File touch → stage → unstage.
 
 ### C.2 Commit-Aktion mit Default-Template

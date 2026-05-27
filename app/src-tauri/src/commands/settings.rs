@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 
 use crate::auth::token::TokenStore;
 use crate::config::settings::{
-    AppSettings, NotificationSettings, PrivacySettings, RepoImportDefaults, RepoListSort,
-    RepoListViewMode, TerminalSettings,
+    AccessibilitySettings, AppSettings, AppearanceSettings, NotificationSettings, PrivacySettings,
+    RepoImportDefaults, RepoListSort, RepoListViewMode, TerminalSettings, WindowStateSettings,
 };
 use crate::AppState;
 
@@ -54,6 +54,19 @@ pub struct SettingsPatch {
     pub terminal: Option<TerminalSettings>,
     pub commit_message_template: Option<String>,
     pub privacy: Option<PrivacySettings>,
+    // Phase 2 fields: the renderer now sends the full appearance / accessibility
+    // sub-structs (themeId, followsSystem, primaryColor, font, fontSize, etc.).
+    // These used to be dropped silently because the patch struct had no slot
+    // for them — every `setThemeId` round-trip then overwrote the optimistic
+    // update with the stale on-disk values, which was the cause of the
+    // "theme always reverts to system" regression in the Tauri build.
+    pub appearance: Option<AppearanceSettings>,
+    pub accessibility: Option<AccessibilitySettings>,
+    // Sidebar collapse + future window-state slots. Without this slot every
+    // `toggleSidebar` round-trip dropped the patch and the renderer's
+    // `hydrateUiFromBackend` rewound the optimistic update — visible in Tauri
+    // as the sidebar toggle "doing nothing" after one frame.
+    pub window_state: Option<WindowStateSettings>,
 }
 
 #[tauri::command]
@@ -133,6 +146,15 @@ pub async fn update_settings(
         }
         if let Some(value) = patch.privacy {
             settings.privacy = value;
+        }
+        if let Some(value) = patch.appearance {
+            settings.appearance = value;
+        }
+        if let Some(value) = patch.accessibility {
+            settings.accessibility = value;
+        }
+        if let Some(value) = patch.window_state {
+            settings.window_state = value;
         }
     }
     config.save(&app)?;

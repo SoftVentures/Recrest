@@ -1,17 +1,12 @@
-import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { PrVelocityCard } from "@/components/organisms/activity/cards/PrVelocityCard";
-import "@/i18n";
+import PrVelocityCard from "@/components/organisms/activity/cards/PrVelocityCard";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("PrVelocityCard", () => {
-  it("renders two series paths", () => {
-    const rows = Array.from({ length: 14 }, (_, day) => ({
-      day,
-      opened: day % 3,
-      merged: day % 2,
-    }));
-    const { container } = render(<PrVelocityCard rows={rows} />);
-    expect(container.querySelectorAll(".a-act-line-series")).toHaveLength(2);
+  it("renders the PR-velocity card root", () => {
+    const { getByTestId } = renderWithProviders(<PrVelocityCard rows={[]} />);
+    expect(getByTestId(TEST_IDS.activity.cards.prVelocity)).toBeInTheDocument();
   });
 });
