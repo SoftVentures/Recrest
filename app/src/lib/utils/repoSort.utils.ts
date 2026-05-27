@@ -1,4 +1,44 @@
+import type { RepoListSort, RepoListViewMode, RepoSortKey } from "@recrest/shared";
+
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+
+/** Page-local list view. `grouped`/`flat` both render the list; the backend
+ *  splits them so the grouped-vs-flat choice survives a restart. */
+export type RepoView = "list" | "card";
+
+/** Map a page `RepoSortKey` to the persisted `{ field, direction }` shape.
+ *  `default` (grouped, no explicit sort) maps to an empty field. */
+export function sortKeyToBackend(key: RepoSortKey): RepoListSort {
+  switch (key) {
+    case "name:asc":
+      return { field: "name", direction: "asc" };
+    case "name:desc":
+      return { field: "name", direction: "desc" };
+    case "lastModified:desc":
+      return { field: "lastModified", direction: "desc" };
+    case "status:asc":
+      return { field: "status", direction: "asc" };
+    case "default":
+    default:
+      return { field: "", direction: "asc" };
+  }
+}
+
+export function sortKeyFromBackend(sort: RepoListSort): RepoSortKey {
+  if (sort.field === "name") return sort.direction === "desc" ? "name:desc" : "name:asc";
+  if (sort.field === "lastModified") return "lastModified:desc";
+  if (sort.field === "status") return "status:asc";
+  return "default";
+}
+
+export function viewToBackend(view: RepoView, sort: RepoSortKey): RepoListViewMode {
+  if (view === "card") return "card";
+  return sort === "default" ? "grouped" : "flat";
+}
+
+export function viewFromBackend(mode: RepoListViewMode): RepoView {
+  return mode === "card" ? "card" : "list";
+}
 
 /**
  * Numeric rank for sorting repos by their working-tree state.

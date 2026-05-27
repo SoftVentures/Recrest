@@ -32,6 +32,7 @@
     "search_placeholder": "Search repositories, branches, MRs…",
     "find_across_repos": "Find across repositories",
     "open_in_ide": "Open in IDE",
+    "open_in_named_ide": "Open in {{ide}}",
     "open_terminal": "Open terminal",
     "open_platform": "Open on platform",
     "open_remote": "Open remote",
@@ -409,7 +410,9 @@
       "title": "Accounts",
       "intro": "Remotes you've signed in to.",
       "providers": "Providers",
-      "providers_sub": "Connect a Personal Access Token to list merge requests."
+      "providers_sub": "Connect a Personal Access Token to list merge requests.",
+      "ssh": "SSH key",
+      "ssh_sub": "Default private key for SSH remotes. A repository can override it in its detail view."
     },
     "integrations": {
       "title": "Integrations",
@@ -417,7 +420,9 @@
       "add": "Add scan path",
       "add_sub": "Recrest scans this folder and every sub-folder for git repositories.",
       "scan": "Scan sources",
-      "scan_sub": "Folders Recrest scans recursively for git repositories."
+      "scan_sub": "Folders Recrest scans recursively for git repositories.",
+      "set_default": "Set {{path}} as the default folder for new imports",
+      "default_badge": "Default"
     },
     "shortcuts": {
       "title": "Shortcuts",
@@ -525,6 +530,10 @@
       "disconnect": "Disconnect",
       "edit_base_url": "Change API base URL",
       "paste_here": "Paste the token you just created — we store it encrypted in your OS keychain.",
+      "ssh_key_label": "SSH key",
+      "ssh_key_edit": "Set SSH key",
+      "ssh_key_clear": "Use ssh-agent",
+      "ssh_key_hint": "Default private key for this provider's SSH remotes. A repository can override it in its detail view.",
       "required_scopes": "Required scopes",
       "save": "Save",
       "self_hosted": "Self-hosted",
@@ -532,6 +541,7 @@
       "status_disconnected": "Not connected",
       "token_placeholder": "Paste your personal access token"
     },
+    "saved": "Settings saved",
     "sections": {
       "desktop": "Desktop",
       "notifications": "Notifications",
@@ -606,6 +616,38 @@
     "test": "Test",
     "test_sent": "Test notification sent"
   },
+  "ssh": {
+    "title": "SSH key",
+    "description": "Override the SSH key for this repository's fetch/pull/push. Leave on ssh-agent to use the default key (set in Settings → Accounts) or your global config.",
+    "use_agent_option": "ssh-agent (default)",
+    "use_agent_sub": "Use your global SSH setup — no specific key",
+    "custom_key": "Custom key",
+    "browse": "Browse for a key…",
+    "key_set": "SSH key set for this repository",
+    "use_agent": "Using ssh-agent for this repository",
+    "failed": "Couldn't update SSH key",
+    "passphrase_placeholder": "Key passphrase (kept in memory only)",
+    "unlock": "Unlock",
+    "unlocked": "Passphrase stored for this session",
+    "test": "Test connection",
+    "test_ok": "Connection succeeded",
+    "test_fail": "Connection failed",
+    "guide": {
+      "trigger": "How do I create one?",
+      "title": "Create an SSH key",
+      "subtitle": "A quick one-time setup in your terminal.",
+      "step1_title": "1. Generate the key",
+      "step1_text": "Run this in a terminal and press Enter for the default location. When prompted, set a passphrase — it encrypts the private key on disk, so a stolen file alone is useless.",
+      "step2_title": "2. Copy your public key",
+      "step2_text": "Print the public half (the .pub file) — this is the only part you share.",
+      "step3_title": "3. Add it to your Git host",
+      "step3_text": "In GitHub/GitLab/Bitbucket open Settings → SSH keys and paste the public key. Then pick the private key above.",
+      "security": "Never share or paste the private key — that's the file without the .pub extension. Only the .pub half ever leaves your machine. Keep keys in ~/.ssh and prefer a passphrase.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "done": "Got it"
+    }
+  },
   "import": {
     "dest_placeholder": "Destination folder (/Users/you/Code)",
     "field": {
@@ -623,6 +665,7 @@
     "loading": "Loading repositories…",
     "no_results": "No repositories.",
     "pick_dest": "Pick a destination folder first.",
+    "remember_default": "Remember as import default",
     "providers_heading": "Providers",
     "search_placeholder": "Search repositories…",
     "tab": {

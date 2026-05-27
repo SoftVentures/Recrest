@@ -88,9 +88,11 @@ export const TEST_IDS = {
     },
     list: "repo-list",
     listEmpty: "repo-list-empty",
+    sortHeader: <T extends string>(col: T) => `repo-list-sort-${col}` as const,
     row: "repo-row",
     rowName: "repo-row-name",
     rowDelete: "repo-row-delete",
+    rowPinToggle: "repo-row-pin-toggle",
     card: "repo-card",
     cardName: "repo-card-name",
     detailPane: "detail-pane",
@@ -107,6 +109,24 @@ export const TEST_IDS = {
     sparkCell: "repo-detail-spark-cell",
     prRow: "repo-detail-pr-row",
     prDrawer: "repo-detail-pr-drawer",
+    ssh: {
+      trigger: "repo-ssh-trigger",
+      modal: "repo-ssh-modal",
+      passphrase: "repo-ssh-passphrase",
+      unlock: "repo-ssh-unlock",
+      test: "repo-ssh-test",
+    },
+  },
+
+  // Shared SSH key picker (used in Settings → Accounts and the RepoDetail SSH card).
+  ssh: {
+    field: "ssh-field",
+    option: <T extends string>(name: T) => `ssh-option-${name}` as const,
+    none: "ssh-option-none",
+    browse: "ssh-browse",
+    guideOpen: "ssh-guide-open",
+    guideModal: "ssh-guide-modal",
+    guideCopy: "ssh-guide-copy",
   },
 
   addRepoDialog: {
@@ -130,6 +150,8 @@ export const TEST_IDS = {
     bulkDestBrowse: "add-repo-bulk-dest-browse",
     import: "add-repo-import",
     rowCheckbox: "add-repo-row-checkbox",
+    providerItem: (id: string) => `add-repo-provider-${id}`,
+    rememberDefault: "add-repo-remember-default",
   },
 
   changes: {
@@ -234,6 +256,7 @@ export const TEST_IDS = {
       scanBrowse: "settings-scan-browse",
       scanAdd: "settings-scan-add",
       scanRemove: <T extends string>(path: T) => `settings-scan-remove-${path}` as const,
+      scanDefaultRadio: <T extends string>(path: T) => `settings-scan-default-${path}` as const,
     },
 
     developer: {

@@ -59,6 +59,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "f2e1d0c9b8a7",
@@ -91,6 +92,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "feat/compose-v2",
       head: "e11f3a9c2b88",
@@ -144,6 +146,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "77aa44bb11cc",
@@ -176,6 +179,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "gitlab",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "feat/home-v2",
       head: "4d5e6f7a8b9c",
@@ -257,6 +261,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "c0a7e2d5f9b1",
@@ -287,6 +292,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "wip/markdown-editor",
       head: "887ab0112233",
@@ -392,6 +398,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "55ee77ffaa22",
@@ -422,6 +429,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "bitbucket",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "ci/deps",
       head: "44bb66ddee99",

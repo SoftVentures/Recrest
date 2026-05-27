@@ -46,6 +46,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 keyring = { version = "3.5", features = ["apple-native", "windows-native", "linux-native"] }
 url = "2.5"
 dirs = "5.0"
+zeroize = "1"
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
@@ -89,6 +90,13 @@ block2 = "0.6"
 # image-path hint that dunst/Plasma/GNOME need to display the app logo
 # on toasts. The Tauri notification plugin doesn't expose those fields.
 notify-rust = { version = "4", features = [] }
+
+[dev-dependencies]
+# Phase 3 backend test harness: throwaway git repos + mocked provider HTTP.
+# `tokio` is already a normal dependency above with the macros/rt features
+# tests need, so it is not duplicated here.
+tempfile = "3"
+wiremock = "0.6"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

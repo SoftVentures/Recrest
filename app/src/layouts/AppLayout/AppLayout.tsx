@@ -6,6 +6,7 @@ import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import PageTransition from "@/components/atoms/transitions/PageTransition";
+import GeneralToaster from "@/components/molecules/feedback/GeneralToaster";
 import AddRepoModal from "@/components/molecules/modals/AddRepoModal";
 import OverallSearch from "@/components/organisms/OverallSearch";
 import UpdaterBanner from "@/components/organisms/banners/UpdaterBanner";
@@ -158,6 +159,7 @@ export function AppLayout() {
         open={findDialogOpen}
         onClose={() => dispatch(setFindDialogOpen(false))}
       />
+      <GeneralToaster />
     </AppFrame>
   );
 }

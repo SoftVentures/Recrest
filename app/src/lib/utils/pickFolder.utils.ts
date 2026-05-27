@@ -18,3 +18,20 @@ export async function pickFolder(defaultPath?: string): Promise<string | null> {
     return null;
   }
 }
+
+/** Native single-file picker (counterpart to {@link pickFolder}). Returns the
+ *  chosen absolute path or `null` when cancelled / outside Tauri. */
+export async function pickFile(defaultPath?: string): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const picked = await open({
+      directory: false,
+      multiple: false,
+      defaultPath: defaultPath || undefined,
+    });
+    return typeof picked === "string" ? picked : null;
+  } catch {
+    return null;
+  }
+}

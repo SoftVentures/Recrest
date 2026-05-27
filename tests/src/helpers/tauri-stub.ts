@@ -200,6 +200,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
           providerId: null,
           logoPath: null,
           logoDarkPath: null,
+          sshKeyPath: null,
           status: SEED.repos[0]?.status ?? null,
         };
         return repo;

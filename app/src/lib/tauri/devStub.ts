@@ -51,6 +51,7 @@ interface DevRepo {
   id: string;
   name: string;
   remoteUrl: string | null;
+  sshKeyPath?: string | null;
   status: { head?: string | null } & Record<string, unknown>;
 }
 
@@ -219,6 +220,7 @@ function installStub(seed: Required_<AppSeed>): void {
       path?: string;
       groupId?: string | null;
       days?: number;
+      keyPath?: string | null;
     };
 
     switch (cmd) {
@@ -239,6 +241,7 @@ function installStub(seed: Required_<AppSeed>): void {
           providerId: null,
           logoPath: null,
           logoDarkPath: null,
+          sshKeyPath: null,
           status: SEED.repos[0]?.status ?? null,
         };
         return repo;
@@ -589,6 +592,25 @@ function installStub(seed: Required_<AppSeed>): void {
       case "plugin:window|set_max_size":
       case "set_caption_button_bounds":
         return undefined;
+
+      case "set_repo_ssh_key": {
+        const idx = SEED.repos.findIndex((r) => r.id === a.repoId);
+        // Replace with a fresh object (not an in-place mutation) so the
+        // subsequent repo_status returns a new reference the store can detect —
+        // matching how the real backend round-trips a freshly serialized DTO.
+        if (idx >= 0) SEED.repos[idx] = { ...SEED.repos[idx]!, sshKeyPath: a.keyPath ?? null };
+        return undefined;
+      }
+      case "ssh_unlock_key":
+        return undefined;
+      case "list_ssh_keys":
+        return {
+          dir: "/Users/dev/.ssh",
+          keys: [
+            { path: "/Users/dev/.ssh/id_ed25519", name: "id_ed25519", hasPublic: true },
+            { path: "/Users/dev/.ssh/id_rsa", name: "id_rsa", hasPublic: true },
+          ],
+        };
 
       default:
         console.warn("[dev-tauri-stub] unhandled command:", cmd, args);

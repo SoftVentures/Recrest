@@ -15,6 +15,8 @@ export interface Repository {
    *  Null when the repo doesn't ship one. Fetch its bytes via `load_logo_bytes`. */
   logoPath: string | null;
   logoDarkPath: string | null;
+  /** Per-repo SSH private key path, or null for ssh-agent / global config. */
+  sshKeyPath: string | null;
 }
 
 export interface LogoBlob {

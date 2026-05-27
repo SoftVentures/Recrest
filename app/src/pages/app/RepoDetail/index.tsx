@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ExternalLink,
   Folder,
+  KeyRound,
   Plus,
   RefreshCw,
   Terminal as TerminalIcon,
@@ -28,12 +29,14 @@ import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
+import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
+import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import {
@@ -83,6 +86,10 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function RepoDetailPage() {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const ide = useDefaultIde();
+  const ideLabel = ide.name
+    ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
+    : tAria("actions.open_in_ide", { ns: I18nNamespace.COMMON });
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { repoId } = useParams<{ repoId: string }>();
@@ -98,6 +105,7 @@ export default function RepoDetailPage() {
   const [busy, setBusy] = useState<null | "pull" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [sshOpen, setSshOpen] = useState(false);
 
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
@@ -206,9 +214,12 @@ export default function RepoDetailPage() {
             </MetaRow>
           </HeaderBody>
           <HeaderActions>
-            <PrimaryBtn type="button" onClick={() => void runCmd(TauriCommand.OPEN_IN_IDE, "IDE")}>
-              <IdeIcon id="vscode" size={14} />
-              <Box component="span">Open in VS Code</Box>
+            <PrimaryBtn
+              type="button"
+              onClick={() => void runCmd(TauriCommand.OPEN_IN_IDE, ideLabel)}
+            >
+              <IdeIcon id={ide.iconId} size={14} color="currentColor" style={{ opacity: 1 }} />
+              <Box component="span">{ideLabel}</Box>
             </PrimaryBtn>
             <IconOnlyBtn
               type="button"
@@ -220,7 +231,7 @@ export default function RepoDetailPage() {
             <IconOnlyBtn
               type="button"
               aria-label={tAria("repo.open_folder")}
-              onClick={() => void runCmd(TauriCommand.OPEN_IN_EXPLORER, "Explorer")}
+              onClick={() => void revealPathInSystem(repo.path)}
             >
               <Folder size={14} />
             </IconOnlyBtn>
@@ -231,6 +242,14 @@ export default function RepoDetailPage() {
               onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
             >
               {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
+            </IconOnlyBtn>
+            <IconOnlyBtn
+              type="button"
+              aria-label={tAria("repo.ssh_key")}
+              data-testid={TEST_IDS.repoDetail.ssh.trigger}
+              onClick={() => setSshOpen(true)}
+            >
+              <KeyRound size={14} />
             </IconOnlyBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
               <ArrowDown size={13} />
@@ -385,6 +404,13 @@ export default function RepoDetailPage() {
         open={branchDialogOpen}
         repoId={repo.id}
         onClose={() => setBranchDialogOpen(false)}
+      />
+
+      <RepoSshModal
+        open={sshOpen}
+        repoId={repo.id}
+        sshKeyPath={repo.sshKeyPath}
+        onClose={() => setSshOpen(false)}
       />
     </Root>
   );

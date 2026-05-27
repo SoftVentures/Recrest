@@ -50,6 +50,13 @@ export const Footer = styled(Box)(({ theme }) => ({
   flexShrink: 0,
 })) as typeof Box;
 
+export const RememberToggle = styled(Box)({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  marginRight: "auto",
+}) as typeof Box;
+
 export const Field = styled(Box)({
   display: "flex",
   flexDirection: "column",

@@ -41,10 +41,16 @@ export const CardTop = styled(Box)({
   gap: 8,
 }) as typeof Box;
 
-export const Actions = styled(Box)({
+export const Actions = styled(Box)(({ theme }) => ({
   display: "flex",
-  gap: 4,
-}) as typeof Box;
+  alignItems: "center",
+  gap: 2,
+  padding: 3,
+  borderRadius: 8,
+  backgroundColor: theme.palette.surface.interface.base,
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 6px -2px rgba(0, 0, 0, 0.08)",
+})) as typeof Box;
 
 export const Body = styled(Box)({
   display: "flex",

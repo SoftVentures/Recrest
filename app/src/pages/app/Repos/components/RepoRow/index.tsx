@@ -1,58 +1,42 @@
-import { type KeyboardEvent, type MouseEvent, useState } from "react";
+import { type KeyboardEvent, type MouseEvent } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
-import { TauriCommand, type TauriCommandName } from "@recrest/shared";
+import { GitBranch, Pin } from "lucide-react";
 
-import {
-  Copy,
-  ExternalLink,
-  Folder,
-  GitBranch,
-  MoreHorizontal,
-  Pin,
-  Terminal as TerminalLucide,
-  Trash2,
-  X,
-} from "lucide-react";
-import { toast } from "sonner";
-
-import BrandIcon from "@/assets/icons/BrandIcon";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
-import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
-import OpenInIdeButton from "@/components/atoms/buttons/OpenInIdeButton";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import GeneralIconButton, {
+  IconButtonSize,
+  IconButtonTone,
+  IconButtonVariant,
+} from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
-import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal } from "@/lib/tauri";
-import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import { RepoActions } from "@/pages/app/Repos/components/RepoActions";
 import {
   Actions,
   ActivityCell,
   BranchCell,
   BranchChip,
   BranchText,
-  DangerMenuIcon,
-  DangerMenuItem,
   Diff,
   FilesMeta,
   Name,
   NameCell,
   Path,
+  PinSlot,
   Row,
   StatusCell,
   StatusText,
   TextCol,
 } from "@/pages/app/Repos/components/RepoRow/RepoRow.styles";
-import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
 
@@ -69,71 +53,12 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
   const dirty = !!repo.status.dirty;
   const ahead = repo.status.ahead;
   const behind = repo.status.behind;
-  const brand = brandFromUrl(repo.remoteUrl);
-
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | null>(null);
 
   const stop = (e: MouseEvent) => e.stopPropagation();
 
-  const runCommand = async (cmd: TauriCommandName, label: string) => {
-    if (!isTauri()) return;
-    try {
-      await invoke(cmd, { repoId: repo.id });
-    } catch {
-      toast.error(`${label} failed`);
-    }
-  };
-
-  const onOpenTerminal = () => void runCommand(TauriCommand.OPEN_TERMINAL, "Terminal");
-  const onOpenExplorer = () => void runCommand(TauriCommand.OPEN_IN_EXPLORER, "Explorer");
-  const onOpenRemote = () => {
-    if (repo.remoteUrl) {
-      void openExternal(repo.remoteUrl);
-    } else {
-      toast.error("No remote configured");
-    }
-  };
-
-  const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
+  const onInlinePin = (e: MouseEvent) => {
     e.stopPropagation();
-    setMenuAnchor(e.currentTarget);
-  };
-  const closeMenu = () => setMenuAnchor(null);
-
-  const onCopyPath = async () => {
-    closeMenu();
-    try {
-      await navigator.clipboard.writeText(repo.path);
-      toast.success("Path copied");
-    } catch {
-      toast.error("Couldn't copy");
-    }
-  };
-
-  const onTogglePin = () => {
-    closeMenu();
     dispatch(togglePinnedRepo(repo.id));
-  };
-
-  const onConfirmForget = async () => {
-    setConfirmKind(null);
-    try {
-      await dispatch(removeRepo(repo.id)).unwrap();
-      toast.success(`${repo.name} removed`);
-    } catch {
-      toast.error("Forget failed");
-    }
-  };
-  const onConfirmDelete = async () => {
-    setConfirmKind(null);
-    try {
-      await dispatch(deleteRepo(repo.id)).unwrap();
-      toast.success(`${repo.name} moved to trash`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Delete failed: ${msg}`);
-    }
   };
 
   return (
@@ -153,6 +78,17 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       }}
     >
       <NameCell>
+        <PinSlot data-pin-slot data-pinned={repo.pinned ? "true" : undefined}>
+          <GeneralIconButton
+            size={IconButtonSize.XS}
+            variant={IconButtonVariant.GHOST}
+            tone={repo.pinned ? IconButtonTone.PRIMARY : IconButtonTone.NEUTRAL}
+            aria-label={repo.pinned ? tAria("repo.unpin") : tAria("repo.pin")}
+            data-testid={TEST_IDS.repos.rowPinToggle}
+            onClick={onInlinePin}
+            icon={<Pin size={13} />}
+          />
+        </PinSlot>
         <RepoAvatar repo={repo} size={28} radius={6} />
         <TextCol>
           <Name data-testid={TEST_IDS.repos.rowName}>{repo.name}</Name>
@@ -202,108 +138,8 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       </ActivityCell>
 
       <Actions onClick={stop}>
-        <OpenInIdeButton repoId={repo.id} />
-        <GeneralTooltip title="Open in Terminal" placement="top">
-          <GeneralIconButton
-            size={IconButtonSize.MD}
-            aria-label={tAria("repo.open_in_terminal")}
-            onClick={onOpenTerminal}
-            icon={<TerminalLucide size={15} />}
-          />
-        </GeneralTooltip>
-        <GeneralTooltip
-          title={repo.remoteUrl ? "Open on host" : "No remote configured"}
-          placement="top"
-        >
-          <GeneralIconButton
-            size={IconButtonSize.MD}
-            aria-label={tAria("repo.open_remote")}
-            onClick={onOpenRemote}
-            disabled={!repo.remoteUrl}
-            icon={brand ? <BrandIcon slug={brand} size={16} /> : <ExternalLink size={15} />}
-          />
-        </GeneralTooltip>
-        <GeneralTooltip title="Open in Explorer" placement="top">
-          <GeneralIconButton
-            size={IconButtonSize.MD}
-            aria-label={tAria("repo.open_in_explorer")}
-            onClick={onOpenExplorer}
-            icon={<Folder size={15} />}
-          />
-        </GeneralTooltip>
-        <GeneralTooltip title="More" placement="top">
-          <GeneralIconButton
-            size={IconButtonSize.MD}
-            aria-label={tAria("repo.more_actions")}
-            onClick={openMenu}
-            icon={<MoreHorizontal size={15} />}
-          />
-        </GeneralTooltip>
+        <RepoActions repo={repo} iconSize={IconButtonSize.MD} />
       </Actions>
-
-      <Menu
-        anchorEl={menuAnchor}
-        open={!!menuAnchor}
-        onClose={closeMenu}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-        onClick={stop}
-      >
-        <MenuItem onClick={onTogglePin}>
-          <ListItemIcon>
-            <Pin size={13} />
-          </ListItemIcon>
-          <ListItemText>{repo.pinned ? "Unpin" : "Pin"}</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => void onCopyPath()}>
-          <ListItemIcon>
-            <Copy size={13} />
-          </ListItemIcon>
-          <ListItemText>Copy path</ListItemText>
-        </MenuItem>
-        <DangerMenuItem
-          onClick={() => {
-            closeMenu();
-            setConfirmKind("forget");
-          }}
-        >
-          <DangerMenuIcon>
-            <X size={13} />
-          </DangerMenuIcon>
-          <ListItemText>Forget (keeps folder)</ListItemText>
-        </DangerMenuItem>
-        <DangerMenuItem
-          onClick={() => {
-            closeMenu();
-            setConfirmKind("delete");
-          }}
-          data-testid={TEST_IDS.repos.rowDelete}
-        >
-          <DangerMenuIcon>
-            <Trash2 size={13} />
-          </DangerMenuIcon>
-          <ListItemText>Delete from disk…</ListItemText>
-        </DangerMenuItem>
-      </Menu>
-
-      <ConfirmationModal
-        open={confirmKind === "forget"}
-        title={`Forget "${repo.name}"?`}
-        description="Recrest stops tracking this repository. The folder stays on disk — you can re-add it any time."
-        confirmLabel="Forget"
-        destructive
-        onCancel={() => setConfirmKind(null)}
-        onConfirm={() => void onConfirmForget()}
-      />
-      <ConfirmationModal
-        open={confirmKind === "delete"}
-        title={`Delete "${repo.name}" from disk?`}
-        description={`Moves "${repo.path}" to your system trash and stops Recrest from tracking it. You can restore from trash.`}
-        confirmLabel="Move to Trash"
-        destructive
-        onCancel={() => setConfirmKind(null)}
-        onConfirm={() => void onConfirmDelete()}
-      />
     </Row>
   );
 }

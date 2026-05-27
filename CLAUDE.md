@@ -77,4 +77,4 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 ## Known scope gaps (not bugs)
 
 - OAuth is scaffolded; MVP ships PAT-only auth.
-- GitLab/Bitbucket providers return `not yet implemented` errors from `list_pull_requests`.
+- GitLab/Bitbucket providers implement PR list/detail, repos, and orgs/groups/workspaces; remaining provider depth (diffs, comments, workflows, pages) is tracked in `docs/plans/03/`.

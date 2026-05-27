@@ -8,6 +8,7 @@ pub mod oauth;
 pub mod process;
 pub mod remote_import;
 pub mod search;
+pub mod ssh;
 pub mod ide;
 pub mod providers;
 pub mod repos;

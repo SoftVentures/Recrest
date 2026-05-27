@@ -32,6 +32,7 @@
     "search_placeholder": "Repos, Branches, MRs durchsuchen…",
     "find_across_repos": "Repo-übergreifend suchen",
     "open_in_ide": "In IDE öffnen",
+    "open_in_named_ide": "In {{ide}} öffnen",
     "open_terminal": "Terminal öffnen",
     "open_platform": "Auf Plattform öffnen",
     "open_remote": "Remote öffnen",
@@ -409,7 +410,9 @@
       "title": "Konten",
       "intro": "Remotes, bei denen du angemeldet bist.",
       "providers": "Anbieter",
-      "providers_sub": "Verbinde einen Personal Access Token, um Merge Requests anzuzeigen."
+      "providers_sub": "Verbinde einen Personal Access Token, um Merge Requests anzuzeigen.",
+      "ssh": "SSH-Key",
+      "ssh_sub": "Standard-Private-Key für SSH-Remotes. Ein Repository kann ihn in seiner Detailansicht überschreiben."
     },
     "integrations": {
       "title": "Integrationen",
@@ -417,7 +420,9 @@
       "add": "Scan-Pfad hinzufügen",
       "add_sub": "Recrest durchsucht diesen Ordner und alle Unterordner nach Git-Repositories.",
       "scan": "Scan-Quellen",
-      "scan_sub": "Ordner, die Recrest rekursiv nach Git-Repositories durchsucht."
+      "scan_sub": "Ordner, die Recrest rekursiv nach Git-Repositories durchsucht.",
+      "set_default": "{{path}} als Standardordner für neue Importe festlegen",
+      "default_badge": "Standard"
     },
     "shortcuts": {
       "title": "Shortcuts",
@@ -525,6 +530,10 @@
       "disconnect": "Trennen",
       "edit_base_url": "API-Basis-URL ändern",
       "paste_here": "Füge den eben erstellten Token ein — wir speichern ihn verschlüsselt im Schlüsselbund.",
+      "ssh_key_label": "SSH-Key",
+      "ssh_key_edit": "SSH-Key festlegen",
+      "ssh_key_clear": "ssh-agent verwenden",
+      "ssh_key_hint": "Standard-Private-Key für die SSH-Remotes dieses Anbieters. Ein Repository kann ihn in seiner Detailansicht überschreiben.",
       "required_scopes": "Benötigte Scopes",
       "save": "Speichern",
       "self_hosted": "Selbst gehostet",
@@ -532,6 +541,7 @@
       "status_disconnected": "Nicht verbunden",
       "token_placeholder": "Personal Access Token einfügen"
     },
+    "saved": "Einstellungen gespeichert",
     "sections": {
       "desktop": "Desktop",
       "notifications": "Benachrichtigungen",
@@ -606,6 +616,38 @@
     "test": "Test",
     "test_sent": "Test-Benachrichtigung gesendet"
   },
+  "ssh": {
+    "title": "SSH-Key",
+    "description": "SSH-Key für Fetch/Pull/Push dieses Repositories überschreiben. Ohne Auswahl wird der Standard-Key (Einstellungen → Accounts) bzw. ssh-agent / die globale Konfiguration genutzt.",
+    "use_agent_option": "ssh-agent (Standard)",
+    "use_agent_sub": "Globale SSH-Konfiguration nutzen — kein bestimmter Key",
+    "custom_key": "Eigener Key",
+    "browse": "Key auswählen…",
+    "key_set": "SSH-Key für dieses Repository gesetzt",
+    "use_agent": "ssh-agent wird für dieses Repository genutzt",
+    "failed": "SSH-Key konnte nicht aktualisiert werden",
+    "passphrase_placeholder": "Key-Passphrase (nur im Arbeitsspeicher)",
+    "unlock": "Entsperren",
+    "unlocked": "Passphrase für diese Sitzung gespeichert",
+    "test": "Verbindung testen",
+    "test_ok": "Verbindung erfolgreich",
+    "test_fail": "Verbindung fehlgeschlagen",
+    "guide": {
+      "trigger": "Wie erstelle ich einen?",
+      "title": "SSH-Key erstellen",
+      "subtitle": "Eine kurze einmalige Einrichtung im Terminal.",
+      "step1_title": "1. Key generieren",
+      "step1_text": "Im Terminal ausführen und mit Enter den Standardpfad bestätigen. Wenn gefragt, eine Passphrase vergeben — sie verschlüsselt den Private Key auf der Platte, sodass eine gestohlene Datei allein nutzlos ist.",
+      "step2_title": "2. Public Key kopieren",
+      "step2_text": "Den öffentlichen Teil (die .pub-Datei) ausgeben — nur diesen Teil gibst du weiter.",
+      "step3_title": "3. Beim Git-Host hinterlegen",
+      "step3_text": "In GitHub/GitLab/Bitbucket unter Einstellungen → SSH-Keys den Public Key einfügen. Dann oben den Private Key auswählen.",
+      "security": "Den Private Key niemals weitergeben oder einfügen — das ist die Datei ohne .pub-Endung. Nur der .pub-Teil verlässt je deinen Rechner. Keys in ~/.ssh lassen und möglichst eine Passphrase nutzen.",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "done": "Verstanden"
+    }
+  },
   "import": {
     "dest_placeholder": "Zielordner (/Users/du/Code)",
     "field": {
@@ -623,6 +665,7 @@
     "loading": "Repositories werden geladen…",
     "no_results": "Keine Repositories.",
     "pick_dest": "Wähle zuerst einen Zielordner aus.",
+    "remember_default": "Als Import-Standard merken",
     "providers_heading": "Anbieter",
     "search_placeholder": "Repositories suchen…",
     "tab": {

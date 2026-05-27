@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import BrandIcon from "@/assets/icons/BrandIcon";
 import GeneralAvatar from "@/components/atoms/avatars/GeneralAvatar";
 import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
+import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import {
   AsideHeading,
   AsideIcon,
@@ -36,8 +37,10 @@ import RepoRowCard from "@/components/molecules/modals/AddRepoModal/panels/Provi
 import {
   BrowseBtn,
   Footer,
+  Hint,
   Input,
   PrimaryBtn,
+  RememberToggle,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -52,6 +55,7 @@ import {
   fetchRemoteRepositories,
 } from "@/store/actions/remoteImport.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
+import { saveSettings } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { keyFor } from "@/store/types/remoteImport.types";
 
@@ -78,13 +82,25 @@ function gradientForOrg(id: string): readonly [string, string] {
 export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelProps) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const importDefaults = useAppSelector((s) => s.settings.backend?.repoImportDefaults);
+  const defaultProvider =
+    importDefaults?.providerId &&
+    connectedProviders.includes(importDefaults.providerId as ProviderId)
+      ? (importDefaults.providerId as ProviderId)
+      : null;
   const [activeProvider, setActiveProvider] = useState<ProviderId | null>(
-    connectedProviders[0] ?? null,
+    defaultProvider ?? connectedProviders[0] ?? null,
   );
-  const [activeOrg, setActiveOrg] = useState<string | null>(null);
+  const [activeOrg, setActiveOrg] = useState<string | null>(
+    defaultProvider ? (importDefaults?.groupId ?? null) : null,
+  );
+  const [rememberDefault, setRememberDefault] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [destination, setDestination] = useState("");
+  const defaultDest = useAppSelector(
+    (s) => s.settings.backend?.defaultScanPath ?? s.repos.scanPaths[0] ?? "",
+  );
+  const [destination, setDestination] = useState(defaultDest);
   const [cloning, setCloning] = useState(false);
 
   useEffect(() => {
@@ -171,6 +187,12 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
       }));
     if (requests.length === 0) return;
 
+    if (rememberDefault && activeProvider) {
+      void dispatch(
+        saveSettings({ repoImportDefaults: { providerId: activeProvider, groupId: activeOrg } }),
+      );
+    }
+
     setCloning(true);
     try {
       const outcomes = await dispatch(cloneRemoteRepositoriesBulk(requests)).unwrap();
@@ -222,6 +244,8 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             <AsideItem
               type="button"
               active={activeProvider === id && activeOrg === null}
+              data-testid={TEST_IDS.addRepoDialog.providerItem(id)}
+              data-active={activeProvider === id && activeOrg === null ? "true" : undefined}
               onClick={() => {
                 setActiveProvider(id);
                 setActiveOrg(null);
@@ -361,6 +385,15 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
         </RepoListScroll>
 
         <Footer>
+          <RememberToggle>
+            <GeneralSwitchInput
+              checked={rememberDefault}
+              onCheckedChange={setRememberDefault}
+              data-testid={TEST_IDS.addRepoDialog.rememberDefault}
+              slotProps={{ input: { "aria-label": t("import.remember_default") } }}
+            />
+            <Hint component="span">{t("import.remember_default")}</Hint>
+          </RememberToggle>
           <Input
             type="text"
             value={destination}

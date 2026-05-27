@@ -1,4 +1,8 @@
 fn main() {
+    // `attrs` is only reassigned on Windows (the debug-icon override below);
+    // on other platforms the binding is never mutated, so silence the
+    // unused-mut lint off-Windows while keeping `mut` valid for the Windows path.
+    #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
     let mut attrs = tauri_build::Attributes::new();
 
     // Debug builds (`tauri:dev`) embed the orange dev icon as the Windows

@@ -34,6 +34,9 @@
   },
   "repo": {
     "open_in_ide": "In IDE öffnen",
+    "ssh_key": "SSH-Key",
+    "pin": "Repository anheften",
+    "unpin": "Repository lösen",
     "open_in_terminal": "Im Terminal öffnen",
     "open_in_explorer": "Im Explorer öffnen",
     "open_remote": "Remote öffnen",

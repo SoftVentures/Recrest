@@ -28,6 +28,24 @@ export const refreshRepoStatus = createAsyncThunk<Repository, RepositoryId>(
   async (repoId) => invoke<Repository>(TauriCommand.REPO_STATUS, { repoId }),
 );
 
+/** Persists (or clears, when `keyPath` is null) the per-repo SSH key and
+ *  returns the refreshed repo so the store reflects the new `sshKeyPath`. */
+export const setRepoSshKey = createAsyncThunk<
+  Repository,
+  { repoId: RepositoryId; keyPath: string | null }
+>("repos/setSshKey", async ({ repoId, keyPath }) => {
+  await invoke<void>(TauriCommand.SET_REPO_SSH_KEY, { repoId, keyPath });
+  return invoke<Repository>(TauriCommand.REPO_STATUS, { repoId });
+});
+
+/** Caches the SSH key passphrase for this repo for the current session. */
+export const sshUnlockKey = createAsyncThunk<void, { repoId: RepositoryId; passphrase: string }>(
+  "repos/sshUnlock",
+  async ({ repoId, passphrase }) => {
+    await invoke<void>(TauriCommand.SSH_UNLOCK_KEY, { repoId, passphrase });
+  },
+);
+
 export const addRepo = createAsyncThunk<Repository, { path: string; groupId?: string | null }>(
   "repos/add",
   async ({ path, groupId }) =>

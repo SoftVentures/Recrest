@@ -56,9 +56,25 @@ export interface PrivacySettings {
   fetchFavicons: boolean;
 }
 
+export interface SshKeyInfo {
+  path: string;
+  name: string;
+  hasPublic: boolean;
+}
+
+export interface SshKeyListing {
+  dir: string | null;
+  keys: SshKeyInfo[];
+}
+
 export interface RepoImportDefaults {
   groupId: string | null;
   providerId: string | null;
+}
+
+export interface GitConfigOverride {
+  userName: string | null;
+  userEmail: string | null;
 }
 
 export interface TerminalSettings {
@@ -99,8 +115,14 @@ export interface AppSettings {
   repoImportDefaults: RepoImportDefaults;
   defaultScanPath: string | null;
   terminal: TerminalSettings;
+  /** Preferred shell id (e.g. `zsh`, `fish`) or null for auto. */
+  shell: string | null;
   commitMessageTemplate: string;
   privacy: PrivacySettings;
+  /** Global default SSH private key path for all SSH remotes. A repo's own
+   *  `sshKeyPath` overrides it; otherwise it's tried before ssh-agent. */
+  defaultSshKeyPath: string | null;
+  gitConfigOverride: GitConfigOverride;
 
   // ---- Phase 2: renderer-scoped preferences moved off localStorage ----
   appearance: AppearanceSettings;

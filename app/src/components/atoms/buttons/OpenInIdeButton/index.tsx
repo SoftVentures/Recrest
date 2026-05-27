@@ -8,6 +8,7 @@ import IdeIcon from "@/assets/icons/IdeIcon";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import type { IdeId } from "@/lib/constants/ides.constants";
 import { invoke, isTauri } from "@/lib/tauri";
@@ -24,11 +25,11 @@ export type OpenInIdeVariant = (typeof OpenInIdeVariant)[keyof typeof OpenInIdeV
 export interface OpenInIdeButtonProps {
   repoId: string;
   variant?: OpenInIdeVariant;
-  /** IDE slug used by `IdeIcon`. Defaults to `vscode` until the settings-driven
-   *  IDE preference is wired through; passing this explicitly overrides it. */
+  /** IDE slug used by `IdeIcon`. Defaults to the user's chosen default IDE from
+   *  settings (via {@link useDefaultIde}); passing this explicitly overrides it. */
   ideId?: IdeId;
   /** Label shown in tooltip (icon variant) or as button text (button variant).
-   *  Defaults to the i18n key `actions.open_in_ide`. */
+   *  Defaults to "Open in {selected IDE}", or a generic "Open in IDE" on auto. */
   label?: string;
   iconSize?: IconButtonSize;
   className?: string;
@@ -38,14 +39,20 @@ export interface OpenInIdeButtonProps {
 function OpenInIdeButton({
   repoId,
   variant = OpenInIdeVariant.ICON,
-  ideId = "vscode",
+  ideId,
   label,
   iconSize = IconButtonSize.MD,
   className,
   "data-testid": testId,
 }: OpenInIdeButtonProps) {
   const { t } = useTranslation();
-  const resolvedLabel = label ?? t("actions.open_in_ide");
+  const defaultIde = useDefaultIde();
+  const effectiveIdeId = ideId ?? defaultIde.iconId;
+  const resolvedLabel =
+    label ??
+    (defaultIde.name
+      ? t("actions.open_in_named_ide", { ide: defaultIde.name })
+      : t("actions.open_in_ide"));
 
   const onClick = async () => {
     if (!isTauri()) return;
@@ -63,7 +70,7 @@ function OpenInIdeButton({
         onClick={() => void onClick()}
         className={className}
         data-testid={testId}
-        startIcon={<IdeIcon id={ideId} size={14} />}
+        startIcon={<IdeIcon id={effectiveIdeId} size={14} />}
       >
         {resolvedLabel}
       </GeneralButton>
@@ -76,7 +83,7 @@ function OpenInIdeButton({
         size={iconSize}
         aria-label={t("repo.open_in_ide", { ns: I18nNamespace.ARIA, defaultValue: resolvedLabel })}
         onClick={() => void onClick()}
-        icon={<IdeIcon id={ideId} size={16} color="brand" />}
+        icon={<IdeIcon id={effectiveIdeId} size={16} color="brand" />}
         className={className}
         data-testid={testId}
       />

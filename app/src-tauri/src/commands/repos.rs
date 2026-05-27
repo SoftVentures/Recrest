@@ -28,6 +28,8 @@ pub struct RepoDto {
     /// The frontend fetches its bytes on demand via `load_logo_bytes`.
     pub logo_path: Option<String>,
     pub logo_dark_path: Option<String>,
+    /// Per-repo SSH private key path, or `None` for ssh-agent / global config.
+    pub ssh_key_path: Option<String>,
 }
 
 impl RepoDto {
@@ -43,6 +45,7 @@ impl RepoDto {
             status,
             logo_path: logos.light.map(|p| p.to_string_lossy().to_string()),
             logo_dark_path: logos.dark.map(|p| p.to_string_lossy().to_string()),
+            ssh_key_path: record.ssh_key_path.clone(),
         }
     }
 }
@@ -504,6 +507,7 @@ pub async fn open_terminal(
         .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
         .path
         .clone();
+    let terminal = config.settings().terminal.clone();
     drop(config);
-    crate::commands::terminal::open_at(&record_path)
+    crate::commands::terminal::open_at(&record_path, &terminal)
 }

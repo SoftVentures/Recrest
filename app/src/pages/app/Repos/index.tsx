@@ -26,7 +26,15 @@ import type { RepoSortKey } from "@/lib/constants/sortKeys.constants";
 import type { RepoStatusChip } from "@/lib/constants/statusChips.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { lastCommitTime, statusRank } from "@/lib/utils/repoSort.utils";
+import {
+  type RepoView,
+  lastCommitTime,
+  sortKeyFromBackend,
+  sortKeyToBackend,
+  statusRank,
+  viewFromBackend,
+  viewToBackend,
+} from "@/lib/utils/repoSort.utils";
 import {
   FilterBadge,
   FilterButton,
@@ -41,12 +49,12 @@ import {
 import { DetailPane } from "@/pages/app/Repos/components/DetailPane";
 import { RepoList } from "@/pages/app/Repos/components/RepoList";
 import { ChipItem } from "@/pages/app/Repos/parts/ChipItem";
+import { saveSettings } from "@/store/actions/settings.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export interface ReposPageProps {
   dirtyOnly?: boolean;
 }
-
-type RepoView = "list" | "card";
 
 interface SortOption {
   key: RepoSortKey;
@@ -64,13 +72,38 @@ const SORT_OPTIONS: SortOption[] = [
 export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const enriched = useEnrichedRepos();
+  const dispatch = useAppDispatch();
+  const backend = useAppSelector((s) => s.settings.backend);
   const { repoId } = useParams<{ repoId?: string }>();
   const [selectedId, setSelectedId] = useState<string | null>(repoId ?? null);
-  const [view, setView] = useState<RepoView>("list");
+  const [view, setView] = useState<RepoView>(() =>
+    backend ? viewFromBackend(backend.repoListViewMode) : "list",
+  );
   const [statusChips, setStatusChips] = useState<Set<RepoStatusChip>>(new Set());
-  const [sort, setSort] = useState<RepoSortKey>("default");
+  const [sort, setSort] = useState<RepoSortKey>(() =>
+    backend ? sortKeyFromBackend(backend.repoListSort) : "default",
+  );
 
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+
+  const persistList = (nextView: RepoView, nextSort: RepoSortKey) => {
+    void dispatch(
+      saveSettings({
+        repoListViewMode: viewToBackend(nextView, nextSort),
+        repoListSort: sortKeyToBackend(nextSort),
+      }),
+    );
+  };
+
+  const handleView = (nextView: RepoView) => {
+    setView(nextView);
+    persistList(nextView, sort);
+  };
+
+  const handleSort = (nextSort: RepoSortKey) => {
+    setSort(nextSort);
+    persistList(view, nextSort);
+  };
 
   const repos = useMemo<EnrichedRepo[]>(() => {
     let out = dirtyOnly ? enriched.filter((r) => r.status.dirty) : enriched;
@@ -116,7 +149,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             value={view}
             exclusive
             density="xs"
-            onChange={(_, v: RepoView | null) => v && setView(v)}
+            onChange={(_, v: RepoView | null) => v && handleView(v)}
             aria-label={tAria("repo.view_toggle")}
           >
             <GeneralButtonGroupItem value="list" data-testid={TEST_IDS.repos.viewToggle.grouped}>
@@ -184,7 +217,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
                 key={opt.key}
                 label={opt.label}
                 active={sort === opt.key}
-                onSelect={() => setSort(opt.key)}
+                onSelect={() => handleSort(opt.key)}
                 indicator="radio"
               />
             ))}
@@ -195,6 +228,8 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             repos={repos}
             grouped={grouped}
             viewMode={view}
+            sort={sort}
+            onSort={handleSort}
             selectedRepoId={selectedId}
             onSelect={(r) => setSelectedId((cur) => (cur === r.id ? null : r.id))}
             emptyTitle={dirtyOnly ? "No dirty repositories" : "No repositories"}

@@ -19,6 +19,9 @@ export const TauriCommand = {
   OPEN_IN_IDE: "open_in_ide",
   DETECT_IDES: "detect_ides",
   OPEN_TERMINAL: "open_terminal",
+  SSH_UNLOCK_KEY: "ssh_unlock_key",
+  SET_REPO_SSH_KEY: "set_repo_ssh_key",
+  LIST_SSH_KEYS: "list_ssh_keys",
 
   // git operations
   OPEN_IN_EXPLORER: "open_in_explorer",

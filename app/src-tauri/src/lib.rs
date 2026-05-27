@@ -6,6 +6,10 @@ mod platform;
 mod providers;
 mod update;
 
+#[cfg(test)]
+mod test_support;
+
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use tauri::{
@@ -16,6 +20,7 @@ use tauri::{
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use tracing_subscriber::EnvFilter;
+use zeroize::Zeroizing;
 
 use crate::config::store::ConfigStore;
 use crate::git::watcher::RepoWatcher;
@@ -29,6 +34,9 @@ pub struct AppState {
     /// Tuple of (provider_id, CSRF nonce) for the in-flight OAuth flow.
     /// Cleared as soon as `complete_oauth` consumes it.
     pub oauth_pending: Arc<Mutex<Option<(String, String)>>>,
+    /// Session-only cache of SSH key passphrases keyed by repo id. Never
+    /// persisted; `Zeroizing` wipes the bytes on drop.
+    pub ssh_passphrases: Arc<Mutex<HashMap<String, Zeroizing<String>>>>,
 }
 
 #[cfg(target_os = "macos")]
@@ -462,6 +470,7 @@ pub fn run() {
                 providers: Arc::new(registry),
                 watcher: watcher_slot,
                 oauth_pending: Arc::new(Mutex::new(None)),
+                ssh_passphrases: Arc::new(Mutex::new(HashMap::new())),
             };
             app.manage(state);
 
@@ -669,6 +678,9 @@ pub fn run() {
         commands::repos::open_in_ide,
         commands::ide::detect_ides,
         commands::repos::open_terminal,
+        commands::ssh::ssh_unlock_key,
+        commands::ssh::set_repo_ssh_key,
+        commands::ssh::list_ssh_keys,
         commands::git_ops::open_in_explorer,
         commands::git_ops::git_fetch,
         commands::git_ops::git_fetch_all,
@@ -724,6 +736,9 @@ pub fn run() {
         commands::repos::open_in_ide,
         commands::ide::detect_ides,
         commands::repos::open_terminal,
+        commands::ssh::ssh_unlock_key,
+        commands::ssh::set_repo_ssh_key,
+        commands::ssh::list_ssh_keys,
         commands::git_ops::open_in_explorer,
         commands::git_ops::git_fetch,
         commands::git_ops::git_fetch_all,

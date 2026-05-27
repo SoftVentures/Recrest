@@ -1,9 +1,17 @@
+import { type KeyboardEvent } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import type { RepoSortKey } from "@recrest/shared";
+
+import { ChevronDown, ChevronUp } from "lucide-react";
+
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 const TableHead = styled(Box)(({ theme }) => ({
   display: "grid",
@@ -28,18 +36,84 @@ const HeadCell = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
+const SortCell = styled(HeadCell)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  cursor: "pointer",
+  userSelect: "none",
+  width: "fit-content",
+  borderRadius: 4,
+  transition: "color 0.12s ease",
+  "&:hover": { color: theme.palette.text.primary },
+  "&[data-active='true']": { color: theme.palette.text.primary },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 2,
+  },
+})) as typeof Typography;
+
 const ActionsHeadCell = styled(HeadCell)({
   justifySelf: "end",
 }) as typeof Typography;
 
-export function RepoListHead() {
+type SortableCol = "name" | "status" | "lastModified";
+
+function nextKey(base: SortableCol, cur: RepoSortKey): RepoSortKey {
+  if (base === "name") return cur === "name:asc" ? "name:desc" : "name:asc";
+  if (base === "lastModified") return "lastModified:desc";
+  return "status:asc";
+}
+
+/** Active arrow for a column, or null when that column isn't the active sort. */
+function arrowFor(base: SortableCol, sort: RepoSortKey): "asc" | "desc" | null {
+  if (base === "name") {
+    if (sort === "name:asc") return "asc";
+    if (sort === "name:desc") return "desc";
+    return null;
+  }
+  if (base === "lastModified") return sort === "lastModified:desc" ? "desc" : null;
+  return sort === "status:asc" ? "asc" : null;
+}
+
+export interface RepoListHeadProps {
+  sort?: RepoSortKey;
+  onSort?: (key: RepoSortKey) => void;
+}
+
+export function RepoListHead({ sort = "default", onSort }: RepoListHeadProps) {
   const { t } = useTranslation(I18nNamespace.COMMON);
+
+  const renderSortable = (base: SortableCol, label: string) => {
+    if (!onSort) return <HeadCell>{label}</HeadCell>;
+    const dir = arrowFor(base, sort);
+    return (
+      <SortCell
+        role="button"
+        tabIndex={0}
+        data-testid={TEST_IDS.repos.sortHeader(base)}
+        data-active={dir ? "true" : undefined}
+        onClick={() => onSort(nextKey(base, sort))}
+        onKeyDown={(e: KeyboardEvent) => {
+          if (e.key === KEYBOARD_KEYS.ENTER || e.key === KEYBOARD_KEYS.SPACE) {
+            e.preventDefault();
+            onSort(nextKey(base, sort));
+          }
+        }}
+      >
+        {label}
+        {dir === "asc" && <ChevronUp size={12} />}
+        {dir === "desc" && <ChevronDown size={12} />}
+      </SortCell>
+    );
+  };
+
   return (
     <TableHead>
-      <HeadCell>{t("repos.col.repository")}</HeadCell>
+      {renderSortable("name", t("repos.col.repository"))}
       <HeadCell>{t("repos.col.branch")}</HeadCell>
-      <HeadCell>{t("repos.col.status")}</HeadCell>
-      <HeadCell>{t("repos.col.activity")}</HeadCell>
+      {renderSortable("status", t("repos.col.status"))}
+      {renderSortable("lastModified", t("repos.col.activity"))}
       <ActionsHeadCell>{t("repos.col.actions")}</ActionsHeadCell>
     </TableHead>
   );

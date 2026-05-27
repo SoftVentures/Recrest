@@ -22,6 +22,11 @@ export const Row = styled(Box)(({ theme }) => ({
   "&[data-selected='true']": {
     backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 8%, transparent)`,
   },
+  // The inline pin sits idle until the row is hovered/selected; an already
+  // pinned repo keeps it lit (handled by the slot's own data attribute).
+  [`&:hover [data-pin-slot], &[data-selected='true'] [data-pin-slot]`]: {
+    opacity: 1,
+  },
   // Mount stagger: rows slide in from the left in quick succession. Tight
   // 20ms step + 200ms duration so 10 rows finish within ~400ms total.
   animation: `${pgSlideL} 200ms ${PAGE_EASE} both`,
@@ -34,6 +39,16 @@ export const NameCell = styled(Box)({
   alignItems: "center",
   gap: 10,
   minWidth: 0,
+}) as typeof Box;
+
+export const PinSlot = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+  opacity: 0,
+  transition: "opacity 120ms ease",
+  "&[data-pinned='true']": { opacity: 1 },
+  'html[data-reduced-motion="true"] &': { transition: "none" },
 }) as typeof Box;
 
 export const TextCol = styled(Box)({ minWidth: 0 }) as typeof Box;

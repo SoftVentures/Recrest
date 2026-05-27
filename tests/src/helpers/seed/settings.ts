@@ -26,8 +26,11 @@ export const SEED_SETTINGS: AppSettings = {
   repoImportDefaults: { groupId: null, providerId: null },
   defaultScanPath: null,
   terminal: { id: null, profile: null, customCommand: null },
+  shell: null,
   commitMessageTemplate: "{{author}}: {{date}}",
   privacy: { fetchFavicons: false },
+  defaultSshKeyPath: null,
+  gitConfigOverride: { userName: null, userEmail: null },
   appearance: {
     themeId: "light",
     followsSystem: true,

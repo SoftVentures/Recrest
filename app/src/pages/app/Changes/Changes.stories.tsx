@@ -28,6 +28,7 @@ function makeRepo(
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: {
       branch: "main",
       head: "abc1234",

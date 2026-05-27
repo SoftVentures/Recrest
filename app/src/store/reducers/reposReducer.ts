@@ -15,9 +15,11 @@ import {
   removeRepo,
   scanForRepos,
   setGroups,
+  setRepoSshKey,
   setScanPaths,
   upsertRepo,
 } from "@/store/actions/repos.actions";
+import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import type { ReposState } from "@/store/types/repos.types";
 
 const initialState: ReposState = {
@@ -32,6 +34,15 @@ export const reposReducer = createReducer(initialState, (builder) => {
   builder
     .addCase(setScanPaths, (state, action) => {
       state.scanPaths = action.payload;
+    })
+    // Mirror the persisted scan paths into the repos slice whenever settings
+    // load or save, so the Integrations editor and onboarding picker reflect
+    // the real backend value instead of starting empty.
+    .addCase(loadSettings.fulfilled, (state, action) => {
+      state.scanPaths = action.payload.scanPaths;
+    })
+    .addCase(saveSettings.fulfilled, (state, action) => {
+      state.scanPaths = action.payload.scanPaths;
     })
     .addCase(upsertRepo, (state, action) => {
       state.items[action.payload.id] = action.payload;
@@ -66,6 +77,9 @@ export const reposReducer = createReducer(initialState, (builder) => {
       state.error = action.error.message ?? "load failed";
     })
     .addCase(refreshRepoStatus.fulfilled, (state, action) => {
+      state.items[action.payload.id] = action.payload;
+    })
+    .addCase(setRepoSshKey.fulfilled, (state, action) => {
       state.items[action.payload.id] = action.payload;
     })
     .addCase(addRepo.fulfilled, (state, action) => {
@@ -121,6 +135,7 @@ export {
   removeRepo,
   scanForRepos,
   setGroups,
+  setRepoSshKey,
   setScanPaths,
   upsertRepo,
 } from "@/store/actions/repos.actions";
