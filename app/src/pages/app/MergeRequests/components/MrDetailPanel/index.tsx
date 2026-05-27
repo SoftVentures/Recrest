@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import BrandIcon from "@/assets/icons/BrandIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import MrChip from "@/components/atoms/chips/MrChip";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import { ciFor } from "@/lib/constants/ciStates.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -28,7 +29,6 @@ import {
   CiDot,
   CiPill,
   Diff,
-  DraftPill,
   Empty,
   FileDiff,
   FileItem,
@@ -147,9 +147,9 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
                   <Sep component="span" variant="caption">
                     ·
                   </Sep>
-                  <DraftPill component="span" variant="caption">
+                  <MrChip state={pr.state} draft>
                     draft
-                  </DraftPill>
+                  </MrChip>
                 </>
               )}
             </Subtitle>

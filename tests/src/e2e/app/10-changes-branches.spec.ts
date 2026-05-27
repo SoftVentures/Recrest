@@ -7,7 +7,7 @@ import { TEST_IDS } from "../../helpers/test-ids";
 test.describe("app / changes + branches", () => {
   test("Changes route only lists dirty repos from the seed", async ({ page }) => {
     await page.goto(AppRoute.CHANGES);
-    await expect(page.getByTestId(TEST_IDS.repos.changesPage)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.changes.page)).toBeVisible();
 
     const dirty = SEED_REPOS.filter((r) => r.status.dirty);
     const clean = SEED_REPOS.filter((r) => !r.status.dirty);

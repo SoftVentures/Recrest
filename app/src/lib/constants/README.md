@@ -21,19 +21,19 @@ and let the bundler pick the right file.
 
 ## File map
 
-| File                          | Purpose                                                                 |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `ciStates.constants.ts`       | `CI_STATES` + `CI_STATE_UI` + `ciFor()` helper                          |
-| `events.constants.ts`         | Re-exports `EventChannel` / `WindowEvent` from shared                   |
-| `ides.constants.ts`           | Re-exports `IDE_DEFINITIONS` + `IDE_UI` logo/filter map                 |
-| `prStates.constants.ts`       | `PR_STATES` + `PR_STATE_UI` tone/label map                              |
-| `providers.constants.ts`      | Re-exports `PROVIDER_IDS` + `Provider.{GITHUB,GITLAB,BITBUCKET}` + icons |
-| `sortKeys.constants.ts`       | `REPO_SORT_KEYS` + `REPO_SORT_UI` label-key map                         |
-| `statusChips.constants.ts`    | `REPO_STATUS_CHIPS` + `REPO_STATUS_CHIP_UI` icon/tone map               |
-| `storage.constants.ts`        | Re-exports `StorageKey`, prefixes, and `storageKeyForX()` generators    |
-| `testIds.constants.ts`        | Nested `TEST_IDS` registry + nav helper functions                       |
-| `theme.constants.ts`          | Theme tokens, primary-color schemes, theme palette definitions          |
-| `tests/`                      | Vitest specs for every constants file                                   |
+| File                       | Purpose                                                                  |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `ciStates.constants.ts`    | `CI_STATES` + `CI_STATE_UI` + `ciFor()` helper                           |
+| `events.constants.ts`      | Re-exports `EventChannel` / `WindowEvent` from shared                    |
+| `ides.constants.ts`        | Re-exports `IDE_DEFINITIONS` + `IDE_UI` logo/filter map                  |
+| `prStates.constants.ts`    | `PR_STATES` + `PR_STATE_UI` tone/label map                               |
+| `providers.constants.ts`   | Re-exports `PROVIDER_IDS` + `Provider.{GITHUB,GITLAB,BITBUCKET}` + icons |
+| `sortKeys.constants.ts`    | `REPO_SORT_KEYS` + `REPO_SORT_UI` label-key map                          |
+| `statusChips.constants.ts` | `REPO_STATUS_CHIPS` + `REPO_STATUS_CHIP_UI` icon/tone map                |
+| `storage.constants.ts`     | Re-exports `StorageKey`, prefixes, and `storageKeyForX()` generators     |
+| `testIds.constants.ts`     | Nested `TEST_IDS` registry + nav helper functions                        |
+| `theme.constants.ts`       | Theme tokens, primary-color schemes, theme palette definitions           |
+| `tests/`                   | Vitest specs for every constants file                                    |
 
 ## Pattern
 
@@ -58,7 +58,7 @@ export const CI_STATE_UI = {
   failure: { tone: "failing", labelKey: "ci.failure" },
   running: { tone: "running", labelKey: "ci.running" },
   pending: { tone: "running", labelKey: "ci.pending" },
-  none:    { tone: "idle",    labelKey: "ci.none" },
+  none: { tone: "idle", labelKey: "ci.none" },
 } as const satisfies Record<CiStatus, CiStateUi>;
 ```
 
@@ -85,7 +85,7 @@ block so they can own the literal values.
 If you need to violate one of these (the anti-flash inline `<script>` in
 `app/index.html` is the canonical exception — it loads before any module),
 add a targeted `// eslint-disable-next-line no-restricted-syntax` and
-explain *why* in a comment.
+explain _why_ in a comment.
 
 ## Adding a new constant
 

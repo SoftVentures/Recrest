@@ -55,7 +55,7 @@ test.describe("app / visual tour", () => {
 
   test("changes", async ({ page }) => {
     await page.goto(AppRoute.CHANGES);
-    await expect(page.getByTestId(TEST_IDS.repos.changesPage)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.changes.page)).toBeVisible();
     await capture(page, "05-changes");
   });
 

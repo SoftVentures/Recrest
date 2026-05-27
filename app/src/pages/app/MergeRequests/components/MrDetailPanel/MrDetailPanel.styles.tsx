@@ -66,17 +66,6 @@ export const Sep = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
 })) as typeof Typography;
 
-export const DraftPill = styled(Typography)(({ theme }) => ({
-  padding: "1px 6px",
-  borderRadius: 8,
-  fontSize: 10,
-  fontWeight: 600,
-  backgroundColor: theme.palette.surface.interface.backElevation,
-  color: theme.palette.text.information,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-})) as typeof Typography;
-
 export const HeaderCtrls = styled(Box)({
   display: "flex",
   gap: 4,

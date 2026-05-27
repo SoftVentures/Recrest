@@ -37,6 +37,8 @@ export const COMPONENT_TEST_IDS = {
     },
     kbd: { root: "kbd-root" },
     aheadBehind: { root: "ahead-behind-root" },
+    mrChip: { root: "mr-chip-root" },
+    branchFilterChip: { root: "branch-filter-chip-root" },
   },
   molecules: {
     drawer: { body: "drawer-body" },

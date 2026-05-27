@@ -1,5 +1,12 @@
 # Plan 2 — Material UI Migration
 
+> **Status: abgeschlossen** (Stand 2026-05-27, Branch `feature/phase-two-mui-migration`).
+> Tailwind/PostCSS/SCSS entfernt, MUI v9 + Emotion als Single-Source, Atoms→Organisms→Pages migriert, Storybook + Vitest grün.
+>
+> **Abschluss-Checks:**
+> - **E14 — Zyklen:** `yarn workspace @recrest/app dep-graph:circular` → ✓ keine zirkulären Abhängigkeiten (483 Dateien). Der frühere Zyklus `store → backendSync → lib/tauri` wurde aufgelöst (IPC-Trace-Flag in `lib/tauri/ipcTrace.ts` statt dynamischem `@/store`-Import).
+> - **E9 — Bundle-Size:** siehe Abschnitt „Bundle-Size (E9)" am Ende dieses Dokuments.
+
 ## Context
 
 Plan 1 hat die App stabilisiert (Cross-Platform-Bugs, UI-Polish, OS-Spezifika, UX-Verbesserungen). **Vor** Plan 3 (Repo Management & Git Actions) und Plan 4 (Activity / Stats / Settings) räumen wir die **Design-Schuld** auf: ein gewachsener Mix aus eigenem SCSS (`app/src/styles/{tokens,layout,views,page-anim}.scss`), Tailwind v4, Radix-Primitiven (Dropdown/Dialog/Select/Tabs/Tooltip/Checkbox/Switch/Separator/Label/Slot) und handgerollten Atoms/Molecules (`Button`, `Input`, `Checkbox`, `Switch`, `IconButton`, `Drawer`, `DropdownMenu` Wrapper, `Badge`, …). Jede neue UI braucht heute drei Layer (CSS-Variable → SCSS-Klasse → React-Wrapper) und es gibt keine durchgängige Component-API, keine konsistenten Props, fragmentierte Stories, fragmentierte Tests.
@@ -538,3 +545,24 @@ In `app/src/` (nicht shared — Frontend-only):
 So wird jede Datei nur einmal statt zweimal angefasst.
 
 Jeder Phase-Schritt **commit-fähig grün**: `test:ts`, `test`, Lint, Storybook bauen, visuelle Stichprobe. So bleibt der Rollback-Pfad an jedem Punkt klein.
+
+---
+
+## Bundle-Size (E9)
+
+Gemessen aus `yarn workspace @recrest/app build` (Vite, prod), Stand 2026-05-27:
+
+| Chunk                | raw        | gzip       |
+| -------------------- | ---------- | ---------- |
+| `index` (App + MUI)  | 982.54 kB  | 281.60 kB  |
+| `vendor-react`       | 256.36 kB  | 82.34 kB   |
+| `vendor-i18n`        | 59.55 kB   | 18.52 kB   |
+| `vendor-redux`       | 24.80 kB   | 9.77 kB    |
+| `vendor-icons`       | 29.68 kB   | 6.07 kB    |
+| `vendor-tauri`       | 20.70 kB   | 5.43 kB    |
+| **JS gesamt**        | —          | **≈ 403.7 kB** |
+| `index.css`          | 136.24 kB  | 72.48 kB   |
+
+**Bewertung:** Ein formaler Pre-Phase-1-Baseline-Wert wurde nie festgehalten (vor der Migration: Tailwind-CSS + handgerollte Atoms; das `≤ +30%`-Kriterium aus dem Skeleton ist damit nicht gegen eine dokumentierte Zahl prüfbar). Die obigen Werte gelten ab jetzt als **Post-Migrations-Baseline** für Plan 3/4.
+
+**Offen (optional, kein Phase-2-Blocker):** MUI liegt im App-`index`-Chunk statt in einem eigenen Vendor-Chunk; Vite warnt entsprechend (>500 kB raw). Ein `manualChunks`-Eintrag für `@mui/*` würde den Initial-Load-Pfad entzerren — sinnvoll, sobald Plan 3 (Diff-Renderer `diff2html`, Budget ≤80 kB gzip in 3.C5) dazukommt und das Chunking ohnehin angefasst wird.

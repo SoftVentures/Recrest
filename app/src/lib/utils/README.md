@@ -5,13 +5,13 @@ not belong to a specific domain (activity, charts, repos) lives here.
 
 ## Files
 
-| File                | Purpose                                                                      |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `brandFromUrl.ts`   | Heuristic mapping `remoteUrl` → provider brand slug (`github`/`gitlab`/...). |
-| `math.utils.ts`     | `clamp`, `clamp01`, `clampUnit` (alias for `clamp01`).                       |
-| `theme.utils.ts`    | Theme palette helpers used by `ThemeWrapper` / persistence.                  |
-| `timeAgo.utils.ts`  | Human-readable relative time (`"5 min ago"`) from an ISO timestamp.          |
-| `window.utils.ts`   | `runWindow(fn)` + `getCurrentWindow()` — Tauri window IPC with safe fallback. |
+| File               | Purpose                                                                       |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `brandFromUrl.ts`  | Heuristic mapping `remoteUrl` → provider brand slug (`github`/`gitlab`/...).  |
+| `math.utils.ts`    | `clamp`, `clamp01`, `clampUnit` (alias for `clamp01`).                        |
+| `theme.utils.ts`   | Theme palette helpers used by `ThemeWrapper` / persistence.                   |
+| `timeAgo.utils.ts` | Human-readable relative time (`"5 min ago"`) from an ISO timestamp.           |
+| `window.utils.ts`  | `runWindow(fn)` + `getCurrentWindow()` — Tauri window IPC with safe fallback. |
 
 Each file with a `.utils.ts` suffix has a matching spec in
 `tests/<name>.utils.test.ts`.

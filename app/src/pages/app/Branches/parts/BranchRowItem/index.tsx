@@ -5,6 +5,7 @@ import { type BranchInfo, TauriCommand } from "@recrest/shared";
 
 import { GitBranch as BranchIcon } from "lucide-react";
 
+import BranchFilterChip from "@/components/atoms/chips/BranchFilterChip";
 import {
   PAGE_DUR_SM,
   PAGE_EASE,
@@ -45,10 +46,16 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
       <NameCell>
         <BranchIcon size={13} aria-hidden />
         <Box component="span">{b.isRemote ? `${b.remote}/${b.name}` : b.name}</Box>
-        {b.isCurrent && <Tag tone="current">{t("branches.tag.current")}</Tag>}
-        {b.isRemote && <Tag tone="remote">{t("branches.tag.remote")}</Tag>}
-        {b.isCurrent && repo.status.dirty && <Tag tone="dirty">{t("branches.tag.dirty")}</Tag>}
-        {b.clean && <Tag tone="clean">{t("branches.tag.clean")}</Tag>}
+        {b.isCurrent && (
+          <BranchFilterChip tone="current">{t("branches.tag.current")}</BranchFilterChip>
+        )}
+        {b.isRemote && (
+          <BranchFilterChip tone="remote">{t("branches.tag.remote")}</BranchFilterChip>
+        )}
+        {b.isCurrent && repo.status.dirty && (
+          <BranchFilterChip tone="dirty">{t("branches.tag.dirty")}</BranchFilterChip>
+        )}
+        {b.clean && <BranchFilterChip tone="clean">{t("branches.tag.clean")}</BranchFilterChip>}
       </NameCell>
       <Meta>
         <MetaLine component="span">
@@ -204,36 +211,6 @@ const NameCell = styled(Box)(({ theme }) => ({
     textOverflow: "ellipsis",
   },
 })) as typeof Box;
-
-// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
-const Tag = styled("span", {
-  shouldForwardProp: (p) => p !== "tone",
-})<{ tone: "current" | "dirty" | "clean" | "remote" }>(({ theme, tone }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  fontSize: 9.5,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  padding: "2px 7px",
-  borderRadius: 100,
-  ...(tone === "current" && {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
-    color: theme.palette.primary.dark,
-  }),
-  ...(tone === "dirty" && {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.warning.main} 18%, transparent)`,
-    color: theme.palette.warning.dark,
-  }),
-  ...(tone === "clean" && {
-    backgroundColor: theme.palette.surface.interface.backElevation,
-    color: theme.palette.text.information,
-  }),
-  ...(tone === "remote" && {
-    backgroundColor: theme.palette.surface.interface.backElevation,
-    color: theme.palette.text.secondary,
-  }),
-}));
 
 const Meta = styled(Box)(({ theme }) => ({
   display: "flex",

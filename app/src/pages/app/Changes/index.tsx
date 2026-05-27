@@ -67,26 +67,20 @@ const RepoBlock = styled(Box)(({ theme }) => ({
   "&:last-of-type": { borderBottom: 0 },
 })) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> for keyboard semantics on the expandable row header
-const RowHeader = styled("button")(({ theme }) => ({
+const RowHeader = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: 12,
   width: "100%",
   padding: "12px 16px",
-  background: "transparent",
-  border: 0,
   cursor: "pointer",
-  textAlign: "left",
-  fontFamily: "inherit",
-  color: "inherit",
   transition: "background-color 120ms ease",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },
   "&:focus-visible": {
     outline: `2px solid ${theme.palette.primary.main}`,
     outlineOffset: -2,
   },
-}));
+})) as typeof Box;
 
 const Chevron = styled(Box)({
   display: "inline-flex",
@@ -215,8 +209,15 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
   return (
     <RepoBlock data-testid={TEST_IDS.changes.row} data-repo-id={repo.id}>
       <RowHeader
-        type="button"
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
         aria-expanded={expanded}
         aria-label={expanded ? "Collapse changed files" : "Expand changed files"}
       >

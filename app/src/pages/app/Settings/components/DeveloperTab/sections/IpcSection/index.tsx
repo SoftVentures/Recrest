@@ -8,11 +8,17 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { safeInvoke, toggleWebviewDevtools } from "@/lib/tauri";
+import { setIpcTrace } from "@/lib/tauri/ipcTrace";
 import { ButtonRow } from "@/pages/app/Settings/components/DeveloperTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 export function IpcSection() {
-  const [ipcTrace, setIpcTrace] = useState(false);
+  const [ipcTrace, setIpcTraceState] = useState(false);
+
+  const onToggleIpcTrace = (next: boolean) => {
+    setIpcTraceState(next);
+    setIpcTrace(next);
+  };
 
   const rendererCrash = () => {
     setTimeout(() => {
@@ -45,7 +51,7 @@ export function IpcSection() {
       >
         <GeneralSwitchInput
           checked={ipcTrace}
-          onCheckedChange={setIpcTrace}
+          onCheckedChange={onToggleIpcTrace}
           data-testid={TEST_IDS.settings.developer.ipc.traceSwitch}
         />
       </SettingsRow>
