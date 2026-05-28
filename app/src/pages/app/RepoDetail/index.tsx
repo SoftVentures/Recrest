@@ -11,6 +11,7 @@ import { AppRoute, PrState, type PullRequest, TauriCommand } from "@recrest/shar
 import {
   ArrowDown,
   ArrowLeft,
+  ArrowUp,
   ExternalLink,
   Folder,
   KeyRound,
@@ -103,7 +104,7 @@ export default function RepoDetailPage() {
 
   const { commits } = useRecentCommits({ repoId, days: 30, limit: 8 });
 
-  const [busy, setBusy] = useState<null | "pull" | "fetch">(null);
+  const [busy, setBusy] = useState<null | "pull" | "push" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
   const [commitDialogOpen, setCommitDialogOpen] = useState(false);
@@ -159,6 +160,21 @@ export default function RepoDetailPage() {
       dispatch(bumpRefreshNonce());
     } catch (err) {
       toast.error((err as { message?: string })?.message ?? "Pull failed");
+    } finally {
+      setBusy(null);
+    }
+  }, [dispatch, repo]);
+
+  const doPush = useCallback(async () => {
+    if (!repo) return;
+    setBusy("push");
+    try {
+      await invoke(TauriCommand.GIT_PUSH, { repoId: repo.id });
+      toast.success("Pushed");
+      void dispatch(loadRepos());
+      dispatch(bumpRefreshNonce());
+    } catch (err) {
+      toast.error((err as { message?: string })?.message ?? "Push failed");
     } finally {
       setBusy(null);
     }
@@ -256,6 +272,10 @@ export default function RepoDetailPage() {
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
               <ArrowDown size={13} />
               {busy === "pull" ? "Pulling…" : "Pull"}
+            </SecondaryBtn>
+            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPush()}>
+              <ArrowUp size={13} />
+              {busy === "push" ? "Pushing…" : "Push"}
             </SecondaryBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doFetch()}>
               <RefreshCw size={13} />
