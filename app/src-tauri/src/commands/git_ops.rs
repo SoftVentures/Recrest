@@ -504,7 +504,7 @@ async fn ssh_creds_for(
     }
 }
 
-async fn resolve_repo_path(
+pub(crate) async fn resolve_repo_path(
     state: &State<'_, AppState>,
     repo_id: &str,
 ) -> Result<PathBuf, CommandError> {

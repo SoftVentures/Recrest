@@ -13,6 +13,7 @@ import {
   Box as BoxIcon,
   Code2,
   FolderOpen,
+  GitBranch,
   Keyboard,
   Settings as SettingsIcon,
   User,
@@ -40,6 +41,7 @@ import {
   SystemSection,
   UpdatesSection,
 } from "@/pages/app/Settings/components/GeneralTab";
+import { GitConfigSection } from "@/pages/app/Settings/components/GitConfigTab";
 import { IntegrationsSection } from "@/pages/app/Settings/components/IntegrationsTab";
 import { ShortcutsSection } from "@/pages/app/Settings/components/ShortcutsTab";
 import { StorageSection } from "@/pages/app/Settings/components/StorageTab";
@@ -52,6 +54,7 @@ type TabId =
   | "general"
   | "accounts"
   | "integrations"
+  | "git"
   | "shortcuts"
   | "storage"
   | "about"
@@ -67,6 +70,7 @@ const TABS: TabDescriptor[] = [
   { id: "general", icon: SettingsIcon, labelKey: "settings.tab.general" },
   { id: "accounts", icon: User, labelKey: "settings.tab.accounts" },
   { id: "integrations", icon: Code2, labelKey: "settings.tab.integrations" },
+  { id: "git", icon: GitBranch, labelKey: "settings.tab.git" },
   { id: "shortcuts", icon: Keyboard, labelKey: "settings.tab.shortcuts" },
   { id: "storage", icon: FolderOpen, labelKey: "settings.tab.storage" },
   { id: "about", icon: BoxIcon, labelKey: "settings.tab.about" },
@@ -221,6 +225,7 @@ const KNOWN_TAB_IDS = new Set<TabId>([
   "general",
   "accounts",
   "integrations",
+  "git",
   "shortcuts",
   "storage",
   "about",
@@ -323,6 +328,15 @@ function SettingsPage() {
               <PageIntro>{t("settings.integrations.intro")}</PageIntro>
             </PageHead>
             <IntegrationsSection />
+          </PageInner>
+        )}
+        {tab === "git" && (
+          <PageInner>
+            <PageHead>
+              <PageH2 component="h2">{t("settings.git.title")}</PageH2>
+              <PageIntro>{t("settings.git.intro")}</PageIntro>
+            </PageHead>
+            <GitConfigSection />
           </PageInner>
         )}
         {tab === "shortcuts" && (

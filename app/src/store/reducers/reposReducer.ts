@@ -6,10 +6,17 @@ import {
   gitBranchCreate,
   gitCheckout,
   gitCloneUrl,
+  gitCommit,
+  gitDiscard,
   gitFetch,
   gitMerge,
   gitPull,
   gitPush,
+  gitStage,
+  gitStash,
+  gitStashDrop,
+  gitStashPop,
+  gitUnstage,
   loadRepos,
   refreshRepoStatus,
   removeRepo,
@@ -117,6 +124,34 @@ export const reposReducer = createReducer(initialState, (builder) => {
     })
     .addCase(gitCloneUrl.fulfilled, (state, action) => {
       state.items[action.payload.id] = action.payload;
+    })
+    .addCase(gitStage.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.status;
+    })
+    .addCase(gitUnstage.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.status;
+    })
+    .addCase(gitDiscard.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.result.status;
+    })
+    .addCase(gitStash.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.status;
+    })
+    .addCase(gitStashPop.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.status;
+    })
+    .addCase(gitStashDrop.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.status;
+    })
+    .addCase(gitCommit.fulfilled, (state, action) => {
+      const repo = state.items[action.payload.repoId];
+      if (repo) repo.status = action.payload.status;
     });
 });
 

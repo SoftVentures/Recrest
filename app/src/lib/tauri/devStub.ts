@@ -68,6 +68,39 @@ function installStub(seed: Required_<AppSeed>): void {
   const callbacks = new Map<number, (arg: unknown) => void>();
   let nextId = 1;
 
+  // --- Plan 3 stub state. Kept here (not at module top) so each `installStub`
+  // call starts from a clean slate but state survives across IPC calls within
+  // a session — the WorkingCopyPanel / GitConfigTab show their flows without
+  // needing a real backend round-trip.
+  interface StubStashEntry {
+    index: number;
+    message: string;
+    oid: string;
+  }
+  const STUB_STASH_BY_REPO = new Map<string, StubStashEntry[]>();
+  const STUB_GLOBAL_GIT_CONFIG: Record<string, string> = {
+    "user.name": "Dev Stub",
+    "user.email": "dev@example.invalid",
+  };
+  // Mark a single dev repo as having a pre-commit hook so the CommitDialog
+  // "Hooks active" badge has something to show without a real .git/hooks/.
+  const STUB_PRE_COMMIT_HOOK_REPOS = new Set<string>(["repo-octo-notes"]);
+
+  function isStubProtected(path: string): boolean {
+    const name = path.split("/").pop() ?? path;
+    return (
+      name === ".env" ||
+      name === ".npmrc" ||
+      name.startsWith(".env.") ||
+      name.startsWith("id_") ||
+      name.endsWith(".pem") ||
+      name.endsWith(".key") ||
+      name.endsWith(".p12") ||
+      name.endsWith(".pfx") ||
+      name.endsWith(".jks")
+    );
+  }
+
   function transformCallback(callback?: (arg: unknown) => void, once = false): number {
     const id = nextId++;
     callbacks.set(id, (arg) => {
@@ -340,6 +373,70 @@ function installStub(seed: Required_<AppSeed>): void {
         return { status: resolveStatus(a.repoId), conflicts: [] };
       case "git_clone":
         return SEED.repos[0] ?? null;
+
+      // --- working copy (Plan 3 / C.1-C.2)
+      case "git_stage":
+      case "git_unstage":
+      case "git_commit":
+        return resolveStatus(a.repoId);
+      case "git_discard": {
+        const paths = ((a.paths as string[] | undefined) ?? []).slice();
+        const force = !!a.force;
+        const protectedHits = force ? [] : paths.filter(isStubProtected);
+        return {
+          discarded: paths.filter((p) => !protectedHits.includes(p)),
+          requiresConfirmation: protectedHits,
+          status: resolveStatus(a.repoId),
+        };
+      }
+      case "git_stash": {
+        const repoId = (a.repoId as string) ?? "";
+        const list = STUB_STASH_BY_REPO.get(repoId) ?? [];
+        list.unshift({
+          index: 0,
+          message: (a.message as string | null | undefined) ?? "WIP on dev: stub stash",
+          oid: `stub-${Date.now().toString(36)}`,
+        });
+        STUB_STASH_BY_REPO.set(
+          repoId,
+          list.map((e, i) => ({ ...e, index: i })),
+        );
+        return resolveStatus(repoId);
+      }
+      case "git_stash_list":
+        return STUB_STASH_BY_REPO.get((a.repoId as string) ?? "") ?? [];
+      case "git_stash_pop":
+      case "git_stash_drop": {
+        const repoId = (a.repoId as string) ?? "";
+        const idx = (a.index as unknown as number | undefined) ?? 0;
+        const list = (STUB_STASH_BY_REPO.get(repoId) ?? []).filter((e) => e.index !== idx);
+        STUB_STASH_BY_REPO.set(
+          repoId,
+          list.map((e, i) => ({ ...e, index: i })),
+        );
+        return resolveStatus(repoId);
+      }
+      case "git_has_pre_commit_hook":
+        return STUB_PRE_COMMIT_HOOK_REPOS.has((a.repoId as string) ?? "");
+
+      // --- git config (Plan 3 / C.3)
+      case "get_git_config":
+        return {
+          scope: a.repoId == null ? "global" : "repo",
+          entries: a.repoId == null ? { ...STUB_GLOBAL_GIT_CONFIG } : {},
+        };
+      case "set_git_config": {
+        if (a.repoId == null) {
+          const key = (a.key as unknown as string | undefined) ?? "";
+          const value = (a.value as unknown as string | undefined) ?? "";
+          if (value === "") delete STUB_GLOBAL_GIT_CONFIG[key];
+          else STUB_GLOBAL_GIT_CONFIG[key] = value;
+        }
+        return {
+          scope: a.repoId == null ? "global" : "repo",
+          entries: a.repoId == null ? { ...STUB_GLOBAL_GIT_CONFIG } : {},
+        };
+      }
 
       // --- search
       case "find_across_repos":

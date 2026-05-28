@@ -43,6 +43,8 @@ export const CardTop = styled(Box)({
 
 export const Actions = styled(Box)(({ theme }) => ({
   display: "flex",
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
   alignItems: "center",
   gap: 2,
   padding: 3,

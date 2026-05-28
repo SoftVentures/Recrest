@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
@@ -15,6 +13,8 @@ import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
+import { setCrashReporting } from "@/store/actions/settings.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 const FactRow = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -42,7 +42,11 @@ const FactsBox = styled(Box)(({ theme }) => ({
 
 export function StorageSection() {
   const { t } = useTranslation();
-  const [crashReporting, setCrashReporting] = useState(false);
+  const dispatch = useAppDispatch();
+  // Backed by `settings.backend.crashReporting` so the toggle survives unmount
+  // (switching tabs unmounts this section). The renderer state used to live
+  // in local `useState`, which reset the toggle every time the user came back.
+  const crashReporting = useAppSelector((s) => s.settings.backend?.crashReporting ?? false);
   return (
     <SettingsSection title={t("settings.storage.diagnostics")}>
       <SettingsRow
@@ -65,7 +69,10 @@ export function StorageSection() {
         }
         sub={t("settings.storage.crash_reporting_sub")}
       >
-        <GeneralSwitchInput checked={crashReporting} onCheckedChange={setCrashReporting} />
+        <GeneralSwitchInput
+          checked={crashReporting}
+          onCheckedChange={(v) => dispatch(setCrashReporting(v))}
+        />
       </SettingsRow>
 
       <FactsBox>

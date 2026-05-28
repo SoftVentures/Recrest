@@ -33,6 +33,15 @@ export const ICON_BUTTON_ICON_SIZES: Record<IconButtonSize, number> = {
   [IconButtonSize.LG]: 16,
 };
 
+/** Square-shape corner radius per size — a flat 8px reads as a circle on the
+ *  smaller hitboxes (8/22 ≈ 36%, 8/16 = 50%), so we scale it. */
+const ICON_BUTTON_SQUARE_RADII: Record<IconButtonSize, number> = {
+  [IconButtonSize.XS]: 4,
+  [IconButtonSize.SM]: 5,
+  [IconButtonSize.MD]: 6,
+  [IconButtonSize.LG]: 8,
+};
+
 export const IconButtonVariant = {
   /** Transparent surface, hover changes icon colour only. */
   GHOST: "ghost",
@@ -96,7 +105,7 @@ const Root = styled("button", {
     cursor: "pointer",
     fontFamily: "inherit",
     flexShrink: 0,
-    borderRadius: $shape === IconButtonShape.CIRCLE ? "50%" : 8,
+    borderRadius: $shape === IconButtonShape.CIRCLE ? "50%" : ICON_BUTTON_SQUARE_RADII[$size],
     border: $variant === IconButtonVariant.OUTLINE ? `1px solid ${theme.palette.divider}` : 0,
     backgroundColor:
       $variant === IconButtonVariant.OUTLINE ? theme.palette.surface.interface.base : "transparent",

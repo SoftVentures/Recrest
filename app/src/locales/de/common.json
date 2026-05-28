@@ -392,6 +392,7 @@
       "general": "Allgemein",
       "accounts": "Konten",
       "integrations": "Integrationen",
+      "git": "Git-Config",
       "shortcuts": "Shortcuts",
       "storage": "Speicher",
       "about": "Über",
@@ -423,6 +424,23 @@
       "scan_sub": "Ordner, die Recrest rekursiv nach Git-Repositories durchsucht.",
       "set_default": "{{path}} als Standardordner für neue Importe festlegen",
       "default_badge": "Standard"
+    },
+    "git": {
+      "title": "Git-Config",
+      "intro": "Lese- und Schreib-Oberfläche für globale Git-Einstellungen. Nur die Recrest bekannten Keys werden gelistet; alles andere bleibt unangetastet.",
+      "section": "Globale Konfiguration",
+      "section_sub": "Liegt in ~/.gitconfig. Leere Felder werden beim Speichern entfernt.",
+      "label_user_name": "user.name",
+      "label_user_email": "user.email",
+      "label_core_editor": "core.editor",
+      "label_core_autocrlf": "core.autocrlf",
+      "label_init_default_branch": "init.defaultBranch",
+      "label_pull_rebase": "pull.rebase",
+      "label_commit_gpgsign": "commit.gpgsign",
+      "save": "Speichern",
+      "save_success": "Git-Config aktualisiert",
+      "save_error": "Git-Config speichern fehlgeschlagen",
+      "load_error": "Git-Config laden fehlgeschlagen"
     },
     "shortcuts": {
       "title": "Shortcuts",

@@ -1,11 +1,13 @@
 import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 
 import {
+  type DiscardResult,
   type GitMergeResult,
   type Repository,
   type RepositoryGroup,
   type RepositoryId,
   type RepositoryStatus,
+  type StashEntry,
   TauriCommand,
 } from "@recrest/shared";
 
@@ -141,3 +143,74 @@ export const gitCloneUrl = createAsyncThunk<
     subFolder: subFolder ?? null,
   }),
 );
+
+export const gitStage = createAsyncThunk<
+  { repoId: RepositoryId; status: RepositoryStatus },
+  { repoId: RepositoryId; paths: string[] }
+>("repos/stage", async ({ repoId, paths }) => ({
+  repoId,
+  status: await invoke<RepositoryStatus>(TauriCommand.GIT_STAGE, { repoId, paths }),
+}));
+
+export const gitUnstage = createAsyncThunk<
+  { repoId: RepositoryId; status: RepositoryStatus },
+  { repoId: RepositoryId; paths: string[] }
+>("repos/unstage", async ({ repoId, paths }) => ({
+  repoId,
+  status: await invoke<RepositoryStatus>(TauriCommand.GIT_UNSTAGE, { repoId, paths }),
+}));
+
+export const gitDiscard = createAsyncThunk<
+  { repoId: RepositoryId; result: DiscardResult },
+  { repoId: RepositoryId; paths: string[]; force?: boolean }
+>("repos/discard", async ({ repoId, paths, force }) => ({
+  repoId,
+  result: await invoke<DiscardResult>(TauriCommand.GIT_DISCARD, {
+    repoId,
+    paths,
+    force: force ?? false,
+  }),
+}));
+
+export const gitStash = createAsyncThunk<
+  { repoId: RepositoryId; status: RepositoryStatus },
+  { repoId: RepositoryId; message?: string | null }
+>("repos/stash", async ({ repoId, message }) => ({
+  repoId,
+  status: await invoke<RepositoryStatus>(TauriCommand.GIT_STASH, {
+    repoId,
+    message: message ?? null,
+  }),
+}));
+
+export const gitStashList = createAsyncThunk<
+  { repoId: RepositoryId; entries: StashEntry[] },
+  RepositoryId
+>("repos/stashList", async (repoId) => ({
+  repoId,
+  entries: await invoke<StashEntry[]>(TauriCommand.GIT_STASH_LIST, { repoId }),
+}));
+
+export const gitStashPop = createAsyncThunk<
+  { repoId: RepositoryId; status: RepositoryStatus },
+  { repoId: RepositoryId; index: number }
+>("repos/stashPop", async ({ repoId, index }) => ({
+  repoId,
+  status: await invoke<RepositoryStatus>(TauriCommand.GIT_STASH_POP, { repoId, index }),
+}));
+
+export const gitStashDrop = createAsyncThunk<
+  { repoId: RepositoryId; status: RepositoryStatus },
+  { repoId: RepositoryId; index: number }
+>("repos/stashDrop", async ({ repoId, index }) => ({
+  repoId,
+  status: await invoke<RepositoryStatus>(TauriCommand.GIT_STASH_DROP, { repoId, index }),
+}));
+
+export const gitCommit = createAsyncThunk<
+  { repoId: RepositoryId; status: RepositoryStatus },
+  { repoId: RepositoryId; message: string }
+>("repos/commit", async ({ repoId, message }) => ({
+  repoId,
+  status: await invoke<RepositoryStatus>(TauriCommand.GIT_COMMIT, { repoId, message }),
+}));

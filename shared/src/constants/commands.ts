@@ -35,6 +35,17 @@ export const TauriCommand = {
   GIT_BRANCH_CREATE: "git_branch_create",
   GIT_MERGE: "git_merge",
   GIT_CLONE: "git_clone",
+  GIT_STAGE: "git_stage",
+  GIT_UNSTAGE: "git_unstage",
+  GIT_DISCARD: "git_discard",
+  GIT_STASH: "git_stash",
+  GIT_STASH_LIST: "git_stash_list",
+  GIT_STASH_POP: "git_stash_pop",
+  GIT_STASH_DROP: "git_stash_drop",
+  GIT_COMMIT: "git_commit",
+  GIT_HAS_PRE_COMMIT_HOOK: "git_has_pre_commit_hook",
+  GET_GIT_CONFIG: "get_git_config",
+  SET_GIT_CONFIG: "set_git_config",
 
   // search
   FIND_ACROSS_REPOS: "find_across_repos",

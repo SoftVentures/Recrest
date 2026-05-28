@@ -341,6 +341,24 @@ export const TEST_IDS = {
     cancel: "create-branch-cancel",
   },
 
+  commitDialog: {
+    root: "commit-dialog",
+    subject: "commit-dialog-subject",
+    body: "commit-dialog-body",
+    insertTemplate: "commit-dialog-insert-template",
+    hooksBadge: "commit-dialog-hooks-badge",
+    filesToggle: "commit-dialog-files-toggle",
+    filesList: "commit-dialog-files-list",
+    submit: "commit-dialog-submit",
+    cancel: "commit-dialog-cancel",
+  },
+
+  gitConfigSettings: {
+    root: "git-config-settings",
+    field: (key: string) => `git-config-field-${key}` as const,
+    save: "git-config-save",
+  },
+
   findAcrossDialog: {
     root: "find-across-dialog",
     input: "find-across-input",
@@ -354,6 +372,28 @@ export const TEST_IDS = {
     root: "changed-files-list",
     row: "changed-files-row",
     truncated: "changed-files-truncated",
+  },
+
+  workingCopy: {
+    root: "working-copy",
+    section: <T extends "staged" | "unstaged">(s: T) => `working-copy-section-${s}` as const,
+    /** Row testid is section-scoped because a file with both staged AND
+     *  worktree changes appears in both sections (matches `git status`),
+     *  so a path-only testid would collide. */
+    row: <T extends "staged" | "unstaged">(section: T, path: string) =>
+      `working-copy-row-${section}-${path}` as const,
+    stageRow: (path: string) => `working-copy-stage-${path}` as const,
+    unstageRow: (path: string) => `working-copy-unstage-${path}` as const,
+    discardRow: (path: string) => `working-copy-discard-${path}` as const,
+    stageAll: "working-copy-stage-all",
+    unstageAll: "working-copy-unstage-all",
+    discardAll: "working-copy-discard-all",
+    stashSave: "working-copy-stash-save",
+    stashList: "working-copy-stash-list",
+    stashRow: (index: number) => `working-copy-stash-row-${index}` as const,
+    stashPop: (index: number) => `working-copy-stash-pop-${index}` as const,
+    stashDrop: (index: number) => `working-copy-stash-drop-${index}` as const,
+    commit: "working-copy-commit",
   },
 
   repoStats: {

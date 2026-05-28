@@ -392,6 +392,7 @@
       "general": "General",
       "accounts": "Accounts",
       "integrations": "Integrations",
+      "git": "Git config",
       "shortcuts": "Shortcuts",
       "storage": "Storage",
       "about": "About",
@@ -423,6 +424,23 @@
       "scan_sub": "Folders Recrest scans recursively for git repositories.",
       "set_default": "Set {{path}} as the default folder for new imports",
       "default_badge": "Default"
+    },
+    "git": {
+      "title": "Git config",
+      "intro": "Read-and-write surface for global git settings. Only the keys Recrest knows about are listed; everything else stays untouched.",
+      "section": "Global config",
+      "section_sub": "Stored in ~/.gitconfig. Empty fields are removed on save.",
+      "label_user_name": "user.name",
+      "label_user_email": "user.email",
+      "label_core_editor": "core.editor",
+      "label_core_autocrlf": "core.autocrlf",
+      "label_init_default_branch": "init.defaultBranch",
+      "label_pull_rebase": "pull.rebase",
+      "label_commit_gpgsign": "commit.gpgsign",
+      "save": "Save",
+      "save_success": "Git config updated",
+      "save_error": "Saving git config failed",
+      "load_error": "Loading git config failed"
     },
     "shortcuts": {
       "title": "Shortcuts",

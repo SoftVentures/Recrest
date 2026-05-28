@@ -46,12 +46,16 @@ export const Content = styled(Box)(({ theme }) => ({
   flexDirection: "column",
   gap: theme.spacing(2),
   padding: theme.spacing(3),
-  flex: 1,
-  minHeight: 0,
+  // Intentionally no `flex: 1` here: the Root above is the scroll surface
+  // and we want Content's height to be driven by its children + padding.
+  // With `flex: 1`, Content gets clamped to Root's viewport height and
+  // tall children visually escape its box — leaving paddingBottom above
+  // the last visible card instead of below it.
 })) as typeof Box;
 
 export const Header = styled(Box)(({ theme }) => ({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "flex-start",
   gap: 16,
   padding: 20,
@@ -158,7 +162,13 @@ export const HeaderActions = styled(Box)({
   flexWrap: "wrap",
   alignItems: "center",
   gap: 6,
+  // Don't shrink — at narrow widths (e.g. macOS min 1100) we'd rather have
+  // the whole cluster wrap to its own row under the title than squeeze the
+  // title text. Header has `flexWrap: wrap` so this wraps cleanly.
   flexShrink: 0,
+  // When the cluster wraps to its own row, align it right to mirror the
+  // desktop inline layout.
+  marginLeft: "auto",
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
@@ -215,7 +225,9 @@ export const IconOnlyBtn = styled(SecondaryBtn)({
 
 export const Grid2 = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  // Stack to a single column once columns can no longer hold ~280px of content
+  // (narrow viewports + zoomed displays).
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
   gap: 12,
 }) as typeof Box;
 
@@ -339,7 +351,12 @@ export const RemoteUrlText = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const PrScroller = styled(Box)({
-  maxHeight: 320,
+  // Card-relative scroll: fill the card's remaining height (the card itself
+  // stretches to match its grid-row sibling), and scroll only when the PR
+  // list overflows the available space. Previously this had a hard 320px
+  // cap which forced an inner scroll even when the card was much taller.
+  flex: 1,
+  minHeight: 0,
   overflowY: "auto",
 }) as typeof Box;
 

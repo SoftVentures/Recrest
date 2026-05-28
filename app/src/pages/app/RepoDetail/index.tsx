@@ -27,10 +27,11 @@ import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
-import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
+import CommitDialog from "@/components/organisms/repos/CommitDialog";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
 import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
+import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
@@ -105,6 +106,7 @@ export default function RepoDetailPage() {
   const [busy, setBusy] = useState<null | "pull" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [commitDialogOpen, setCommitDialogOpen] = useState(false);
   const [sshOpen, setSshOpen] = useState(false);
 
   useEffect(() => {
@@ -275,60 +277,6 @@ export default function RepoDetailPage() {
         />
 
         <Grid2>
-          <Card>
-            <CardHead>
-              <CardTitle>Activity — 14 days</CardTitle>
-              <CardMeta>
-                {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
-              </CardMeta>
-            </CardHead>
-            <ActivityBars>
-              {repo.activity.map((v, i) => {
-                const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
-                return (
-                  <ActivityBar
-                    key={i}
-                    heightPct={heightPct}
-                    hot={v >= maxBucket * 0.66}
-                    aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
-                    data-testid={TEST_IDS.repoDetail.sparkCell}
-                    data-index={i}
-                  />
-                );
-              })}
-            </ActivityBars>
-            <ActivityAxis>
-              <Box component="span">14d ago</Box>
-              <Box component="span">today</Box>
-            </ActivityAxis>
-          </Card>
-
-          <Card>
-            <CardHead>
-              <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
-              {repo.status.dirty && (
-                <CardMeta>
-                  +{repo.added} −{repo.removed} · {repo.filesChanged} file
-                  {repo.filesChanged === 1 ? "" : "s"}
-                </CardMeta>
-              )}
-            </CardHead>
-            {repo.status.dirty ? (
-              <ChangedFilesList
-                files={repo.status.changedFiles}
-                truncated={repo.status.changedFilesTruncated}
-              />
-            ) : (
-              <CleanState>
-                <Mascot variant="celebrating" size={96} title="Nothing to commit" />
-                <CleanStateText>Nothing to commit.</CleanStateText>
-                <CleanStateSub>Working tree is clean.</CleanStateSub>
-              </CleanState>
-            )}
-          </Card>
-        </Grid2>
-
-        <Grid2>
           {repoProviderConnected && (
             <Card>
               <CardHead>
@@ -359,6 +307,57 @@ export default function RepoDetailPage() {
               )}
             </Card>
           )}
+
+          <Card>
+            <CardHead>
+              <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
+              {repo.status.dirty && (
+                <CardMeta>
+                  +{repo.added} −{repo.removed} · {repo.filesChanged} file
+                  {repo.filesChanged === 1 ? "" : "s"}
+                </CardMeta>
+              )}
+            </CardHead>
+            {repo.status.dirty ? (
+              <WorkingCopyPanel repoId={repo.id} onCommitClick={() => setCommitDialogOpen(true)} />
+            ) : (
+              <CleanState>
+                <Mascot variant="celebrating" size={96} title="Nothing to commit" />
+                <CleanStateText>Nothing to commit.</CleanStateText>
+                <CleanStateSub>Working tree is clean.</CleanStateSub>
+              </CleanState>
+            )}
+          </Card>
+        </Grid2>
+
+        <Grid2>
+          <Card>
+            <CardHead>
+              <CardTitle>Activity — 14 days</CardTitle>
+              <CardMeta>
+                {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
+              </CardMeta>
+            </CardHead>
+            <ActivityBars>
+              {repo.activity.map((v, i) => {
+                const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
+                return (
+                  <ActivityBar
+                    key={i}
+                    heightPct={heightPct}
+                    hot={v >= maxBucket * 0.66}
+                    aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
+                    data-testid={TEST_IDS.repoDetail.sparkCell}
+                    data-index={i}
+                  />
+                );
+              })}
+            </ActivityBars>
+            <ActivityAxis>
+              <Box component="span">14d ago</Box>
+              <Box component="span">today</Box>
+            </ActivityAxis>
+          </Card>
 
           <Card>
             <CardHead>
@@ -404,6 +403,12 @@ export default function RepoDetailPage() {
         open={branchDialogOpen}
         repoId={repo.id}
         onClose={() => setBranchDialogOpen(false)}
+      />
+
+      <CommitDialog
+        open={commitDialogOpen}
+        repoId={repo.id}
+        onClose={() => setCommitDialogOpen(false)}
       />
 
       <RepoSshModal

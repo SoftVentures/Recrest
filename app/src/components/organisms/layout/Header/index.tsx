@@ -93,10 +93,9 @@ function useHeaderContext(): HeaderContext {
     const repoId = path.slice("/repo/".length).split("/")[0];
     const repo = repoId ? repos[repoId] : null;
     if (repo) {
-      return {
-        title: repo.name,
-        meta: repo.path,
-      };
+      // Path is already shown inside the detail page header card — don't
+      // repeat it in the top bar.
+      return { title: repo.name, meta: null };
     }
   }
   if (path.startsWith("/repos") || path.startsWith("/repo/")) {

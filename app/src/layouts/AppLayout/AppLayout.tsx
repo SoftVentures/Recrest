@@ -19,10 +19,12 @@ import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
 import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
+import { useWindowChrome } from "@/hooks/usePlatform";
 import { usePrPolling } from "@/hooks/usePrPolling";
 import { useResponsiveSidebar } from "@/hooks/useResponsiveSidebar";
 import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useThemeAttribute } from "@/hooks/useThemeAttribute";
+import { WINDOW_CHROME_HEIGHT_PX } from "@/lib/constants/platform.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { setFindDialogOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -118,6 +120,20 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const dispatch = useAppDispatch();
   const findDialogOpen = useAppSelector((s) => s.ui.findDialogOpen);
+  const chrome = useWindowChrome();
+  const chromeHeight = WINDOW_CHROME_HEIGHT_PX[chrome];
+
+  // The custom OS titlebar (when present) sits above the app header, so any
+  // portal-mounted overlay that wants to start "below the chrome" needs the
+  // combined offset. Expose it as a CSS var on :root so MUI's portal-mounted
+  // Drawer/Modal can read it without prop-drilling.
+  useEffect(() => {
+    const value = `${chromeHeight + 64}px`;
+    document.documentElement.style.setProperty("--recrest-app-chrome-bottom", value);
+    return () => {
+      document.documentElement.style.removeProperty("--recrest-app-chrome-bottom");
+    };
+  }, [chromeHeight]);
 
   // Cmd+Shift+F / Ctrl+Shift+F opens the cross-repo search. Plain Cmd+F stays
   // free for the host browser's find-in-page (when running under `dev:web`).

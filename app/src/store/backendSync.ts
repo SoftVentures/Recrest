@@ -6,6 +6,7 @@ import type { ThemeId } from "@/lib/constants/theme.constants";
 import { isTauri } from "@/lib/tauri";
 import {
   saveSettings,
+  setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
@@ -194,6 +195,8 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
     dispatch(saveSettings({ startMinimized: a.payload }));
   } else if (setDesktopCloseToTray.match(a)) {
     dispatch(saveSettings({ closeToTray: a.payload }));
+  } else if (setCrashReporting.match(a)) {
+    dispatch(saveSettings({ crashReporting: a.payload }));
   } else if (setNotificationsEnabled.match(a)) {
     dispatch(
       saveSettings({

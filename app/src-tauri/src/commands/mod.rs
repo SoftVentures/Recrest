@@ -1,6 +1,8 @@
 pub mod activity;
 pub mod clone;
 pub mod error;
+pub mod git_config;
+pub mod git_index;
 pub mod git_info;
 pub mod git_ops;
 pub mod notifications;
