@@ -71,6 +71,7 @@ const SORT_OPTIONS: SortOption[] = [
 
 export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t: tCommon } = useTranslation(I18nNamespace.COMMON);
   const enriched = useEnrichedRepos();
   const dispatch = useAppDispatch();
   const backend = useAppSelector((s) => s.settings.backend);
@@ -80,6 +81,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
     backend ? viewFromBackend(backend.repoListViewMode) : "list",
   );
   const [statusChips, setStatusChips] = useState<Set<RepoStatusChip>>(new Set());
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<RepoSortKey>(() =>
     backend ? sortKeyFromBackend(backend.repoListSort) : "default",
   );
@@ -105,8 +107,17 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
     persistList(view, nextSort);
   };
 
+  // Distinct group labels present in the (already-enriched) repo list.
+  // Sorted by `localeCompare` so the menu order is stable across re-renders.
+  const groupOptions = useMemo<string[]>(() => {
+    const seen = new Set<string>();
+    for (const r of enriched) seen.add(r.group);
+    return [...seen].sort((a, b) => a.localeCompare(b));
+  }, [enriched]);
+
   const repos = useMemo<EnrichedRepo[]>(() => {
     let out = dirtyOnly ? enriched.filter((r) => r.status.dirty) : enriched;
+    if (groupFilter !== null) out = out.filter((r) => r.group === groupFilter);
     if (statusChips.size > 0) {
       out = out.filter((r) => {
         for (const chip of statusChips) {
@@ -124,7 +135,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
       out = [...out].sort((a, b) => lastCommitTime(b) - lastCommitTime(a));
     else if (sort === "status:asc") out = [...out].sort((a, b) => statusRank(a) - statusRank(b));
     return out;
-  }, [enriched, dirtyOnly, statusChips, sort]);
+  }, [enriched, dirtyOnly, groupFilter, statusChips, sort]);
 
   const grouped = sort === "default";
 
@@ -139,7 +150,8 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
     });
   };
 
-  const activeFilterCount = statusChips.size + (sort === "default" ? 0 : 1);
+  const activeFilterCount =
+    statusChips.size + (sort === "default" ? 0 : 1) + (groupFilter !== null ? 1 : 0);
 
   return (
     <PageRoot data-testid={dirtyOnly ? "changes-page" : "repos-page"}>
@@ -210,6 +222,28 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
               active={statusChips.has("behind")}
               onSelect={() => toggleChip("behind")}
             />
+            {groupOptions.length > 1 && (
+              <>
+                <MenuSeparator />
+                <SectionLabel>{tCommon("repos.filter.group_section")}</SectionLabel>
+                <ChipItem
+                  label={tCommon("repos.filter.group_all")}
+                  active={groupFilter === null}
+                  onSelect={() => setGroupFilter(null)}
+                  indicator="radio"
+                />
+                {groupOptions.map((g) => (
+                  <ChipItem
+                    key={g}
+                    label={g}
+                    active={groupFilter === g}
+                    onSelect={() => setGroupFilter(g)}
+                    indicator="radio"
+                    testId={TEST_IDS.repos.filterGroupOption(g)}
+                  />
+                ))}
+              </>
+            )}
             <MenuSeparator />
             <SectionLabel>Sort by</SectionLabel>
             {SORT_OPTIONS.map((opt) => (

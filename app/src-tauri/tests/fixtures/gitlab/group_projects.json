@@ -1,0 +1,19 @@
+[
+  {
+    "id": 555,
+    "name": "platform-api",
+    "path_with_namespace": "acme/platform/platform-api",
+    "description": "The API service.",
+    "default_branch": "main",
+    "visibility": "private",
+    "archived": false,
+    "http_url_to_repo": "https://gitlab.example/acme/platform/platform-api.git",
+    "ssh_url_to_repo": "git@gitlab.example:acme/platform/platform-api.git",
+    "web_url": "https://gitlab.example/acme/platform/platform-api",
+    "last_activity_at": "2026-05-20T10:00:00Z",
+    "namespace": {
+      "path": "platform",
+      "avatar_url": null
+    }
+  }
+]

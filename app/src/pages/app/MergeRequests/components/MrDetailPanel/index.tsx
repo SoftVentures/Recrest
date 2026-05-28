@@ -267,7 +267,11 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
             <ReviewerChips>
               {detail.reviewers.map((r) => (
                 <ReviewerChip component="span" key={r.login} data-state={r.state}>
-                  <AuthorAvatar name={r.name ?? r.login} size={14} />
+                  <AuthorAvatar
+                    name={r.name ?? r.login}
+                    avatarUrl={r.avatarUrl ?? null}
+                    size={14}
+                  />
                   <Box component="span">{r.login}</Box>
                   <ReviewerState component="span" variant="caption">
                     {r.state.replace("_", " ")}

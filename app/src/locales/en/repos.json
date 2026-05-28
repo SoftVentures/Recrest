@@ -5,6 +5,15 @@
     "create_branch_tooltip": "Create a new branch from HEAD",
     "avatar_upload_hint": "Click to set a custom logo"
   },
+  "avatar": {
+    "edit": "Change avatar",
+    "edit_aria": "Change repository avatar",
+    "reset": "Reset to auto-detected",
+    "reset_aria": "Reset to auto-detected repository avatar",
+    "upload_error": "Avatar upload failed",
+    "uploaded": "Avatar updated",
+    "reset_done": "Avatar reset"
+  },
   "summary": {
     "total": "Total",
     "dirty": "With changes",

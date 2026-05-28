@@ -2,6 +2,7 @@ import { createReducer } from "@reduxjs/toolkit";
 
 import {
   addRepo,
+  clearRepoLogo,
   deleteRepo,
   gitBranchCreate,
   gitCheckout,
@@ -22,6 +23,7 @@ import {
   removeRepo,
   scanForRepos,
   setGroups,
+  setRepoLogo,
   setRepoSshKey,
   setScanPaths,
   upsertRepo,
@@ -87,6 +89,12 @@ export const reposReducer = createReducer(initialState, (builder) => {
       state.items[action.payload.id] = action.payload;
     })
     .addCase(setRepoSshKey.fulfilled, (state, action) => {
+      state.items[action.payload.id] = action.payload;
+    })
+    .addCase(setRepoLogo.fulfilled, (state, action) => {
+      state.items[action.payload.id] = action.payload;
+    })
+    .addCase(clearRepoLogo.fulfilled, (state, action) => {
       state.items[action.payload.id] = action.payload;
     })
     .addCase(addRepo.fulfilled, (state, action) => {
@@ -157,6 +165,7 @@ export const reposReducer = createReducer(initialState, (builder) => {
 
 export {
   addRepo,
+  clearRepoLogo,
   deleteRepo,
   gitBranchCreate,
   gitCheckout,
@@ -170,6 +179,7 @@ export {
   removeRepo,
   scanForRepos,
   setGroups,
+  setRepoLogo,
   setRepoSshKey,
   setScanPaths,
   upsertRepo,

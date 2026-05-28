@@ -117,7 +117,9 @@
       "dirty": "Dirty",
       "clean": "Clean",
       "ahead": "Ahead",
-      "behind": "Behind"
+      "behind": "Behind",
+      "group_section": "Group",
+      "group_all": "All groups"
     },
     "sort": {
       "label": "Sort by",

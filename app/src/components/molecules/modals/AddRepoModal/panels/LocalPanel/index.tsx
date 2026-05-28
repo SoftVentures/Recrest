@@ -22,16 +22,22 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { addRepo } from "@/store/actions/repos.actions";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export function LocalPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  // When the user hasn't typed anything yet, start the picker at the
+  // repo-root folder they've already pointed Recrest at — almost always
+  // where the next repo lives too.
+  const browseFallback = useAppSelector(
+    (s) => s.settings.backend?.defaultScanPath ?? s.repos.scanPaths[0] ?? null,
+  );
   const [path, setPath] = useState("");
   const [busy, setBusy] = useState(false);
 
   const onBrowse = async () => {
-    const picked = await pickFolder(path.trim() || undefined);
+    const picked = await pickFolder(path.trim() || browseFallback || undefined);
     if (picked) setPath(picked);
   };
 

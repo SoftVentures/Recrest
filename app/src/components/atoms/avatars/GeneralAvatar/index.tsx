@@ -1,3 +1,5 @@
+import { type ReactNode } from "react";
+
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
@@ -9,6 +11,9 @@ export interface GeneralAvatarProps {
   label?: string;
   imageUrl?: string | null;
   onImageError?: () => void;
+  /** Optional icon shown instead of `letter` when no image is loaded.
+   *  Used for bot/automation avatars. */
+  glyph?: ReactNode;
 }
 
 interface TileProps {
@@ -66,6 +71,7 @@ function GeneralAvatar({
   label,
   imageUrl,
   onImageError,
+  glyph,
 }: GeneralAvatarProps) {
   const theme = useTheme();
   const hasImage = Boolean(imageUrl);
@@ -78,7 +84,7 @@ function GeneralAvatar({
       neutralBg={theme.palette.surface.interface.base}
       aria-label={label}
     >
-      {!hasImage && letter}
+      {!hasImage && (glyph ?? letter)}
       {imageUrl && (
         <Image
           component="img"

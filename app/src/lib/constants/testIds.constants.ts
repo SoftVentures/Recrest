@@ -82,6 +82,7 @@ export const TEST_IDS = {
     page: "repos-page",
     toolbar: "repos-toolbar",
     filterTrigger: "repos-filter-trigger",
+    filterGroupOption: <T extends string>(group: T) => `repos-filter-group-${group}` as const,
     viewToggle: {
       grouped: "repo-view-toggle-grouped",
       card: "repo-view-toggle-card",
@@ -106,6 +107,8 @@ export const TEST_IDS = {
   repoDetail: {
     page: "repo-detail-page",
     back: "repo-detail-back",
+    avatarEdit: "repo-detail-avatar-edit",
+    avatarReset: "repo-detail-avatar-reset",
     sparkCell: "repo-detail-spark-cell",
     prRow: "repo-detail-pr-row",
     prDrawer: "repo-detail-pr-drawer",

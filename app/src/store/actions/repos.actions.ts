@@ -12,6 +12,7 @@ import {
 } from "@recrest/shared";
 
 import { invoke } from "@/lib/tauri";
+import { invalidateRepoLogoCache } from "@/lib/utils/repoLogo.utils";
 
 export const setScanPaths = createAction<string[]>("repos/setScanPaths");
 export const upsertRepo = createAction<Repository>("repos/upsertRepo");
@@ -28,6 +29,33 @@ export const loadRepos = createAsyncThunk<Repository[]>("repos/list", async () =
 export const refreshRepoStatus = createAsyncThunk<Repository, RepositoryId>(
   "repos/status",
   async (repoId) => invoke<Repository>(TauriCommand.REPO_STATUS, { repoId }),
+);
+
+/** Copies an image into the managed avatar dir and points the repo at it.
+ *  Returns the refreshed repo so the store picks up the new `logoPath`.
+ *  Busts the per-path data-URI cache because the backend writes to the
+ *  same `<repo_id>.<ext>` filename on re-upload. */
+export const setRepoLogo = createAsyncThunk<
+  Repository,
+  { repoId: RepositoryId; sourcePath: string }
+>("repos/setLogo", async ({ repoId, sourcePath }) => {
+  const next = await invoke<Repository>(TauriCommand.SET_REPO_LOGO, {
+    repoId,
+    sourcePath,
+  });
+  invalidateRepoLogoCache(next.logoPath);
+  return next;
+});
+
+/** Removes the per-repo avatar override so the UI falls back to the
+ *  in-repo auto-detected logo (or initials). */
+export const clearRepoLogo = createAsyncThunk<Repository, RepositoryId>(
+  "repos/clearLogo",
+  async (repoId) => {
+    const next = await invoke<Repository>(TauriCommand.CLEAR_REPO_LOGO, { repoId });
+    invalidateRepoLogoCache(next.logoPath);
+    return next;
+  },
 );
 
 /** Persists (or clears, when `keyPath` is null) the per-repo SSH key and

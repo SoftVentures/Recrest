@@ -5,6 +5,15 @@
     "create_branch_tooltip": "Neuen Branch von HEAD erstellen",
     "avatar_upload_hint": "Klicken, um ein eigenes Logo festzulegen"
   },
+  "avatar": {
+    "edit": "Avatar ändern",
+    "edit_aria": "Repository-Avatar ändern",
+    "reset": "Auf Auto-Erkennung zurücksetzen",
+    "reset_aria": "Repository-Avatar auf Auto-Erkennung zurücksetzen",
+    "upload_error": "Avatar-Upload fehlgeschlagen",
+    "uploaded": "Avatar aktualisiert",
+    "reset_done": "Avatar zurückgesetzt"
+  },
   "summary": {
     "total": "Gesamt",
     "dirty": "Mit Änderungen",

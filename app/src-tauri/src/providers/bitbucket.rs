@@ -137,7 +137,15 @@ impl GitProvider for BitbucketProvider {
                 "{base}/repositories/{workspace}/{repo}/pullrequests"
             ))
             .basic_auth(&username, Some(&password))
-            .query(&[("state", "OPEN"), ("pagelen", "50")])
+            // `+values.reviewers` extends Bitbucket's default field set so
+            // each PR carries its reviewers inline; without this the list
+            // endpoint omits them entirely and we'd need an extra request
+            // per PR to surface them.
+            .query(&[
+                ("state", "OPEN"),
+                ("pagelen", "50"),
+                ("fields", "+values.reviewers"),
+            ])
             .send()
             .await?;
 
@@ -431,6 +439,20 @@ fn map_pr(pr: BbPr, ci: Option<CiStatus>) -> PullRequestDto {
         .and_then(|a| a.links.as_ref())
         .and_then(|l| l.avatar.as_ref())
         .map(|h| h.href.clone());
+    let requested_reviewers = pr
+        .reviewers
+        .as_ref()
+        .map(|rs| {
+            rs.iter()
+                .filter_map(|r| {
+                    r.display_name
+                        .clone()
+                        .or_else(|| r.nickname.clone())
+                        .filter(|s| !s.trim().is_empty())
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
     PullRequestDto {
         id: pr.id.to_string(),
         number: pr.id,
@@ -470,10 +492,9 @@ fn map_pr(pr: BbPr, ci: Option<CiStatus>) -> PullRequestDto {
         additions: None,
         deletions: None,
         ci_status: ci,
-        // Plan 1 §A.2: Bitbucket assignee/reviewer mapping deferred to
-        // Plan 3 §D.1. See gitlab.rs for the same rationale.
+        // Bitbucket has no per-PR "assignee" concept — only reviewers.
         assignees: Vec::new(),
-        requested_reviewers: Vec::new(),
+        requested_reviewers,
     }
 }
 
@@ -650,6 +671,10 @@ struct BbPr {
     source: Option<BbBranchRef>,
     #[serde(default)]
     destination: Option<BbBranchRef>,
+    // Only populated when the list query asks for it via
+    // `?fields=%2Bvalues.reviewers` — see `list_pull_requests`.
+    #[serde(default)]
+    reviewers: Option<Vec<BbAuthor>>,
     created_on: DateTime<Utc>,
     updated_on: DateTime<Utc>,
 }
@@ -837,4 +862,108 @@ struct BbWorkspace {
     name: String,
     #[serde(default)]
     links: Option<BbLinks>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::token::install_keyring_mock;
+    use wiremock::matchers::{method, path_regex};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    async fn provider_with_credentials(server: &MockServer) -> BitbucketProvider {
+        install_keyring_mock();
+        let p = BitbucketProvider::new();
+        p.set_base_url(Some(server.uri())).await.unwrap();
+        p.set_token("test-token", Some("test-user")).await.unwrap();
+        p
+    }
+
+    #[tokio::test]
+    async fn bitbucket_list_organizations_maps_workspaces() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/bitbucket/workspaces.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/workspaces$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let orgs = provider.list_organizations().await.unwrap();
+
+        assert_eq!(orgs.len(), 1);
+        assert_eq!(orgs[0].provider_id, PROVIDER_ID);
+        assert_eq!(orgs[0].slug, "acme");
+        assert_eq!(orgs[0].display_name, "Acme Workspace");
+        assert_eq!(
+            orgs[0].avatar_url.as_deref(),
+            Some("https://bitbucket.org/workspaces/acme/avatar/")
+        );
+    }
+
+    #[tokio::test]
+    async fn bitbucket_list_repositories_for_org_maps_repos() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/bitbucket/workspace_repos.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repositories/[^/]+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let repos = provider.list_repositories_for_org("acme").await.unwrap();
+
+        assert_eq!(repos.len(), 1);
+        assert_eq!(repos[0].full_name, "acme/platform-api");
+        assert_eq!(repos[0].default_branch, "main");
+        assert!(repos[0].is_private);
+        assert_eq!(repos[0].language.as_deref(), Some("rust"));
+    }
+
+    #[tokio::test]
+    async fn bitbucket_pr_maps_reviewers() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/bitbucket/pullrequests.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/pullrequests$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let prs = provider
+            .list_pull_requests("https://bitbucket.org/myws/myrepo")
+            .await
+            .unwrap();
+
+        assert_eq!(prs[0].requested_reviewers, vec!["Eve Reviewer".to_string()]);
+        // Bitbucket has no "assignees" concept on PRs.
+        assert!(prs[0].assignees.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bitbucket_pr_uses_display_name_and_avatar() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/bitbucket/pullrequests.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/pullrequests$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let prs = provider
+            .list_pull_requests("https://bitbucket.org/myws/myrepo")
+            .await
+            .unwrap();
+
+        assert_eq!(prs.len(), 1);
+        assert_eq!(prs[0].author, "Dora Developer");
+        assert_eq!(
+            prs[0].author_avatar_url.as_deref(),
+            Some("https://bitbucket.org/account/dora/avatar.png")
+        );
+    }
 }

@@ -308,6 +308,11 @@ pub struct RepoRecord {
     /// specific repo. `None` means "use ssh-agent / global config".
     #[serde(default)]
     pub ssh_key_path: Option<String>,
+    /// User-uploaded logo override (absolute path under
+    /// `<app_data>/repo-logos/`). Takes precedence over the in-repo
+    /// auto-detection when set. Cleared by `clear_repo_logo`.
+    #[serde(default)]
+    pub custom_logo_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -359,7 +364,10 @@ mod tests {
         let json = serde_json::to_string(&original).expect("serialize");
         let parsed: AppSettings = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(original.theme, parsed.theme);
-        assert_eq!(original.commit_message_template, parsed.commit_message_template);
+        assert_eq!(
+            original.commit_message_template,
+            parsed.commit_message_template
+        );
     }
 
     #[test]

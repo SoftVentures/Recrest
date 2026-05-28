@@ -52,6 +52,8 @@ interface DevRepo {
   name: string;
   remoteUrl: string | null;
   sshKeyPath?: string | null;
+  logoPath?: string | null;
+  logoIsCustom?: boolean;
   status: { head?: string | null } & Record<string, unknown>;
 }
 
@@ -697,6 +699,31 @@ function installStub(seed: Required_<AppSeed>): void {
         // matching how the real backend round-trips a freshly serialized DTO.
         if (idx >= 0) SEED.repos[idx] = { ...SEED.repos[idx]!, sshKeyPath: a.keyPath ?? null };
         return undefined;
+      }
+      case "set_repo_logo": {
+        // The dev stub has no filesystem to copy into — we just flip the
+        // flag so the UI's "Reset" affordance shows up and confirms the
+        // happy path renders. The actual image bytes remain unfetchable.
+        const idx = SEED.repos.findIndex((r) => r.id === a.repoId);
+        if (idx >= 0) {
+          SEED.repos[idx] = {
+            ...SEED.repos[idx]!,
+            logoPath: `dev-stub://repo-logos/${a.repoId}`,
+            logoIsCustom: true,
+          };
+        }
+        return SEED.repos[idx] ?? null;
+      }
+      case "clear_repo_logo": {
+        const idx = SEED.repos.findIndex((r) => r.id === a.repoId);
+        if (idx >= 0) {
+          SEED.repos[idx] = {
+            ...SEED.repos[idx]!,
+            logoPath: null,
+            logoIsCustom: false,
+          };
+        }
+        return SEED.repos[idx] ?? null;
       }
       case "ssh_unlock_key":
         return undefined;

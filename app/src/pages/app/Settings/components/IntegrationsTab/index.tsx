@@ -157,7 +157,11 @@ export function IntegrationsSection() {
 
   const onBrowse = async () => {
     if (!isTauri()) return;
-    const picked = await pickFolder(draft.trim() || undefined);
+    // Fall back to the user's preferred root (or the first existing scan
+    // path) so a new entry usually starts as a sibling of what's there
+    // already — beats reopening at $HOME every time.
+    const fallback = defaultScanPath ?? paths[0] ?? undefined;
+    const picked = await pickFolder(draft.trim() || fallback);
     if (picked && !paths.includes(picked)) {
       void persist([...paths, picked], defaultScanPath);
     }

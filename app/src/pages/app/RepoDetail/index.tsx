@@ -24,10 +24,10 @@ import { toast } from "sonner";
 import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
-import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
+import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
 import CommitDialog from "@/components/organisms/repos/CommitDialog";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
 import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
@@ -209,7 +209,7 @@ export default function RepoDetailPage() {
 
       <Content>
         <Header>
-          <RepoAvatar repo={repo} size={64} radius={14} />
+          <EditableRepoAvatar repo={repo} size={64} radius={14} />
           <HeaderBody>
             <TitleRow>
               <RepoName>{repo.name}</RepoName>

@@ -80,7 +80,13 @@ impl ConfigStore {
     /// Upsert a repository record discovered during scanning.
     /// Reuses an existing record if the path matches, otherwise creates a new one.
     pub fn upsert_scanned_repo(&mut self, path: &Path) -> anyhow::Result<RepoRecord> {
-        if let Some(existing) = self.settings.repos.values().find(|r| r.path == path).cloned() {
+        if let Some(existing) = self
+            .settings
+            .repos
+            .values()
+            .find(|r| r.path == path)
+            .cloned()
+        {
             return Ok(existing);
         }
 
@@ -102,8 +108,11 @@ impl ConfigStore {
             remote_url,
             provider_id,
             ssh_key_path: None,
+            custom_logo_path: None,
         };
-        self.settings.repos.insert(record.id.clone(), record.clone());
+        self.settings
+            .repos
+            .insert(record.id.clone(), record.clone());
         Ok(record)
     }
 }
@@ -159,11 +168,13 @@ mod tests {
         }"#;
         fs::write(&path, custom).expect("seed settings");
 
-        let mut store =
-            ConfigStore::from_path_for_tests(path.clone()).expect("load seeded store");
+        let mut store = ConfigStore::from_path_for_tests(path.clone()).expect("load seeded store");
         assert_eq!(store.settings().theme, "dark");
         assert_eq!(store.settings().locale, "de");
-        assert_eq!(store.settings().scan_paths, vec!["/tmp/customers".to_string()]);
+        assert_eq!(
+            store.settings().scan_paths,
+            vec!["/tmp/customers".to_string()]
+        );
 
         store.reset_to_defaults().expect("reset");
 
@@ -190,13 +201,14 @@ mod tests {
 
         // Path with no on-disk file — fresh install scenario.
         assert!(!path.exists());
-        let mut store =
-            ConfigStore::from_path_for_tests(path.clone()).expect("load empty store");
+        let mut store = ConfigStore::from_path_for_tests(path.clone()).expect("load empty store");
 
         // Mutate the in-memory snapshot away from defaults so we can verify
         // reset wipes the live state too, not just the file.
         store.settings_mut().theme = "dark".into();
-        store.reset_to_defaults().expect("reset must not fail when file absent");
+        store
+            .reset_to_defaults()
+            .expect("reset must not fail when file absent");
 
         assert_eq!(store.settings().theme, AppSettings::default().theme);
         assert!(!path.exists());

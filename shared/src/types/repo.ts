@@ -15,6 +15,10 @@ export interface Repository {
    *  Null when the repo doesn't ship one. Fetch its bytes via `load_logo_bytes`. */
   logoPath: string | null;
   logoDarkPath: string | null;
+  /** True when `logoPath` is the user-uploaded override (stored under
+   *  `<app_data>/repo-logos/`) rather than the in-repo auto-detected file.
+   *  Lets the UI show a "Reset to auto-detected" affordance. */
+  logoIsCustom?: boolean;
   /** Per-repo SSH private key path, or null for ssh-agent / global config. */
   sshKeyPath: string | null;
 }

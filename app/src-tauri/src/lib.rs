@@ -13,9 +13,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use tauri::{
-    AppHandle, Manager,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager,
 };
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
@@ -139,10 +139,11 @@ fn pick_windows_icon_bytes(dark: bool) -> &'static [u8] {
 /// the renderer is using.
 #[cfg(windows)]
 fn windows_uses_dark_mode() -> bool {
-    use windows::Win32::System::Registry::{
-        HKEY, HKEY_CURRENT_USER, KEY_READ, RRF_RT_REG_DWORD, RegCloseKey, RegGetValueW, RegOpenKeyExW,
-    };
     use windows::core::PCWSTR;
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegGetValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, KEY_READ,
+        RRF_RT_REG_DWORD,
+    };
 
     let subkey: Vec<u16> = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
         .encode_utf16()
@@ -155,8 +156,14 @@ fn windows_uses_dark_mode() -> bool {
 
     unsafe {
         let mut hkey = HKEY::default();
-        if RegOpenKeyExW(HKEY_CURRENT_USER, PCWSTR(subkey.as_ptr()), 0, KEY_READ, &mut hkey)
-            .is_err()
+        if RegOpenKeyExW(
+            HKEY_CURRENT_USER,
+            PCWSTR(subkey.as_ptr()),
+            0,
+            KEY_READ,
+            &mut hkey,
+        )
+        .is_err()
         {
             return false; // Default to light if registry isn't readable.
         }
@@ -195,7 +202,7 @@ fn windows_uses_dark_mode() -> bool {
 fn apply_windows_theme_icon(app: &AppHandle) {
     use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows::Win32::UI::WindowsAndMessaging::{
-        ICON_BIG, ICON_SMALL, SendMessageW, WM_GETICON, WM_SETICON,
+        SendMessageW, ICON_BIG, ICON_SMALL, WM_GETICON, WM_SETICON,
     };
 
     let dark = windows_uses_dark_mode();
@@ -214,12 +221,8 @@ fn apply_windows_theme_icon(app: &AppHandle) {
         if let Ok(raw) = window.hwnd() {
             let hwnd = HWND(raw.0 as *mut _);
             unsafe {
-                let small_hicon = SendMessageW(
-                    hwnd,
-                    WM_GETICON,
-                    WPARAM(ICON_SMALL as usize),
-                    LPARAM(0),
-                );
+                let small_hicon =
+                    SendMessageW(hwnd, WM_GETICON, WPARAM(ICON_SMALL as usize), LPARAM(0));
                 if small_hicon.0 != 0 {
                     SendMessageW(
                         hwnd,
@@ -248,17 +251,14 @@ fn set_app_user_model_id() {
     // Dev builds get a `.dev` suffix so the Windows taskbar doesn't
     // recycle the prod build's cached pin icon / RelaunchIconResource —
     // the two identities are now distinct in Explorer's per-AUMID store.
-    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
     use windows::core::PCWSTR;
+    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
     let id = if cfg!(debug_assertions) {
         "eu.softventures.recrest.dev"
     } else {
         "eu.softventures.recrest"
     };
-    let aumid: Vec<u16> = id
-        .encode_utf16()
-        .chain(std::iter::once(0))
-        .collect();
+    let aumid: Vec<u16> = id.encode_utf16().chain(std::iter::once(0)).collect();
     // `SetCurrentProcessExplicitAppUserModelID` returns an HRESULT; failure
     // is non-fatal (notifications still work, just with the parent-process
     // name). Silently swallow so a weird Windows build doesn't crash boot.
@@ -285,7 +285,9 @@ fn show_main_window(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     // GUI-gestartete Apps erben auf macOS/Linux nicht den interaktiven $PATH
@@ -395,9 +397,8 @@ pub fn run() {
                     .await;
 
                     // Then every 4h for the rest of the app's lifetime.
-                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(
-                        4 * 60 * 60,
-                    ));
+                    let mut interval =
+                        tokio::time::interval(std::time::Duration::from_secs(4 * 60 * 60));
                     // The first tick fires immediately — skip it since we
                     // just ran the check above.
                     interval.tick().await;
@@ -656,8 +657,7 @@ pub fn run() {
                 // else: fall through — let the OS close the window, then the
                 // app exits because the webview was the only window.
             }
-        })
-        ;
+        });
 
     // `tauri::generate_handler!` cannot accept `#[cfg]` attrs on individual
     // arms, so we duplicate the handler registration — release builds get the
@@ -675,6 +675,8 @@ pub fn run() {
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
+        commands::repos::set_repo_logo,
+        commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::ide::detect_ides,
         commands::repos::open_terminal,
@@ -744,6 +746,8 @@ pub fn run() {
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
+        commands::repos::set_repo_logo,
+        commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::ide::detect_ides,
         commands::repos::open_terminal,

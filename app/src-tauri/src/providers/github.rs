@@ -828,3 +828,64 @@ struct GhCheckRun {
     #[serde(default)]
     completed_at: Option<DateTime<Utc>>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::token::install_keyring_mock;
+    use wiremock::matchers::{method, path_regex};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    async fn provider_with_token(server: &MockServer) -> GithubProvider {
+        install_keyring_mock();
+        let p = GithubProvider::new();
+        p.set_base_url(Some(server.uri())).await.unwrap();
+        p.set_token("test-token", None).await.unwrap();
+        p
+    }
+
+    #[tokio::test]
+    async fn github_list_organizations_maps_orgs() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/github/orgs.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user/orgs$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let orgs = provider.list_organizations().await.unwrap();
+
+        assert_eq!(orgs.len(), 1);
+        assert_eq!(orgs[0].provider_id, PROVIDER_ID);
+        assert_eq!(orgs[0].id, "12345");
+        assert_eq!(orgs[0].slug, "acme");
+        assert_eq!(orgs[0].display_name, "acme");
+        assert!(orgs[0].avatar_url.is_some());
+    }
+
+    #[tokio::test]
+    async fn github_list_repositories_for_org_maps_repos() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/github/org_repos.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/orgs/[^/]+/repos$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let repos = provider.list_repositories_for_org("acme").await.unwrap();
+
+        assert_eq!(repos.len(), 1);
+        assert_eq!(repos[0].full_name, "acme/platform-api");
+        assert_eq!(repos[0].default_branch, "main");
+        assert!(repos[0].is_private);
+        assert_eq!(repos[0].language.as_deref(), Some("Rust"));
+        assert_eq!(
+            repos[0].clone_url_ssh.as_deref(),
+            Some("git@github.com:acme/platform-api.git")
+        );
+    }
+}

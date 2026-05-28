@@ -367,10 +367,32 @@ fn map_mr(mr: GlMr) -> PullRequestDto {
         _ => Some(CiStatus::None),
     };
 
+    fn display_name(u: GlUser) -> String {
+        u.name
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or(u.username)
+    }
+
     let (author, author_avatar_url) = match mr.author {
-        Some(a) => (a.username, a.avatar_url),
+        Some(a) => {
+            let avatar = a.avatar_url.clone();
+            (display_name(a), avatar)
+        }
         None => (String::new(), None),
     };
+
+    let assignees = mr
+        .assignees
+        .unwrap_or_default()
+        .into_iter()
+        .map(display_name)
+        .collect::<Vec<_>>();
+    let requested_reviewers = mr
+        .reviewers
+        .unwrap_or_default()
+        .into_iter()
+        .map(display_name)
+        .collect::<Vec<_>>();
     PullRequestDto {
         id: mr.id.to_string(),
         number: mr.iid,
@@ -393,12 +415,8 @@ fn map_mr(mr: GlMr) -> PullRequestDto {
         additions: None,
         deletions: None,
         ci_status: ci,
-        // Plan 1 §A.2: GitLab assignee/reviewer mapping not implemented yet
-        // (Plan 3 §D.1). Empty Vecs make the notification gating fail-closed
-        // — no GitLab MR notifies anyone until the user is recognised as
-        // assignee/reviewer, which matches the user's stated preference.
-        assignees: Vec::new(),
-        requested_reviewers: Vec::new(),
+        assignees,
+        requested_reviewers,
     }
 }
 
@@ -486,6 +504,10 @@ struct GlMr {
     source_branch: String,
     target_branch: String,
     author: Option<GlUser>,
+    #[serde(default)]
+    assignees: Option<Vec<GlUser>>,
+    #[serde(default)]
+    reviewers: Option<Vec<GlUser>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     head_pipeline: Option<GlPipeline>,
@@ -584,4 +606,120 @@ struct GlGroup {
     full_path: String,
     #[serde(default)]
     avatar_url: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::token::install_keyring_mock;
+    use wiremock::matchers::{method, path_regex};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    async fn provider_with_token(server: &MockServer) -> GitlabProvider {
+        install_keyring_mock();
+        let p = GitlabProvider::new();
+        p.set_base_url(Some(server.uri())).await.unwrap();
+        // Provider id is namespaced so tests for different providers don't
+        // share keyring entries even with the mock backend.
+        p.set_token("test-token", None).await.unwrap();
+        p
+    }
+
+    #[tokio::test]
+    async fn gitlab_list_organizations_maps_groups() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/groups.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/groups$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let orgs = provider.list_organizations().await.unwrap();
+
+        assert_eq!(orgs.len(), 1);
+        assert_eq!(orgs[0].provider_id, PROVIDER_ID);
+        assert_eq!(orgs[0].id, "99");
+        // GitLab `slug` uses `full_path` so subgroup paths round-trip.
+        assert_eq!(orgs[0].slug, "acme/platform");
+        assert_eq!(orgs[0].display_name, "Acme / Platform");
+        assert_eq!(
+            orgs[0].avatar_url.as_deref(),
+            Some("https://gitlab.example/uploads/acme.png")
+        );
+    }
+
+    #[tokio::test]
+    async fn gitlab_list_repositories_for_org_maps_projects() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/group_projects.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/groups/[^/]+/projects$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let repos = provider
+            .list_repositories_for_org("acme/platform")
+            .await
+            .unwrap();
+
+        assert_eq!(repos.len(), 1);
+        assert_eq!(repos[0].full_name, "acme/platform/platform-api");
+        assert_eq!(repos[0].default_branch, "main");
+        assert!(repos[0].is_private);
+        assert_eq!(
+            repos[0].clone_url_ssh.as_deref(),
+            Some("git@gitlab.example:acme/platform/platform-api.git")
+        );
+    }
+
+    #[tokio::test]
+    async fn gitlab_mr_maps_assignees_and_reviewers() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/merge_requests.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/merge_requests$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let prs = provider
+            .list_pull_requests("https://gitlab.com/group/proj")
+            .await
+            .unwrap();
+
+        assert_eq!(prs[0].assignees, vec!["Bob Builder".to_string()]);
+        assert_eq!(
+            prs[0].requested_reviewers,
+            vec!["Carol Reviewer".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn gitlab_mr_uses_real_name_and_avatar() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/merge_requests.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/merge_requests$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let prs = provider
+            .list_pull_requests("https://gitlab.com/group/proj")
+            .await
+            .unwrap();
+
+        assert_eq!(prs.len(), 1);
+        assert_eq!(prs[0].author, "Ada Lovelace");
+        assert_eq!(
+            prs[0].author_avatar_url.as_deref(),
+            Some("https://gitlab.example/uploads/ada.png")
+        );
+    }
 }

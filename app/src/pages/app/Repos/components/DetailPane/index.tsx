@@ -29,13 +29,13 @@ import { toast } from "sonner";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
-import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import GeneralIconButton, {
   IconButtonSize,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
+import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -115,7 +115,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     <Pane data-testid={TEST_IDS.repos.detailPane} data-repo-id={repo.id}>
       <Header>
         <HeaderTopRow>
-          <RepoAvatar repo={repo} size={36} radius={8} />
+          <EditableRepoAvatar repo={repo} size={36} radius={8} />
           <HeaderTitleStack>
             <RepoName>{repo.name}</RepoName>
             <RepoPath>{repo.path}</RepoPath>

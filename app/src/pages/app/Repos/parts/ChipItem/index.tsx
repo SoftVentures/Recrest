@@ -17,9 +17,17 @@ export interface ChipItemProps {
   icon?: ReactNode;
   /** `"check"` for boolean status filters, `"radio"` for the sort group. */
   indicator?: "check" | "radio";
+  testId?: string;
 }
 
-export function ChipItem({ label, active, onSelect, icon, indicator = "check" }: ChipItemProps) {
+export function ChipItem({
+  label,
+  active,
+  onSelect,
+  icon,
+  indicator = "check",
+  testId,
+}: ChipItemProps) {
   return (
     <FilterItem
       onClick={(e) => {
@@ -27,6 +35,7 @@ export function ChipItem({ label, active, onSelect, icon, indicator = "check" }:
         onSelect();
       }}
       data-active={active ? "true" : undefined}
+      data-testid={testId}
     >
       <LeadingSlot component="span" variant="caption">
         {active &&

@@ -184,7 +184,7 @@ export function MrRow({ pr, repoName, onClick }: MrRowProps) {
             ·
           </Sep>
           <AuthorWrap component="span" variant="caption">
-            <AuthorAvatar name={pr.author} size={14} />
+            <AuthorAvatar name={pr.author} avatarUrl={pr.authorAvatarUrl ?? null} size={14} />
             {pr.author}
           </AuthorWrap>
           <Sep component="span" variant="caption">

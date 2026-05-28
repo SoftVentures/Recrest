@@ -1,0 +1,28 @@
+{
+  "values": [
+    {
+      "uuid": "{aaaa-bbbb-cccc-dddd-eeee}",
+      "name": "platform-api",
+      "full_name": "acme/platform-api",
+      "description": "The API service.",
+      "mainbranch": { "name": "main" },
+      "is_private": true,
+      "updated_on": "2026-05-20T10:00:00Z",
+      "size": 12345,
+      "language": "rust",
+      "links": {
+        "html": { "href": "https://bitbucket.org/acme/platform-api" },
+        "avatar": { "href": "https://bitbucket.org/account/acme/avatar/" },
+        "clone": [
+          { "href": "https://bitbucket.org/acme/platform-api.git", "name": "https" },
+          { "href": "git@bitbucket.org:acme/platform-api.git", "name": "ssh" }
+        ]
+      },
+      "workspace": {
+        "uuid": "{11111111-2222-3333-4444-555555555555}",
+        "slug": "acme",
+        "name": "Acme Workspace"
+      }
+    }
+  ]
+}
