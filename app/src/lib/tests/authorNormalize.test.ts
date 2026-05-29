@@ -4,11 +4,11 @@ import { __normaliseFragmentForTests as normalise, signatureKey } from "@/lib/au
 
 describe("normaliseFragment", () => {
   it.each([
-    ["Valentin Röhle", "valentinroehle"],
-    ["Valentin Roehle", "valentinroehle"],
-    ["valentin.roehle", "valentinroehle"],
-    ["VALENTIN_RÖHLE", "valentinroehle"],
-    ["  Valentin   Röhle  ", "valentinroehle"],
+    ["Sasha Müller", "sashamueller"],
+    ["Sasha Mueller", "sashamueller"],
+    ["sasha.mueller", "sashamueller"],
+    ["SASHA_MÜLLER", "sashamueller"],
+    ["  Sasha   Müller  ", "sashamueller"],
   ])("normalises %s -> %s", (input, expected) => {
     expect(normalise(input)).toBe(expected);
   });
@@ -31,21 +31,21 @@ describe("normaliseFragment", () => {
 
 describe("signatureKey", () => {
   it("encodes name | email-local with normalised fragments", () => {
-    expect(signatureKey("Valentin Röhle", "valentin@example.com")).toBe("valentinroehle|valentin");
+    expect(signatureKey("Sasha Müller", "sasha@example.com")).toBe("sashamueller|sasha");
   });
 
   it("produces different keys when only the email-local differs", () => {
     // This is the exact case that the leaderboard's union-find now bridges:
     // two signatures with the same normalised name but different email locals
     // still collide here at the key level — the merge happens downstream.
-    expect(signatureKey("Valentin Röhle", "valentin@example.com")).not.toBe(
-      signatureKey("valentin.roehle", "valentin.roehle@example.com"),
+    expect(signatureKey("Sasha Müller", "sasha@example.com")).not.toBe(
+      signatureKey("sasha.mueller", "sasha.mueller@example.com"),
     );
   });
 
   it("tolerates missing name or email", () => {
-    expect(signatureKey(null, "valentin@example.com")).toBe("|valentin");
-    expect(signatureKey("Valentin Röhle", null)).toBe("valentinroehle|");
+    expect(signatureKey(null, "sasha@example.com")).toBe("|sasha");
+    expect(signatureKey("Sasha Müller", null)).toBe("sashamueller|");
     expect(signatureKey(null, null)).toBe("|");
   });
 });

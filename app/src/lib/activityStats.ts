@@ -225,8 +225,8 @@ export function computeLeaderboard(
   // Union-Find over name-key / email-local-key fragments so identities with the
   // same name but different emails (or same email but different name spellings)
   // collapse into one bucket. Plain `${nameKey}|${emailKey}` keys would treat
-  // "Valentin Röhle" + valentin@… and "valentin.roehle" + valentin.roehle@…
-  // as two different people even though they normalise to the same name.
+  // "Sasha Park" + sasha@… and "sasha.park" + sasha.park@… as two different
+  // people even though they normalise to the same name.
   const parent = new Map<string, string>();
   const find = (x: string): string => {
     let cur = x;

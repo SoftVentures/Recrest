@@ -15,6 +15,8 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
+import RepoContextMenu from "@/components/molecules/menus/RepoContextMenu";
+import { useContextMenu } from "@/hooks/useContextMenu";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -53,6 +55,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
   const dirty = !!repo.status.dirty;
   const ahead = repo.status.ahead;
   const behind = repo.status.behind;
+  const ctx = useContextMenu();
 
   const stop = (e: MouseEvent) => e.stopPropagation();
 
@@ -69,7 +72,9 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       data-testid={TEST_IDS.repos.row}
       data-repo-id={repo.id}
       data-dirty={dirty ? "true" : undefined}
+      data-context-menu-open={ctx.open ? "true" : undefined}
       onClick={() => onClick?.(repo)}
+      onContextMenu={ctx.onContextMenu}
       onKeyDown={(e: KeyboardEvent) => {
         if (e.key === KEYBOARD_KEYS.ENTER || e.key === KEYBOARD_KEYS.SPACE) {
           e.preventDefault();
@@ -140,6 +145,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       <Actions onClick={stop}>
         <RepoActions repo={repo} iconSize={IconButtonSize.MD} />
       </Actions>
+      <RepoContextMenu repo={repo} position={ctx.position} onClose={ctx.onClose} />
     </Row>
   );
 }

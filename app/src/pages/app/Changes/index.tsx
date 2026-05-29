@@ -16,7 +16,9 @@ import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
+import RepoContextMenu from "@/components/molecules/menus/RepoContextMenu";
 import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
+import { useContextMenu } from "@/hooks/useContextMenu";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import {
   PAGE_DUR_SM,
@@ -65,6 +67,11 @@ const Card = styled(Box)(({ theme }) => ({
 const RepoBlock = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
+  "&[data-context-menu-open='true']": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -2,
+    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 10%, transparent)`,
+  },
 })) as typeof Box;
 
 const RowHeader = styled(Box)(({ theme }) => ({
@@ -181,6 +188,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
   const navigate = useNavigate();
   const { t } = useTranslation(I18nNamespace.REPOS);
   const [busy, setBusy] = useState<"commit" | "pull" | null>(null);
+  const ctx = useContextMenu();
 
   const onCommit = async () => {
     if (!isTauri()) {
@@ -207,11 +215,16 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
   const fileCount = repo.filesChanged;
 
   return (
-    <RepoBlock data-testid={TEST_IDS.changes.row} data-repo-id={repo.id}>
+    <RepoBlock
+      data-testid={TEST_IDS.changes.row}
+      data-repo-id={repo.id}
+      data-context-menu-open={ctx.open ? "true" : undefined}
+    >
       <RowHeader
         role="button"
         tabIndex={0}
         onClick={onToggle}
+        onContextMenu={ctx.onContextMenu}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -273,6 +286,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
           </FilesPanelInner>
         </FilesPanel>
       )}
+      <RepoContextMenu repo={repo} position={ctx.position} onClose={ctx.onClose} />
     </RepoBlock>
   );
 }

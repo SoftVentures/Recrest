@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Checkbox, FormControlLabel, Radio } from "@mui/material";
 
 import { GitMerge } from "lucide-react";
 
+import RichTextEditor from "@/components/atoms/text/RichTextEditor";
 import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import {
   Body,
-  DescTextArea,
+  DeleteBranchHint,
+  DeleteBranchLabel,
+  DescriptionWrap,
   Field,
   PrimaryBtn,
   ProviderNote,
@@ -19,7 +22,6 @@ import {
   StrategyList,
   StrategyName,
   StrategyOption,
-  StrategyRadio,
   StrategyText,
   TitleInput,
 } from "@/components/molecules/modals/MergeMrModal/MergeMrModal.styles";
@@ -32,11 +34,14 @@ export interface MergeMrSubmit {
   strategy: MergeStrategy;
   title: string;
   description: string;
+  /** When true, the merge handler should call `git_branch_delete` on the
+   *  source branch after a successful merge. Defaults to false in the UI —
+   *  destructive operations require explicit opt-in. */
+  deleteSourceBranch: boolean;
 }
 
 export interface MergeMrModalProps {
   open: boolean;
-  /** The MR being merged — used to pre-fill the title + description fields. */
   prTitle: string;
   prNumber: number;
   prBody: string | null;
@@ -49,11 +54,6 @@ export interface MergeMrModalProps {
 
 const STRATEGIES: readonly MergeStrategy[] = ["merge", "squash", "rebase"];
 
-/** Modal that confirms a PR/MR merge: lets the user pick the strategy
- *  (merge-commit / squash / rebase), edit the commit title and description,
- *  then triggers the merge via the parent's `onConfirm` callback. Title/body
- *  are seeded from the PR's own metadata so the common path is just
- *  "click Confirm" without typing. */
 function MergeMrModal({
   open,
   prTitle,
@@ -69,26 +69,30 @@ function MergeMrModal({
   const [strategy, setStrategy] = useState<MergeStrategy>("merge");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [deleteSourceBranch, setDeleteSourceBranch] = useState(false);
 
-  // Re-seed every time the modal opens so re-opening on the same PR resets
-  // any in-progress draft and switching to a different PR shows its own
-  // fields instead of stale state from the previous one.
   useEffect(() => {
     if (!open) return;
     setStrategy("merge");
     setTitle(`${prTitle} (#${prNumber})`);
     setDescription(prBody ?? "");
+    setDeleteSourceBranch(false);
   }, [open, prTitle, prNumber, prBody]);
 
   const submit = () => {
     if (busy || !title.trim()) return;
-    void onConfirm({ strategy, title: title.trim(), description: description.trim() });
+    void onConfirm({
+      strategy,
+      title: title.trim(),
+      description: description.trim(),
+      deleteSourceBranch,
+    });
   };
 
   return (
     <GeneralModal
       open={open}
-      modalWidth={600}
+      modalWidth={640}
       customTitle={t("detail.merge_modal.title")}
       subtitle={t("detail.merge_modal.subtitle")}
       textCapitalize={false}
@@ -104,14 +108,19 @@ function MergeMrModal({
                 const params = { source: sourceBranch, target: targetBranch };
                 return (
                   <StrategyOption key={s} selected={selected} htmlFor={`merge-strategy-${s}`}>
-                    <StrategyRadio
+                    <Radio
                       id={`merge-strategy-${s}`}
-                      type="radio"
                       name="merge-strategy"
                       value={s}
                       checked={selected}
                       onChange={() => setStrategy(s)}
-                      data-testid={TEST_IDS.mr.mergeModal.strategy(s)}
+                      size="small"
+                      color="primary"
+                      slotProps={{
+                        input: {
+                          "data-testid": TEST_IDS.mr.mergeModal.strategy(s),
+                        } as React.InputHTMLAttributes<HTMLInputElement>,
+                      }}
                     />
                     <StrategyText>
                       <StrategyName component="span">
@@ -134,7 +143,6 @@ function MergeMrModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("detail.merge_modal.title_placeholder")}
-              autoFocus
               data-testid={TEST_IDS.mr.mergeModal.titleInput}
               onKeyDown={(e) => {
                 if (e.key === "Escape") onCancel();
@@ -146,13 +154,41 @@ function MergeMrModal({
             <SectionLabel component="span">
               {t("detail.merge_modal.description_label")}
             </SectionLabel>
-            <DescTextArea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("detail.merge_modal.description_placeholder")}
-              data-testid={TEST_IDS.mr.mergeModal.descInput}
-            />
+            <DescriptionWrap>
+              <RichTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder={t("detail.merge_modal.description_placeholder")}
+                data-testid={TEST_IDS.mr.mergeModal.descInput}
+              />
+            </DescriptionWrap>
           </Field>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                color="primary"
+                checked={deleteSourceBranch}
+                onChange={(e) => setDeleteSourceBranch(e.target.checked)}
+                slotProps={{
+                  input: {
+                    "data-testid": TEST_IDS.mr.mergeModal.deleteBranch,
+                  } as React.InputHTMLAttributes<HTMLInputElement>,
+                }}
+              />
+            }
+            label={
+              <Box component="span">
+                <DeleteBranchLabel component="span">
+                  {t("detail.merge_modal.delete_branch_label")}
+                </DeleteBranchLabel>
+                <DeleteBranchHint component="span">
+                  {t("detail.merge_modal.delete_branch_hint", { source: sourceBranch })}
+                </DeleteBranchHint>
+              </Box>
+            }
+          />
 
           <ProviderNote component="div" variant="caption">
             {t("detail.merge_modal.provider_note")}

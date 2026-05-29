@@ -8,7 +8,7 @@ const meta = {
   args: {
     authors: { current: 6, previous: 4, delta: 2 },
     topAuthors: [
-      { name: "Valentin", email: "v@example.com" },
+      { name: "Sasha", email: "v@example.com" },
       { name: "Alice", email: "a@example.com" },
       { name: "Bob", email: null },
     ],

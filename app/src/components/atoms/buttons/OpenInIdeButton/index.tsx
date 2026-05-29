@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import type { IdeId } from "@/lib/constants/ides.constants";
@@ -78,16 +77,15 @@ function OpenInIdeButton({
   }
 
   return (
-    <GeneralTooltip title={resolvedLabel} placement="top">
-      <GeneralIconButton
-        size={iconSize}
-        aria-label={t("repo.open_in_ide", { ns: I18nNamespace.ARIA, defaultValue: resolvedLabel })}
-        onClick={() => void onClick()}
-        icon={<IdeIcon id={effectiveIdeId} size={16} color="brand" />}
-        className={className}
-        data-testid={testId}
-      />
-    </GeneralTooltip>
+    <GeneralIconButton
+      size={iconSize}
+      aria-label={t("repo.open_in_ide", { ns: I18nNamespace.ARIA, defaultValue: resolvedLabel })}
+      tooltip={resolvedLabel}
+      onClick={() => void onClick()}
+      icon={<IdeIcon id={effectiveIdeId} size={16} color="brand" />}
+      className={className}
+      data-testid={testId}
+    />
   );
 }
 

@@ -129,11 +129,22 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
         return true;
       });
     }
-    if (sort === "name:asc") out = [...out].sort((a, b) => a.name.localeCompare(b.name));
+    // `default` = grouped view with alphabetical order inside each group.
+    // Without an explicit sort the user expects a predictable A→Z layout,
+    // not whatever insertion order Redux happens to have.
+    if (sort === "default" || sort === "name:asc")
+      out = [...out].sort((a, b) => a.name.localeCompare(b.name));
     else if (sort === "name:desc") out = [...out].sort((a, b) => b.name.localeCompare(a.name));
     else if (sort === "lastModified:desc")
       out = [...out].sort((a, b) => lastCommitTime(b) - lastCommitTime(a));
     else if (sort === "status:asc") out = [...out].sort((a, b) => statusRank(a) - statusRank(b));
+
+    // Pinned repos always bubble to the top — applied last so it overrides
+    // whichever sort key the user picked. JS's Array.sort is stable, so the
+    // alphabetical order survives within both the pinned and the unpinned
+    // subsets. The downstream group-by preserves relative order within a
+    // category, so pinned items land at the top of their own group.
+    out = [...out].sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
     return out;
   }, [enriched, dirtyOnly, groupFilter, statusChips, sort]);
 

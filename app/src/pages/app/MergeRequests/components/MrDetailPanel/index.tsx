@@ -15,7 +15,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import MrChip from "@/components/atoms/chips/MrChip";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import MergeMrModal, { type MergeMrSubmit } from "@/components/molecules/modals/MergeMrModal";
 import { ciFor } from "@/lib/constants/ciStates.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -76,6 +76,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [busy, setBusy] = useState<null | "checkout" | "merge">(null);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const key = detailKey(repoId, pr.number);
   const detail = useAppSelector((s) => s.prs.detail[key]);
   const detailLoading = useAppSelector((s) => s.prs.detailLoading[key] ?? false);
@@ -104,20 +105,52 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
     }
   };
 
-  const onMerge = async () => {
-    if (!isTauri()) return;
+  // Every merge surface in the app routes through `<MergeMrModal>` — the
+  // drawer's primary action just opens the modal, real `git_merge` happens
+  // after the user picks a strategy + reviews the commit message.
+  const openMergeModal = () => {
+    if (pr.draft) return;
+    setMergeModalOpen(true);
+  };
+
+  const onConfirmMerge = async (data: MergeMrSubmit) => {
+    if (!isTauri()) {
+      setMergeModalOpen(false);
+      toast.success(tPrs("detail.merge_modal.merged_ok"));
+      return;
+    }
     setBusy("merge");
     try {
+      const message = data.description.trim() ? `${data.title}\n\n${data.description}` : data.title;
       await invoke(TauriCommand.GIT_MERGE, {
         repoId,
         source: pr.sourceBranch,
         target: pr.targetBranch,
-        message: `Merge '${pr.sourceBranch}' into ${pr.targetBranch} (#${pr.number})`,
+        message,
       });
-      toast.success("Merged");
+      toast.success(tPrs("detail.merge_modal.merged_ok"));
+      setMergeModalOpen(false);
+
+      if (data.deleteSourceBranch) {
+        try {
+          await invoke(TauriCommand.GIT_BRANCH_DELETE, {
+            repoId,
+            branch: pr.sourceBranch,
+          });
+          toast.success(tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          toast.error(
+            tPrs("detail.merge_modal.branch_delete_failed", {
+              source: pr.sourceBranch,
+              message: msg,
+            }),
+          );
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Merge failed: ${msg}`);
+      toast.error(`${tPrs("detail.merge_modal.merge_failed")}: ${msg}`);
     } finally {
       setBusy(null);
     }
@@ -173,27 +206,21 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
             </Subtitle>
           </HeaderTitleStack>
           <HeaderCtrls>
-            <GeneralTooltip title="Open on host" placement="top">
-              <Box component="span">
-                <GeneralIconButton
-                  size={IconButtonSize.MD}
-                  aria-label={tAria("repo.open_on_host")}
-                  onClick={() => void openExternal(pr.url)}
-                  icon={brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
-                />
-              </Box>
-            </GeneralTooltip>
+            <GeneralIconButton
+              size={IconButtonSize.MD}
+              aria-label={tAria("repo.open_on_host")}
+              tooltip="Open on host"
+              onClick={() => void openExternal(pr.url)}
+              icon={brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
+            />
             {onClose && (
-              <GeneralTooltip title="Close" placement="top">
-                <Box component="span">
-                  <GeneralIconButton
-                    size={IconButtonSize.MD}
-                    aria-label={tAria("drawer.close")}
-                    onClick={onClose}
-                    icon={<X size={14} />}
-                  />
-                </Box>
-              </GeneralTooltip>
+              <GeneralIconButton
+                size={IconButtonSize.MD}
+                aria-label={tAria("drawer.close")}
+                tooltip="Close"
+                onClick={onClose}
+                icon={<X size={14} />}
+              />
             )}
           </HeaderCtrls>
         </HeaderTopRow>
@@ -201,7 +228,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
         <ActionRow>
           <PrimaryAction
             type="button"
-            onClick={() => void onMerge()}
+            onClick={openMergeModal}
             disabled={busy !== null || pr.draft}
           >
             <GitMerge size={13} />
@@ -345,6 +372,18 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
           <Box component="span">{tPrs("detail.open_full")}</Box>
         </FullCta>
       </Footer>
+
+      <MergeMrModal
+        open={mergeModalOpen}
+        prTitle={pr.title}
+        prNumber={pr.number}
+        prBody={detail?.body ?? null}
+        sourceBranch={pr.sourceBranch}
+        targetBranch={pr.targetBranch}
+        busy={busy === "merge"}
+        onCancel={() => setMergeModalOpen(false)}
+        onConfirm={onConfirmMerge}
+      />
     </Panel>
   );
 }

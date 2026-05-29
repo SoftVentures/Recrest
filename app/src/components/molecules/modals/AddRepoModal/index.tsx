@@ -51,8 +51,8 @@ export default function AddRepoModal() {
     <GeneralModal
       open={open}
       onCloseModal={close}
-      modalWidth={880}
-      modalHeight={640}
+      modalWidth={1200}
+      modalHeight={720}
       textCapitalize={false}
       data-testid={TEST_IDS.addRepoDialog.root}
       customTitle={

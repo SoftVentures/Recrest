@@ -24,9 +24,11 @@ export const Card = styled(Box)(({ theme }) => ({
     borderColor: theme.palette.border.hover,
     backgroundColor: theme.palette.surface.interface.active,
   },
-  "&[data-selected='true']": {
+  "&[data-selected='true'], &[data-context-menu-open='true']": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -1,
     borderColor: theme.palette.primary.main,
-    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 6%, transparent)`,
+    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 10%, transparent)`,
   },
   // Mount stagger: cards rise in row by row.
   animation: `${pgRise} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,

@@ -84,7 +84,11 @@
       "merging": "Mergt…",
       "merge_failed": "Merge fehlgeschlagen",
       "merged_ok": "Gemerged",
-      "provider_note": "Strategie wird vorerst lokal gespeichert — vollständiger Provider-Merge (Squash/Rebase auf Host) folgt."
+      "provider_note": "Strategie wird lokal via git2 angewendet. Provider-seitiger Merge (Squash/Rebase über die Host-API) ist in Plan 03/07 erfasst — noch nicht implementiert.",
+      "delete_branch_label": "Source-Branch nach dem Merge löschen",
+      "delete_branch_hint": "Löscht den lokalen '{{source}}'-Branch nachdem der Merge erfolgreich war.",
+      "branch_deleted_ok": "Branch '{{source}}' gelöscht",
+      "branch_delete_failed": "Konnte '{{source}}' nicht löschen: {{message}}"
     },
     "not_found_title": "Merge Request nicht gefunden",
     "not_found_desc": "Merge Request #{{n}} wurde in diesem Repository nicht gefunden — möglicherweise entfernt, umbenannt oder nicht geladen."

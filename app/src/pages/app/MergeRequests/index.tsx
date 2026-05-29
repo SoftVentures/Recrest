@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +22,7 @@ import {
 } from "@/lib/animations/pageAnimations";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
 import MrFiltersPopover, {
   type AuthorOption,
   type RepoOption,
@@ -33,7 +34,8 @@ import {
   activeMrFilterCount,
   applyMrFilters,
 } from "@/pages/app/MergeRequests/utils/mrFilters";
-import { useAppSelector } from "@/store/hooks";
+import { detailKey, loadPrDetail, loadPrDiff } from "@/store/actions/prs.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 interface Row {
   pr: PullRequest;
@@ -123,9 +125,14 @@ const Scroll = styled(Box)({
 
 export default function MergeRequestsPage() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const items = useAppSelector((s) => s.prs.items);
   const repos = useAppSelector((s) => s.repos.items);
   const connections = useAppSelector((s) => s.providers.connections);
+  const cachedDiffs = useAppSelector((s) => s.prs.diff);
+  const cachedDetails = useAppSelector((s) => s.prs.detail);
+  const diffsLoading = useAppSelector((s) => s.prs.diffLoading);
+  const detailsLoading = useAppSelector((s) => s.prs.detailLoading);
 
   const [filter, setFilter] = useState("");
   const [filters, setFilters] = useState<MrFiltersState>(EMPTY_MR_FILTERS);
@@ -149,6 +156,26 @@ export default function MergeRequestsPage() {
     }
     return out;
   }, [items, repos, connections]);
+
+  // Preload diff + detail for every visible MR so:
+  //   1) Rows can show +/− stats even when the provider list endpoint omits
+  //      them (GitLab) — derived from the cached diff via deriveDiffStats
+  //   2) Opening the drawer / detail page reveals data instantly instead of
+  //      flashing a loading state
+  // Dispatch is idempotent — guard against re-dispatching when the slice
+  // already has the data or a request is in flight.
+  useEffect(() => {
+    if (!isTauri()) return;
+    for (const row of allRows) {
+      const key = detailKey(row.repoId, row.pr.number);
+      if (!cachedDiffs[key] && !diffsLoading[key]) {
+        void dispatch(loadPrDiff({ repoId: row.repoId, prNumber: row.pr.number }));
+      }
+      if (!cachedDetails[key] && !detailsLoading[key]) {
+        void dispatch(loadPrDetail({ repoId: row.repoId, prNumber: row.pr.number }));
+      }
+    }
+  }, [allRows, cachedDiffs, cachedDetails, diffsLoading, detailsLoading, dispatch]);
 
   const repoOptions = useMemo<RepoOption[]>(() => {
     const map = new Map<string, RepoOption>();
@@ -286,6 +313,7 @@ export default function MergeRequestsPage() {
                 repoName={g.repoName}
                 prs={g.rows}
                 collapsed={collapsedRepoIds.has(g.repoId)}
+                selectedKey={selected ? `${selected.repoId}#${selected.pr.number}` : null}
                 onToggle={() => toggleGroup(g.repoId)}
                 onSelectRow={(row) => setSelected(row)}
               />

@@ -19,7 +19,8 @@
     "build": "yarn workspace @recrest/shared build && yarn workspace @recrest/app tauri:build",
     "build:landingpage": "yarn workspace @recrest/landingpage build",
     "preview:landingpage": "yarn workspace @recrest/landingpage preview",
-    "predev": "yarn workspace @recrest/shared build",
+    "preinstall": "node scripts/check-node.cjs",
+    "predev": "node scripts/check-node.cjs && yarn workspace @recrest/shared build",
     "postinstall": "yarn workspace @recrest/shared build",
     "format": "yarn workspace @recrest/shared format && yarn workspace @recrest/app format && yarn workspace @recrest/tests format && yarn workspace @recrest/landingpage format",
     "format:check": "yarn workspace @recrest/shared format:check && yarn workspace @recrest/app format:check && yarn workspace @recrest/tests format:check && yarn workspace @recrest/landingpage format:check",
@@ -68,8 +69,12 @@
     ]
   },
   "engines": {
-    "node": "v22.20.0",
+    "node": "22.20.0",
     "yarn": "1.22.22"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "volta": {
+    "node": "22.20.0",
+    "yarn": "1.22.22"
+  }
 }

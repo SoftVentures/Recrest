@@ -82,6 +82,7 @@ import {
   Root,
   SecondaryBtn,
   TitleRow,
+  WorkingCopyScroll,
 } from "@/pages/app/RepoDetail/RepoDetail.styles";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
@@ -341,7 +342,12 @@ export default function RepoDetailPage() {
               )}
             </CardHead>
             {repo.status.dirty ? (
-              <WorkingCopyPanel repoId={repo.id} onCommitClick={() => setCommitDialogOpen(true)} />
+              <WorkingCopyScroll>
+                <WorkingCopyPanel
+                  repoId={repo.id}
+                  onCommitClick={() => setCommitDialogOpen(true)}
+                />
+              </WorkingCopyScroll>
             ) : (
               <CleanState>
                 <Mascot variant="celebrating" size={96} title="Nothing to commit" />

@@ -1,13 +1,20 @@
 import type { KeyboardEvent } from "react";
 
+import { useNavigate } from "react-router-dom";
+
+import { useTranslation } from "react-i18next";
+
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import type { PullRequest } from "@recrest/shared";
+import { type PullRequest, TauriCommand, routeToMr } from "@recrest/shared";
 
-import { GitBranch, GitMerge } from "lucide-react";
+import { Code, Copy, ExternalLink, GitBranch, GitMerge, Maximize2, Type } from "lucide-react";
+import { toast } from "sonner";
 
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
+import ContextMenu from "@/components/molecules/menus/ContextMenu";
+import { useContextMenu } from "@/hooks/useContextMenu";
 import {
   PAGE_DUR_SM,
   PAGE_EASE,
@@ -16,12 +23,22 @@ import {
   staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
 import { type CiTone, ciFor } from "@/lib/constants/ciStates.constants";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
+import { detailKey } from "@/store/actions/prs.actions";
+import { useAppSelector } from "@/store/hooks";
 
 export interface MrRowProps {
   pr: PullRequest;
+  repoId?: string;
   repoName?: string;
+  /** True while this row's drawer is open — drives the same orange outline
+   *  the context-menu uses, so the visual selection state matches across
+   *  click-and-drawer vs. right-click-and-menu interactions. */
+  selected?: boolean;
   onClick?: (pr: PullRequest) => void;
 }
 
@@ -34,6 +51,11 @@ const Row = styled(Box)(({ theme }) => ({
   cursor: "pointer",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },
   "&:last-child": { borderBottom: 0 },
+  "&[data-selected='true'], &[data-context-menu-open='true']": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -2,
+    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 10%, transparent)`,
+  },
   // Mount stagger: each row rises in 30ms after the previous one.
   animation: `${pgRise} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...staggerNthOfType({ step: 30, count: 12 }),
@@ -158,20 +180,85 @@ const CiEmpty = styled(Typography)(({ theme }) => ({
   flexShrink: 0,
 })) as typeof Typography;
 
-export function MrRow({ pr, repoName, onClick }: MrRowProps) {
+export function MrRow({ pr, repoId, repoName, selected, onClick }: MrRowProps) {
   const state = ciFor(pr.ciStatus);
-  // Skip the diff chip entirely when the provider couldn't compute the totals
-  // (GitLab's MR-list endpoint returns no per-MR additions/deletions). The
-  // sub-row used to render "+ −" with the signs but no numbers, which read as
-  // a bug — silent omission is the lesser evil.
-  const hasChangeStats = pr.additions != null && pr.deletions != null;
+  const navigate = useNavigate();
+  const { t: tPrs } = useTranslation(I18nNamespace.PRS);
+  const { t } = useTranslation();
+  const { position, onContextMenu, onClose } = useContextMenu();
+
+  // Provider stats first; otherwise derive from the preloaded diff cache
+  // (MergeRequests page fires `loadPrDiff` for every visible MR on mount,
+  // so by the time most rows hover into view the cache is populated).
+  const cachedDiff = useAppSelector((s) =>
+    repoId ? s.prs.diff[detailKey(repoId, pr.number)] : undefined,
+  );
+  const providerStats = pr.additions != null && pr.deletions != null;
+  const stats = providerStats
+    ? { additions: pr.additions ?? 0, deletions: pr.deletions ?? 0 }
+    : cachedDiff
+      ? deriveDiffStats(cachedDiff)
+      : null;
+  const hasChangeStats = stats !== null;
+
+  const openDetail = () => {
+    if (repoId) navigate(routeToMr(repoId, pr.number));
+  };
+
+  // Open the full detail page with a query param that auto-pops the merge
+  // modal — keeps the modal's state ownership on the detail page (where it
+  // already lives) while letting the row deep-link straight into the action.
+  const openMerge = () => {
+    if (repoId) navigate(`${routeToMr(repoId, pr.number)}?merge=open`);
+  };
+
+  const onCheckout = async () => {
+    if (!isTauri() || !repoId) return;
+    try {
+      await invoke(TauriCommand.GIT_CHECKOUT, { repoId, branch: pr.sourceBranch });
+      toast.success(t("context_menu.checkout_done", { branch: pr.sourceBranch }));
+    } catch {
+      toast.error(t("context_menu.checkout_failed"));
+    }
+  };
+
+  const onCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(pr.url);
+      toast.success(t("context_menu.copy_url_done"));
+    } catch {
+      toast.error(t("context_menu.copy_failed"));
+    }
+  };
+
+  const onCopyTitle = async () => {
+    try {
+      await navigator.clipboard.writeText(pr.title);
+      toast.success(t("context_menu.copy_title_done"));
+    } catch {
+      toast.error(t("context_menu.copy_failed"));
+    }
+  };
+
+  const onCopyBranch = async () => {
+    try {
+      await navigator.clipboard.writeText(pr.sourceBranch);
+      toast.success(t("context_menu.copy_branch_done"));
+    } catch {
+      toast.error(t("context_menu.copy_failed"));
+    }
+  };
+
   return (
     <Row
       role="button"
       tabIndex={0}
       data-testid={TEST_IDS.mr.row}
       data-mr-number={pr.number}
+      data-selected={selected ? "true" : undefined}
+      data-context-menu-open={position !== null ? "true" : undefined}
       onClick={() => onClick?.(pr)}
+      onContextMenu={onContextMenu}
       onKeyDown={(e: KeyboardEvent) => {
         if (e.key === KEYBOARD_KEYS.ENTER || e.key === KEYBOARD_KEYS.SPACE) {
           e.preventDefault();
@@ -204,13 +291,13 @@ export function MrRow({ pr, repoName, onClick }: MrRowProps) {
           <Sep component="span" variant="caption">
             ·
           </Sep>
-          {hasChangeStats ? (
+          {hasChangeStats && stats ? (
             <Diff component="span">
               <Box component="span" className="add">
-                +{pr.additions}
+                +{stats.additions}
               </Box>
               <Box component="span" className="rem">
-                −{pr.deletions}
+                −{stats.deletions}
               </Box>
             </Diff>
           ) : (
@@ -230,6 +317,71 @@ export function MrRow({ pr, repoName, onClick }: MrRowProps) {
           —
         </CiEmpty>
       )}
+      <ContextMenu
+        position={position}
+        onClose={onClose}
+        data-testid={TEST_IDS.mr.contextMenu}
+        sections={[
+          {
+            items: [
+              {
+                key: "open-detail",
+                label: tPrs("detail.open_full"),
+                icon: <Maximize2 size={13} />,
+                variant: "primary",
+                disabled: !repoId,
+                onSelect: openDetail,
+              },
+            ],
+          },
+          {
+            items: [
+              {
+                key: "merge",
+                label: t("context_menu.merge"),
+                icon: <GitMerge size={13} />,
+                disabled: !repoId || pr.draft,
+                onSelect: openMerge,
+              },
+              {
+                key: "checkout",
+                label: t("context_menu.checkout_branch"),
+                icon: <Code size={13} />,
+                disabled: !repoId,
+                onSelect: () => void onCheckout(),
+              },
+              {
+                key: "open-host",
+                label: t("context_menu.open_on_host"),
+                icon: <ExternalLink size={13} />,
+                onSelect: () => void openExternal(pr.url),
+              },
+            ],
+          },
+          {
+            items: [
+              {
+                key: "copy-url",
+                label: t("context_menu.copy_url"),
+                icon: <Copy size={13} />,
+                onSelect: () => void onCopyUrl(),
+              },
+              {
+                key: "copy-title",
+                label: t("context_menu.copy_title"),
+                icon: <Type size={13} />,
+                onSelect: () => void onCopyTitle(),
+              },
+              {
+                key: "copy-branch",
+                label: t("context_menu.copy_branch"),
+                icon: <GitBranch size={13} />,
+                onSelect: () => void onCopyBranch(),
+              },
+            ],
+          },
+        ]}
+      />
     </Row>
   );
 }

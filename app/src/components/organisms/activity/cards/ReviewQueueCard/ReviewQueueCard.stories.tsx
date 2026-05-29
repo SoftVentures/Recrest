@@ -12,7 +12,7 @@ const meta = {
         repoName: "recrest",
         number: 42,
         title: "Add multilingual aria labels",
-        author: "valentin",
+        author: "sasha",
         url: "https://github.com/recrest/example/pull/42",
         openedAt: "2025-02-10T12:00:00Z",
         ageDays: 5,

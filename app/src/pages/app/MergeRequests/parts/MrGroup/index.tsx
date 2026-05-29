@@ -13,6 +13,7 @@ interface Props {
   repoName: string;
   prs: Array<{ pr: PullRequest; repoName: string; repoId: string }>;
   collapsed: boolean;
+  selectedKey?: string | null;
   onToggle: () => void;
   onSelectRow: (row: { pr: PullRequest; repoName: string; repoId: string }) => void;
 }
@@ -22,6 +23,7 @@ export default function MrGroup({
   repoName,
   prs,
   collapsed,
+  selectedKey,
   onToggle,
   onSelectRow,
 }: Props) {
@@ -40,14 +42,19 @@ export default function MrGroup({
         </GroupCount>
       </GroupHead>
       {!collapsed &&
-        prs.map((row) => (
-          <MrRow
-            key={`${row.repoId}#${row.pr.number}`}
-            pr={row.pr}
-            repoName={row.repoName}
-            onClick={() => onSelectRow(row)}
-          />
-        ))}
+        prs.map((row) => {
+          const key = `${row.repoId}#${row.pr.number}`;
+          return (
+            <MrRow
+              key={key}
+              pr={row.pr}
+              repoId={row.repoId}
+              repoName={row.repoName}
+              selected={selectedKey === key}
+              onClick={() => onSelectRow(row)}
+            />
+          );
+        })}
     </Box>
   );
 }

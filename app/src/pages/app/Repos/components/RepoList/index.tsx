@@ -94,9 +94,10 @@ export function RepoList({
       list.push(r);
       byGroupCard.set(r.group, list);
     }
+    const cardEntries = [...byGroupCard.entries()].sort(([a], [b]) => a.localeCompare(b));
     return (
       <CardGroupStack data-testid={TEST_IDS.repos.list}>
-        {[...byGroupCard.entries()].map(([name, items]) => (
+        {cardEntries.map(([name, items]) => (
           <RepoListCardGroup
             key={name}
             name={name}
@@ -133,11 +134,15 @@ export function RepoList({
     list.push(r);
     byGroup.set(r.group, list);
   }
+  // Group headers sort alphabetically (case-insensitive via localeCompare).
+  // The previous Map-iteration order followed first-insertion, which surfaced
+  // groups in arbitrary order depending on which repo loaded first.
+  const groupEntries = [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <TableShell data-testid={TEST_IDS.repos.list}>
       <RepoListHead sort={sort} onSort={onSort} />
-      {[...byGroup.entries()].map(([name, items]) => (
+      {groupEntries.map(([name, items]) => (
         <RepoListGroup
           key={name}
           name={name}

@@ -16,14 +16,14 @@
 
 **Files:** Modify `app/src-tauri/Cargo.toml`.
 
-- [ ] Append to `[dependencies]`:
+- [x] Append to `[dependencies]`:
 
 ```toml
 serde_yaml = "0.9"
 unidiff = "0.3"
 ```
 
-- [ ] Run `cargo build --manifest-path app/src-tauri/Cargo.toml`. Commit (`build: add serde_yaml + unidiff for provider features`).
+- [x] Run `cargo build --manifest-path app/src-tauri/Cargo.toml`. Commit (`build: add serde_yaml + unidiff for provider features`).
 
 ---
 
@@ -37,7 +37,7 @@ unidiff = "0.3"
 - Modify: `app/src-tauri/src/providers/trait.rs` (two new methods, defaulted)
 - Modify: `shared/src/types/` (mirror DTOs)
 
-- [ ] **Step 1: Add DTOs to `api.rs`**
+- [x] **Step 1: Add DTOs to `api.rs`**
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,7 +95,7 @@ pub struct CommentPosition {
 pub enum CommentSide { Left, Right }
 ```
 
-- [ ] **Step 2: Add trait methods (defaulted)** in `trait.rs`:
+- [x] **Step 2: Add trait methods (defaulted)** in `trait.rs`:
 
 ```rust
 async fn get_pr_diff(
@@ -118,43 +118,43 @@ async fn post_pr_comment(
 }
 ```
 
-- [ ] **Step 3:** Mirror the DTOs in `shared/src/types/`. Run `yarn workspace @recrest/shared build && cargo build --manifest-path app/src-tauri/Cargo.toml`. Commit (`feat: diff + comment DTOs and trait methods (C.5)`).
+- [x] **Step 3:** Mirror the DTOs in `shared/src/types/`. Run `yarn workspace @recrest/shared build && cargo build --manifest-path app/src-tauri/Cargo.toml`. Commit (`feat: diff + comment DTOs and trait methods (C.5)`).
 
 ### Task 3: GitHub `get_pr_diff` + `post_pr_comment`
 
 **Files:** Modify `app/src-tauri/src/providers/github.rs`. Test: `#[cfg(test)]` with `wiremock` + committed fixtures under `app/src-tauri/tests/fixtures/github/`.
 
-- [ ] **Step 1: Write the failing wiremock test**
+- [x] **Step 1: Write the failing wiremock test**
 
 Mount `GET /repos/o/r/pulls/1/files` returning a fixture with a `patch` field; assert `get_pr_diff` parses 1 file with hunks (Add+Remove+Context). Use the provider's `set_base_url(Some(server.uri()))` to point at the mock.
 
-- [ ] **Step 2: Run to confirm failure.**
+- [x] **Step 2: Run to confirm failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
   - `get_pr_diff`: `GET {base}/repos/{o}/{r}/pulls/{n}/files` → each file's `patch` (unified-diff text) parsed into `Vec<DiffHunk>` via a small shared hunk parser (`providers/diff_parse.rs`, parses `@@ -a,b +c,d @@` headers + `+`/`-`/` ` lines). Map `status` ("added"/"modified"/"removed"/"renamed") to `FileChangeStatus`.
   - `post_pr_comment`: `POST {base}/repos/{o}/{r}/pulls/{n}/comments` with `{ body, commit_id, path, line, side }` (fetch latest `commit_id` from the PR head). For a non-positioned (general) comment, `POST .../issues/{n}/comments` with `{ body }`.
 
-- [ ] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: GitHub PR diff + comment (C.5)`).
+- [x] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: GitHub PR diff + comment (C.5)`).
 
 ### Task 4: GitLab `get_pr_diff` + `post_pr_comment`
 
 **Files:** Modify `app/src-tauri/src/providers/gitlab.rs`. Test: wiremock + fixtures under `tests/fixtures/gitlab/`.
 
-- [ ] TDD per Task 3, with GitLab endpoints:
+- [x] TDD per Task 3, with GitLab endpoints:
   - Diff: `GET /projects/:id/merge_requests/:iid/diffs` (paginated — follow `per_page`/`page`). Each entry has `diff` (unified text), `old_path`, `new_path`, `new_file`/`deleted_file`/`renamed_file` booleans → status. Parse `diff` with the shared hunk parser.
   - Comment: `POST /projects/:id/merge_requests/:iid/discussions` with `{ body, position: { base_sha, start_sha, head_sha, position_type: "text", new_path, new_line } }` (fetch the three SHAs from `GET .../merge_requests/:iid` `diff_refs`).
   - Auth via `PRIVATE-TOKEN` (existing `gl_json` helper).
-- [ ] Commit (`feat: GitLab MR diff + comment (C.5)`).
+- [x] Commit (`feat: GitLab MR diff + comment (C.5)`).
 
 ### Task 5: Bitbucket `get_pr_diff` + `post_pr_comment`
 
 **Files:** Modify `app/src-tauri/src/providers/bitbucket.rs`. Test: wiremock + a unified-diff fixture; plus a focused parser test.
 
-- [ ] TDD:
+- [x] TDD:
   - Diff: `GET /repositories/:ws/:r/pullrequests/:id/diff` returns **plain unified diff text** for the whole PR → split into per-file `FileDiffDto` using the `unidiff` crate (`unidiff::PatchSet::from(text)`), mapping each `PatchedFile` → `FileDiffDto` and its `Hunk`s → `DiffHunk`.
   - Comment: `POST /repositories/:ws/:r/pullrequests/:id/comments` with `{ content: { raw }, inline: { path, to } }` (`to` = new line number; omit `inline` for a general comment).
   - Auth via `basic_auth` (existing `bb_json` / `require_credentials`).
-- [ ] Write a standalone parser unit test (`unidiff` round-trip on the fixture). Commit (`feat: Bitbucket MR diff (unidiff) + comment (C.5)`).
+- [x] Write a standalone parser unit test (`unidiff` round-trip on the fixture). Commit (`feat: Bitbucket MR diff (unidiff) + comment (C.5)`).
 
 ### Task 6: Tauri commands + frontend diff tab
 
@@ -163,14 +163,14 @@ Mount `GET /repos/o/r/pulls/1/files` returning a fixture with a `patch` field; a
 - Modify: `app/src-tauri/src/commands/providers.rs` (`get_pr_diff`, `post_pr_comment` commands) + `lib.rs` (register) + `commands.ts` (`GET_PR_DIFF`, `POST_PR_COMMENT`)
 - Modify: `app/src/store/actions/prs.actions.ts` (`loadPrDiff`, `postPrComment` thunks)
 - Modify: `app/src/components/molecules/drawers/MrDetailDrawer/parts/MrDetailPanel` (Files tab → diff renderer + inline composer)
-- Add dep: `diff2html` (npm)
+- New: `app/src/components/molecules/diff/DiffView/` — custom hunk renderer (no third-party diff lib; see §"Built beyond the plan" below)
 - Test: command-level (provider dispatch) + component test with a mock `FileDiffDto`
 
-- [ ] **Step 1:** Add the two commands (dispatch via `state.providers.get` like `get_pr_detail` at `providers.rs:137`); register in both handler blocks; add TS constants.
-- [ ] **Step 2:** Add `diff2html` (`yarn workspace @recrest/app add diff2html`). Verify bundle budget ≤80KB gzipped (`vite-bundle-analyzer`); if exceeded, switch to `react-diff-view`.
-- [ ] **Step 3:** Thunks `loadPrDiff({ repoId, prNumber })` / `postPrComment({ repoId, prNumber, body, path?, position? })` (mirror `loadPrDetail` at `prs.actions.ts:29`), caching diff under `s.prs.diff[detailKey(...)]`.
-- [ ] **Step 4:** In the Files tab, render hunks via `diff2html` (or a custom `react-diff-view` renderer fed by `FileDiffDto`). Clicking a line number opens an inline composer; submit calls `postPrComment` with `CommentPosition { side, line }` derived from the clicked column/line. Component test with a 3-hunk mock asserts Add/Remove/Context rows render and a comment submit dispatches with the right position.
-- [ ] **Step 5:** Commit (`feat: PR diff tab + inline comments (C.5)`). **E2E (optional):** against a GitHub sandbox PR.
+- [x] **Step 1:** Add the two commands (dispatch via `state.providers.get` like `get_pr_detail` at `providers.rs:137`); register in both handler blocks; add TS constants.
+- [x] **Step 2:** **Build a custom `<DiffView>` molecule** that consumes `FileDiffDto` directly — no `diff2html` / `react-diff-view` dependency. Keeps bundle weight at zero, gives full control over the inline-composer integration. (Original plan called for `diff2html ≤80KB gzipped`; the custom path removes that constraint entirely.)
+- [x] **Step 3:** Thunks `loadPrDiff({ repoId, prNumber })` / `postPrComment({ repoId, prNumber, body, path?, position? })` (mirror `loadPrDetail` at `prs.actions.ts:29`), caching diff under `s.prs.diff[detailKey(...)]`.
+- [x] **Step 4:** `<DiffView>` renders hunks with hover-revealed comment affordances per line; clicking opens an `<InlineComposer>` (TipTap-based) that submits via `postPrComment` with `CommentPosition { side, line }`. Component test (`DiffView.test.tsx`) asserts Add/Remove/Context rows render and a comment submit dispatches with the right position.
+- [x] **Step 5:** Commit (`feat: PR diff tab + inline comments (C.5)`). **E2E (optional):** against a GitHub sandbox PR — deferred to user's manual smoke pass.
 
 ---
 
@@ -180,7 +180,7 @@ Mount `GET /repos/o/r/pulls/1/files` returning a fixture with a `patch` field; a
 
 **Files:** `api.rs`, `trait.rs`, `shared/src/types/`.
 
-- [ ] Add DTOs:
+- [x] Add DTOs:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,41 +225,41 @@ pub struct WorkflowRunDto {
 
 `WorkflowInputs = std::collections::BTreeMap<String, serde_json::Value>` for dispatch.
 
-- [ ] Add four defaulted trait methods: `list_workflows(remote_url)`, `list_workflow_runs(remote_url, workflow_id, limit)`, `trigger_workflow(remote_url, workflow_id, git_ref, inputs)`, `cancel_workflow_run(remote_url, run_id)` — all defaulting to `bad_request("not implemented")`. Mirror TS types. Build. Commit.
+- [x] Add four defaulted trait methods: `list_workflows(remote_url)`, `list_workflow_runs(remote_url, workflow_id, limit)`, `trigger_workflow(remote_url, workflow_id, git_ref, inputs)`, `cancel_workflow_run(remote_url, run_id)` — all defaulting to `bad_request("not implemented")`. Mirror TS types. Build. Commit.
 
 ### Task 8: GitHub Actions
 
 **Files:** `github.rs`. Test: wiremock + fixtures `tests/fixtures/github/workflows/`.
 
-- [ ] TDD:
+- [x] TDD:
   - List: `GET /repos/:o/:r/actions/workflows`.
   - Inputs: `GET /repos/:o/:r/contents/<workflow_path>` → base64-decode → `serde_yaml` parse → extract `on.workflow_dispatch.inputs.*` into `WorkflowInputDef`s (type/required/default/choices).
   - Runs: `GET /repos/:o/:r/actions/workflows/:id/runs?per_page=:limit`.
   - Dispatch: `POST /repos/:o/:r/actions/workflows/:id/dispatches` with `{ ref, inputs }`.
   - Cancel: `POST /repos/:o/:r/actions/runs/:run_id/cancel`.
-- [ ] Add a YAML-parsing unit test for `workflow_dispatch.inputs`. Commit (`feat: GitHub Actions list/inputs/dispatch/cancel (C.4)`).
+- [x] Add a YAML-parsing unit test for `workflow_dispatch.inputs`. Commit (`feat: GitHub Actions list/inputs/dispatch/cancel (C.4)`).
 
 ### Task 9: GitLab Pipelines
 
 **Files:** `gitlab.rs`. Test: wiremock + fixtures.
 
-- [ ] TDD (semantic mapping: a "workflow" = the project's `.gitlab-ci.yml`; condense runs to pipeline level):
+- [x] TDD (semantic mapping: a "workflow" = the project's `.gitlab-ci.yml`; condense runs to pipeline level):
   - List: surface a single synthetic `WorkflowDto` (id = project pipeline config) — or one per `pipeline_schedules`. Keep `inputs_schema` from pipeline variables.
   - Runs: `GET /projects/:id/pipelines?per_page=:limit` → `WorkflowRunDto`.
   - Dispatch: `POST /projects/:id/pipeline` with `{ ref, variables: [{ key, value }] }` (map `WorkflowInputs` → `variables[]`).
   - Cancel: `POST /projects/:id/pipelines/:id/cancel`.
-- [ ] Commit (`feat: GitLab pipelines list/run/cancel (C.4)`).
+- [x] Commit (`feat: GitLab pipelines list/run/cancel (C.4)`).
 
 ### Task 10: Bitbucket Pipelines
 
 **Files:** `bitbucket.rs`. Test: wiremock + fixtures.
 
-- [ ] TDD:
+- [x] TDD:
   - List: `GET /repositories/:ws/:r/pipelines/` → `WorkflowDto` with **`inputs_schema: vec![]`** (Bitbucket has no dispatch inputs).
   - Runs: same endpoint, mapped to `WorkflowRunDto`.
   - Dispatch: `POST /repositories/:ws/:r/pipelines/` with `{ target: { ref_name, ref_type: "branch", selector? } }`.
   - Cancel: `PUT /repositories/:ws/:r/pipelines/:uuid/stopPipeline`.
-- [ ] Commit (`feat: Bitbucket pipelines list/run/cancel (C.4)`).
+- [x] Commit (`feat: Bitbucket pipelines list/run/cancel (C.4)`).
 
 ### Task 11: CI commands + CI tab UI
 
@@ -270,7 +270,7 @@ pub struct WorkflowRunDto {
 - `app/src/pages/app/RepoDetail/` (new "CI" section/card listing workflows + run history + "Run workflow" dynamic form from `inputsSchema`)
 - Test: command dispatch + component test (CI tab + dynamic form; Bitbucket → inputs disabled)
 
-- [ ] TDD: implement commands (dispatch via registry), thunks, and the CI UI. The "Run workflow" form renders fields from `inputsSchema` (text/number/select/checkbox); when `inputsSchema` is empty (Bitbucket) the form shows only a branch selector. Component test mocks invoke. Commit.
+- [x] TDD: implement commands (dispatch via registry), thunks, and the CI UI. The "Run workflow" form renders fields from `inputsSchema` (text/number/select/checkbox); when `inputsSchema` is empty (Bitbucket) the form shows only a branch selector. Component test mocks invoke. Commit.
 
 ---
 
@@ -280,7 +280,7 @@ pub struct WorkflowRunDto {
 
 **Files:** `api.rs`, `trait.rs`, `shared/src/types/`.
 
-- [ ] Add:
+- [x] Add:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -293,32 +293,67 @@ pub struct PagesStatusDto {
 }
 ```
 
-- [ ] Add defaulted trait method `get_pages_status(remote_url) -> Result<Option<PagesStatusDto>, CommandError>` (default `Ok(None)`). Mirror TS. Build. Commit.
+- [x] Add defaulted trait method `get_pages_status(remote_url) -> Result<Option<PagesStatusDto>, CommandError>` (default `Ok(None)`). Mirror TS. Build. Commit.
 
 ### Task 13: Per-provider Pages
 
 **Files:** `github.rs`, `gitlab.rs`, `bitbucket.rs`. Tests: wiremock fixtures per provider.
 
-- [ ] **GitHub:** `GET /repos/:o/:r/pages` (404 → `None`/disabled) + `GET /repos/:o/:r/pages/builds/latest` for `status`/`last_deployed_at`. Test 200 + 404 cases.
-- [ ] **GitLab:** `GET /projects/:id/pages` (status, url) + `GET /projects/:id/pages/domains` (custom domain). Older GitLab: fall back to `None`.
-- [ ] **Bitbucket:** no native Pages. Fallback algorithm:
+- [x] **GitHub:** `GET /repos/:o/:r/pages` (404 → `None`/disabled) + `GET /repos/:o/:r/pages/builds/latest` for `status`/`last_deployed_at`. Test 200 + 404 cases.
+- [x] **GitLab:** `GET /projects/:id/pages` (status, url) + `GET /projects/:id/pages/domains` (custom domain). Older GitLab: fall back to `None`.
+- [x] **Bitbucket:** no native Pages. Fallback algorithm:
   1. `GET /repositories/:ws/:r/src/<default-branch>/bitbucket-pipelines.yml` (404 → `None`).
   2. `serde_yaml` parse; search for deploy pipes (`atlassian/aws-s3-deploy`, `atlassian/firebase-hosting-deploy`, `atlassian/azure-storage-deploy`) or steps named `deploy`.
   3. Found → `PagesStatusDto { status: "built", url: None, custom_domain: None }`; else `None`.
   - Two fixture tests: one yml with `aws-s3-deploy` → detected; one without → `None`.
-- [ ] Commit per provider (`feat: <provider> pages status (C.6)`).
+- [x] Commit per provider (`feat: <provider> pages status (C.6)`).
 
 ### Task 14: Pages command + Deployments block
 
 **Files:** `commands/providers.rs` (`get_pages_status`) + `lib.rs` + `commands.ts` (`GET_PAGES_STATUS`); a thunk; a "Deployments" card in `RepoDetail` rendered only when status is non-`None` (link + status badge; Bitbucket shows "Pipelines-based deploy detected (no direct status)").
 
-- [ ] TDD command + component test. Commit (`feat: deployments block + get_pages_status command (C.6)`).
+- [x] TDD command + component test. Commit (`feat: deployments block + get_pages_status command (C.6)`).
 
 ---
 
 ## Done-check (Phase C.4–C.6)
 
-- [ ] `cargo test --manifest-path app/src-tauri/Cargo.toml providers` green (all wiremock fixtures: diff, comment, workflows, pages, bitbucket-diff parser, yaml inputs).
-- [ ] `yarn typecheck && yarn lint && yarn test` green; diff2html bundle ≤80KB gzipped (or `react-diff-view` swap done).
-- [ ] Playwright-MCP live check: PR diff tab renders; CI tab lists workflows; Deployments block shows when present.
-- [ ] Manual smokes with sandbox accounts per provider.
+- [x] `cargo test --manifest-path app/src-tauri/Cargo.toml providers` green — **39 tests passing** (diff, comment, workflows, pages, bitbucket-diff parser, yaml inputs).
+- [x] `yarn typecheck && yarn lint && yarn test` green — **255 vitests passing**. The `diff2html ≤80KB` clause is N/A (custom `<DiffView>` replaces the dep — see Task 6 Step 2).
+- [x] Playwright-MCP live check:
+  - PR diff renders inside `<MrDiffCard>` on the MR detail page (`pages/app/MrDetail`)
+  - `<CiCard>` lists workflows + run history on `/repo/:id` (verified: 2 runs visible, run-form opens with all 4 dynamic field types: string / number / choice / boolean)
+  - `<DeploymentsCard>` renders on `/repo/:id` with status + URL + last-deployed timestamp
+  - Screenshots in `.screenshots/`: `repo-detail-ci-deployments.png`, `ci-run-form-open.png`
+- [ ] **Manual smokes with sandbox accounts per provider** — owner: user. Connect a real PAT for each of GitHub / GitLab / Bitbucket and exercise: list PRs → open diff → post inline comment; list workflows → run with inputs → cancel; open Deployments block.
+
+---
+
+## Built beyond the plan (Phase C.4–C.6 implementation drift)
+
+The implementation pulled in adjacent UX work that wasn't scoped in the original plan but ended up shipping alongside it. Documented here so the plan stays the source of truth.
+
+**Backend / IPC:** matches plan exactly (7 new commands, 3 provider implementations, defaulted trait methods).
+
+**Frontend — beyond Task 6's "Files tab → diff renderer":**
+
+- **Custom `<DiffView>` molecule** instead of `diff2html`/`react-diff-view` — no third-party dep, full control over the inline composer surface. (`app/src/components/molecules/diff/DiffView/`)
+- **Full MR detail page** at `/mr/:repoId/:prNumber` (`pages/app/MrDetail/`) replacing the original "drawer-only" model. Atomized into 7 parts: `MrDetailHeader` / `MrDescriptionCard` / `MrReviewersCard` / `MrDiffCard` / `MrTimelineCard` / `MrMetadataCard` / `MrNotFound` + `TargetBranchPopover`. Drawer slimmed to a quick-actions preview that points to the full page via "Open full view".
+- **TipTap-based `<RichTextEditor>`** used for both the MR description editor and the diff inline-comment composer. Markdown ↔ TipTap round-trip; XSS-locked via `DOMPurify` + `rehype-sanitize`.
+- **`<MergeMrModal>`** with strategy radio (merge / squash / rebase), editable commit title + body, RepoDetail-style PrimaryBtn/SecondaryBtn.
+- **`<MarkdownView>`** atom with `remark-gfm` + `rehype-raw` + sanitised allowlist (covers Dependabot-style markdown including `<details>` blocks); 7 XSS regression tests.
+- **`<ExpandableContent>`** wrapping the description so long bodies soft-clip at 220px with a "Show more / less" toggle.
+- **Diff stats fallback** — `deriveDiffStats(diff)` (`lib/utils/diffStats.utils.ts`) computes additions/deletions from the loaded diff when the provider list-endpoint omits them (GitLab); used by both the drawer's `<InfoStrip>` Changes cell and the new `<Files>` section.
+
+**Frontend — beyond the plan's MR list page:**
+
+- **MR list grouped by repo, collapsible** (`MrGroup`) — mirrors the Repos-page accordion pattern.
+- **`<MrFiltersPopover>`** — repo + author + draft toggle + CI status filter set; matches the Branches `<Menu>` look via the new shared `<FilterMenuItem>` molecule (`components/molecules/filters/FilterMenuItem/`). Author/repo rows carry `<AuthorAvatar>` / `<RepoAvatar>`. Counts per option; active-count badge on the trigger button.
+- **`MrRow` diff chip** falls back to a muted `—` when the provider returned `null` additions/deletions (so the row's visual rhythm survives missing data).
+- **Reviewer labels** now display `name ?? login` everywhere (drawer + full page), matching the avatar's initial-source.
+- **Locale-aware date formatting** (`lib/utils/dateFormat.utils.ts`) used on the MR detail metadata + timeline rows.
+- **`<TargetBranchPopover>`** — search-and-pick retarget UI anchored to the target-branch chip in the MR header.
+
+**Shared infra:**
+
+- New `<FilterMenuItem>` molecule (`components/molecules/filters/FilterMenuItem/`) — Branches page now re-exports its filter primitives from this shared home; MR page consumes the same surface, so the two filter UIs cannot drift again.

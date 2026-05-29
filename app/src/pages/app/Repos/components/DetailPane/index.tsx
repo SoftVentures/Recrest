@@ -33,7 +33,6 @@ import GeneralIconButton, {
   IconButtonSize,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
@@ -141,34 +140,31 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             <IdeIcon id={ide.iconId} size={13} color="currentColor" style={{ opacity: 1 }} />
             <Box component="span">{ideLabel}</Box>
           </PrimaryIde>
-          <GeneralTooltip title="Open in Terminal" placement="top">
-            <GeneralIconButton
-              size={IconButtonSize.MD}
-              variant={IconButtonVariant.OUTLINE}
-              aria-label={tAria("repo.open_in_terminal")}
-              onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
-              icon={<TerminalLucide size={13} />}
-            />
-          </GeneralTooltip>
-          <GeneralTooltip title="Open in Explorer" placement="top">
-            <GeneralIconButton
-              size={IconButtonSize.MD}
-              variant={IconButtonVariant.OUTLINE}
-              aria-label={tAria("repo.open_in_explorer")}
-              onClick={() => void revealPathInSystem(repo.path)}
-              icon={<Folder size={13} />}
-            />
-          </GeneralTooltip>
+          <GeneralIconButton
+            size={IconButtonSize.MD}
+            variant={IconButtonVariant.OUTLINE}
+            aria-label={tAria("repo.open_in_terminal")}
+            tooltip="Open in Terminal"
+            onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
+            icon={<TerminalLucide size={13} />}
+          />
+          <GeneralIconButton
+            size={IconButtonSize.MD}
+            variant={IconButtonVariant.OUTLINE}
+            aria-label={tAria("repo.open_in_explorer")}
+            tooltip="Open in Explorer"
+            onClick={() => void revealPathInSystem(repo.path)}
+            icon={<Folder size={13} />}
+          />
           {repo.remoteUrl && (
-            <GeneralTooltip title="Open on host" placement="top">
-              <GeneralIconButton
-                size={IconButtonSize.MD}
-                variant={IconButtonVariant.OUTLINE}
-                aria-label={tAria("repo.open_remote")}
-                onClick={() => void openExternal(repo.remoteUrl!)}
-                icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
-              />
-            </GeneralTooltip>
+            <GeneralIconButton
+              size={IconButtonSize.MD}
+              variant={IconButtonVariant.OUTLINE}
+              aria-label={tAria("repo.open_remote")}
+              tooltip="Open on host"
+              onClick={() => void openExternal(repo.remoteUrl!)}
+              icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
+            />
           )}
         </IconRow>
       </Header>

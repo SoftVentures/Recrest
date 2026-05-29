@@ -186,7 +186,7 @@ function installStub(seed: Required_<AppSeed>): void {
         repoName: repo.name,
         number: num,
         title,
-        author: "valentin",
+        author: "sasha",
         url,
         timestamp: new Date(nowMs - (d + 1) * 86_400_000).toISOString(),
         kind: "opened",
@@ -196,7 +196,7 @@ function installStub(seed: Required_<AppSeed>): void {
         repoName: repo.name,
         number: num,
         title,
-        author: "valentin",
+        author: "sasha",
         url,
         timestamp: ts,
         kind: "merged",
@@ -326,14 +326,14 @@ function installStub(seed: Required_<AppSeed>): void {
           sha: "abc1234",
           shortSha: "abc1234",
           subject: "feat: latest work on branch",
-          author: "Valentin",
+          author: "Sasha",
           authoredAt: cIso(1),
         };
         const altCommit = {
           sha: "def5678",
           shortSha: "def5678",
           subject: "chore: keep develop in sync",
-          author: "Valentin",
+          author: "Sasha",
           authoredAt: cIso(3),
         };
         return [

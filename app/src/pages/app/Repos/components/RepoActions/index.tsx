@@ -24,7 +24,6 @@ import GeneralIconButton, {
   IconButtonSize,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import OpenInIdeButton from "@/components/atoms/buttons/OpenInIdeButton";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -118,42 +117,35 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
   return (
     <>
       <OpenInIdeButton repoId={repo.id} iconSize={iconSize} />
-      <GeneralTooltip title="Open in Terminal" placement="top">
-        <GeneralIconButton
-          size={iconSize}
-          aria-label={tAria("repo.open_in_terminal")}
-          onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
-          icon={<TerminalLucide size={px} />}
-        />
-      </GeneralTooltip>
-      <GeneralTooltip
-        title={repo.remoteUrl ? "Open on host" : "No remote configured"}
-        placement="top"
-      >
-        <GeneralIconButton
-          size={iconSize}
-          aria-label={tAria("repo.open_remote")}
-          onClick={onOpenRemote}
-          disabled={!repo.remoteUrl}
-          icon={brand ? <BrandIcon slug={brand} size={px} /> : <ExternalLink size={px} />}
-        />
-      </GeneralTooltip>
-      <GeneralTooltip title="Open in Explorer" placement="top">
-        <GeneralIconButton
-          size={iconSize}
-          aria-label={tAria("repo.open_in_explorer")}
-          onClick={() => void revealPathInSystem(repo.path)}
-          icon={<Folder size={px} />}
-        />
-      </GeneralTooltip>
-      <GeneralTooltip title="More" placement="top">
-        <GeneralIconButton
-          size={iconSize}
-          aria-label={tAria("repo.more_actions")}
-          onClick={openMenu}
-          icon={<MoreHorizontal size={px} />}
-        />
-      </GeneralTooltip>
+      <GeneralIconButton
+        size={iconSize}
+        aria-label={tAria("repo.open_in_terminal")}
+        tooltip="Open in Terminal"
+        onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
+        icon={<TerminalLucide size={px} />}
+      />
+      <GeneralIconButton
+        size={iconSize}
+        aria-label={tAria("repo.open_remote")}
+        tooltip={repo.remoteUrl ? "Open on host" : "No remote configured"}
+        onClick={onOpenRemote}
+        disabled={!repo.remoteUrl}
+        icon={brand ? <BrandIcon slug={brand} size={px} /> : <ExternalLink size={px} />}
+      />
+      <GeneralIconButton
+        size={iconSize}
+        aria-label={tAria("repo.open_in_explorer")}
+        tooltip="Open in Explorer"
+        onClick={() => void revealPathInSystem(repo.path)}
+        icon={<Folder size={px} />}
+      />
+      <GeneralIconButton
+        size={iconSize}
+        aria-label={tAria("repo.more_actions")}
+        tooltip="More"
+        onClick={openMenu}
+        icon={<MoreHorizontal size={px} />}
+      />
 
       <Menu
         anchorEl={menuAnchor}

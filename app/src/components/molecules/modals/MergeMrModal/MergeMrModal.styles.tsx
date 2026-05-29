@@ -24,50 +24,24 @@ export const StrategyList = styled(Box)({
   marginTop: 8,
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <label> required to associate radio input with its block of text
+// eslint-disable-next-line no-restricted-syntax -- native <label> required so clicking anywhere on the card toggles the wrapped MUI <Radio>
 export const StrategyOption = styled("label", {
   shouldForwardProp: (p) => p !== "selected",
 })<{ selected: boolean }>(({ theme, selected }) => ({
   display: "grid",
   gridTemplateColumns: "auto 1fr",
   gap: 10,
+  alignItems: "flex-start",
   padding: "10px 12px",
   borderRadius: 8,
-  border: `1px solid ${selected ? theme.palette.text.primary : theme.palette.divider}`,
+  border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
   backgroundColor: selected
-    ? `color-mix(in srgb, ${theme.palette.text.primary} 5%, transparent)`
+    ? `color-mix(in srgb, ${theme.palette.primary.main} 6%, transparent)`
     : theme.palette.background.paper,
   cursor: "pointer",
   transition: "border-color 120ms ease, background-color 120ms ease",
   "&:hover": {
     borderColor: theme.palette.border.hover,
-  },
-}));
-
-// eslint-disable-next-line no-restricted-syntax -- native <input type="radio"> for accessibility / form semantics
-export const StrategyRadio = styled("input")(({ theme }) => ({
-  appearance: "none",
-  width: 14,
-  height: 14,
-  margin: "2px 0 0 0",
-  borderRadius: "50%",
-  border: `1.5px solid ${theme.palette.divider}`,
-  cursor: "pointer",
-  display: "inline-block",
-  position: "relative",
-  flexShrink: 0,
-  "&:checked": {
-    borderColor: theme.palette.text.primary,
-    "&::after": {
-      content: '""',
-      position: "absolute",
-      top: 2,
-      left: 2,
-      width: 6,
-      height: 6,
-      borderRadius: "50%",
-      backgroundColor: theme.palette.text.primary,
-    },
   },
 }));
 
@@ -110,22 +84,33 @@ export const TitleInput = styled("input")(({ theme }) => ({
   "&:focus": { borderColor: theme.palette.border.hover },
 }));
 
-// eslint-disable-next-line no-restricted-syntax -- native <textarea> required for multi-line input
-export const DescTextArea = styled("textarea")(({ theme }) => ({
-  width: "100%",
-  resize: "vertical",
-  minHeight: 96,
-  padding: "10px 12px",
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.primary,
-  fontFamily: "inherit",
+// The description now uses the shared `<RichTextEditor>` molecule (TipTap).
+// Cap the editor body so a long PR description (Dependabot, long release
+// notes) scrolls inside the editor instead of pushing Title + Strategy +
+// Actions off the bottom of small viewports. Behaviour matches the previous
+// textarea: ~96px floor, ~180px ceiling, internal scroll once content
+// exceeds it.
+export const DescriptionWrap = styled(Box)({
+  "& .ProseMirror": {
+    minHeight: 96,
+    maxHeight: 180,
+    overflowY: "auto",
+  },
+}) as typeof Box;
+
+export const DeleteBranchLabel = styled(Box)(({ theme }) => ({
+  display: "block",
   fontSize: 13,
-  lineHeight: 1.55,
-  outline: "none",
-  "&:focus": { borderColor: theme.palette.border.hover },
-}));
+  fontWeight: 500,
+  color: theme.palette.text.primary,
+})) as typeof Box;
+
+export const DeleteBranchHint = styled(Box)(({ theme }) => ({
+  display: "block",
+  fontSize: 11.5,
+  color: theme.palette.text.information,
+  marginTop: 2,
+})) as typeof Box;
 
 export const ProviderNote = styled(Typography)(({ theme }) => ({
   fontSize: 11.5,

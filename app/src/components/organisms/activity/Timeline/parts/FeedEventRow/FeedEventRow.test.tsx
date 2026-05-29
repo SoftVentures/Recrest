@@ -14,7 +14,7 @@ const commit: RecentCommit = {
   repoId: "r1",
   repoName: "recrest",
   sha: "abc1234",
-  author: "valentin",
+  author: "sasha",
   authorEmail: "v@example.com",
   summary: "Add aria labels",
   timestamp: "2025-02-15T10:00:00Z",

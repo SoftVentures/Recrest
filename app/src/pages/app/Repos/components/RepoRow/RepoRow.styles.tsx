@@ -19,8 +19,10 @@ export const Row = styled(Box)(({ theme }) => ({
   backgroundColor: "transparent",
   transition: "background-color 0.12s ease",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },
-  "&[data-selected='true']": {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 8%, transparent)`,
+  "&[data-selected='true'], &[data-context-menu-open='true']": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -2,
+    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 10%, transparent)`,
   },
   // The inline pin sits idle until the row is hovered/selected; an already
   // pinned repo keeps it lit (handled by the slot's own data attribute).

@@ -83,14 +83,13 @@ export function StorageSection() {
         <FactRow>
           <Box component="strong">Git:</Box>
           <Box component="span">2.44.0</Box>
-          <GeneralTooltip title={t("settings.storage.git_info")} arrow placement="top">
-            <GeneralIconButton
-              size={IconButtonSize.XS}
-              variant={IconButtonVariant.GHOST}
-              aria-label={t("settings.more_info", { ns: I18nNamespace.ARIA })}
-              icon={<Info size={11} />}
-            />
-          </GeneralTooltip>
+          <GeneralIconButton
+            size={IconButtonSize.XS}
+            variant={IconButtonVariant.GHOST}
+            aria-label={t("settings.more_info", { ns: I18nNamespace.ARIA })}
+            tooltip={t("settings.storage.git_info")}
+            icon={<Info size={11} />}
+          />
         </FactRow>
       </FactsBox>
     </SettingsSection>

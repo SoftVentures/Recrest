@@ -29,7 +29,7 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 
 ---
 
-## Sub-plans (5 files)
+## Sub-plans (7 files)
 
 | #   | File                         | Scope (master-spec items)                                                                                                                                                                         | Depends on |
 | --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -38,8 +38,10 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 | 3   | `03-working-copy.md`         | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                      | 1 (Part A) |
 | 4   | `04-provider-mr-ci-pages.md` | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                       | 1 (Part A) |
 | 5   | `05-provider-depth.md`       | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                  | 1 (Part A) |
+| 6   | `06-git-config-full.md`      | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                              | 3          |
+| 7   | `07-provider-merge.md`       | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring    | 4          |
 
-All five are written in full, grounded against the real source (exact signatures,
+All seven are written in full, grounded against the real source (exact signatures,
 file:line, no placeholders). One deferred item is flagged inline: the **terminal-picker
 Settings UI** (Plan 1, Part B) — the spawn bug is fixed by auto-detection; the picker
 folds into Plan 2's settings work once the `store/actions` + `backendSync.ts` write
@@ -54,13 +56,16 @@ Plan 1 Part A (test harness)  ── prerequisite for every backend TDD step
 └─ Plan 1 Part B (bugs: terminal + reveal)   ← smallest, highest user-visible payoff
    ├─ Plan 2 (repo polish: B.1–B.6)          ┐ frontend + settings; B.3/B.6 add backend
    └─ Plan 3 (working copy: C.1–C.3)         ┘ local-git subsystem
-      └─ Plan 5 (provider depth: D.1/D.2)     ← lighter provider warm-up (mapping + tests)
-         └─ Plan 4 (MR diff / CI / pages)     ← heaviest provider-trait work
+      ├─ Plan 6 (git config full)            ← expansion of Plan 3's C.3 slice
+      └─ Plan 5 (provider depth: D.1/D.2)    ← lighter provider warm-up (mapping + tests)
+         └─ Plan 4 (MR diff / CI / pages)    ← heaviest provider-trait work
+            └─ Plan 7 (provider merge: C.7)  ← unblocks the "coming soon" note in MergeMrModal
 ```
 
 Rationale: Plans 4 + 5 both touch `providers/trait.rs` + `providers/api.rs`; doing
-the lighter Plan 5 first warms up those files and de-risks Plan 4. Within the branch,
-sequencing avoids repeated churn on the shared trait/DTO files.
+the lighter Plan 5 first warms up those files and de-risks Plan 4. Plan 7 depends on
+Plan 4's trait + HTTP-helper infrastructure already being in place. Within the
+branch, sequencing avoids repeated churn on the shared trait/DTO files.
 
 ---
 

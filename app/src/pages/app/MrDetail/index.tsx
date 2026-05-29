@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
@@ -29,12 +29,25 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function MrDetailPage() {
   const { repoId, prNumber } = useParams<{ repoId: string; prNumber: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t: tPrs } = useTranslation(I18nNamespace.PRS);
   const dispatch = useAppDispatch();
 
   const [busy, setBusy] = useState<null | "checkout" | "merge">(null);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+
+  // Deep-link from the row context menu: arriving with `?merge=open` opens
+  // the merge modal once the PR is loaded. Strip the param afterwards so a
+  // reload doesn't re-fire the modal and the URL stays clean.
+  useEffect(() => {
+    if (searchParams.get("merge") === "open") {
+      setMergeModalOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("merge");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Local-only retarget override until the provider IPC
   // (`update_pr_target_branch`) lands; falls back to the PR's own target.
@@ -137,6 +150,24 @@ export default function MrDetailPage() {
       });
       toast.success(tPrs("detail.merge_modal.merged_ok"));
       setMergeModalOpen(false);
+
+      if (data.deleteSourceBranch) {
+        try {
+          await invoke(TauriCommand.GIT_BRANCH_DELETE, {
+            repoId,
+            branch: pr.sourceBranch,
+          });
+          toast.success(tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          toast.error(
+            tPrs("detail.merge_modal.branch_delete_failed", {
+              source: pr.sourceBranch,
+              message: msg,
+            }),
+          );
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(`${tPrs("detail.merge_modal.merge_failed")}: ${msg}`);

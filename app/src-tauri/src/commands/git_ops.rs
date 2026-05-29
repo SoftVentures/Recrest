@@ -457,6 +457,25 @@ pub async fn git_branch_create(
     Ok(status::read_status(&path2)?)
 }
 
+/// Deletes a local branch. Refuses to delete the currently-checked-out branch
+/// (would orphan HEAD); the UI must `git_checkout` somewhere else first. Used
+/// by the merge-modal "Delete source branch after merge" affordance — after a
+/// merge HEAD lives on the target, so deleting the source is safe.
+#[tauri::command]
+pub async fn git_branch_delete(
+    state: State<'_, AppState>,
+    repo_id: String,
+    branch: String,
+) -> Result<status::RepoStatusDto, CommandError> {
+    let path = resolve_repo_path(&state, &repo_id).await?;
+    let branch_clone = branch.clone();
+    tokio::task::spawn_blocking(move || branch_delete_blocking(&path, &branch_clone))
+        .await
+        .map_err(|e| CommandError::internal(format!("branch_delete task failed: {e}")))??;
+    let path2 = resolve_repo_path(&state, &repo_id).await?;
+    Ok(status::read_status(&path2)?)
+}
+
 /// Fast-forward `git pull` — fetches then fast-forwards HEAD when possible.
 /// Refuses to pull when the working tree is dirty or a merge would be needed;
 /// that's a UX call rather than a limitation (real merge conflicts should
@@ -744,6 +763,32 @@ fn branch_create_blocking(
             .map_err(|e| CommandError::internal(format!("set_head failed: {e}")))?;
     }
 
+    Ok(())
+}
+
+fn branch_delete_blocking(path: &Path, branch: &str) -> Result<(), CommandError> {
+    let repo = Repository::open(path)
+        .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
+
+    // Refuse to delete the currently-checked-out branch — it would orphan
+    // HEAD. The UI is expected to switch off this branch first (the merge
+    // flow naturally lands us on `target`, so the source becomes deletable).
+    if let Ok(head) = repo.head() {
+        if let Some(name) = head.shorthand() {
+            if name == branch {
+                return Err(CommandError::bad_request(format!(
+                    "cannot delete '{branch}': it's the currently checked-out branch"
+                )));
+            }
+        }
+    }
+
+    let mut local = repo
+        .find_branch(branch, git2::BranchType::Local)
+        .map_err(|_| CommandError::bad_request(format!("local branch '{branch}' not found")))?;
+    local
+        .delete()
+        .map_err(|e| CommandError::bad_request(format!("delete branch failed: {e}")))?;
     Ok(())
 }
 

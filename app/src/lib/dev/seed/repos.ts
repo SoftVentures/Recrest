@@ -71,7 +71,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "f2e1d0c9b8a7",
         summary: "feat(landing): ship responsive hero demo",
-        author: "valentin",
+        author: "demo-user",
         timestamp: daysAgo(1),
       },
       commitActivity: commitActivity([2, 3, 4, 6, 5, 2, 3, 4, 7, 8, 5, 3, 4, 6]),
@@ -110,7 +110,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "e11f3a9c2b88",
         summary: "refactor: split compose profiles per stack",
-        author: "valentin",
+        author: "demo-user",
         timestamp: daysAgo(2),
       },
       changedFiles: [
@@ -293,7 +293,7 @@ export const SEED_REPOS: Repository[] = [
     name: "octo-notes",
     path: "~/Code/experiments/octo-notes",
     groupId: "experiments",
-    remoteUrl: "https://github.com/valentin/octo-notes",
+    remoteUrl: "https://github.com/demo-user/octo-notes",
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
@@ -308,7 +308,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "887ab0112233",
         summary: "wip: editor lane with frontmatter parser",
-        author: "valentin",
+        author: "demo-user",
         timestamp: daysAgo(1),
       },
       changedFiles: [
@@ -399,7 +399,7 @@ export const SEED_REPOS: Repository[] = [
     name: "glyph-sandbox",
     path: "~/Code/experiments/glyph-sandbox",
     groupId: "experiments",
-    remoteUrl: "https://github.com/valentin/glyph-sandbox",
+    remoteUrl: "https://github.com/demo-user/glyph-sandbox",
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
@@ -411,7 +411,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "55ee77ffaa22",
         summary: "ci(deps): migrate to vite 5",
-        author: "valentin",
+        author: "demo-user",
         timestamp: daysAgo(6),
       },
       commitActivity: commitActivity([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]),
@@ -430,7 +430,7 @@ export const SEED_REPOS: Repository[] = [
     name: "signal-lab",
     path: "~/Code/experiments/signal-lab",
     groupId: "experiments",
-    remoteUrl: "https://bitbucket.org/valentin/signal-lab",
+    remoteUrl: "https://bitbucket.org/demo-user/signal-lab",
     providerId: "bitbucket",
     logoPath: null,
     logoDarkPath: null,
@@ -442,7 +442,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "44bb66ddee99",
         summary: "ci(deps): quarterly bump",
-        author: "valentin",
+        author: "demo-user",
         timestamp: daysAgo(9),
       },
       commitActivity: commitActivity([0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]),
@@ -459,7 +459,7 @@ export const SEED_REPOS: Repository[] = [
 ];
 
 const AUTHOR_EMAILS: Record<string, string> = {
-  valentin: "valentin@example.com",
+  "demo-user": "demo-user@example.com",
   maren: "maren@example.com",
   tomi: "tomi@example.com",
   lea: "lea@example.com",
@@ -488,7 +488,7 @@ const COMMIT_SUMMARIES = [
   "docs: changelog entry",
 ] as const;
 
-const CO_AUTHORS = ["valentin", "maren", "tomi", "lea"] as const;
+const CO_AUTHORS = ["demo-user", "maren", "tomi", "lea"] as const;
 
 // Spread commits across the 14-day window AND across varied weekday hours so
 // the heatmap/author-clock cards light up in multiple cells. Twelve commits

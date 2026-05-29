@@ -1,0 +1,449 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e670]:
+      - generic [ref=e7]:
+        - img [ref=e671]:
+          - img [ref=e9]
+        - paragraph [ref=e19]: Recrest
+      - navigation [ref=e20]:
+        - link [ref=e672] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e23]:
+            - img [ref=e24]
+            - generic [ref=e27]: Dashboard
+        - link [ref=e673] [cursor=pointer]:
+          - /url: /repos
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - generic [ref=e34]: Repositories
+            - generic [ref=e35]: "8"
+        - link [ref=e674] [cursor=pointer]:
+          - /url: /merge-requests
+          - generic [ref=e38]:
+            - img [ref=e39]
+            - generic [ref=e43]: Merge Requests
+            - generic [ref=e44]: "5"
+        - link [ref=e675] [cursor=pointer]:
+          - /url: /changes
+          - generic [ref=e47]:
+            - img [ref=e48]
+            - generic [ref=e50]: Changes
+            - generic [ref=e51]: "3"
+        - link [ref=e676] [cursor=pointer]:
+          - /url: /branches
+          - generic [ref=e54]:
+            - img [ref=e55]
+            - generic [ref=e59]: Branches
+        - link [ref=e677] [cursor=pointer]:
+          - /url: /activity
+          - generic [ref=e62]:
+            - img [ref=e63]
+            - generic [ref=e65]: Activity
+      - button [ref=e678] [cursor=pointer]:
+        - img [ref=e67]
+      - generic [ref=e70]:
+        - group [ref=e679]:
+          - button [pressed] [ref=e680] [cursor=pointer]:
+            - img [ref=e74]
+            - generic [ref=e76]: Local
+          - button [ref=e681] [cursor=pointer]:
+            - img [ref=e78]
+            - generic [ref=e81]: Global
+        - link [ref=e682] [cursor=pointer]:
+          - /url: /settings
+          - generic [ref=e84]:
+            - img [ref=e85]
+            - generic [ref=e88]: Settings
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - heading [level=1] [ref=e683]: Dashboard
+        - generic [ref=e93]: 8 repos
+      - button [ref=e684] [cursor=pointer]:
+        - img [ref=e96]
+        - generic [ref=e99]: Search repositories, branches, MRs…
+        - generic [ref=e100]: ⌘K
+      - generic [ref=e101]:
+        - button [ref=e685] [cursor=pointer]:
+          - img [ref=e103]
+        - button [ref=e686] [cursor=pointer]:
+          - img [ref=e109]
+        - button [ref=e687] [cursor=pointer]:
+          - img [ref=e115]
+          - generic [ref=e117]: Add Repository
+    - main [ref=e118]:
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - button [ref=e688] [cursor=pointer]:
+            - generic [ref=e125]: Repositories
+            - generic [ref=e126]: "8"
+            - generic [ref=e127]: 3 with changes
+          - button [ref=e689] [cursor=pointer]:
+            - generic [ref=e130]: Merge Requests
+            - generic [ref=e131]: "5"
+            - generic [ref=e132]: 2 draft
+          - button [ref=e690] [cursor=pointer]:
+            - generic [ref=e135]: Ahead / behind
+            - generic [ref=e137]:
+              - generic [ref=e138]: ↑
+              - text: "7"
+              - generic [ref=e139]: /
+              - generic [ref=e140]: ↓
+              - text: "9"
+            - generic [ref=e141]: across all remotes
+          - button [ref=e691] [cursor=pointer]:
+            - generic [ref=e144]: Commits · 14d
+            - generic [ref=e145]: "194"
+            - generic [ref=e146]: peak day 20
+        - generic [ref=e147]:
+          - generic [ref=e148]:
+            - generic [ref=e149]:
+              - heading [level=3] [ref=e692]: Activity · last 14 days
+              - generic [ref=e151]: 194 commits across 8 repos
+            - generic [ref=e167]:
+              - generic [ref=e168]: 14d ago
+              - generic [ref=e169]: 7d
+              - generic [ref=e170]: today
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - heading [level=3] [ref=e693]: Needs your attention
+              - generic [ref=e175]: 5 items
+            - generic [ref=e176]:
+              - button [ref=e694] [cursor=pointer]:
+                - generic [ref=e695]: L
+                - generic [ref=e179]:
+                  - generic [ref=e180]: local-dev-stacks
+                  - generic [ref=e181]:
+                    - text: 3 changed ·
+                    - generic [ref=e182]: "+112"
+                    - generic [ref=e183]: −48
+                - generic [ref=e184]: dirty
+              - button [ref=e696] [cursor=pointer]:
+                - generic [ref=e697]: P
+                - generic [ref=e187]:
+                  - generic [ref=e188]: pulse-ios
+                  - generic [ref=e189]:
+                    - text: 7 changed ·
+                    - generic [ref=e190]: "+398"
+                    - generic [ref=e191]: −142
+                - generic [ref=e192]: dirty
+              - button [ref=e698] [cursor=pointer]:
+                - generic [ref=e699]: O
+                - generic [ref=e195]:
+                  - generic [ref=e196]: octo-notes
+                  - generic [ref=e197]:
+                    - text: 12 changed ·
+                    - generic [ref=e198]: "+612"
+                    - generic [ref=e199]: −211
+                - generic [ref=e200]: dirty
+              - button [ref=e700] [cursor=pointer]:
+                - generic [ref=e701]: L
+                - generic [ref=e203]:
+                  - generic [ref=e204]: ledger-api
+                  - generic [ref=e205]: 3 commits behind
+                - generic [ref=e206]: behind
+              - button [ref=e702] [cursor=pointer]:
+                - generic [ref=e703]: P
+                - generic [ref=e209]:
+                  - generic [ref=e210]: pulse-ios
+                  - generic [ref=e211]: 1 commit behind
+                - generic [ref=e212]: behind
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - heading [level=3] [ref=e704]: Open merge requests
+              - button [ref=e705] [cursor=pointer]: View all →
+            - generic [ref=e218]:
+              - button [ref=e706] [cursor=pointer]:
+                - img [ref=e220]
+                - generic [ref=e224]:
+                  - generic [ref=e225]: "feat(landing): realistic hero demo with DE/EN copy"
+                  - generic [ref=e226]: "#41 · valentin"
+                - generic [ref=e227]: passing
+              - button [ref=e707] [cursor=pointer]:
+                - img [ref=e230]
+                - generic [ref=e234]:
+                  - generic [ref=e235]: "ci(tests): bootstrap Playwright suite"
+                  - generic [ref=e236]: "#38 · valentin"
+                - generic [ref=e237]: —
+              - button [ref=e708] [cursor=pointer]:
+                - img [ref=e239]
+                - generic [ref=e243]:
+                  - generic [ref=e244]: "compose-v2: split profiles"
+                  - generic [ref=e245]: "#22 · valentin"
+                - generic [ref=e246]: failing
+              - button [ref=e709] [cursor=pointer]:
+                - img [ref=e249]
+                - generic [ref=e253]:
+                  - generic [ref=e254]: "fix(button): retain focus ring after click"
+                  - generic [ref=e255]: "#204 · lea"
+                - generic [ref=e256]: passing
+          - generic [ref=e258]:
+            - generic [ref=e259]:
+              - heading [level=3] [ref=e710]: Recent commits
+              - button [ref=e711] [cursor=pointer]: All activity →
+            - generic [ref=e263]:
+              - button [ref=e712] [cursor=pointer]:
+                - generic [ref=e713]: L
+                - generic [ref=e267]:
+                  - generic [ref=e268]: "fix(a11y): aria-label on icon button"
+                  - generic [ref=e269]:
+                    - generic [ref=e270]: signal-lab
+                    - generic [ref=e271]: ·
+                    - generic [ref=e272]: lea
+                    - generic [ref=e273]: ·
+                    - generic [ref=e274]: r7c0-la
+              - button [ref=e714] [cursor=pointer]:
+                - generic [ref=e715]: T
+                - generic [ref=e278]:
+                  - generic [ref=e279]: "style: align spacing in header"
+                  - generic [ref=e280]:
+                    - generic [ref=e281]: glyph-sandbox
+                    - generic [ref=e282]: ·
+                    - generic [ref=e283]: tomi
+                    - generic [ref=e284]: ·
+                    - generic [ref=e285]: r6c0dbo
+              - button [ref=e716] [cursor=pointer]:
+                - generic [ref=e717]: M
+                - generic [ref=e289]:
+                  - generic [ref=e290]: "feat: add keyboard shortcut"
+                  - generic [ref=e291]:
+                    - generic [ref=e292]: octo-notes
+                    - generic [ref=e293]: ·
+                    - generic [ref=e294]: maren
+                    - generic [ref=e295]: ·
+                    - generic [ref=e296]: r5c0ote
+              - button [ref=e718] [cursor=pointer]:
+                - generic [ref=e719]: V
+                - generic [ref=e300]:
+                  - generic [ref=e301]: "refactor: extract shared helpers"
+                  - generic [ref=e302]:
+                    - generic [ref=e303]: starlight-ui
+                    - generic [ref=e304]: ·
+                    - generic [ref=e305]: valentin
+                    - generic [ref=e306]: ·
+                    - generic [ref=e307]: r4c0t-u
+              - button [ref=e720] [cursor=pointer]:
+                - generic [ref=e721]: L
+                - generic [ref=e311]:
+                  - generic [ref=e312]: "fix(a11y): aria-label on icon button"
+                  - generic [ref=e313]:
+                    - generic [ref=e314]: pulse-ios
+                    - generic [ref=e315]: ·
+                    - generic [ref=e316]: lea
+                    - generic [ref=e317]: ·
+                    - generic [ref=e318]: r3c0-io
+              - button [ref=e722] [cursor=pointer]:
+                - generic [ref=e723]: T
+                - generic [ref=e322]:
+                  - generic [ref=e323]: "style: align spacing in header"
+                  - generic [ref=e324]:
+                    - generic [ref=e325]: ledger-api
+                    - generic [ref=e326]: ·
+                    - generic [ref=e327]: tomi
+                    - generic [ref=e328]: ·
+                    - generic [ref=e329]: r2c0-ap
+          - generic [ref=e330]:
+            - generic [ref=e332]:
+              - heading [level=3] [ref=e724]: Language mix
+              - generic [ref=e334]: weighted by commits
+            - generic [ref=e335]:
+              - img [ref=e336]:
+                - generic [ref=e353]: "104"
+                - generic [ref=e354]: commits
+              - list [ref=e355]:
+                - listitem [ref=e356]:
+                  - generic [ref=e358]: TypeScript
+                  - generic [ref=e359]: 25%
+                - listitem [ref=e360]:
+                  - generic [ref=e362]: Rust
+                  - generic [ref=e363]: 13%
+                - listitem [ref=e364]:
+                  - generic [ref=e366]: Swift
+                  - generic [ref=e367]: 10%
+                - listitem [ref=e368]:
+                  - generic [ref=e370]: JavaScript
+                  - generic [ref=e371]: 10%
+                - listitem [ref=e372]:
+                  - generic [ref=e374]: Python
+                  - generic [ref=e375]: 10%
+                - listitem [ref=e376]:
+                  - generic [ref=e378]: CSS
+                  - generic [ref=e379]: 7%
+                - listitem [ref=e380]:
+                  - generic [ref=e382]: Shell
+                  - generic [ref=e383]: 7%
+                - listitem [ref=e384]:
+                  - generic [ref=e386]: YAML
+                  - generic [ref=e387]: 4%
+                - listitem [ref=e388]:
+                  - generic [ref=e390]: Jupyter
+                  - generic [ref=e391]: 2%
+                - listitem [ref=e392]:
+                  - generic [ref=e394]: HTML
+                  - generic [ref=e395]: 2%
+                - listitem [ref=e396]:
+                  - generic [ref=e398]: Dockerfile
+                  - generic [ref=e399]: 2%
+                - listitem [ref=e400]:
+                  - generic [ref=e402]: Objective-C
+                  - generic [ref=e403]: 2%
+                - listitem [ref=e404]:
+                  - generic [ref=e406]: Markdown
+                  - generic [ref=e407]: 1%
+                - listitem [ref=e408]:
+                  - generic [ref=e410]: Vue
+                  - generic [ref=e411]: 1%
+                - listitem [ref=e412]:
+                  - generic [ref=e414]: Other (8)
+                  - generic [ref=e415]: 4%
+          - generic [ref=e416]:
+            - heading [level=3] [ref=e725]: Quick actions
+            - generic [ref=e420]:
+              - button [ref=e726] [cursor=pointer]:
+                - img [ref=e422]
+                - generic [ref=e427]: Fetch all
+              - button [ref=e727] [cursor=pointer]:
+                - img [ref=e429]
+                - generic [ref=e430]: Clone repo
+              - button [ref=e728] [cursor=pointer]:
+                - img [ref=e432]
+                - generic [ref=e435]: Find across repos
+              - button [ref=e729] [cursor=pointer]:
+                - img [ref=e437]
+                - generic [ref=e439]: Open workspace
+              - button [ref=e730] [cursor=pointer]:
+                - img [ref=e441]
+                - generic [ref=e445]: Open in IDE
+              - button [ref=e731] [cursor=pointer]:
+                - img [ref=e447]
+                - generic [ref=e449]: Recent commits
+              - button [ref=e732] [cursor=pointer]:
+                - img [ref=e451]
+                - generic [ref=e455]: Create branch
+              - button [disabled] [ref=e733]:
+                - img [ref=e457]
+                - generic [ref=e461]: Pull all
+          - generic [ref=e462]:
+            - generic [ref=e464]:
+              - heading [level=3] [ref=e734]: Weekday × hour heatmap
+              - generic [ref=e466]: when the team commits
+            - img [ref=e735]:
+              - generic [ref=e469]: Mo
+              - generic [ref=e495]: Tu
+              - generic [ref=e521]: We
+              - generic [ref=e547]: Th
+              - generic [ref=e573]: Fr
+              - generic [ref=e599]: Sa
+              - generic [ref=e625]: Su
+            - generic [ref=e650]:
+              - generic [ref=e651]: "00"
+              - generic [ref=e652]: "06"
+              - generic [ref=e653]: "12"
+              - generic [ref=e654]: "18"
+              - generic [ref=e655]: "23"
+  - dialog "Add repository Import from a connected provider, add an existing folder, or clone from any URL. Close" [active] [ref=e906]:
+    - generic [ref=e907]:
+      - heading "Add repository Import from a connected provider, add an existing folder, or clone from any URL. Close" [level=2] [ref=e908]:
+        - generic [ref=e909]:
+          - paragraph [ref=e910]:
+            - generic [ref=e911]:
+              - img [ref=e913]
+              - generic [ref=e914]:
+                - paragraph [ref=e915]: Add repository
+                - paragraph [ref=e916]: Import from a connected provider, add an existing folder, or clone from any URL.
+          - button "Close" [ref=e918] [cursor=pointer]:
+            - img [ref=e919]
+      - generic [ref=e922]:
+        - tablist [ref=e923]:
+          - button "From providers 1" [ref=e924] [cursor=pointer]:
+            - img [ref=e925]
+            - text: From providers
+            - generic [ref=e930]: "1"
+          - button "Existing folder" [ref=e931] [cursor=pointer]:
+            - img [ref=e932]
+            - text: Existing folder
+          - button "Clone from URL" [ref=e937] [cursor=pointer]:
+            - img [ref=e938]
+            - text: Clone from URL
+        - generic [ref=e943]:
+          - generic [ref=e944]:
+            - paragraph [ref=e945]: Providers
+            - generic [ref=e946]:
+              - button "GitHub GitHub" [ref=e947] [cursor=pointer]:
+                - img "GitHub" [ref=e949]
+                - generic [ref=e951]: GitHub
+                - img [ref=e952]
+              - button "ACME Labs ACME Labs" [ref=e954] [cursor=pointer]:
+                - generic "ACME Labs" [ref=e956]: A
+                - generic "ACME Labs" [ref=e957]
+              - button "Experiments Experiments" [ref=e958] [cursor=pointer]:
+                - generic "Experiments" [ref=e960]: E
+                - generic "Experiments" [ref=e961]
+          - generic [ref=e962]:
+            - generic [ref=e964]:
+              - img [ref=e965]
+              - textbox "Search" [ref=e968]:
+                - /placeholder: Search repositories…
+            - generic [ref=e969]:
+              - generic [ref=e970]:
+                - generic [ref=e971]: Available — recently active
+                - generic [ref=e972]: "4"
+              - generic [ref=e973] [cursor=pointer]:
+                - generic [ref=e974]:
+                  - checkbox "valentin/recrest Native developer dashboard for git repos. TypeScript updated 2026-05-28" [ref=e975]
+                  - img [ref=e976]
+                - generic [ref=e978]:
+                  - generic [ref=e980]: valentin/recrest
+                  - generic [ref=e981]: Native developer dashboard for git repos.
+                  - generic [ref=e982]:
+                    - generic [ref=e983]: TypeScript
+                    - generic [ref=e985]: ·
+                    - generic [ref=e986]: updated 2026-05-28
+              - generic [ref=e987] [cursor=pointer]:
+                - generic [ref=e988]:
+                  - checkbox "valentin/dotfiles Personal dotfiles, zsh and nvim configs. Shell updated 2026-05-22" [ref=e989]
+                  - img [ref=e990]
+                - generic [ref=e992]:
+                  - generic [ref=e994]: valentin/dotfiles
+                  - generic [ref=e995]: Personal dotfiles, zsh and nvim configs.
+                  - generic [ref=e996]:
+                    - generic [ref=e997]: Shell
+                    - generic [ref=e999]: ·
+                    - generic [ref=e1000]: updated 2026-05-22
+              - generic [ref=e1001] [cursor=pointer]:
+                - generic [ref=e1002]:
+                  - checkbox "valentin/blog private Personal blog — markdown + Astro. Astro updated 2026-05-15" [ref=e1003]
+                  - img [ref=e1004]
+                - generic [ref=e1006]:
+                  - generic [ref=e1007]:
+                    - generic [ref=e1008]: valentin/blog
+                    - generic [ref=e1009]: private
+                  - generic [ref=e1010]: Personal blog — markdown + Astro.
+                  - generic [ref=e1011]:
+                    - generic [ref=e1012]: Astro
+                    - generic [ref=e1014]: ·
+                    - generic [ref=e1015]: updated 2026-05-15
+              - generic [ref=e1016] [cursor=pointer]:
+                - generic [ref=e1017]:
+                  - checkbox "valentin/cli-experiments fork archived Rust updated 2025-11-30" [ref=e1018]
+                  - img [ref=e1019]
+                - generic [ref=e1021]:
+                  - generic [ref=e1022]:
+                    - generic [ref=e1023]: valentin/cli-experiments
+                    - generic [ref=e1024]: fork
+                    - generic [ref=e1025]: archived
+                  - generic [ref=e1026]:
+                    - generic [ref=e1027]: Rust
+                    - generic [ref=e1029]: ·
+                    - generic [ref=e1030]: updated 2025-11-30
+            - generic [ref=e1031]:
+              - generic [ref=e1032]:
+                - switch "Remember as import default" [ref=e1035] [cursor=pointer]
+                - generic [ref=e1038]: Remember as import default
+              - textbox "Destination folder (/Users/you/Code)" [ref=e1039]: ~/Code
+              - button "Browse…" [ref=e1040] [cursor=pointer]:
+                - img [ref=e1041]
+                - text: Browse…
+              - button "Cancel" [ref=e1043] [cursor=pointer]
+              - button "Import 0" [disabled] [ref=e1044]:
+                - img [ref=e1045]
+                - text: Import 0

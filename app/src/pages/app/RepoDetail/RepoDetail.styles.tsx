@@ -228,6 +228,11 @@ export const Grid2 = styled(Box)({
   // Stack to a single column once columns can no longer hold ~280px of content
   // (narrow viewports + zoomed displays).
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  // Cards size to their own content — without this, a tall Working-tree
+  // card (many uncommitted files) stretches its short sibling (Merge
+  // requests / Activity bars) to match, leaving an empty void at the
+  // bottom of the short card. `start` keeps each card honest.
+  alignItems: "start",
   gap: 12,
 }) as typeof Box;
 
@@ -319,6 +324,15 @@ export const PrRowSlot = styled(Box)({
   cursor: "pointer",
 }) as typeof Box;
 
+export const WorkingCopyScroll = styled(Box)({
+  // Mirrors PrScroller: the Working-tree card can hold many files and would
+  // blow the page height to thousands of pixels without an internal cap.
+  maxHeight: 480,
+  overflowY: "auto",
+  // Sub-sections inside WorkingCopyPanel use `overflow: hidden`, so the
+  // scroll lives here at the panel boundary.
+}) as typeof Box;
+
 export const CleanState = styled(Box)({
   display: "flex",
   flexDirection: "column",
@@ -351,12 +365,11 @@ export const RemoteUrlText = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const PrScroller = styled(Box)({
-  // Card-relative scroll: fill the card's remaining height (the card itself
-  // stretches to match its grid-row sibling), and scroll only when the PR
-  // list overflows the available space. Previously this had a hard 320px
-  // cap which forced an inner scroll even when the card was much taller.
-  flex: 1,
-  minHeight: 0,
+  // Hard cap with internal scroll. The Grid2 row no longer stretches cards
+  // to match (align-items: start), so PrScroller can't rely on a
+  // stretched parent to bound its growth — we need an explicit ceiling
+  // here, otherwise a long PR list bloats the whole page.
+  maxHeight: 480,
   overflowY: "auto",
 }) as typeof Box;
 

@@ -8,7 +8,7 @@ const meta = {
   args: {
     buckets: [
       {
-        author: "Valentin",
+        author: "Sasha",
         email: "v@example.com",
         count: 24,
         share: 0.5,

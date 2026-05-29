@@ -35,6 +35,7 @@ export const TauriCommand = {
   GIT_CHECKOUT_REMOTE: "git_checkout_remote",
   GIT_LIST_BRANCHES: "git_list_branches",
   GIT_BRANCH_CREATE: "git_branch_create",
+  GIT_BRANCH_DELETE: "git_branch_delete",
   GIT_MERGE: "git_merge",
   GIT_CLONE: "git_clone",
   GIT_STAGE: "git_stage",

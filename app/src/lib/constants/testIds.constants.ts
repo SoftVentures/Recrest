@@ -96,12 +96,17 @@ export const TEST_IDS = {
     rowPinToggle: "repo-row-pin-toggle",
     card: "repo-card",
     cardName: "repo-card-name",
+    contextMenu: "repo-context-menu",
     detailPane: "detail-pane",
     addScope: {
       root: "repo-add-scope",
       local: "repo-add-scope-local",
       global: "repo-add-scope-global",
     },
+  },
+
+  contextMenu: {
+    item: (key: string) => `context-menu-item-${key}`,
   },
 
   repoDetail: {
@@ -160,6 +165,7 @@ export const TEST_IDS = {
   changes: {
     page: "changes-page",
     row: "changes-row",
+    contextMenu: "changes-row-context-menu",
   },
 
   mr: {
@@ -175,6 +181,7 @@ export const TEST_IDS = {
     filterCiOption: (status: string) => `mr-filter-ci-${status}`,
     filterReset: "mr-filter-reset",
     groupHead: (repoId: string) => `mr-group-${repoId}`,
+    contextMenu: "mr-row-context-menu",
     drawer: "mr-drawer",
     row: "mr-row",
     detailPanel: "mr-detail-panel",
@@ -202,6 +209,7 @@ export const TEST_IDS = {
       descInput: "mr-merge-modal-desc",
       confirm: "mr-merge-modal-confirm",
       cancel: "mr-merge-modal-cancel",
+      deleteBranch: "mr-merge-modal-delete-branch",
     },
     diff: {
       file: "mr-diff-file",

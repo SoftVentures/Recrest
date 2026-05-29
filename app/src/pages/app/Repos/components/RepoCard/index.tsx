@@ -9,6 +9,8 @@ import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
+import RepoContextMenu from "@/components/molecules/menus/RepoContextMenu";
+import { useContextMenu } from "@/hooks/useContextMenu";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -40,6 +42,7 @@ export interface RepoCardProps {
 export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
+  const ctx = useContextMenu();
 
   const stop = (e: MouseEvent) => e.stopPropagation();
 
@@ -51,7 +54,9 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
       data-testid={TEST_IDS.repos.card}
       data-repo-id={repo.id}
       data-dirty={dirty ? "true" : undefined}
+      data-context-menu-open={ctx.open ? "true" : undefined}
       onClick={() => onClick?.(repo)}
+      onContextMenu={ctx.onContextMenu}
       onKeyDown={(e: KeyboardEvent) => {
         if (e.key === KEYBOARD_KEYS.ENTER || e.key === KEYBOARD_KEYS.SPACE) {
           e.preventDefault();
@@ -106,6 +111,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           height={18}
         />
       </Footer>
+      <RepoContextMenu repo={repo} position={ctx.position} onClose={ctx.onClose} />
     </Card>
   );
 }

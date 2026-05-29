@@ -118,6 +118,31 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
   const orgs = useAppSelector((s) =>
     activeProvider ? (s.remoteImport.organizations[activeProvider] ?? []) : [],
   );
+
+  // GitLab returns groups with path-style slugs (`benova/infrastructure`).
+  // We render subgroups indented under their parent when the parent is also in
+  // the list, so navigation mirrors the actual group hierarchy instead of a
+  // flat list of slashed display names.
+  const decoratedOrgs = useMemo(() => {
+    const slugSet = new Set(orgs.map((o) => o.slug));
+    const sorted = [...orgs].sort((a, b) => a.slug.localeCompare(b.slug));
+    return sorted.map((o) => {
+      const parts = o.slug.split("/");
+      let ancestorsInList = 0;
+      for (let j = 1; j < parts.length; j++) {
+        if (slugSet.has(parts.slice(0, j).join("/"))) ancestorsInList++;
+      }
+      const depth = 1 + ancestorsInList;
+      // Strip path-prefix from display name when a parent is rendered above,
+      // so the indent does the "this is a sub-thing" signalling alone.
+      const labelSegments = o.displayName.split(/\s*\/\s*/);
+      const label =
+        ancestorsInList > 0 && labelSegments.length > 1
+          ? (labelSegments[labelSegments.length - 1] ?? o.displayName)
+          : o.displayName;
+      return { org: o, depth, label };
+    });
+  }, [orgs]);
   const listingKey = activeProvider ? keyFor(activeProvider, activeOrg) : null;
   const listing = useAppSelector((s) =>
     listingKey ? s.remoteImport.listings[listingKey] : undefined,
@@ -269,15 +294,15 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
               <ChevronRight size={12} />
             </AsideItem>
             {activeProvider === id &&
-              orgs.map((org) => {
+              decoratedOrgs.map(({ org, depth, label }) => {
                 const [g1, g2] = gradientForOrg(org.id);
-                const letter = (org.displayName.trim().charAt(0) || "?").toUpperCase();
+                const letter = (label.trim().charAt(0) || "?").toUpperCase();
                 return (
                   <AsideItem
                     key={org.id}
                     type="button"
                     active={activeOrg === org.slug}
-                    indent
+                    depth={depth}
                     onClick={() => {
                       setActiveOrg(org.slug);
                       setSelected(new Set());
@@ -301,8 +326,9 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={org.displayName}
                     >
-                      {org.displayName}
+                      {label}
                     </Box>
                   </AsideItem>
                 );
@@ -358,6 +384,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
                       alreadyLocal={false}
                       onToggle={() => toggle(r.id)}
                       progress={progress[r.id]?.stage}
+                      groupPrefix={activeOrg}
                     />
                   ))}
                 </>
@@ -376,6 +403,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
                       alreadyLocal
                       onToggle={() => toggle(r.id)}
                       progress={progress[r.id]?.stage}
+                      groupPrefix={activeOrg}
                     />
                   ))}
                 </>
