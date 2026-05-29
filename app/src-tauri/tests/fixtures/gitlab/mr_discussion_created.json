@@ -1,0 +1,12 @@
+{
+  "id": "disc-abc-1",
+  "notes": [
+    {
+      "id": 4242,
+      "body": "looks good!",
+      "system": false,
+      "created_at": "2025-01-03T10:11:12Z",
+      "author": { "username": "alice", "name": "Alice", "avatar_url": null }
+    }
+  ]
+}

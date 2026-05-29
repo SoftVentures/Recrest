@@ -3,6 +3,20 @@
     "name": "Recrest",
     "tagline": "Lightweight developer dashboard"
   },
+  "editor": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "Strikethrough",
+    "heading": "Heading",
+    "bullet_list": "Bullet list",
+    "ordered_list": "Numbered list",
+    "code": "Inline code",
+    "code_block": "Code block",
+    "quote": "Quote",
+    "link": "Insert link",
+    "link_prompt": "Link URL",
+    "unlink": "Remove link"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "repos": "Repositories",
@@ -78,6 +92,9 @@
     "mrs": {
       "title": "Merge Requests",
       "meta": "{{count}} open"
+    },
+    "mr": {
+      "title": "Merge Request"
     },
     "changes": {
       "title": "Changes",
@@ -202,6 +219,23 @@
       "closed": "Closed"
     },
     "filters": "Filters",
+    "filter_panel": {
+      "title": "Filter merge requests",
+      "section_repos": "Repos",
+      "section_authors": "Authors",
+      "section_status": "Status",
+      "section_ci": "CI status",
+      "include_drafts": "Include drafts",
+      "reset": "Reset",
+      "empty_section": "Nothing to filter on yet",
+      "ci": {
+        "success": "Success",
+        "failure": "Failure",
+        "running": "Running",
+        "pending": "Pending",
+        "none": "No CI"
+      }
+    },
     "actions": {
       "merge": "Merge",
       "checkout": "Checkout"
@@ -556,6 +590,8 @@
       "ssh_key_hint": "Default private key for this provider's SSH remotes. A repository can override it in its detail view.",
       "required_scopes": "Required scopes",
       "save": "Save",
+      "token_create_link": "Create a {{name}} token",
+      "token_create_link_aria": "Open {{name}} token creation page in browser",
       "self_hosted": "Self-hosted",
       "status_connected": "Connected",
       "status_disconnected": "Not connected",

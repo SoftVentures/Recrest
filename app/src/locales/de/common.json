@@ -3,6 +3,20 @@
     "name": "Recrest",
     "tagline": "Leichtgewichtiges Developer-Dashboard"
   },
+  "editor": {
+    "bold": "Fett",
+    "italic": "Kursiv",
+    "strike": "Durchgestrichen",
+    "heading": "Überschrift",
+    "bullet_list": "Aufzählung",
+    "ordered_list": "Nummerierte Liste",
+    "code": "Inline-Code",
+    "code_block": "Codeblock",
+    "quote": "Zitat",
+    "link": "Link einfügen",
+    "link_prompt": "Link-URL",
+    "unlink": "Link entfernen"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "repos": "Repositories",
@@ -78,6 +92,9 @@
     "mrs": {
       "title": "Merge Requests",
       "meta": "{{count}} offen"
+    },
+    "mr": {
+      "title": "Merge Request"
     },
     "changes": {
       "title": "Änderungen",
@@ -202,6 +219,23 @@
       "closed": "Geschlossen"
     },
     "filters": "Filter",
+    "filter_panel": {
+      "title": "Merge Requests filtern",
+      "section_repos": "Repos",
+      "section_authors": "Autoren",
+      "section_status": "Status",
+      "section_ci": "CI-Status",
+      "include_drafts": "Entwürfe einbeziehen",
+      "reset": "Zurücksetzen",
+      "empty_section": "Noch nichts zum Filtern",
+      "ci": {
+        "success": "Erfolgreich",
+        "failure": "Fehlgeschlagen",
+        "running": "Läuft",
+        "pending": "Wartet",
+        "none": "Kein CI"
+      }
+    },
     "actions": {
       "merge": "Mergen",
       "checkout": "Checkout"
@@ -556,6 +590,8 @@
       "ssh_key_hint": "Standard-Private-Key für die SSH-Remotes dieses Anbieters. Ein Repository kann ihn in seiner Detailansicht überschreiben.",
       "required_scopes": "Benötigte Scopes",
       "save": "Speichern",
+      "token_create_link": "{{name}}-Token erstellen",
+      "token_create_link_aria": "{{name}}-Token-Erstellseite im Browser öffnen",
       "self_hosted": "Selbst gehostet",
       "status_connected": "Verbunden",
       "status_disconnected": "Nicht verbunden",

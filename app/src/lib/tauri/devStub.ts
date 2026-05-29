@@ -27,6 +27,7 @@ import { Provider } from "@/lib/constants/providers.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { type AppSeed, DEFAULT_SEED } from "@/lib/dev/seed";
 import { SEED_ORGS, SEED_REMOTE_LISTINGS } from "@/lib/dev/seed/remote";
+import { UNHANDLED, providerFeatureStub } from "@/lib/tauri/devStub.providers";
 
 type Required_<T> = { [K in keyof T]-?: NonNullable<T[K]> };
 
@@ -486,7 +487,127 @@ function installStub(seed: Required_<AppSeed>): void {
         const list = (SEED.prs && a.repoId && SEED.prs[a.repoId]) || [];
         const base = list.find((pr) => pr.number === a.prNumber);
         if (!base) return null;
-        return { ...base, body: "", mergeable: true, reviewers: [], files: [], timeline: [] };
+        // A realistic Dependabot-shaped markdown body so dev:web can verify the
+        // MarkdownView + ExpandableContent behaviour without a live provider.
+        // Tables, links, inline code, blockquotes and a <details> block all
+        // exercise the renderer's GFM + safe-HTML paths.
+        const body = `Bumps the **npm-all** group with 3 updates in the \`/\` directory.
+
+**What changed**
+
+- React-Redux now ships **proper TS overloads** for \`useSelector\` with default equality
+- TipTap v3 dropped the legacy \`emitUpdate\` argument shape — code already migrated
+- \`@tauri-apps/api\` got a new \`isTauri()\` helper we should adopt long-term
+
+**Checklist**
+
+1. Verify \`yarn test\` passes locally
+2. Run the smoke screen on dev:web (3200)
+3. Approve and merge using **Squash**
+
+Quick links: [release notes](https://github.com/reduxjs/redux-toolkit/releases) · [diff](https://github.com/reduxjs/redux-toolkit/compare/v2.11.2...v2.12.0)
+
+---
+
+### Package table
+
+| Package | From | To |
+| --- | --- | --- |
+| [@reduxjs/toolkit](https://github.com/reduxjs/redux-toolkit) | \`2.11.2\` | \`2.12.0\` |
+| [@tauri-apps/api](https://github.com/tauri-apps/tauri) | \`2.10.1\` | \`2.11.0\` |
+| [react](https://github.com/facebook/react) | \`19.2.5\` | \`19.2.6\` |
+
+Updates \`@reduxjs/toolkit\` from 2.11.2 to 2.12.0.
+
+<details>
+<summary>Release notes</summary>
+
+> Sourced from [@reduxjs/toolkit's releases](https://github.com/reduxjs/redux-toolkit/releases).
+
+### v2.12.0
+
+This feature release adds three new helpers and tightens up several existing ones.
+
+- Adds \`createListenerMiddleware().clearListeners()\`
+- Fixes a bug where \`combineSlices\` would drop typing under \`exactOptionalPropertyTypes\`
+- Improves devtool action labels for nested \`createAsyncThunk\` calls
+
+</details>
+
+<details>
+<summary>Commits</summary>
+
+- See full diff [here](https://github.com/reduxjs/redux-toolkit/compare/v2.11.2...v2.12.0).
+
+</details>
+
+---
+
+Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself.
+You can also trigger a rebase manually by commenting \`@dependabot rebase\`.`;
+        // A tiny synthetic timeline so the Timeline card has something to
+        // render in dev:web (avatar + locale date + body) without a live
+        // provider.
+        const t0 = Date.now() - 3 * 86_400_000;
+        const timeline = [
+          {
+            id: "ev-open",
+            type: "opened",
+            actor: base.author,
+            at: new Date(t0).toISOString(),
+            body: null,
+          },
+          {
+            id: "ev-commit",
+            type: "commit",
+            actor: base.author,
+            at: new Date(t0 + 4 * 3_600_000).toISOString(),
+            body: "Push `feat/landing-hero` → 3 commits",
+          },
+          {
+            id: "ev-review",
+            type: "review_requested",
+            actor: "lea",
+            at: new Date(t0 + 26 * 3_600_000).toISOString(),
+            body: null,
+          },
+          {
+            id: "ev-comment",
+            type: "commented",
+            actor: "lea",
+            at: new Date(t0 + 28 * 3_600_000).toISOString(),
+            body: "Looks great overall — a couple of nits inline.",
+          },
+        ];
+        // Dev-only reviewer set so the drawer / MR detail can demo the
+        // chip layout and the "show name, fall back to login" behaviour.
+        const reviewers = [
+          {
+            login: "lea",
+            name: "Lea Ramirez",
+            avatarUrl: null,
+            state: "approved" as const,
+          },
+          {
+            login: "octocat",
+            name: null,
+            avatarUrl: null,
+            state: "pending" as const,
+          },
+        ];
+        return { ...base, body, mergeable: true, reviewers, files: [], timeline };
+      }
+      case "get_pr_diff":
+      case "post_pr_comment":
+      case "list_workflows":
+      case "list_workflow_runs":
+      case "trigger_workflow":
+      case "cancel_workflow_run":
+      case "get_pages_status": {
+        // Plan 03/04 provider-depth stubs live in a sibling module to keep
+        // this file under the line ceiling.
+        const stub = providerFeatureStub(cmd, a);
+        return stub === UNHANDLED ? undefined : stub;
       }
 
       // --- notifications / oauth / settings / window / system

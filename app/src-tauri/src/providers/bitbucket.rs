@@ -5,8 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::api::{
-    CiStatus, FileChangeDto, FileChangeStatus, OrganizationDto, PrState, PullRequestDetailDto,
-    PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto,
+    CiStatus, CommentDto, CommentPosition, CommentSide, DiffHunk, DiffLine, DiffLineKind,
+    FileChangeDto, FileChangeStatus, FileDiffDto, OrganizationDto, PagesStatusDto, PrState,
+    PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto,
+    TimelineEventDto, WorkflowDto, WorkflowInputs, WorkflowRunDto,
 };
 use super::r#trait::GitProvider;
 use crate::auth::token::TokenStore;
@@ -430,6 +432,363 @@ impl GitProvider for BitbucketProvider {
         }
         Ok(out)
     }
+
+    async fn get_pr_diff(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+    ) -> Result<Vec<FileDiffDto>, CommandError> {
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        let url = format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/diff");
+
+        let res = self
+            .http
+            .get(&url)
+            .basic_auth(&username, Some(&password))
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "bitbucket diff: {} ({url})",
+                res.status()
+            )));
+        }
+        let text = res.text().await?;
+        Ok(parse_combined_diff(&text))
+    }
+
+    async fn post_pr_comment(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        body: &str,
+        path: Option<&str>,
+        position: Option<CommentPosition>,
+    ) -> Result<CommentDto, CommandError> {
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        let url = format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/comments");
+
+        let mut payload = serde_json::json!({ "content": { "raw": body } });
+        if let (Some(path), Some(pos)) = (path, position) {
+            // Bitbucket inline comments use `inline.to` for the new-side line
+            // and `inline.from` for the old-side line. Only one of the two is
+            // set per comment, mirroring `CommentSide`.
+            let mut inline = serde_json::json!({ "path": path });
+            match pos.side {
+                CommentSide::Right => inline["to"] = pos.line.into(),
+                CommentSide::Left => inline["from"] = pos.line.into(),
+            }
+            payload["inline"] = inline;
+        }
+
+        let res = self
+            .http
+            .post(&url)
+            .basic_auth(&username, Some(&password))
+            .json(&payload)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "bitbucket post comment: {} ({url})",
+                res.status()
+            )));
+        }
+        let raw: BbCreatedComment = res.json().await?;
+        Ok(CommentDto {
+            id: raw.id.to_string(),
+            author: raw
+                .user
+                .as_ref()
+                .and_then(|u| u.display_name.clone().or_else(|| u.nickname.clone()))
+                .unwrap_or_default(),
+            body: raw.content.map(|c| c.raw).unwrap_or_default(),
+            path: raw.inline.and_then(|i| i.path),
+            created_at: raw.created_on,
+        })
+    }
+
+    async fn list_workflows(&self, remote_url: &str) -> Result<Vec<WorkflowDto>, CommandError> {
+        // Bitbucket Pipelines has no per-workflow concept and no dispatch
+        // inputs — surface one synthetic workflow so the CI tab has a stable
+        // entry to attach pipeline runs to. The "Run" form shows only a
+        // branch selector (empty `inputs_schema`).
+        let (_workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        Ok(vec![WorkflowDto {
+            id: "pipelines".to_string(),
+            name: repo,
+            path: "bitbucket-pipelines.yml".to_string(),
+            state: "active".to_string(),
+            inputs_schema: Vec::new(),
+        }])
+    }
+
+    async fn list_workflow_runs(
+        &self,
+        remote_url: &str,
+        _workflow_id: &str,
+        limit: u32,
+    ) -> Result<Vec<WorkflowRunDto>, CommandError> {
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        let pagelen = limit.clamp(1, 100);
+        let url = format!(
+            "{base}/repositories/{workspace}/{repo}/pipelines/?pagelen={pagelen}&sort=-created_on"
+        );
+        let page: BbPage<BbPipeline> = bb_json(&self.http, &username, &password, &url).await?;
+        Ok(page.values.into_iter().map(map_pipeline).collect())
+    }
+
+    async fn trigger_workflow(
+        &self,
+        remote_url: &str,
+        _workflow_id: &str,
+        git_ref: &str,
+        _inputs: WorkflowInputs,
+    ) -> Result<WorkflowRunDto, CommandError> {
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        let url = format!("{base}/repositories/{workspace}/{repo}/pipelines/");
+        let payload = serde_json::json!({
+            "target": { "ref_type": "branch", "type": "pipeline_ref_target", "ref_name": git_ref }
+        });
+        let res = self
+            .http
+            .post(&url)
+            .basic_auth(&username, Some(&password))
+            .json(&payload)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "bitbucket trigger pipeline: {} ({url})",
+                res.status()
+            )));
+        }
+        let run: BbPipeline = res.json().await?;
+        Ok(map_pipeline(run))
+    }
+
+    async fn cancel_workflow_run(
+        &self,
+        remote_url: &str,
+        run_id: &str,
+    ) -> Result<(), CommandError> {
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        let url =
+            format!("{base}/repositories/{workspace}/{repo}/pipelines/{run_id}/stopPipeline");
+        let res = self
+            .http
+            .post(&url)
+            .basic_auth(&username, Some(&password))
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "bitbucket stop pipeline: {} ({url})",
+                res.status()
+            )));
+        }
+        Ok(())
+    }
+
+    async fn get_pages_status(
+        &self,
+        remote_url: &str,
+    ) -> Result<Option<PagesStatusDto>, CommandError> {
+        // Bitbucket has no native Pages. Heuristic: if the repo's
+        // `bitbucket-pipelines.yml` references a known deploy pipe, report a
+        // "built" status (no URL — Bitbucket can't tell us where it deployed).
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        // Use the repo's default branch via the `src` shortcut (HEAD).
+        let url = format!(
+            "{base}/repositories/{workspace}/{repo}/src/HEAD/bitbucket-pipelines.yml"
+        );
+        let res = self
+            .http
+            .get(&url)
+            .basic_auth(&username, Some(&password))
+            .send()
+            .await?;
+        if res.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "bitbucket pipelines.yml: {} ({url})",
+                res.status()
+            )));
+        }
+        let yaml = res.text().await?;
+        if pipelines_yaml_has_deploy(&yaml) {
+            Ok(Some(PagesStatusDto {
+                url: None,
+                status: "built".into(),
+                last_deployed_at: None,
+                custom_domain: None,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+fn map_pipeline(p: BbPipeline) -> WorkflowRunDto {
+    // Bitbucket nests run state in `state.name` (IN_PROGRESS/COMPLETED/...)
+    // and the outcome in `state.result.name` (SUCCESSFUL/FAILED/STOPPED).
+    let status = p
+        .state
+        .as_ref()
+        .and_then(|s| s.name.clone())
+        .unwrap_or_default();
+    let conclusion = p
+        .state
+        .as_ref()
+        .and_then(|s| s.result.as_ref())
+        .and_then(|r| r.name.clone());
+    let html_url = p
+        .links
+        .as_ref()
+        .and_then(|l| l.html.as_ref())
+        .map(|h| h.href.clone())
+        .unwrap_or_default();
+    WorkflowRunDto {
+        id: p.uuid.clone().unwrap_or_default(),
+        run_number: p.build_number.unwrap_or(0),
+        status,
+        conclusion,
+        head_sha: p
+            .target
+            .as_ref()
+            .and_then(|t| t.commit.as_ref())
+            .and_then(|c| c.hash.clone())
+            .unwrap_or_default(),
+        created_at: p.created_on.unwrap_or_else(Utc::now),
+        html_url,
+        actor: p
+            .creator
+            .as_ref()
+            .and_then(|u| u.display_name.clone().or_else(|| u.nickname.clone())),
+    }
+}
+
+/// True if a `bitbucket-pipelines.yml` references a known static-hosting
+/// deploy pipe or a step literally named "deploy". Best-effort string scan —
+/// avoids a full YAML parse since pipes can appear under any step nesting.
+fn pipelines_yaml_has_deploy(yaml: &str) -> bool {
+    const DEPLOY_PIPES: &[&str] = &[
+        "atlassian/aws-s3-deploy",
+        "atlassian/firebase-hosting-deploy",
+        "atlassian/azure-storage-deploy",
+        "atlassian/google-cloud-storage-deploy",
+    ];
+    let lower = yaml.to_lowercase();
+    DEPLOY_PIPES.iter().any(|p| lower.contains(p))
+        || lower.lines().any(|l| {
+            let t = l.trim();
+            t == "- step: &deploy" || t.starts_with("name: deploy") || t == "deployment: production"
+        })
+}
+
+/// Splits a combined unified-diff blob (Bitbucket returns the whole PR as one
+/// chunk) into per-file `FileDiffDto`s. Uses the `unidiff` crate so we don't
+/// re-roll the file-header parsing — our `diff_parse::parse_hunks` only
+/// understands single-file hunk text.
+fn parse_combined_diff(text: &str) -> Vec<FileDiffDto> {
+    let mut patch = unidiff::PatchSet::new();
+    if patch.parse(text).is_err() {
+        return Vec::new();
+    }
+    patch
+        .into_iter()
+        .map(|pf| {
+            // `target_file`/`source_file` carry the `b/` and `a/` prefixes
+            // from git-style headers — strip them so the UI shows a clean
+            // path, and so the rename check below compares logical names.
+            let new_clean = strip_diff_prefix(&pf.target_file).to_string();
+            let old_clean = strip_diff_prefix(&pf.source_file).to_string();
+            let status = if pf.is_added_file() {
+                FileChangeStatus::Added
+            } else if pf.is_removed_file() {
+                FileChangeStatus::Removed
+            } else if old_clean != new_clean && !old_clean.is_empty() && !new_clean.is_empty() {
+                // `unidiff` ≤0.3 doesn't expose a `is_rename()` flag, but a
+                // rename shows up as differing `a/` and `b/` paths on a file
+                // whose status isn't add/remove.
+                FileChangeStatus::Renamed
+            } else {
+                FileChangeStatus::Modified
+            };
+            let path = new_clean;
+            let old_path = match status {
+                FileChangeStatus::Renamed | FileChangeStatus::Copied => Some(old_clean),
+                _ => None,
+            };
+            let hunks = pf
+                .into_iter()
+                .map(|h| DiffHunk {
+                    old_start: h.source_start as u32,
+                    old_lines: h.source_length as u32,
+                    new_start: h.target_start as u32,
+                    new_lines: h.target_length as u32,
+                    lines: h
+                        .into_iter()
+                        .filter_map(|l| {
+                            let kind = if l.is_added() {
+                                DiffLineKind::Add
+                            } else if l.is_removed() {
+                                DiffLineKind::Remove
+                            } else if l.is_context() {
+                                DiffLineKind::Context
+                            } else {
+                                return None;
+                            };
+                            Some(DiffLine {
+                                kind,
+                                content: l.value,
+                                old_line_no: l.source_line_no.map(|n| n as u32),
+                                new_line_no: l.target_line_no.map(|n| n as u32),
+                            })
+                        })
+                        .collect(),
+                })
+                .collect();
+            FileDiffDto {
+                path,
+                old_path,
+                status,
+                hunks,
+            }
+        })
+        .collect()
+}
+
+fn strip_diff_prefix(p: &str) -> &str {
+    p.strip_prefix("a/").or_else(|| p.strip_prefix("b/")).unwrap_or(p)
 }
 
 fn map_pr(pr: BbPr, ci: Option<CiStatus>) -> PullRequestDto {
@@ -780,6 +1139,78 @@ struct BbComment {
     content: Option<BbCommentContent>,
 }
 
+/// Response shape for `POST .../pullrequests/:id/comments` — same surface as
+/// `BbComment` but with `id` (always present) and a non-optional `created_on`
+/// from the API contract. Kept separate so the activity-feed parser keeps
+/// tolerating the optional fields it sees in legacy activity entries.
+#[derive(Deserialize)]
+struct BbCreatedComment {
+    id: u64,
+    created_on: DateTime<Utc>,
+    #[serde(default)]
+    user: Option<BbAuthor>,
+    #[serde(default)]
+    content: Option<BbCreatedCommentContent>,
+    #[serde(default)]
+    inline: Option<BbInline>,
+}
+
+#[derive(Deserialize)]
+struct BbCreatedCommentContent {
+    #[serde(default)]
+    raw: String,
+}
+
+#[derive(Deserialize)]
+struct BbInline {
+    #[serde(default)]
+    path: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BbPipeline {
+    #[serde(default)]
+    uuid: Option<String>,
+    #[serde(default)]
+    build_number: Option<u64>,
+    #[serde(default)]
+    state: Option<BbPipelineState>,
+    #[serde(default)]
+    target: Option<BbPipelineTarget>,
+    #[serde(default)]
+    creator: Option<BbAuthor>,
+    #[serde(default)]
+    created_on: Option<DateTime<Utc>>,
+    #[serde(default)]
+    links: Option<BbLinks>,
+}
+
+#[derive(Deserialize)]
+struct BbPipelineState {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    result: Option<BbPipelineResult>,
+}
+
+#[derive(Deserialize)]
+struct BbPipelineResult {
+    #[serde(default)]
+    name: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BbPipelineTarget {
+    #[serde(default)]
+    commit: Option<BbPipelineCommit>,
+}
+
+#[derive(Deserialize)]
+struct BbPipelineCommit {
+    #[serde(default)]
+    hash: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct BbCommentContent {
     #[serde(default)]
@@ -941,6 +1372,169 @@ mod tests {
         assert_eq!(prs[0].requested_reviewers, vec!["Eve Reviewer".to_string()]);
         // Bitbucket has no "assignees" concept on PRs.
         assert!(prs[0].assignees.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bitbucket_parse_combined_diff_splits_per_file() {
+        // Standalone parser test — no HTTP. The fixture covers a modified
+        // file with one hunk and a renamed file with another hunk.
+        let text = include_str!("../../tests/fixtures/bitbucket/pr_combined_diff.txt");
+        let diff = super::parse_combined_diff(text);
+        assert_eq!(diff.len(), 2);
+        assert_eq!(diff[0].path, "src/lib.rs");
+        assert_eq!(diff[0].status, FileChangeStatus::Modified);
+        assert_eq!(diff[0].hunks.len(), 1);
+
+        assert_eq!(diff[1].path, "README.md");
+        assert_eq!(diff[1].status, FileChangeStatus::Renamed);
+        assert_eq!(diff[1].old_path.as_deref(), Some("OLD-README.md"));
+    }
+
+    #[tokio::test]
+    async fn bitbucket_get_pr_diff_returns_parsed_files() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/bitbucket/pr_combined_diff.txt");
+        Mock::given(method("GET"))
+            .and(path_regex(
+                r".*/repositories/[^/]+/[^/]+/pullrequests/\d+/diff$",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let diff = provider
+            .get_pr_diff("https://bitbucket.org/acme/widget", 7)
+            .await
+            .unwrap();
+
+        assert_eq!(diff.len(), 2);
+        assert_eq!(diff[0].status, FileChangeStatus::Modified);
+        assert_eq!(diff[1].status, FileChangeStatus::Renamed);
+    }
+
+    #[tokio::test]
+    async fn bitbucket_post_pr_comment_inline_uses_comments_endpoint() {
+        let server = MockServer::start().await;
+        let created = include_str!("../../tests/fixtures/bitbucket/pr_comment_created.json");
+        Mock::given(method("POST"))
+            .and(path_regex(
+                r".*/repositories/[^/]+/[^/]+/pullrequests/\d+/comments$",
+            ))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://bitbucket.org/acme/widget",
+                7,
+                "looks good!",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    side: CommentSide::Right,
+                    line: 2,
+                    start_line: None,
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "778899");
+        assert_eq!(comment.author, "Alice");
+        assert_eq!(comment.path.as_deref(), Some("src/lib.rs"));
+    }
+
+    #[test]
+    fn pipelines_yaml_deploy_detection() {
+        let deploy = include_str!("../../tests/fixtures/bitbucket/pipelines_deploy.yml");
+        let nodeploy = include_str!("../../tests/fixtures/bitbucket/pipelines_nodeploy.yml");
+        assert!(super::pipelines_yaml_has_deploy(deploy));
+        assert!(!super::pipelines_yaml_has_deploy(nodeploy));
+    }
+
+    #[tokio::test]
+    async fn bitbucket_list_workflow_runs_maps_pipelines() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/bitbucket/pipelines.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repositories/[^/]+/[^/]+/pipelines/$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let runs = provider
+            .list_workflow_runs("https://bitbucket.org/acme/widget", "pipelines", 10)
+            .await
+            .unwrap();
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].run_number, 42);
+        assert_eq!(runs[0].status, "COMPLETED");
+        assert_eq!(runs[0].conclusion.as_deref(), Some("SUCCESSFUL"));
+        assert_eq!(runs[0].actor.as_deref(), Some("Alice"));
+        assert_eq!(runs[1].conclusion.as_deref(), Some("FAILED"));
+    }
+
+    #[tokio::test]
+    async fn bitbucket_get_pages_status_detects_deploy_pipe() {
+        let server = MockServer::start().await;
+        let yml = include_str!("../../tests/fixtures/bitbucket/pipelines_deploy.yml");
+        Mock::given(method("GET"))
+            .and(path_regex(
+                r".*/repositories/[^/]+/[^/]+/src/HEAD/bitbucket-pipelines\.yml$",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_string(yml))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let pages = provider
+            .get_pages_status("https://bitbucket.org/acme/widget")
+            .await
+            .unwrap();
+        assert!(pages.is_some());
+        assert_eq!(pages.unwrap().status, "built");
+    }
+
+    #[tokio::test]
+    async fn bitbucket_get_pages_status_none_without_deploy() {
+        let server = MockServer::start().await;
+        let yml = include_str!("../../tests/fixtures/bitbucket/pipelines_nodeploy.yml");
+        Mock::given(method("GET"))
+            .and(path_regex(
+                r".*/repositories/[^/]+/[^/]+/src/HEAD/bitbucket-pipelines\.yml$",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_string(yml))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let pages = provider
+            .get_pages_status("https://bitbucket.org/acme/widget")
+            .await
+            .unwrap();
+        assert!(pages.is_none());
+    }
+
+    #[tokio::test]
+    async fn bitbucket_get_pages_status_404_is_none() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(
+                r".*/repositories/[^/]+/[^/]+/src/HEAD/bitbucket-pipelines\.yml$",
+            ))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let pages = provider
+            .get_pages_status("https://bitbucket.org/acme/widget")
+            .await
+            .unwrap();
+        assert!(pages.is_none());
     }
 
     #[tokio::test]

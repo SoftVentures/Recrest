@@ -5,9 +5,12 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::api::{
-    CiStatus, FileChangeDto, FileChangeStatus, OrganizationDto, PrState, PullRequestDetailDto,
-    PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto,
+    CiStatus, CommentDto, CommentPosition, CommentSide, FileChangeDto, FileChangeStatus,
+    FileDiffDto, OrganizationDto, PagesStatusDto, PrState, PullRequestDetailDto, PullRequestDto,
+    RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto, WorkflowInputs,
+    WorkflowRunDto,
 };
+use super::diff_parse::parse_hunks;
 use super::r#trait::GitProvider;
 use crate::auth::token::TokenStore;
 use crate::commands::error::CommandError;
@@ -348,6 +351,340 @@ impl GitProvider for GitlabProvider {
         }
         Ok(out)
     }
+
+    async fn get_pr_diff(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+    ) -> Result<Vec<FileDiffDto>, CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+
+        // GitLab paginates `/diffs` (one entry per file). The unified-diff text
+        // lives in `diff`. We follow `per_page` until the API returns < page,
+        // matching the same convention used by `list_repositories_*`.
+        let mut out = Vec::new();
+        for page in 1..=MAX_PAGES {
+            let url = format!(
+                "{base}/projects/{encoded}/merge_requests/{pr_number}/diffs?per_page={PER_PAGE}&page={page}"
+            );
+            let batch: Vec<GlDiffEntry> = gl_json(&self.http, &token, &url).await?;
+            if batch.is_empty() {
+                break;
+            }
+            let batch_len = batch.len();
+            for d in batch {
+                let status = if d.new_file.unwrap_or(false) {
+                    FileChangeStatus::Added
+                } else if d.deleted_file.unwrap_or(false) {
+                    FileChangeStatus::Removed
+                } else if d.renamed_file.unwrap_or(false) {
+                    FileChangeStatus::Renamed
+                } else {
+                    FileChangeStatus::Modified
+                };
+                let path = d
+                    .new_path
+                    .clone()
+                    .unwrap_or_else(|| d.old_path.clone().unwrap_or_default());
+                let old_path = match status {
+                    FileChangeStatus::Renamed | FileChangeStatus::Copied => d.old_path.clone(),
+                    _ => None,
+                };
+                out.push(FileDiffDto {
+                    path,
+                    old_path,
+                    status,
+                    hunks: d.diff.as_deref().map(parse_hunks).unwrap_or_default(),
+                });
+            }
+            if (batch_len as u32) < PER_PAGE {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    async fn post_pr_comment(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        body: &str,
+        path: Option<&str>,
+        position: Option<CommentPosition>,
+    ) -> Result<CommentDto, CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+
+        // GitLab requires three SHAs (`base`/`start`/`head`) on inline
+        // discussions — fetched once from the MR detail.
+        if let (Some(path), Some(pos)) = (path, position) {
+            let mr_url = format!("{base}/projects/{encoded}/merge_requests/{pr_number}");
+            let mr: GlMrDetail = gl_json(&self.http, &token, &mr_url).await?;
+            let refs = mr.diff_refs.ok_or_else(|| {
+                CommandError::internal("gitlab: MR has no diff_refs; cannot anchor inline comment")
+            })?;
+            let url = format!("{base}/projects/{encoded}/merge_requests/{pr_number}/discussions");
+            let mut position_payload = serde_json::json!({
+                "base_sha": refs.base_sha,
+                "start_sha": refs.start_sha,
+                "head_sha": refs.head_sha,
+                "position_type": "text",
+                "new_path": path,
+            });
+            match pos.side {
+                CommentSide::Right => position_payload["new_line"] = pos.line.into(),
+                CommentSide::Left => position_payload["old_line"] = pos.line.into(),
+            }
+            let payload = serde_json::json!({
+                "body": body,
+                "position": position_payload,
+            });
+            let res = self
+                .http
+                .post(&url)
+                .header("PRIVATE-TOKEN", &token)
+                .json(&payload)
+                .send()
+                .await?;
+            if !res.status().is_success() {
+                return Err(CommandError::internal(format!(
+                    "gitlab post discussion: {} ({url})",
+                    res.status()
+                )));
+            }
+            let disc: GlDiscussion = res.json().await?;
+            // A new discussion has exactly one note — return that.
+            let note = disc
+                .notes
+                .into_iter()
+                .next()
+                .ok_or_else(|| CommandError::internal("gitlab: discussion returned no notes"))?;
+            return Ok(CommentDto {
+                id: note.id.to_string(),
+                author: note
+                    .author
+                    .as_ref()
+                    .map(|a| a.username.clone())
+                    .unwrap_or_default(),
+                body: note.body,
+                path: Some(path.to_string()),
+                created_at: note.created_at,
+            });
+        }
+
+        // General comment → MR notes endpoint, no position.
+        let url = format!("{base}/projects/{encoded}/merge_requests/{pr_number}/notes");
+        let payload = serde_json::json!({ "body": body });
+        let res = self
+            .http
+            .post(&url)
+            .header("PRIVATE-TOKEN", &token)
+            .json(&payload)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "gitlab post note: {} ({url})",
+                res.status()
+            )));
+        }
+        let note: GlNote = res.json().await?;
+        Ok(CommentDto {
+            id: note.id.to_string(),
+            author: note
+                .author
+                .as_ref()
+                .map(|a| a.username.clone())
+                .unwrap_or_default(),
+            body: note.body,
+            path: None,
+            created_at: note.created_at,
+        })
+    }
+
+    async fn list_workflows(&self, remote_url: &str) -> Result<Vec<WorkflowDto>, CommandError> {
+        // GitLab has no per-workflow concept like Actions — the project's
+        // `.gitlab-ci.yml` is the single pipeline definition. We surface one
+        // synthetic workflow so the CI tab has a stable entry to attach the
+        // run history + the "Run pipeline" form to. `inputs_schema` is empty:
+        // pipeline variables are free-form, so the form shows a branch
+        // selector plus optional key/value variables instead of typed inputs.
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        Ok(vec![WorkflowDto {
+            id: "pipeline".to_string(),
+            name: project_path,
+            path: ".gitlab-ci.yml".to_string(),
+            state: "active".to_string(),
+            inputs_schema: Vec::new(),
+        }])
+    }
+
+    async fn list_workflow_runs(
+        &self,
+        remote_url: &str,
+        _workflow_id: &str,
+        limit: u32,
+    ) -> Result<Vec<WorkflowRunDto>, CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+        let per_page = limit.clamp(1, 100);
+        let url =
+            format!("{base}/projects/{encoded}/pipelines?per_page={per_page}&order_by=id&sort=desc");
+        let pipelines: Vec<GlPipelineRun> = gl_json(&self.http, &token, &url).await?;
+        Ok(pipelines.into_iter().map(map_pipeline_run).collect())
+    }
+
+    async fn trigger_workflow(
+        &self,
+        remote_url: &str,
+        _workflow_id: &str,
+        git_ref: &str,
+        inputs: WorkflowInputs,
+    ) -> Result<WorkflowRunDto, CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+        let url = format!("{base}/projects/{encoded}/pipeline");
+
+        // Map free-form inputs → GitLab CI variables.
+        let variables: Vec<serde_json::Value> = inputs
+            .into_iter()
+            .map(|(k, v)| {
+                let value = match v {
+                    serde_json::Value::String(s) => s,
+                    other => other.to_string(),
+                };
+                serde_json::json!({ "key": k, "value": value })
+            })
+            .collect();
+        let payload = serde_json::json!({ "ref": git_ref, "variables": variables });
+        let res = self
+            .http
+            .post(&url)
+            .header("PRIVATE-TOKEN", &token)
+            .json(&payload)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "gitlab trigger pipeline: {} ({url})",
+                res.status()
+            )));
+        }
+        let run: GlPipelineRun = res.json().await?;
+        Ok(map_pipeline_run(run))
+    }
+
+    async fn cancel_workflow_run(
+        &self,
+        remote_url: &str,
+        run_id: &str,
+    ) -> Result<(), CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+        let url = format!("{base}/projects/{encoded}/pipelines/{run_id}/cancel");
+        let res = self
+            .http
+            .post(&url)
+            .header("PRIVATE-TOKEN", &token)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "gitlab cancel pipeline: {} ({url})",
+                res.status()
+            )));
+        }
+        Ok(())
+    }
+
+    async fn get_pages_status(
+        &self,
+        remote_url: &str,
+    ) -> Result<Option<PagesStatusDto>, CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+
+        // `GET /projects/:id/pages` — 404 on older GitLab or Pages-disabled.
+        let url = format!("{base}/projects/{encoded}/pages");
+        let res = self
+            .http
+            .get(&url)
+            .header("PRIVATE-TOKEN", &token)
+            .send()
+            .await?;
+        if res.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "gitlab pages: {} ({url})",
+                res.status()
+            )));
+        }
+        let pages: GlPages = res.json().await?;
+        let custom_domain = pages
+            .domains
+            .as_ref()
+            .and_then(|d| d.first())
+            .map(|d| d.domain.clone());
+        Ok(Some(PagesStatusDto {
+            url: pages.url,
+            status: if pages.is_enabled.unwrap_or(true) {
+                "built".into()
+            } else {
+                "disabled".into()
+            },
+            last_deployed_at: None,
+            custom_domain,
+        }))
+    }
+}
+
+fn map_pipeline_run(p: GlPipelineRun) -> WorkflowRunDto {
+    // GitLab pipeline `status` doubles as both status and conclusion. We keep
+    // the raw value in `status` and surface success/failed in `conclusion` so
+    // the UI's run-badge logic matches GitHub's.
+    let conclusion = match p.status.as_str() {
+        "success" | "failed" | "canceled" | "skipped" => Some(p.status.clone()),
+        _ => None,
+    };
+    WorkflowRunDto {
+        id: p.id.to_string(),
+        run_number: p.iid.unwrap_or(p.id),
+        status: p.status,
+        conclusion,
+        head_sha: p.sha.unwrap_or_default(),
+        created_at: p.created_at.unwrap_or_else(Utc::now),
+        html_url: p.web_url.unwrap_or_default(),
+        actor: p.user.map(|u| u.name.unwrap_or(u.username)),
+    }
 }
 
 fn map_mr(mr: GlMr) -> PullRequestDto {
@@ -523,6 +860,71 @@ struct GlMrDetail {
     base_mr: GlMr,
     #[serde(default)]
     reviewers: Option<Vec<GlUser>>,
+    /// Required by the inline-discussion endpoint to anchor the comment
+    /// against a specific revision triple. May be absent on closed/legacy
+    /// MRs — callers surface a clean error in that case.
+    #[serde(default)]
+    diff_refs: Option<GlDiffRefs>,
+}
+
+#[derive(Deserialize, Clone)]
+struct GlDiffRefs {
+    base_sha: String,
+    start_sha: String,
+    head_sha: String,
+}
+
+#[derive(Deserialize)]
+struct GlDiffEntry {
+    #[serde(default)]
+    new_path: Option<String>,
+    #[serde(default)]
+    old_path: Option<String>,
+    #[serde(default)]
+    new_file: Option<bool>,
+    #[serde(default)]
+    deleted_file: Option<bool>,
+    #[serde(default)]
+    renamed_file: Option<bool>,
+    /// Unified-diff text. Absent on binary changes.
+    #[serde(default)]
+    diff: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct GlDiscussion {
+    notes: Vec<GlNote>,
+}
+
+#[derive(Deserialize)]
+struct GlPipelineRun {
+    id: u64,
+    #[serde(default)]
+    iid: Option<u64>,
+    status: String,
+    #[serde(default)]
+    sha: Option<String>,
+    #[serde(default)]
+    web_url: Option<String>,
+    #[serde(default)]
+    created_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    user: Option<GlUser>,
+}
+
+#[derive(Deserialize)]
+struct GlPages {
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    is_enabled: Option<bool>,
+    #[serde(default)]
+    domains: Option<Vec<GlPagesDomain>>,
+}
+
+#[derive(Deserialize)]
+struct GlPagesDomain {
+    domain: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -697,6 +1099,147 @@ mod tests {
             prs[0].requested_reviewers,
             vec!["Carol Reviewer".to_string()]
         );
+    }
+
+    #[tokio::test]
+    async fn gitlab_get_pr_diff_parses_diffs_per_file() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/mr_diffs.json");
+        Mock::given(method("GET"))
+            .and(path_regex(
+                r".*/projects/[^/]+/merge_requests/\d+/diffs$",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let diff = provider
+            .get_pr_diff("https://gitlab.com/acme/widget", 12)
+            .await
+            .unwrap();
+
+        assert_eq!(diff.len(), 2);
+        assert_eq!(diff[0].path, "src/lib.rs");
+        assert_eq!(diff[0].status, FileChangeStatus::Modified);
+        assert_eq!(diff[0].hunks[0].lines.len(), 5);
+
+        assert_eq!(diff[1].path, "README.md");
+        assert_eq!(diff[1].status, FileChangeStatus::Renamed);
+        assert_eq!(diff[1].old_path.as_deref(), Some("OLD-README.md"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_post_pr_comment_inline_uses_discussions_endpoint() {
+        let server = MockServer::start().await;
+        let detail = include_str!("../../tests/fixtures/gitlab/mr_detail_for_diff.json");
+        let created = include_str!("../../tests/fixtures/gitlab/mr_discussion_created.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/projects/[^/]+/merge_requests/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(detail))
+            .mount(&server)
+            .await;
+        Mock::given(method("POST"))
+            .and(path_regex(
+                r".*/projects/[^/]+/merge_requests/\d+/discussions$",
+            ))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://gitlab.com/acme/widget",
+                12,
+                "looks good!",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    side: CommentSide::Right,
+                    line: 2,
+                    start_line: None,
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "4242");
+        assert_eq!(comment.author, "alice");
+        assert_eq!(comment.path.as_deref(), Some("src/lib.rs"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_list_workflows_returns_synthetic_pipeline() {
+        let server = MockServer::start().await;
+        let provider = provider_with_token(&server).await;
+        let workflows = provider
+            .list_workflows("https://gitlab.com/acme/widget")
+            .await
+            .unwrap();
+        assert_eq!(workflows.len(), 1);
+        assert_eq!(workflows[0].id, "pipeline");
+        assert_eq!(workflows[0].name, "acme/widget");
+        assert!(workflows[0].inputs_schema.is_empty());
+    }
+
+    #[tokio::test]
+    async fn gitlab_list_workflow_runs_maps_pipelines() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/pipelines.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/projects/[^/]+/pipelines$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let runs = provider
+            .list_workflow_runs("https://gitlab.com/acme/widget", "pipeline", 10)
+            .await
+            .unwrap();
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].run_number, 88);
+        assert_eq!(runs[0].conclusion.as_deref(), Some("success"));
+        assert_eq!(runs[0].actor.as_deref(), Some("Alice"));
+        assert_eq!(runs[1].conclusion.as_deref(), Some("failed"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_get_pages_status_maps_fields() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/gitlab/pages.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/projects/[^/]+/pages$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let pages = provider
+            .get_pages_status("https://gitlab.com/acme/widget")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(pages.status, "built");
+        assert_eq!(pages.url.as_deref(), Some("https://acme.gitlab.io/widget"));
+        assert_eq!(pages.custom_domain.as_deref(), Some("docs.acme.dev"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_get_pages_status_404_is_none() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/projects/[^/]+/pages$"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let pages = provider
+            .get_pages_status("https://gitlab.com/acme/widget")
+            .await
+            .unwrap();
+        assert!(pages.is_none());
     }
 
     #[tokio::test]

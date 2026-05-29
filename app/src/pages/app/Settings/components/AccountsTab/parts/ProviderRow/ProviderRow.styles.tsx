@@ -215,6 +215,28 @@ export const Scope = styled(Box)(({ theme }) => ({
   color: theme.palette.text.secondary,
 })) as typeof Box;
 
+// eslint-disable-next-line no-restricted-syntax -- native <button> required so openExternal can be wired without an <a href> that Tauri would try to load inside the app window
+export const TokenCreateLink = styled("button")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  fontSize: 11.5,
+  color: theme.palette.primary.dark,
+  textDecoration: "underline",
+  textUnderlineOffset: 2,
+  fontFamily: "inherit",
+  "&:hover": { textDecoration: "none" },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 2,
+    borderRadius: 2,
+  },
+}));
+
 export const Field = styled(Box)({
   display: "flex",
   flexDirection: "column",

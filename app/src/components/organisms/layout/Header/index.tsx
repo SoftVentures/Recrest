@@ -59,6 +59,22 @@ function useHeaderContext(): HeaderContext {
       meta: t("view.dashboard.meta", { count: repoList.length }),
     };
   }
+  // `/mr/:repoId/:prNumber` — the top-bar shows `Merge Request` as the
+  // bold title with the `#N` rendered as the small/muted meta (same visual
+  // pattern as the list view's "{count} open"). The PR's full title already
+  // lives on the detail page itself, so repeating it here would crowd the
+  // chrome. Falls back to the plural label until the route param parses.
+  if (path.startsWith("/mr/")) {
+    const numberRaw = path.slice("/mr/".length).split("/")[1];
+    const prNumber = Number(numberRaw);
+    if (Number.isFinite(prNumber) && prNumber > 0) {
+      return { title: t("view.mr.title"), meta: `#${prNumber}` };
+    }
+    return {
+      title: t("view.mrs.title"),
+      meta: t("view.mrs.meta", { count: mrOpen }),
+    };
+  }
   if (path.startsWith("/merge-requests")) {
     return {
       title: t("view.mrs.title"),

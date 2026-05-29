@@ -28,8 +28,10 @@ import Mascot from "@/components/atoms/brand/Mascot";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import CiCard from "@/components/organisms/repos/CiCard";
 import CommitDialog from "@/components/organisms/repos/CommitDialog";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
+import DeploymentsCard from "@/components/organisms/repos/DeploymentsCard";
 import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
 import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
@@ -349,6 +351,13 @@ export default function RepoDetailPage() {
             )}
           </Card>
         </Grid2>
+
+        {repoProviderConnected && (
+          <Grid2>
+            <CiCard repoId={repo.id} />
+            <DeploymentsCard repoId={repo.id} />
+          </Grid2>
+        )}
 
         <Grid2>
           <Card>

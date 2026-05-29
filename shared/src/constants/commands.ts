@@ -66,6 +66,13 @@ export const TauriCommand = {
   CLEAR_PROVIDER_TOKEN: "clear_provider_token",
   FETCH_PULL_REQUESTS: "fetch_pull_requests",
   GET_PR_DETAIL: "get_pr_detail",
+  GET_PR_DIFF: "get_pr_diff",
+  POST_PR_COMMENT: "post_pr_comment",
+  LIST_WORKFLOWS: "list_workflows",
+  LIST_WORKFLOW_RUNS: "list_workflow_runs",
+  TRIGGER_WORKFLOW: "trigger_workflow",
+  CANCEL_WORKFLOW_RUN: "cancel_workflow_run",
+  GET_PAGES_STATUS: "get_pages_status",
   LIST_PR_EVENTS: "list_pr_events",
   LIST_CHECK_RUNS: "list_check_runs",
 

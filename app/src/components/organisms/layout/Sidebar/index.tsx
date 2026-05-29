@@ -129,6 +129,8 @@ function Sidebar() {
             label: t("nav.merge_requests"),
             count: mrCount,
             testId: navTestId(AppRoute.MERGE_REQUESTS),
+            // Keep "Merge Requests" highlighted on the single-MR detail page too.
+            matchPrefixes: ["/mr/"],
           } satisfies NavSpec,
         ]
       : []),

@@ -1,0 +1,7 @@
+{
+  "id": 778899,
+  "created_on": "2025-01-03T10:11:12Z",
+  "user": { "display_name": "Alice", "nickname": "alice" },
+  "content": { "raw": "looks good!" },
+  "inline": { "path": "src/lib.rs", "to": 2 }
+}

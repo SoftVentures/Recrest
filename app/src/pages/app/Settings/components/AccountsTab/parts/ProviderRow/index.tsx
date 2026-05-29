@@ -6,11 +6,13 @@ import { ExternalLink, Link as LinkIcon } from "lucide-react";
 
 import {
   PROVIDER_API_URLS,
+  PROVIDER_CREATE_TOKEN_URLS,
   PROVIDER_NAMES,
   PROVIDER_OAUTH_SCOPES,
   Provider,
   type ProviderId,
 } from "@/lib/constants/providers.constants";
+import { openExternal } from "@/lib/tauri";
 import {
   ActionGroup,
   ApiChange,
@@ -34,10 +36,30 @@ import {
   Spacer,
   StatusPill,
   TextInput,
+  TokenCreateLink,
   TopRow,
   Username,
 } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow/ProviderRow.styles";
 import { useAppSelector } from "@/store/hooks";
+
+/** Returns the host token-creation URL. Self-hosted GitHub/GitLab strip the
+ *  API suffix from the stored base URL so users land on the web UI, not the
+ *  REST root. Bitbucket Server is out of scope — cloud URL works for all. */
+function tokenCreateUrlFor(providerId: ProviderId, baseUrl: string | null | undefined): string {
+  const cloud = PROVIDER_CREATE_TOKEN_URLS[providerId];
+  if (!baseUrl) return cloud;
+  if (providerId === Provider.GITHUB) {
+    const m = baseUrl.match(/^(https?:\/\/[^/]+)\/api\/v3\/?$/i);
+    if (m?.[1]) return `${m[1]}/settings/tokens/new?scopes=repo,read:user&description=Recrest`;
+  }
+  if (providerId === Provider.GITLAB) {
+    const m = baseUrl.match(/^(https?:\/\/[^/]+)\/api\/v4\/?$/i);
+    if (m?.[1]) {
+      return `${m[1]}/-/user_settings/personal_access_tokens?name=Recrest&scopes=read_api,read_user,read_repository`;
+    }
+  }
+  return cloud;
+}
 
 const PROVIDER_BRANDS: Record<ProviderId, ReactNode> = {
   github: <GithubGlyph size={16} />,
@@ -173,6 +195,14 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
                 {s}
               </Scope>
             ))}
+            <TokenCreateLink
+              type="button"
+              onClick={() => void openExternal(tokenCreateUrlFor(providerId, connection?.baseUrl))}
+              aria-label={t("settings.providers.token_create_link_aria", { name: providerName })}
+            >
+              <ExternalLink size={11} />
+              {t("settings.providers.token_create_link", { name: providerName })}
+            </TokenCreateLink>
             {providerId === Provider.BITBUCKET && (
               <FormHint component="span" variant="body2">
                 {t("settings.providers.bitbucket_scope_note")}

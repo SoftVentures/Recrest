@@ -7,6 +7,8 @@ import {
   detailKey,
   fetchPullRequests,
   loadPrDetail,
+  loadPrDiff,
+  postPrComment,
   resetFilters,
   setFilters,
   setPrs,
@@ -25,6 +27,9 @@ const initialState: PrsState = {
   items: {},
   detail: {},
   detailLoading: {},
+  diff: {},
+  diffLoading: {},
+  comments: {},
   loading: false,
   error: null,
   lastFetched: null,
@@ -34,11 +39,16 @@ const initialState: PrsState = {
 function purgeRepo(state: PrsState, repoId: RepositoryId) {
   delete state.items[repoId];
   const prefix = `${repoId}#`;
-  for (const key of Object.keys(state.detail)) {
-    if (key.startsWith(prefix)) delete state.detail[key];
-  }
-  for (const key of Object.keys(state.detailLoading)) {
-    if (key.startsWith(prefix)) delete state.detailLoading[key];
+  for (const map of [
+    state.detail,
+    state.detailLoading,
+    state.diff,
+    state.diffLoading,
+    state.comments,
+  ]) {
+    for (const key of Object.keys(map)) {
+      if (key.startsWith(prefix)) delete map[key];
+    }
   }
 }
 
@@ -80,6 +90,21 @@ export const prsReducer = createReducer(initialState, (builder) => {
       const k = detailKey(action.meta.arg.repoId, action.meta.arg.prNumber);
       state.detailLoading[k] = false;
     })
+    .addCase(loadPrDiff.pending, (state, action) => {
+      state.diffLoading[detailKey(action.meta.arg.repoId, action.meta.arg.prNumber)] = true;
+    })
+    .addCase(loadPrDiff.fulfilled, (state, action) => {
+      state.diff[action.payload.key] = action.payload.files;
+      state.diffLoading[action.payload.key] = false;
+    })
+    .addCase(loadPrDiff.rejected, (state, action) => {
+      const k = detailKey(action.meta.arg.repoId, action.meta.arg.prNumber);
+      state.diffLoading[k] = false;
+    })
+    .addCase(postPrComment.fulfilled, (state, action) => {
+      const existing = state.comments[action.payload.key] ?? [];
+      state.comments[action.payload.key] = [...existing, action.payload.comment];
+    })
     .addCase(removeRepo.fulfilled, (state, action) => purgeRepo(state, action.payload))
     .addCase(deleteRepo.fulfilled, (state, action) => purgeRepo(state, action.payload));
 });
@@ -89,6 +114,8 @@ export {
   detailKey,
   fetchPullRequests,
   loadPrDetail,
+  loadPrDiff,
+  postPrComment,
   resetFilters,
   setFilters,
   setPrs,

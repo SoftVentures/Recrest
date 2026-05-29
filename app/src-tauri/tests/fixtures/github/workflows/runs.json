@@ -1,0 +1,25 @@
+{
+  "total_count": 2,
+  "workflow_runs": [
+    {
+      "id": 9000001,
+      "run_number": 42,
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "abc123def456abc123def456abc123def456abcd",
+      "created_at": "2025-01-04T10:00:00Z",
+      "html_url": "https://github.com/acme/widget/actions/runs/9000001",
+      "actor": { "login": "alice", "avatar_url": null }
+    },
+    {
+      "id": 9000000,
+      "run_number": 41,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "0000000000000000000000000000000000000000",
+      "created_at": "2025-01-03T10:00:00Z",
+      "html_url": "https://github.com/acme/widget/actions/runs/9000000",
+      "actor": { "login": "bob", "avatar_url": null }
+    }
+  ]
+}

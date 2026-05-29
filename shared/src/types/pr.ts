@@ -104,3 +104,54 @@ export interface PrFilters {
   draft: "any" | "hide" | "only";
   author: string | null;
 }
+
+// ─── Plan 03/04 C.5 — diff + inline comments ───────────────────────────────
+
+export const DiffLineKind = {
+  CONTEXT: "context",
+  ADD: "add",
+  REMOVE: "remove",
+} as const;
+export type DiffLineKind = (typeof DiffLineKind)[keyof typeof DiffLineKind];
+
+export interface DiffLine {
+  kind: DiffLineKind;
+  content: string;
+  oldLineNo: number | null;
+  newLineNo: number | null;
+}
+
+export interface DiffHunk {
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  lines: DiffLine[];
+}
+
+export interface FileDiff {
+  path: string;
+  oldPath: string | null;
+  status: FileChangeStatus;
+  hunks: DiffHunk[];
+}
+
+export const CommentSide = {
+  LEFT: "LEFT",
+  RIGHT: "RIGHT",
+} as const;
+export type CommentSide = (typeof CommentSide)[keyof typeof CommentSide];
+
+export interface CommentPosition {
+  side: CommentSide;
+  line: number;
+  startLine: number | null;
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  body: string;
+  path: string | null;
+  createdAt: string; // ISO-8601
+}

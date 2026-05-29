@@ -116,6 +116,15 @@ const Diff = styled(Box)(({ theme }) => ({
   "& .rem": { color: theme.palette.error.main },
 })) as typeof Box;
 
+// Muted placeholder when the provider didn't supply additions/deletions for
+// this MR (GitLab's MR-list endpoint, fork PRs without full stats). Keeps
+// the row's visual rhythm so the "next" position after `#42 · author ·` is
+// never blank — a vanishing chip read as a layout bug, not a missing value.
+const DiffUnknown = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.informationLight,
+  fontVariantNumeric: "tabular-nums",
+})) as typeof Typography;
+
 const CiPill = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -151,6 +160,11 @@ const CiEmpty = styled(Typography)(({ theme }) => ({
 
 export function MrRow({ pr, repoName, onClick }: MrRowProps) {
   const state = ciFor(pr.ciStatus);
+  // Skip the diff chip entirely when the provider couldn't compute the totals
+  // (GitLab's MR-list endpoint returns no per-MR additions/deletions). The
+  // sub-row used to render "+ −" with the signs but no numbers, which read as
+  // a bug — silent omission is the lesser evil.
+  const hasChangeStats = pr.additions != null && pr.deletions != null;
   return (
     <Row
       role="button"
@@ -190,14 +204,20 @@ export function MrRow({ pr, repoName, onClick }: MrRowProps) {
           <Sep component="span" variant="caption">
             ·
           </Sep>
-          <Diff component="span">
-            <Box component="span" className="add">
-              +{pr.additions}
-            </Box>
-            <Box component="span" className="rem">
-              −{pr.deletions}
-            </Box>
-          </Diff>
+          {hasChangeStats ? (
+            <Diff component="span">
+              <Box component="span" className="add">
+                +{pr.additions}
+              </Box>
+              <Box component="span" className="rem">
+                −{pr.deletions}
+              </Box>
+            </Diff>
+          ) : (
+            <DiffUnknown component="span" variant="caption">
+              —
+            </DiffUnknown>
+          )}
         </MetaRow>
       </TextCol>
       {state ? (

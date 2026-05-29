@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 
 use super::api::{
-    CheckRunSummaryDto, OrganizationDto, PrEventDto, PullRequestDetailDto, PullRequestDto,
-    RemoteRepositoryDto,
+    CheckRunSummaryDto, CommentDto, CommentPosition, FileDiffDto, OrganizationDto,
+    PagesStatusDto, PrEventDto, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto,
+    WorkflowDto, WorkflowInputs, WorkflowRunDto,
 };
 use crate::commands::error::CommandError;
 
@@ -135,5 +136,96 @@ pub trait GitProvider: Send + Sync {
             "{}: OAuth is not configured",
             self.id()
         )))
+    }
+
+    // ─── Plan 03/04 C.5: PR diff + inline comments ──────────────────────────
+
+    /// Normalised per-file diff for a PR/MR. Provider implementations parse
+    /// their wire format (GitHub `patch`, GitLab `diff`, Bitbucket combined
+    /// text) via `providers::diff_parse` or `unidiff`.
+    async fn get_pr_diff(
+        &self,
+        _remote_url: &str,
+        _pr_number: u64,
+    ) -> Result<Vec<FileDiffDto>, CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: get_pr_diff is not implemented",
+            self.id()
+        )))
+    }
+
+    /// Posts a review comment. `path` + `position` together select an inline
+    /// comment on a specific line; both omitted = a general PR/MR comment.
+    async fn post_pr_comment(
+        &self,
+        _remote_url: &str,
+        _pr_number: u64,
+        _body: &str,
+        _path: Option<&str>,
+        _position: Option<CommentPosition>,
+    ) -> Result<CommentDto, CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: post_pr_comment is not implemented",
+            self.id()
+        )))
+    }
+
+    // ─── Plan 03/04 C.4: CI workflows / pipelines ───────────────────────────
+
+    async fn list_workflows(
+        &self,
+        _remote_url: &str,
+    ) -> Result<Vec<WorkflowDto>, CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: list_workflows is not implemented",
+            self.id()
+        )))
+    }
+
+    async fn list_workflow_runs(
+        &self,
+        _remote_url: &str,
+        _workflow_id: &str,
+        _limit: u32,
+    ) -> Result<Vec<WorkflowRunDto>, CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: list_workflow_runs is not implemented",
+            self.id()
+        )))
+    }
+
+    async fn trigger_workflow(
+        &self,
+        _remote_url: &str,
+        _workflow_id: &str,
+        _git_ref: &str,
+        _inputs: WorkflowInputs,
+    ) -> Result<WorkflowRunDto, CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: trigger_workflow is not implemented",
+            self.id()
+        )))
+    }
+
+    async fn cancel_workflow_run(
+        &self,
+        _remote_url: &str,
+        _run_id: &str,
+    ) -> Result<(), CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: cancel_workflow_run is not implemented",
+            self.id()
+        )))
+    }
+
+    // ─── Plan 03/04 C.6: Pages / deploy status ──────────────────────────────
+
+    /// `Ok(None)` = no Pages configured or provider doesn't support it; the
+    /// UI hides the Deployments block in that case.
+    async fn get_pages_status(
+        &self,
+        _remote_url: &str,
+    ) -> Result<Option<PagesStatusDto>, CommandError> {
+        Ok(None)
     }
 }

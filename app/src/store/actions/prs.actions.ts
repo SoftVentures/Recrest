@@ -1,6 +1,9 @@
 import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 
 import {
+  type Comment,
+  type CommentPosition,
+  type FileDiff,
   type PrFilters,
   type PullRequest,
   type PullRequestDetail,
@@ -32,4 +35,32 @@ export const loadPrDetail = createAsyncThunk<
 >("prs/detail", async ({ repoId, prNumber }) => {
   const detail = await invoke<PullRequestDetail>(TauriCommand.GET_PR_DETAIL, { repoId, prNumber });
   return { key: detailKey(repoId, prNumber), detail };
+});
+
+export const loadPrDiff = createAsyncThunk<
+  { key: string; files: FileDiff[] },
+  { repoId: RepositoryId; prNumber: number }
+>("prs/diff", async ({ repoId, prNumber }) => {
+  const files = await invoke<FileDiff[]>(TauriCommand.GET_PR_DIFF, { repoId, prNumber });
+  return { key: detailKey(repoId, prNumber), files };
+});
+
+export const postPrComment = createAsyncThunk<
+  { key: string; comment: Comment },
+  {
+    repoId: RepositoryId;
+    prNumber: number;
+    body: string;
+    path?: string;
+    position?: CommentPosition;
+  }
+>("prs/postComment", async ({ repoId, prNumber, body, path, position }) => {
+  const comment = await invoke<Comment>(TauriCommand.POST_PR_COMMENT, {
+    repoId,
+    prNumber,
+    body,
+    path: path ?? null,
+    position: position ?? null,
+  });
+  return { key: detailKey(repoId, prNumber), comment };
 });
