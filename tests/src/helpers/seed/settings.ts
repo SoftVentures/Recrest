@@ -52,6 +52,10 @@ export const SEED_SETTINGS: AppSettings = {
 export const SEED_SETTINGS_DARK: AppSettings = {
   ...SEED_SETTINGS,
   theme: "dark",
+  // Phase 2 moved the effective theme onto `appearance` (themeId + followsSystem);
+  // flipping the legacy `theme` field alone no longer drives the boot theme, so
+  // keep the dark seed internally consistent or a "seeded dark" boot renders light.
+  appearance: { ...SEED_SETTINGS.appearance, themeId: "dark", followsSystem: false },
 };
 
 export const SEED_SETTINGS_DE: AppSettings = {

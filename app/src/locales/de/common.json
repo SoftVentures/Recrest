@@ -493,7 +493,14 @@
       "scan": "Scan-Quellen",
       "scan_sub": "Ordner, die Recrest rekursiv nach Git-Repositories durchsucht.",
       "set_default": "{{path}} als Standardordner für neue Importe festlegen",
-      "default_badge": "Standard"
+      "default_badge": "Standard",
+      "scanning": "Durchsuche {{path}} …",
+      "path_added_none": "{{path}} hinzugefügt",
+      "path_added_one": "{{path}} hinzugefügt — {{count}} Repository gefunden",
+      "path_added_other": "{{path}} hinzugefügt — {{count}} Repositories gefunden",
+      "path_removed_none": "{{path}} entfernt",
+      "path_removed_one": "{{path}} entfernt — {{count}} Repository entfernt",
+      "path_removed_other": "{{path}} entfernt — {{count}} Repositories entfernt"
     },
     "git": {
       "title": "Git-Config",

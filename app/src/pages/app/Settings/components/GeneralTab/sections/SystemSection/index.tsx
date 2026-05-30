@@ -154,6 +154,7 @@ export function SystemSection() {
             const n = Number(e.target.value);
             if (Number.isFinite(n)) dispatch(setPollingIntervalMinutes(n));
           }}
+          aria-label={t("settings.fields.polling_interval")}
           data-testid={TEST_IDS.settings.general.pollingInput}
         />
       </SettingsRow>
@@ -169,6 +170,7 @@ export function SystemSection() {
             const v = e.target.value as string;
             persist({ defaultIde: v === "auto" ? null : v });
           }}
+          slotProps={{ input: { "aria-label": t("settings.fields.default_ide") } }}
           data-testid={TEST_IDS.settings.general.defaultIdeSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -232,6 +234,7 @@ export function SystemSection() {
               },
             });
           }}
+          slotProps={{ input: { "aria-label": t("settings.fields.default_terminal") } }}
           data-testid={TEST_IDS.settings.general.defaultTerminalSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -275,6 +278,7 @@ export function SystemSection() {
             const v = e.target.value as string;
             persist({ shell: v === "auto" ? null : v });
           }}
+          slotProps={{ input: { "aria-label": t("settings.fields.default_shell") } }}
           data-testid={TEST_IDS.settings.general.defaultShellSelect}
           renderValue={(value) => {
             const v = value as string;

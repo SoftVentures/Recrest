@@ -27,7 +27,11 @@ export async function invoke<T>(command: string, args?: Record<string, unknown>)
   if (!isTauri()) {
     throw new Error(`tauri-ipc-unavailable: ${command} (running outside Tauri runtime)`);
   }
-  if (import.meta.env.DEV) {
+  // `dev_log` is the sink the devLog forwarder uses to mirror console.*
+  // calls to disk. Tracing its own invocation would push every trace line
+  // back through the same forwarder → infinite recursion. Skip the trace
+  // for that one command (the message payload is in the log line itself).
+  if (import.meta.env.DEV && command !== "dev_log") {
     if (isIpcTraceEnabled()) {
       const t0 = performance.now();
       try {

@@ -90,6 +90,17 @@ export const removeRepo = createAsyncThunk<RepositoryId, RepositoryId>(
   },
 );
 
+/** Drops every repo discovered under a removed scan root (unless still covered
+ *  by a remaining root) and returns the forgotten ids so the store can prune
+ *  them. The backend decides containment on canonicalised paths — see
+ *  `forget_repos_under_path`. */
+export const forgetReposUnderPath = createAsyncThunk<
+  RepositoryId[],
+  { removedPath: string; remainingPaths: string[] }
+>("repos/forgetUnderPath", async ({ removedPath, remainingPaths }) =>
+  invoke<RepositoryId[]>(TauriCommand.FORGET_REPOS_UNDER_PATH, { removedPath, remainingPaths }),
+);
+
 export const deleteRepo = createAsyncThunk<RepositoryId, RepositoryId>(
   "repos/delete",
   async (repoId) => {

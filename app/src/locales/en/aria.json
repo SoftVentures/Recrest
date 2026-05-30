@@ -57,5 +57,8 @@
   },
   "activity": {
     "timeline_filter": "Event type"
+  },
+  "dashboard": {
+    "main": "Dashboard content"
   }
 }

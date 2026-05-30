@@ -493,7 +493,14 @@
       "scan": "Scan sources",
       "scan_sub": "Folders Recrest scans recursively for git repositories.",
       "set_default": "Set {{path}} as the default folder for new imports",
-      "default_badge": "Default"
+      "default_badge": "Default",
+      "scanning": "Scanning {{path}}…",
+      "path_added_none": "Added {{path}}",
+      "path_added_one": "Added {{path}} — found {{count}} repository",
+      "path_added_other": "Added {{path}} — found {{count}} repositories",
+      "path_removed_none": "Removed {{path}}",
+      "path_removed_one": "Removed {{path}} — {{count}} repository dropped",
+      "path_removed_other": "Removed {{path}} — {{count}} repositories dropped"
     },
     "git": {
       "title": "Git config",

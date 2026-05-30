@@ -24,6 +24,7 @@ export function DesktopSection() {
         <GeneralSwitchInput
           checked={autoStart}
           onCheckedChange={(v) => dispatch(setDesktopAutoStart(v))}
+          aria-label={t("settings.desktop.auto_start")}
           data-testid={TEST_IDS.settings.general.desktopAutoStart}
         />
       </SettingsRow>
@@ -34,6 +35,7 @@ export function DesktopSection() {
         <GeneralSwitchInput
           checked={startMinimized}
           onCheckedChange={(v) => dispatch(setDesktopStartMinimized(v))}
+          aria-label={t("settings.desktop.start_minimized")}
           data-testid={TEST_IDS.settings.general.desktopStartMinimized}
         />
       </SettingsRow>
@@ -44,6 +46,7 @@ export function DesktopSection() {
         <GeneralSwitchInput
           checked={closeToTray}
           onCheckedChange={(v) => dispatch(setDesktopCloseToTray(v))}
+          aria-label={t("settings.desktop.close_to_tray")}
           data-testid={TEST_IDS.settings.general.desktopCloseToTray}
         />
       </SettingsRow>

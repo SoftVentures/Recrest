@@ -1,15 +1,24 @@
 use keyring::Entry;
 
-const SERVICE: &str = "eu.softventures.recrest";
+use crate::identity;
 
 /// Thin wrapper around OS keychain storage. One entry per provider.
+///
+/// The service name is the active build identifier (`identity::
+/// current_identifier()`), so dev and prod builds keep separate keychain
+/// entries — installing a prod build doesn't leak its tokens to a parallel
+/// `yarn dev` run and vice versa. This matches the `appDataDir` /
+/// single-instance / AUMID split that the rest of the dev-co-existence
+/// story relies on.
 pub struct TokenStore {
     service: &'static str,
 }
 
 impl TokenStore {
-    pub const fn new() -> Self {
-        Self { service: SERVICE }
+    pub fn new() -> Self {
+        Self {
+            service: identity::current_identifier(),
+        }
     }
 
     pub fn store(&self, provider_id: &str, token: &str) -> keyring::Result<()> {

@@ -109,11 +109,42 @@ impl ConfigStore {
             provider_id,
             ssh_key_path: None,
             custom_logo_path: None,
+            manual: false,
         };
         self.settings
             .repos
             .insert(record.id.clone(), record.clone());
         Ok(record)
+    }
+
+    /// Drop auto-discovered repos that no longer sit under any configured scan
+    /// root — e.g. a scan path was removed, or an earlier too-broad scan pulled
+    /// in nested repos (`.vscode`/`.codex`/… internal git dirs). Manually-added
+    /// repos (`manual == true`) are kept wherever they live. No-op when there
+    /// are no scan paths, so a fresh/empty config never nukes everything.
+    /// Returns the `(id, path)` of every pruned repo so callers can unwatch them.
+    pub fn prune_orphan_scanned_repos(&mut self) -> Vec<(String, PathBuf)> {
+        let roots: Vec<PathBuf> = self
+            .settings
+            .scan_paths
+            .iter()
+            .map(|p| crate::git::scanner::normalize_scan_root(Path::new(p)))
+            .collect();
+        if roots.is_empty() {
+            return Vec::new();
+        }
+        let orphans: Vec<(String, PathBuf)> = self
+            .settings
+            .repos
+            .values()
+            .filter(|r| !r.manual && !roots.iter().any(|root| r.path.starts_with(root)))
+            .map(|r| (r.id.clone(), r.path.clone()))
+            .collect();
+        for (id, _) in &orphans {
+            self.settings.repos.remove(id);
+            self.settings.pinned_repo_ids.retain(|pid| pid != id);
+        }
+        orphans
     }
 }
 

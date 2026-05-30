@@ -962,7 +962,7 @@ mod tests {
     fn ssh_key_override_builds_ssh_key_cred() {
         let (_dir, key) = temp_key(false);
         let cred = build_ssh_key_cred(Some("git"), &key, None).expect("cred builds");
-        assert!(cred.credtype() & git2::CredentialType::SSH_KEY.bits() != 0);
+        assert!(cred.credtype() as u32 & git2::CredentialType::SSH_KEY.bits() != 0);
     }
 
     #[test]

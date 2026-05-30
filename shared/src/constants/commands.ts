@@ -13,6 +13,7 @@ export const TauriCommand = {
   REPO_STATUS: "repo_status",
   ADD_REPO: "add_repo",
   REMOVE_REPO: "remove_repo",
+  FORGET_REPOS_UNDER_PATH: "forget_repos_under_path",
   DELETE_REPO: "delete_repo",
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
@@ -109,6 +110,11 @@ export const TauriCommand = {
   GET_DEV_PATHS: "get_dev_paths",
   GET_BUILD_TRIPLE: "get_build_triple",
   DEV_PANIC: "dev_panic",
+  /** Sink for frontend console / window-error forwarding so an external
+   *  supervisor (e.g. Claude) can read what the WebView2 console saw
+   *  without having to keep DevTools open. Append-only file at the repo
+   *  root: `.claude-dev.log`. */
+  DEV_LOG: "dev_log",
 } as const;
 
 export type TauriCommandName = (typeof TauriCommand)[keyof typeof TauriCommand];

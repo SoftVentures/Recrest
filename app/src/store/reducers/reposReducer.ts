@@ -4,6 +4,7 @@ import {
   addRepo,
   clearRepoLogo,
   deleteRepo,
+  forgetReposUnderPath,
   gitBranchCreate,
   gitCheckout,
   gitCloneUrl,
@@ -65,9 +66,10 @@ export const reposReducer = createReducer(initialState, (builder) => {
     })
     .addCase(scanForRepos.fulfilled, (state, action) => {
       state.loading = false;
-      for (const repo of action.payload) {
-        state.items[repo.id] = repo;
-      }
+      // scan_repos returns the FULL authoritative repo set (discovered +
+      // surviving manual adds, orphans pruned), so replace wholesale — a merge
+      // would leave pruned orphan rows lingering in the dashboard.
+      state.items = Object.fromEntries(action.payload.map((r) => [r.id, r]));
     })
     .addCase(scanForRepos.rejected, (state, action) => {
       state.loading = false;
@@ -102,6 +104,13 @@ export const reposReducer = createReducer(initialState, (builder) => {
     })
     .addCase(removeRepo.fulfilled, (state, action) => {
       delete state.items[action.payload];
+    })
+    .addCase(forgetReposUnderPath.fulfilled, (state, action) => {
+      // `?? []` guards the web dev-stub / any future backend that resolves
+      // null instead of an empty id array — `for…of null` would throw.
+      for (const id of action.payload ?? []) {
+        delete state.items[id];
+      }
     })
     .addCase(deleteRepo.fulfilled, (state, action) => {
       delete state.items[action.payload];
@@ -167,6 +176,7 @@ export {
   addRepo,
   clearRepoLogo,
   deleteRepo,
+  forgetReposUnderPath,
   gitBranchCreate,
   gitCheckout,
   gitCloneUrl,

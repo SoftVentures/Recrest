@@ -2,6 +2,7 @@ mod auth;
 mod commands;
 mod config;
 mod git;
+mod identity;
 mod platform;
 mod providers;
 mod update;
@@ -251,14 +252,15 @@ fn set_app_user_model_id() {
     // Dev builds get a `.dev` suffix so the Windows taskbar doesn't
     // recycle the prod build's cached pin icon / RelaunchIconResource —
     // the two identities are now distinct in Explorer's per-AUMID store.
+    // Resolved via `identity::current_identifier()` so this and the Tauri
+    // config (overlaid by `tauri.dev.conf.json` in debug builds) stay in
+    // lock-step — diverging would re-introduce the icon-cache collision.
     use windows::core::PCWSTR;
     use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
-    let id = if cfg!(debug_assertions) {
-        "eu.softventures.recrest.dev"
-    } else {
-        "eu.softventures.recrest"
-    };
-    let aumid: Vec<u16> = id.encode_utf16().chain(std::iter::once(0)).collect();
+    let aumid: Vec<u16> = identity::current_identifier()
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
     // `SetCurrentProcessExplicitAppUserModelID` returns an HRESULT; failure
     // is non-fatal (notifications still work, just with the parent-process
     // name). Silently swallow so a weird Windows build doesn't crash boot.
@@ -308,6 +310,12 @@ pub fn run() {
         set_app_user_model_id();
     }
 
+    // Mark a session boundary in `.claude-dev.log` so successive `yarn dev`
+    // sessions are visually demarcated when reading the file. Debug-only —
+    // production builds neither register the command nor write the file.
+    #[cfg(debug_assertions)]
+    commands::dev_log::log_session_start(identity::current_identifier());
+
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // I5: respect `--start-minimized` on a second-instance launch.
@@ -346,7 +354,26 @@ pub fn run() {
             // tracing's global dispatcher (only one logger can be installed).
 
             let handle = app.handle().clone();
-            let config = ConfigStore::load_or_default(&handle)?;
+
+            // Window title carries the dev/prod marker. `tauri.conf.json`
+            // hard-codes "Recrest" and the `tauri.dev.conf.json` overlay
+            // can't safely replace `app.windows[]` (array-replace would
+            // require duplicating every Window property), so we set the
+            // title at runtime via `identity::current_tray_tooltip()` —
+            // same string that goes on the tray, kept in one place.
+            if let Some(window) = handle.get_webview_window("main") {
+                let _ = window.set_title(identity::current_tray_tooltip());
+            }
+
+            let mut config = ConfigStore::load_or_default(&handle)?;
+            // Reconcile on boot: drop auto-discovered repos that no longer sit
+            // under any configured scan root (junk from an earlier too-broad
+            // scan, or a scan path removed by an older build before pruning
+            // existed). Manual adds are kept. Persist only when something
+            // actually changed.
+            if !config.prune_orphan_scanned_repos().is_empty() {
+                let _ = config.save(&handle);
+            }
 
             // Crash reporting — opt-in via the `crashReporting` setting + a
             // compile-time DSN. `mem::forget` on the returned guard is the
@@ -509,10 +536,11 @@ pub fn run() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 let deep_handle = handle.clone();
+                let callback_prefix = identity::current_oauth_callback_prefix();
                 handle.deep_link().on_open_url(move |event| {
                     for url in event.urls() {
                         let s = url.as_str();
-                        if s.starts_with("recrest://oauth/callback") {
+                        if s.starts_with(&callback_prefix) {
                             let _ = tauri::Emitter::emit(
                                 &deep_handle,
                                 "oauth://callback",
@@ -554,7 +582,7 @@ pub fn run() {
 
             let _tray = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
                 .icon(app.default_window_icon().cloned().unwrap())
-                .tooltip("Recrest")
+                .tooltip(identity::current_tray_tooltip())
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
@@ -672,6 +700,7 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::forget_repos_under_path,
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
@@ -751,6 +780,7 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::forget_repos_under_path,
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
@@ -824,6 +854,7 @@ pub fn run() {
         commands::dev::get_dev_paths,
         commands::dev::get_build_triple,
         commands::dev::dev_panic,
+        commands::dev_log::dev_log,
     ]);
 
     let app = builder

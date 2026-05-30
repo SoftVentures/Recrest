@@ -147,7 +147,7 @@ function LanguageDonutCard({ mix, loading }: Props) {
             commits
           </CentreSub>
         </Svg>
-        <LegendList component="ul">
+        <LegendList component="ul" tabIndex={0} aria-label={t("activity.cards.language_title")}>
           {legend.map((s) => (
             <LegendItem key={s.language} component="li">
               <Swatch color={s.color} />

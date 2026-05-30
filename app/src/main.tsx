@@ -61,6 +61,15 @@ async function bootstrap(): Promise<void> {
     store.dispatch(setGroups(DEFAULT_SEED.groups));
   }
 
+  // Mirror console + window errors into `<repo_root>/.claude-dev.log`
+  // via the Rust `dev_log` command so an external supervisor can read
+  // what the WebView2 console saw without keeping DevTools open. Dev
+  // builds only — Vite tree-shakes the dynamic import in production.
+  if (import.meta.env.DEV) {
+    const { installDevLogForwarder } = await import("@/lib/devLog");
+    installDevLogForwarder();
+  }
+
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <ReduxProvider store={store}>

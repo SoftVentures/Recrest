@@ -26,6 +26,7 @@ export function AccessibilitySection() {
         <GeneralSwitchInput
           checked={highContrast}
           onCheckedChange={(v) => dispatch(setHighContrast(v))}
+          aria-label={t("settings.accessibility.high_contrast")}
           data-testid={TEST_IDS.settings.general.a11yHighContrast}
         />
       </SettingsRow>
@@ -36,6 +37,7 @@ export function AccessibilitySection() {
         <GeneralSwitchInput
           checked={reducedMotion}
           onCheckedChange={(v) => dispatch(setReducedMotion(v))}
+          aria-label={t("settings.accessibility.reduced_motion")}
           data-testid={TEST_IDS.settings.general.a11yReducedMotion}
         />
       </SettingsRow>
@@ -46,6 +48,7 @@ export function AccessibilitySection() {
         <GeneralSwitchInput
           checked={underlineLinks}
           onCheckedChange={(v) => dispatch(setUnderlineLinks(v))}
+          aria-label={t("settings.accessibility.underline_links")}
           data-testid={TEST_IDS.settings.general.a11yUnderlineLinks}
         />
       </SettingsRow>

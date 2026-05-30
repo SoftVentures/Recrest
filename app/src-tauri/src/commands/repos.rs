@@ -81,26 +81,54 @@ pub async fn scan_repos(
     let options = ScanOptions::default();
     let discovered = crate::git::scanner::scan_many(&paths, &options)?;
 
-    let mut config = state.config.lock().await;
-    config.settings_mut().scan_paths = paths;
+    // Upsert everything discovered under the new paths, then reconcile: drop
+    // auto-discovered repos that no longer sit under any scan root (a removed
+    // path, or junk from an earlier too-broad scan). The returned set is the
+    // FULL authoritative repo list (discovered + surviving manual adds), so the
+    // renderer can replace its store wholesale instead of merging stale rows.
+    let (records, new_records, orphans) = {
+        let mut config = state.config.lock().await;
+        config.settings_mut().scan_paths = paths;
 
-    let mut out = Vec::with_capacity(discovered.len());
-    let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
-    for repo_path in discovered {
-        let record = config.upsert_scanned_repo(&repo_path)?;
-        let status = status::read_status(&record.path)?;
-        new_records.push((record.id.clone(), record.path.clone()));
-        out.push(RepoDto::from_record(&record, status));
-    }
+        let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
+        for repo_path in discovered {
+            let record = config.upsert_scanned_repo(&repo_path)?;
+            new_records.push((record.id.clone(), record.path.clone()));
+        }
 
-    config.save(&app)?;
-    drop(config);
+        let orphans = config.prune_orphan_scanned_repos();
+        config.save(&app)?;
 
-    // Subscribe the filesystem watcher to every scanned repo (best-effort).
+        let records: Vec<RepoRecord> = config.settings().repos.values().cloned().collect();
+        (records, new_records, orphans)
+    };
+
+    // Watcher: subscribe freshly-discovered repos, unwatch pruned orphans.
     if let Some(watcher) = state.watcher.lock().await.as_mut() {
         for (id, path) in new_records {
             let _ = watcher.watch_repo(&id, &path).await;
         }
+        for (_, path) in &orphans {
+            let _ = watcher.unwatch_repo(path.as_path()).await;
+        }
+    }
+
+    // Statuses for the full set, computed concurrently (mirrors `list_repos`).
+    let handles: Vec<_> = records
+        .iter()
+        .map(|r| {
+            let path = r.path.clone();
+            tokio::task::spawn_blocking(move || {
+                status::read_status(&path).unwrap_or_else(|_| status::RepoStatusDto::unknown())
+            })
+        })
+        .collect();
+    let mut out = Vec::with_capacity(records.len());
+    for (record, handle) in records.iter().zip(handles) {
+        let status = handle
+            .await
+            .unwrap_or_else(|_| status::RepoStatusDto::unknown());
+        out.push(RepoDto::from_record(record, status));
     }
     Ok(out)
 }
@@ -164,6 +192,9 @@ pub async fn add_repo(
     let mut config = state.config.lock().await;
     let mut record = config.upsert_scanned_repo(std::path::Path::new(&path))?;
     record.group_id = group_id.clone();
+    // Explicit user add — flag it so a later scan's orphan-prune never removes
+    // it, even when it lives outside every configured scan root.
+    record.manual = true;
     config
         .settings_mut()
         .repos
@@ -496,6 +527,76 @@ pub async fn remove_repo(
         let _ = watcher.unwatch_repo(&path).await;
     }
     Ok(())
+}
+
+/// Unregister every repo discovered under `removed_path` that is **not** also
+/// covered by one of `remaining_paths`. Invoked when the user deletes a scan
+/// root in Settings → Integrations so the repositories that root surfaced drop
+/// out of the dashboard immediately — while repos still reached by an
+/// overlapping root (e.g. `D:\` when `D:\Projects` is removed), and repos added
+/// manually outside every scan root, survive untouched.
+///
+/// Containment is a component-wise `Path::starts_with` on the **raw** stored
+/// paths (after `normalize_scan_root` folds the bare drive form `D:` to `D:\`),
+/// so `D:\Projects` never swallows `D:\ProjectsX`. We deliberately do NOT
+/// canonicalise: discovered repo paths are the verbatim result of walking the
+/// scan root, so matching that same raw form mirrors discovery exactly — and it
+/// also prunes a repo whose folder was deleted on disk while still registered
+/// (the very stale state this command should clean). `std::fs::canonicalize`
+/// would defeat that — it only resolves paths that still exist and returns the
+/// Windows verbatim (`\\?\`) form, so a missing repo path would fall back to
+/// its raw form and never prefix-match a canonicalised root. Returns the ids
+/// that were forgotten so the renderer can prune its store without a full
+/// reload, and best-effort unwatches each (mirrors `remove_repo`).
+#[tauri::command]
+pub async fn forget_repos_under_path(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    removed_path: String,
+    remaining_paths: Vec<String>,
+) -> Result<Vec<String>, CommandError> {
+    use crate::git::scanner::normalize_scan_root;
+
+    let removed = normalize_scan_root(std::path::Path::new(&removed_path));
+    let remaining: Vec<PathBuf> = remaining_paths
+        .iter()
+        .map(|p| normalize_scan_root(std::path::Path::new(p)))
+        .collect();
+
+    let mut config = state.config.lock().await;
+
+    // Snapshot victims under an immutable borrow first; the mutable borrow for
+    // removal can't overlap the iteration.
+    let victims: Vec<(String, PathBuf)> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|record| {
+            record.path.starts_with(&removed)
+                && !remaining.iter().any(|root| record.path.starts_with(root))
+        })
+        .map(|record| (record.id.clone(), record.path.clone()))
+        .collect();
+
+    if victims.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let settings = config.settings_mut();
+    for (id, _) in &victims {
+        settings.repos.remove(id);
+        settings.pinned_repo_ids.retain(|pinned| pinned != id);
+    }
+    config.save(&app)?;
+    drop(config);
+
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        for (_, path) in &victims {
+            let _ = watcher.unwatch_repo(path.as_path()).await;
+        }
+    }
+
+    Ok(victims.into_iter().map(|(id, _)| id).collect())
 }
 
 /// Refuse to send "obviously dangerous" paths to the trash. The user can

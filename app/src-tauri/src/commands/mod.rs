@@ -21,4 +21,6 @@ pub mod tray;
 pub mod update;
 #[cfg(debug_assertions)]
 pub mod dev;
+#[cfg(debug_assertions)]
+pub mod dev_log;
 pub mod window;

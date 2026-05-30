@@ -56,6 +56,7 @@ export function UpdatesSection() {
           onChange={(e: SelectChangeEvent<unknown>) =>
             dispatch(setUpdateMode(e.target.value as AutoUpdateMode))
           }
+          slotProps={{ input: { "aria-label": t("settings.updates.mode") } }}
           data-testid={TEST_IDS.settings.general.updateModeSelect}
         >
           {UPDATE_MODES.map((m) => {

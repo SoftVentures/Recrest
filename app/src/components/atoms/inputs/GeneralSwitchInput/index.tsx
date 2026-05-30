@@ -62,7 +62,10 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
 }));
 
 const GeneralSwitchInput = forwardRef<HTMLButtonElement, GeneralSwitchInputProps>(
-  function GeneralSwitchInput({ onCheckedChange, onChange, ...rest }, ref) {
+  function GeneralSwitchInput(
+    { onCheckedChange, onChange, "aria-label": ariaLabel, ...rest },
+    ref,
+  ) {
     return (
       <StyledSwitch
         ref={ref}
@@ -71,6 +74,10 @@ const GeneralSwitchInput = forwardRef<HTMLButtonElement, GeneralSwitchInputProps
           onChange?.(e, checked);
           onCheckedChange?.(checked);
         }}
+        // Route the accessible name onto the hidden checkbox input — MUI keeps
+        // the real <input> behind the styled track, and axe's `label` rule
+        // checks that input, not the switch root the label would otherwise hit.
+        slotProps={ariaLabel ? { input: { "aria-label": ariaLabel } } : undefined}
         {...rest}
       />
     );

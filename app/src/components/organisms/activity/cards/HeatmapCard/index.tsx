@@ -49,6 +49,7 @@ function HeatmapCard({ matrix, loading }: Props) {
                   title={`${WEEKDAYS[dayIdx]} · ${String(hourIdx).padStart(2, "0")}:00 · ${v}`}
                 >
                   <Cell
+                    role="img"
                     intensity={intensity}
                     style={{ "--cell-delay": dayIdx * 24 + hourIdx } as CSSProperties}
                     data-testid={TEST_IDS.activity.heatmap.cell}

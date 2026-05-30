@@ -313,6 +313,13 @@ pub struct RepoRecord {
     /// auto-detection when set. Cleared by `clear_repo_logo`.
     #[serde(default)]
     pub custom_logo_path: Option<PathBuf>,
+    /// `true` when the user added this repo explicitly (Add-repo / clone),
+    /// `false` when it was auto-discovered by a scan. Scanned repos that no
+    /// longer sit under any configured scan root are pruned on the next
+    /// scan/boot; manual ones are kept wherever they live. Legacy records
+    /// (no field) default to `false` — i.e. treated as scanned.
+    #[serde(default)]
+    pub manual: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

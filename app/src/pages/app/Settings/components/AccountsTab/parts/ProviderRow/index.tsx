@@ -40,7 +40,13 @@ import {
   TopRow,
   Username,
 } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow/ProviderRow.styles";
-import { useAppSelector } from "@/store/hooks";
+import {
+  clearProviderToken,
+  loadProviders,
+  setProviderBaseUrl,
+  setProviderToken,
+} from "@/store/actions/providers.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 /** Returns the host token-creation URL. Self-hosted GitHub/GitLab strip the
  *  API suffix from the stored base URL so users land on the web UI, not the
@@ -79,6 +85,7 @@ export interface ProviderRowProps {
 
 export function ProviderRow({ providerId }: ProviderRowProps) {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const connection = useAppSelector((s) => s.providers.connections[providerId]);
   const connected = !!connection?.connected;
   const isSelfHosted =
@@ -91,6 +98,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
   const [username, setUsername] = useState("");
   const [baseUrlExpanded, setBaseUrlExpanded] = useState(false);
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const requiresUsername = providerId === Provider.BITBUCKET;
   const effectiveBaseUrl = connection?.baseUrl ?? PROVIDER_API_URLS[providerId];
@@ -102,6 +110,59 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
     setToken("");
     setUsername("");
     setBaseUrlDraft("");
+  };
+
+  const onSaveToken = async () => {
+    const trimmedToken = token.trim();
+    if (!trimmedToken) return;
+    if (requiresUsername && !username.trim()) return;
+    setSubmitting(true);
+    try {
+      await dispatch(
+        setProviderToken({
+          providerId,
+          token: trimmedToken,
+          username: requiresUsername ? username.trim() : null,
+        }),
+      ).unwrap();
+      // Rust's `set_provider_token` echoes the input username (null for
+      // GitHub/GitLab since only Bitbucket requires it). Re-fetch the full
+      // provider list so `provider.username()` hits the host's /user
+      // endpoint and the UI shows the actual login next to the brand.
+      void dispatch(loadProviders());
+      closeForms();
+    } catch {
+      // Connection failures surface via the Redux providers slice; keep the
+      // form open so the user can retry without re-pasting the token.
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onSaveBaseUrl = async () => {
+    const next = baseUrlDraft.trim();
+    setSubmitting(true);
+    try {
+      await dispatch(
+        setProviderBaseUrl({ providerId, baseUrl: next.length > 0 ? next : null }),
+      ).unwrap();
+      closeForms();
+    } catch {
+      // ignore — slice surfaces error
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDisconnect = async () => {
+    setSubmitting(true);
+    try {
+      await dispatch(clearProviderToken(providerId)).unwrap();
+    } catch {
+      // ignore — slice surfaces error
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -122,7 +183,12 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
         <Spacer component="span" />
         <ActionGroup>
           {connected ? (
-            <Btn type="button" variant="outline">
+            <Btn
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => void onDisconnect()}
+            >
               {t("settings.providers.disconnect")}
             </Btn>
           ) : tokenExpanded ? null : (
@@ -173,7 +239,9 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               placeholder={BASE_URL_PLACEHOLDERS[providerId]}
               autoFocus
             />
-            <Btn type="button">{t("settings.providers.save")}</Btn>
+            <Btn type="button" disabled={submitting} onClick={() => void onSaveBaseUrl()}>
+              {t("settings.providers.save")}
+            </Btn>
             <Btn type="button" variant="ghost" onClick={closeForms}>
               {t("actions.cancel")}
             </Btn>
@@ -230,10 +298,20 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void onSaveToken();
+                }
+              }}
               placeholder={t("settings.providers.token_placeholder")}
               autoFocus={!requiresUsername}
             />
-            <Btn type="button" disabled={!token.trim() || (requiresUsername && !username.trim())}>
+            <Btn
+              type="button"
+              disabled={submitting || !token.trim() || (requiresUsername && !username.trim())}
+              onClick={() => void onSaveToken()}
+            >
               {t("settings.providers.save")}
             </Btn>
             <Btn type="button" variant="ghost" onClick={closeForms}>

@@ -5,6 +5,65 @@
 
 export const UNHANDLED = Symbol("unhandled");
 
+/** Realistic Dependabot-shaped PR body (GFM tables, links, inline code,
+ *  blockquotes, `<details>`) so dev:web exercises the MarkdownView +
+ *  ExpandableContent paths without a live provider. Lives here so `devStub.ts`
+ *  stays under the 800-line ceiling. */
+export const DEV_PR_DETAIL_BODY = `Bumps the **npm-all** group with 3 updates in the \`/\` directory.
+
+**What changed**
+
+- React-Redux now ships **proper TS overloads** for \`useSelector\` with default equality
+- TipTap v3 dropped the legacy \`emitUpdate\` argument shape — code already migrated
+- \`@tauri-apps/api\` got a new \`isTauri()\` helper we should adopt long-term
+
+**Checklist**
+
+1. Verify \`yarn test\` passes locally
+2. Run the smoke screen on dev:web (3200)
+3. Approve and merge using **Squash**
+
+Quick links: [release notes](https://github.com/reduxjs/redux-toolkit/releases) · [diff](https://github.com/reduxjs/redux-toolkit/compare/v2.11.2...v2.12.0)
+
+---
+
+### Package table
+
+| Package | From | To |
+| --- | --- | --- |
+| [@reduxjs/toolkit](https://github.com/reduxjs/redux-toolkit) | \`2.11.2\` | \`2.12.0\` |
+| [@tauri-apps/api](https://github.com/tauri-apps/tauri) | \`2.10.1\` | \`2.11.0\` |
+| [react](https://github.com/facebook/react) | \`19.2.5\` | \`19.2.6\` |
+
+Updates \`@reduxjs/toolkit\` from 2.11.2 to 2.12.0.
+
+<details>
+<summary>Release notes</summary>
+
+> Sourced from [@reduxjs/toolkit's releases](https://github.com/reduxjs/redux-toolkit/releases).
+
+### v2.12.0
+
+This feature release adds three new helpers and tightens up several existing ones.
+
+- Adds \`createListenerMiddleware().clearListeners()\`
+- Fixes a bug where \`combineSlices\` would drop typing under \`exactOptionalPropertyTypes\`
+- Improves devtool action labels for nested \`createAsyncThunk\` calls
+
+</details>
+
+<details>
+<summary>Commits</summary>
+
+- See full diff [here](https://github.com/reduxjs/redux-toolkit/compare/v2.11.2...v2.12.0).
+
+</details>
+
+---
+
+Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself.
+You can also trigger a rebase manually by commenting \`@dependabot rebase\`.`;
+
 type Args = Record<string, unknown>;
 
 export function providerFeatureStub(cmd: string, a: Args): unknown | typeof UNHANDLED {

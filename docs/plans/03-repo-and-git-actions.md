@@ -387,6 +387,50 @@ Ergänzt zur Settings-Erweiterung in Plan 4 (Terminal-Wahl löst auch A.1 hier).
 
 ---
 
+## Phase E — Dev/Prod Co-Existence
+
+### E.1 Dev- und prod-Instanz parallel betreibbar
+
+- **Symptom:** "wenn ich die app starte sie co existiert neben der desktop app. Also 1x dev und 1x reguläre app."
+- **Root-Cause:** `tauri.conf.json::identifier = "eu.softventures.recrest"` ist in beiden Builds gleich. Daran hängen:
+  - `tauri-plugin-single-instance` Lock-Key (Named Mutex Windows / File-Lock Unix) → dev fokussiert prod statt zu starten.
+  - `appDataDir`/`appConfigDir` (`%APPDATA%/eu.softventures.recrest/`) → Settings/Plugin-Stores stomp'n sich gegenseitig.
+  - macOS Bundle-ID, productName, Window-Title sind ebenfalls identisch.
+  - `auth/token.rs::SERVICE` ist hardcoded → Keychain-Tokens werden geteilt.
+  - Deep-Link-Scheme `recrest://` ist in beiden Builds registriert; das OS routet Callbacks unbestimmt.
+- **Schon getrennt:** Icons (via `tauri.dev.conf.json`), Windows AUMID (`set_app_user_model_id` in `lib.rs`).
+- **Vorgehen:**
+  1. **Neues Modul `app/src-tauri/src/identity.rs`** als single source of truth (CLAUDE.md "no magic strings"):
+     - `pub const IDENTIFIER_PROD: &str = "eu.softventures.recrest";`
+     - `pub const IDENTIFIER_DEV:  &str = "eu.softventures.recrest.dev";`
+     - `pub const DEEP_LINK_SCHEME_PROD: &str = "recrest";`
+     - `pub const DEEP_LINK_SCHEME_DEV:  &str = "recrest-dev";`
+     - `pub const TRAY_TOOLTIP_PROD: &str = "Recrest";`
+     - `pub const TRAY_TOOLTIP_DEV:  &str = "Recrest Dev";`
+     - `pub fn current_identifier() -> &'static str` via `cfg!(debug_assertions)`. Analog `current_deep_link_scheme()`, `current_tray_tooltip()`, `current_oauth_callback_prefix()`.
+  2. **`app/src-tauri/tauri.dev.conf.json` erweitern** — nur in `tauri dev` aktiv, `tauri build` ignoriert die Datei:
+     - `identifier: "eu.softventures.recrest.dev"`
+     - `productName: "Recrest Dev"`
+     - `app.windows[0]` mit `label: "main"` + `title: "Recrest Dev"`
+     - `plugins.deep-link.desktop.schemes: ["recrest-dev"]`
+  3. **`app/src-tauri/src/lib.rs`:**
+     - `mod identity;` registrieren.
+     - `set_app_user_model_id` nutzt `identity::current_identifier()` statt der lokalen `if cfg!(debug_assertions)`-Verzweigung.
+     - Tray-Tooltip aus `identity::current_tray_tooltip()`.
+     - Deep-Link-Handler matched `identity::current_oauth_callback_prefix()` statt hardcoded `"recrest://oauth/callback"`.
+  4. **`app/src-tauri/src/auth/token.rs`:** `SERVICE`-Konstante ersetzen durch Helper `service()` der `identity::current_identifier()` zurückgibt; `TokenStore::new()` setzt `service` darüber.
+- **Was Tauri automatisch mitnimmt sobald der Identifier abweicht:**
+  - Single-instance Lock-Key → beide Builds laufen parallel.
+  - `appDataDir`/`appConfigDir`/`appLogDir` und alle Plugin-Store-Pfade.
+  - macOS Bundle-ID in `tauri build` (in dev egal, kein .app-Bundle).
+- **Migrations-Note:** Bestehende dev-Settings unter `%APPDATA%/eu.softventures.recrest/` werden nicht migriert; dev startet mit frischem `%APPDATA%/eu.softventures.recrest.dev/`. Dev-Tokens im Keychain müssen einmalig neu gesetzt werden. Akzeptabel, weil dev-Setups regulär weggeworfen werden.
+- **Test:**
+  - Rust-Unit für `identity`: in `#[cfg(debug_assertions)]` Build liefern Helpers die `.dev`/`recrest-dev`-Varianten.
+  - Manuell: prod-Installer + `yarn dev` parallel starten → beide Fenster gleichzeitig sichtbar, getrennte `%APPDATA%`-Ordner, getrennte Keychain-Einträge (Windows `Anmeldeinformationsverwaltung` / macOS Keychain Access zwei `eu.softventures.recrest*`-Einträge).
+  - Single-instance: zweimal `yarn dev` → zweiter Aufruf fokussiert die laufende dev-Instanz, **nicht** die prod-App.
+
+---
+
 ## Phase-übergreifende Verifikation
 
 ```bash

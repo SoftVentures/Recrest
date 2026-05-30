@@ -27,7 +27,7 @@ import { Provider } from "@/lib/constants/providers.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { type AppSeed, DEFAULT_SEED } from "@/lib/dev/seed";
 import { SEED_ORGS, SEED_REMOTE_LISTINGS } from "@/lib/dev/seed/remote";
-import { UNHANDLED, providerFeatureStub } from "@/lib/tauri/devStub.providers";
+import { DEV_PR_DETAIL_BODY, UNHANDLED, providerFeatureStub } from "@/lib/tauri/devStub.providers";
 
 type Required_<T> = { [K in keyof T]-?: NonNullable<T[K]> };
 
@@ -51,6 +51,7 @@ interface DevPullRequest {
 interface DevRepo {
   id: string;
   name: string;
+  path: string;
   remoteUrl: string | null;
   sshKeyPath?: string | null;
   logoPath?: string | null;
@@ -284,6 +285,24 @@ function installStub(seed: Required_<AppSeed>): void {
       }
       case "remove_repo":
         return undefined;
+      case "forget_repos_under_path": {
+        // Mirror the Rust prune so dev:web removes the right repos and returns
+        // an id array (a null here would make the reducer's `for…of` throw).
+        const norm = (p: string) => p.replace(/\\/g, "/").replace(/\/+$/, "");
+        const under = (child: string, root: string) => {
+          if (!root) return false;
+          const c = norm(child);
+          const r = norm(root);
+          return c === r || c.startsWith(r + "/");
+        };
+        const removed = String((args.removedPath as string | undefined) ?? "");
+        const remaining = ((args.remainingPaths as string[] | undefined) ?? []).map(String);
+        const ids = SEED.repos
+          .filter((r) => under(r.path, removed) && !remaining.some((rem) => under(r.path, rem)))
+          .map((r) => r.id);
+        SEED.repos = SEED.repos.filter((r) => !ids.includes(r.id));
+        return ids;
+      }
       case "delete_repo":
         // dev:web has no filesystem — pretend the trash move succeeded.
         // The frontend slice's `deleteRepo.fulfilled` then prunes the repo
@@ -491,60 +510,7 @@ function installStub(seed: Required_<AppSeed>): void {
         // MarkdownView + ExpandableContent behaviour without a live provider.
         // Tables, links, inline code, blockquotes and a <details> block all
         // exercise the renderer's GFM + safe-HTML paths.
-        const body = `Bumps the **npm-all** group with 3 updates in the \`/\` directory.
-
-**What changed**
-
-- React-Redux now ships **proper TS overloads** for \`useSelector\` with default equality
-- TipTap v3 dropped the legacy \`emitUpdate\` argument shape — code already migrated
-- \`@tauri-apps/api\` got a new \`isTauri()\` helper we should adopt long-term
-
-**Checklist**
-
-1. Verify \`yarn test\` passes locally
-2. Run the smoke screen on dev:web (3200)
-3. Approve and merge using **Squash**
-
-Quick links: [release notes](https://github.com/reduxjs/redux-toolkit/releases) · [diff](https://github.com/reduxjs/redux-toolkit/compare/v2.11.2...v2.12.0)
-
----
-
-### Package table
-
-| Package | From | To |
-| --- | --- | --- |
-| [@reduxjs/toolkit](https://github.com/reduxjs/redux-toolkit) | \`2.11.2\` | \`2.12.0\` |
-| [@tauri-apps/api](https://github.com/tauri-apps/tauri) | \`2.10.1\` | \`2.11.0\` |
-| [react](https://github.com/facebook/react) | \`19.2.5\` | \`19.2.6\` |
-
-Updates \`@reduxjs/toolkit\` from 2.11.2 to 2.12.0.
-
-<details>
-<summary>Release notes</summary>
-
-> Sourced from [@reduxjs/toolkit's releases](https://github.com/reduxjs/redux-toolkit/releases).
-
-### v2.12.0
-
-This feature release adds three new helpers and tightens up several existing ones.
-
-- Adds \`createListenerMiddleware().clearListeners()\`
-- Fixes a bug where \`combineSlices\` would drop typing under \`exactOptionalPropertyTypes\`
-- Improves devtool action labels for nested \`createAsyncThunk\` calls
-
-</details>
-
-<details>
-<summary>Commits</summary>
-
-- See full diff [here](https://github.com/reduxjs/redux-toolkit/compare/v2.11.2...v2.12.0).
-
-</details>
-
----
-
-Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself.
-You can also trigger a rebase manually by commenting \`@dependabot rebase\`.`;
+        const body = DEV_PR_DETAIL_BODY;
         // A tiny synthetic timeline so the Timeline card has something to
         // render in dev:web (avatar + locale date + body) without a live
         // provider.
@@ -701,6 +667,14 @@ You can also trigger a rebase manually by commenting \`@dependabot rebase\`.`;
         return `${os}-x86_64`;
       }
       case "dev_panic":
+        return undefined;
+      // The devLog forwarder (main.tsx, DEV builds) mirrors every console.*
+      // call to `invoke("dev_log")`. If this command falls through to the
+      // `default` branch below it logs `console.warn("unhandled command…")`,
+      // which the forwarder re-forwards as another `dev_log` invoke — an
+      // unbounded loop that pegs the main thread and stops the app rendering.
+      // Handle it explicitly so the web/stub boot never wedges.
+      case "dev_log":
         return undefined;
 
       // --- Tauri plugin: event
