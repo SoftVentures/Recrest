@@ -1,5 +1,7 @@
 # Plan 1 — Foundations & OS Bugfixes Implementation Plan
 
+> ✅ **Status: Done.** All 8 tasks implemented and smoke-verified on macOS. Code locations: `app/src-tauri/Cargo.toml` (dev-deps), `app/src-tauri/src/test_support/mod.rs` (TempRepo), `app/src-tauri/src/config/settings.rs` (`git_config_override`), `app/src-tauri/src/commands/terminal.rs` (`terminal_spawn_plan` + `open_at` + `auto_detect_terminal_with`), `app/src/lib/tauri/index.ts::revealPathInSystem` (+ 4 callers).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the shared Rust test harness + settings groundwork that the rest of Phase 3 needs (Part A), then fix the two broken repo actions — "Open in Terminal" and "Open in Folder" (Part B).
@@ -20,7 +22,7 @@
 
 - Modify: `app/src-tauri/Cargo.toml` (append a new `[dev-dependencies]` section at end of file)
 
-- [ ] **Step 1: Add the dev-dependencies**
+- [x] **Step 1: Add the dev-dependencies**
 
 Append to `app/src-tauri/Cargo.toml`:
 
@@ -33,12 +35,12 @@ tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "fs", "p
 
 (If `tokio` is already a normal dependency with these features, only add `tempfile` and `wiremock`. Verify with `rg '^tokio' app/src-tauri/Cargo.toml` first and merge feature flags rather than duplicating the key.)
 
-- [ ] **Step 2: Verify the workspace still resolves under vendored-libgit2**
+- [x] **Step 2: Verify the workspace still resolves under vendored-libgit2**
 
 Run: `cargo build --manifest-path app/src-tauri/Cargo.toml --tests`
 Expected: compiles; no second libgit2 pulled in.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/src-tauri/Cargo.toml app/src-tauri/Cargo.lock
@@ -52,7 +54,7 @@ git commit -m "test: add tempfile + wiremock dev-dependencies for phase 3"
 - Create: `app/src-tauri/src/test_support/mod.rs`
 - Modify: `app/src-tauri/src/lib.rs` (register the module under `#[cfg(test)]`)
 
-- [ ] **Step 1: Write the helper + its self-test**
+- [x] **Step 1: Write the helper + its self-test**
 
 Create `app/src-tauri/src/test_support/mod.rs`:
 
@@ -132,7 +134,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register the module (test-only)**
+- [x] **Step 2: Register the module (test-only)**
 
 In `app/src-tauri/src/lib.rs`, add near the other `mod` declarations:
 
@@ -141,12 +143,12 @@ In `app/src-tauri/src/lib.rs`, add near the other `mod` declarations:
 mod test_support;
 ```
 
-- [ ] **Step 3: Run the self-test to verify it passes**
+- [x] **Step 3: Run the self-test to verify it passes**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml test_support`
 Expected: PASS (`temp_repo_commits_and_reports_head ... ok`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/src-tauri/src/test_support/mod.rs app/src-tauri/src/lib.rs
@@ -159,12 +161,12 @@ git commit -m "test: add TempRepo git fixture helper"
 
 - Modify: `CLAUDE.md` (root) — "Known scope gaps" section
 
-- [ ] **Step 1: Verify the providers really are implemented**
+- [x] **Step 1: Verify the providers really are implemented**
 
 Run: `rg -n "not yet implemented|not_yet_implemented" app/src-tauri/src/providers`
 Expected: no hits in `gitlab.rs` / `bitbucket.rs` `list_pull_requests` paths.
 
-- [ ] **Step 2: Correct the wording**
+- [x] **Step 2: Correct the wording**
 
 In root `CLAUDE.md`, under "## Known scope gaps (not bugs)", replace:
 
@@ -180,7 +182,7 @@ with:
 
 Run `rg -n "not yet implemented" CLAUDE.md app/CLAUDE.md` and fix any remaining copy the same way.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add CLAUDE.md
@@ -196,7 +198,7 @@ Consumed by Plan 3 (commit signature fallback + git config editing). Added here 
 - Modify: `app/src-tauri/src/config/settings.rs` (struct + field + test)
 - Modify: `shared/src/types/settings.ts` (mirror the DTO) + `shared/src/index.ts` (barrel if needed)
 
-- [ ] **Step 1: Write the failing round-trip test**
+- [x] **Step 1: Write the failing round-trip test**
 
 In the `#[cfg(test)] mod tests` block of `settings.rs`, add:
 
@@ -214,12 +216,12 @@ fn git_config_override_round_trips_and_defaults_empty() {
 }
 ```
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml git_config_override_round_trips`
 Expected: FAIL to compile — `no field git_config_override on AppSettings`.
 
-- [ ] **Step 3: Add the struct + field**
+- [x] **Step 3: Add the struct + field**
 
 In `settings.rs`, add the struct (near `RepoImportDefaults`):
 
@@ -241,12 +243,12 @@ And add to `AppSettings`:
 
 (Place it next to the other `#[serde(default)]` sub-structs so legacy `settings.json` without the key still deserializes.)
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml git_config_override_round_trips`
 Expected: PASS.
 
-- [ ] **Step 5: Mirror the TS type**
+- [x] **Step 5: Mirror the TS type**
 
 In `shared/src/types/settings.ts`, add:
 
@@ -259,12 +261,12 @@ export interface GitConfigOverride {
 
 and add `gitConfigOverride: GitConfigOverride;` to the `AppSettings` interface. Ensure it's exported from `shared/src/index.ts`.
 
-- [ ] **Step 6: Verify both sides typecheck**
+- [x] **Step 6: Verify both sides typecheck**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml --no-run && yarn workspace @recrest/shared build && yarn typecheck`
 Expected: all green.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/src-tauri/src/config/settings.rs shared/src/types/settings.ts shared/src/index.ts
@@ -283,7 +285,7 @@ The testable seam: a function that returns _what to spawn_ without spawning. Let
 
 - Modify: `app/src-tauri/src/commands/terminal.rs` (add `TerminalSpawn` + `terminal_spawn_plan` + tests)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add at the bottom of `app/src-tauri/src/commands/terminal.rs`:
 
@@ -335,12 +337,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run them to confirm they fail**
+- [x] **Step 2: Run them to confirm they fail**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml terminal::tests`
 Expected: FAIL to compile — `cannot find function terminal_spawn_plan`.
 
-- [ ] **Step 3: Implement the planner**
+- [x] **Step 3: Implement the planner**
 
 Add to `app/src-tauri/src/commands/terminal.rs` (above the test module). The id strings mirror `shared/src/constants/terminal.ts` `TERMINAL_IDS` exactly:
 
@@ -454,12 +456,12 @@ fn shell_single_quote(s: &str) -> String {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml terminal::tests`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src-tauri/src/commands/terminal.rs
@@ -475,7 +477,7 @@ git commit -m "feat: pure terminal_spawn_plan with per-terminal argv (A.1)"
 - Modify: `app/src-tauri/src/commands/terminal.rs` (`open_at` signature + auto chain)
 - Modify: `app/src-tauri/src/commands/repos.rs:494-509` (pass terminal settings)
 
-- [ ] **Step 1: Write the auto-detection test**
+- [x] **Step 1: Write the auto-detection test**
 
 Add to the `tests` module in `terminal.rs`:
 
@@ -495,12 +497,12 @@ fn auto_chain_none_when_nothing_found() {
 }
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml terminal::tests::auto_chain`
 Expected: FAIL — `cannot find function auto_detect_terminal_with`.
 
-- [ ] **Step 3: Implement auto-detection + rewrite `open_at`**
+- [x] **Step 3: Implement auto-detection + rewrite `open_at`**
 
 Replace the body of `open_at` and add the auto helpers in `terminal.rs`:
 
@@ -598,7 +600,7 @@ pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandEr
 
 Delete the old hardcoded `#[cfg(...)]` bodies of the previous `open_at`.
 
-- [ ] **Step 4: Update the command caller**
+- [x] **Step 4: Update the command caller**
 
 In `app/src-tauri/src/commands/repos.rs`, change `open_terminal` (mirrors the `open_repo`/`default_ide` pattern at line 486):
 
@@ -622,12 +624,12 @@ pub async fn open_terminal(
 }
 ```
 
-- [ ] **Step 5: Run tests + build**
+- [x] **Step 5: Run tests + build**
 
 Run: `cargo test --manifest-path app/src-tauri/Cargo.toml terminal && cargo build --manifest-path app/src-tauri/Cargo.toml`
 Expected: PASS + clean build.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src-tauri/src/commands/terminal.rs app/src-tauri/src/commands/repos.rs
@@ -648,7 +650,7 @@ Swap the four frontend callers from the bare `open_in_explorer` command to the e
 - Modify: `app/src/pages/app/RepoDetail/index.tsx` (Explorer onClick)
 - Modify: `app/src-tauri/src/commands/git_ops.rs:154-193` (reveal flags)
 
-- [ ] **Step 1: Point the frontend callers at `revealPathInSystem`**
+- [x] **Step 1: Point the frontend callers at `revealPathInSystem`**
 
 Each component already has `repo.path` in scope (e.g. `RepoRow` uses it at lines 107/159). Replace the `OPEN_IN_EXPLORER` invocations.
 
@@ -666,7 +668,7 @@ import { revealPathInSystem } from "@/lib/tauri";
 
 Apply the equivalent change in `RepoCard/index.tsx` (line ~117), `DetailPane/index.tsx` (line ~158), and `RepoDetail/index.tsx` (line ~223) — each replaces `run*(TauriCommand.OPEN_IN_EXPLORER, "Explorer")` with `revealPathInSystem(<the repo path in scope>)`. In `RepoDetail` the variable is the same `repo.path` rendered at line 195.
 
-- [ ] **Step 2: Harden the backend fallback to reveal**
+- [x] **Step 2: Harden the backend fallback to reveal**
 
 The command stays registered (dev-stub + any non-`repo.path` caller). In `git_ops.rs`, change the per-OS spawns to reveal:
 
@@ -693,12 +695,12 @@ The command stays registered (dev-stub + any non-`repo.path` caller). In `git_op
 
 Leave the Linux `xdg-open` arm as-is (no portable cross-file-manager reveal flag exists).
 
-- [ ] **Step 3: Typecheck + build**
+- [x] **Step 3: Typecheck + build**
 
 Run: `yarn typecheck && cargo build --manifest-path app/src-tauri/Cargo.toml`
 Expected: green.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/src/pages/app/Repos/components/RepoRow/index.tsx app/src/pages/app/Repos/components/RepoCard/index.tsx app/src/pages/app/Repos/components/DetailPane/index.tsx app/src/pages/app/RepoDetail/index.tsx app/src-tauri/src/commands/git_ops.rs
@@ -711,11 +713,11 @@ git commit -m "feat: reveal repo in file manager instead of just opening (A.2)"
 
 A.1/A.2 are OS-native — unit tests cover argv, but spawning is environment-specific. Per repo convention, drive the live app before calling done.
 
-- [ ] **Step 1:** `yarn dev` (full Tauri shell). On your dev OS (macOS), for a tracked repo:
+- [x] **Step 1:** `yarn dev` (full Tauri shell). On your dev OS (macOS), for a tracked repo:
   - Click "Open in Terminal" → terminal opens at the repo dir (with `terminal.id` unset → auto picks Terminal.app).
   - Click "Open in Folder" → Finder opens **with the repo highlighted** (reveal, not just open).
-- [ ] **Step 2:** Drive both buttons via the Playwright MCP and capture the IPC result (no error toast).
-- [ ] **Step 3:** Record the manual matrix (OS × terminal) in the PR description for any non-dev OS you can reach.
+- [x] **Step 2:** Drive both buttons via the Playwright MCP and capture the IPC result (no error toast).
+- [x] **Step 3:** Record the manual matrix (OS × terminal) in the PR description for any non-dev OS you can reach.
 
 ---
 
@@ -738,6 +740,6 @@ The picker is tracked as a follow-up task to be folded into `02-repo-polish.md`
 
 ## Done-check
 
-- [ ] `cargo test --manifest-path app/src-tauri/Cargo.toml terminal` green (planner + auto-detect).
-- [ ] `yarn typecheck && yarn lint` green.
-- [ ] Manual: terminal opens at repo dir; folder **reveals** (highlights) the repo.
+- [x] `cargo test --manifest-path app/src-tauri/Cargo.toml terminal` green (planner + auto-detect).
+- [x] `yarn typecheck && yarn lint` green.
+- [x] Manual: terminal opens at repo dir; folder **reveals** (highlights) the repo.

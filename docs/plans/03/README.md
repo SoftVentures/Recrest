@@ -31,21 +31,32 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 
 ## Sub-plans (7 files)
 
-| #   | File                         | Scope (master-spec items)                                                                                                                                                                         | Depends on |
-| --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 1   | `01-foundations-and-os.md`   | **Part A:** Rust test harness (`tempfile`/`wiremock` + `TempRepo`), stale-doc fix, `gitConfigOverride` field. **Part B:** A.1 terminal (settings-driven argv + auto-detect), A.2 reveal-in-folder | —          |
-| 2   | `02-repo-polish.md`          | B.1 import defaults, B.2 default scan path, B.3 favicon fallback, B.4 pin direct-click, B.5 flat list + sortable header, B.6 per-repo SSH key                                                     | 1 (Part A) |
-| 3   | `03-working-copy.md`         | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                      | 1 (Part A) |
-| 4   | `04-provider-mr-ci-pages.md` | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                       | 1 (Part A) |
-| 5   | `05-provider-depth.md`       | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                  | 1 (Part A) |
-| 6   | `06-git-config-full.md`      | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                              | 3          |
-| 7   | `07-provider-merge.md`       | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring    | 4          |
+| #   | File                         | Status     | Scope (master-spec items)                                                                                                                                                                                | Depends on |
+| --- | ---------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | `01-foundations-and-os.md`   | ✅ Done     | **Part A:** Rust test harness (`tempfile`/`wiremock` + `TempRepo`), stale-doc fix, `gitConfigOverride` field. **Part B:** A.1 terminal (settings-driven argv + auto-detect), A.2 reveal-in-folder        | —          |
+| 2   | `02-repo-polish.md`          | ✅ Done     | B.1 import defaults, B.2 default scan path, ~~B.3 favicon fallback~~ (scope-cut), B.4 pin direct-click, B.5 flat list + sortable header, B.6 per-repo SSH key                                            | 1 (Part A) |
+| 3   | `03-working-copy.md`         | ✅ Done     | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                             | 1 (Part A) |
+| 4   | `04-provider-mr-ci-pages.md` | ✅ Done     | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                              | 1 (Part A) |
+| 5   | `05-provider-depth.md`       | 🔴 Open    | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                         | 1 (Part A) |
+| 6   | `06-git-config-full.md`      | 🔴 Open    | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                                     | 3          |
+| 7   | `07-provider-merge.md`       | 🔴 Open    | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring           | 4          |
 
 All seven are written in full, grounded against the real source (exact signatures,
 file:line, no placeholders). One deferred item is flagged inline: the **terminal-picker
 Settings UI** (Plan 1, Part B) — the spawn bug is fixed by auto-detection; the picker
 folds into Plan 2's settings work once the `store/actions` + `backendSync.ts` write
 path is read.
+
+**Scope cut (Plan 2):** B.3 favicon-remote-fetch was dropped. `detect_repo_logo`
+(`app/src-tauri/src/git/logo.rs:87`) already finds in-repo logo files across the
+common frontend layouts; a remote `<host>/favicon.ico` fetcher (privacy gate +
+image-decode pipeline + cache + concurrency limiter) was overkill for the marginal
+case of "project ships no logo file at all". See the B.3 section in
+`02-repo-polish.md` for the rationale and how to restore it from git history if
+ever needed.
+
+**Remaining work:** Plans 5, 6, 7 (provider depth, full git-config surface,
+provider-side merge). See execution order below.
 
 ---
 

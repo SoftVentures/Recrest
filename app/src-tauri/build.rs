@@ -1,4 +1,27 @@
 fn main() {
+    // Icons are pulled in by `include_bytes!` in `src/lib.rs`. Cargo tracks
+    // `include_bytes!` paths automatically, but only when the macro is
+    // re-evaluated — if a stale incremental cache decides not to recompile
+    // lib.rs, the embedded bytes go stale. Adding explicit
+    // `cargo:rerun-if-changed` here forces a full rebuild whenever any
+    // icon asset changes on disk, so `yarn tauri:dev` always picks up the
+    // latest PNG/ICNS bytes.
+    for path in [
+        "icons/mac/icon.icns",
+        "icons/mac/icon-dark.icns",
+        "icons/windows/icon-light.png",
+        "icons/windows/icon-dark.png",
+        "icons/tray/tray-template@2x.png",
+        "icons/tray/tray-light.png",
+        "icons/tray/tray-dark.png",
+        "icons-dev/mac/icon-light.icns",
+        "icons-dev/mac/icon-dark.icns",
+        "icons-dev/windows/icon-light.png",
+        "icons-dev/windows/icon-dark.png",
+    ] {
+        println!("cargo:rerun-if-changed={path}");
+    }
+
     // `attrs` is only reassigned on Windows (the debug-icon override below);
     // on other platforms the binding is never mutated, so silence the
     // unused-mut lint off-Windows while keeping `mut` valid for the Windows path.
@@ -16,9 +39,9 @@ fn main() {
     #[cfg(target_os = "windows")]
     {
         if std::env::var("PROFILE").as_deref() == Ok("debug") {
-            println!("cargo:rerun-if-changed=icons-dev/icon.ico");
+            println!("cargo:rerun-if-changed=icons-dev/windows/icon.ico");
             let windows = tauri_build::WindowsAttributes::new()
-                .window_icon_path("icons-dev/icon.ico");
+                .window_icon_path("icons-dev/windows/icon.ico");
             attrs = attrs.windows_attributes(windows);
         }
     }

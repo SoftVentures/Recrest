@@ -15,9 +15,15 @@ use std::sync::Arc;
 
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::TrayIconBuilder,
     AppHandle, Manager,
 };
+// Click-routing types are only used on Windows + Linux, where the tray's
+// left-click brings the window forward. macOS follows the menu-bar
+// convention (left-click opens the menu directly via
+// `show_menu_on_left_click(true)`), so it never reads click events.
+#[cfg(not(target_os = "macos"))]
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use tracing_subscriber::EnvFilter;
@@ -41,13 +47,36 @@ pub struct AppState {
 }
 
 #[cfg(target_os = "macos")]
-const ICON_PROD_LIGHT: &[u8] = include_bytes!("../icons/icon.icns");
+const ICON_PROD_LIGHT: &[u8] = include_bytes!("../icons/mac/icon.icns");
 #[cfg(target_os = "macos")]
-const ICON_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.icns");
+const ICON_PROD_DARK: &[u8] = include_bytes!("../icons/mac/icon-dark.icns");
 #[cfg(target_os = "macos")]
-const ICON_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/icon-light.icns");
+const ICON_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/mac/icon-light.icns");
 #[cfg(target_os = "macos")]
-const ICON_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.icns");
+const ICON_DEV_DARK: &[u8] = include_bytes!("../icons-dev/mac/icon-dark.icns");
+
+// Tray icon: single monochrome set, shared between prod and dev. macOS
+// treats it as a template image (alpha-only, auto-tinted by the menu bar);
+// Windows swaps between light/dark on `WindowEvent::ThemeChanged`. Dev
+// builds reuse the same artwork — the tray tooltip
+// (`identity::current_tray_tooltip()`) is what distinguishes them.
+#[cfg(any(target_os = "macos", all(unix, not(target_os = "macos"))))]
+const TRAY_ICON: &[u8] = include_bytes!("../icons/tray/tray-template@2x.png");
+
+#[cfg(windows)]
+const TRAY_ICON_LIGHT: &[u8] = include_bytes!("../icons/tray/tray-light.png");
+#[cfg(windows)]
+const TRAY_ICON_DARK: &[u8] = include_bytes!("../icons/tray/tray-dark.png");
+
+#[cfg(any(target_os = "macos", all(unix, not(target_os = "macos"))))]
+fn tray_icon_bytes() -> &'static [u8] {
+    TRAY_ICON
+}
+
+#[cfg(windows)]
+fn tray_icon_bytes(dark: bool) -> &'static [u8] {
+    if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT }
+}
 
 #[cfg(target_os = "macos")]
 fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
@@ -112,13 +141,13 @@ fn observe_macos_appearance() {
 // process start, but as soon as `set_windows_app_icon` runs the runtime
 // version wins and starts following the OS theme.
 #[cfg(windows)]
-const ICON_WIN_PROD_LIGHT: &[u8] = include_bytes!("../icons/128x128.png");
+const ICON_WIN_PROD_LIGHT: &[u8] = include_bytes!("../icons/windows/icon-light.png");
 #[cfg(windows)]
-const ICON_WIN_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.png");
+const ICON_WIN_PROD_DARK: &[u8] = include_bytes!("../icons/windows/icon-dark.png");
 #[cfg(windows)]
-const ICON_WIN_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/128x128.png");
+const ICON_WIN_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/windows/icon-light.png");
 #[cfg(windows)]
-const ICON_WIN_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.png");
+const ICON_WIN_DEV_DARK: &[u8] = include_bytes!("../icons-dev/windows/icon-dark.png");
 
 #[cfg(windows)]
 fn pick_windows_icon_bytes(dark: bool) -> &'static [u8] {
@@ -207,8 +236,8 @@ fn apply_windows_theme_icon(app: &AppHandle) {
     };
 
     let dark = windows_uses_dark_mode();
-    let bytes = pick_windows_icon_bytes(dark);
-    let image = match tauri::image::Image::from_bytes(bytes) {
+    let window_bytes = pick_windows_icon_bytes(dark);
+    let window_image = match tauri::image::Image::from_bytes(window_bytes) {
         Ok(image) => image,
         Err(err) => {
             tracing::warn!("[windows] could not decode app icon: {err}");
@@ -217,7 +246,7 @@ fn apply_windows_theme_icon(app: &AppHandle) {
     };
 
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.set_icon(image.clone());
+        let _ = window.set_icon(window_image);
 
         if let Ok(raw) = window.hwnd() {
             let hwnd = HWND(raw.0 as *mut _);
@@ -236,8 +265,18 @@ fn apply_windows_theme_icon(app: &AppHandle) {
         }
     }
 
-    if let Some(tray) = app.tray_by_id(commands::tray::TRAY_ID) {
-        let _ = tray.set_icon(Some(image));
+    // Tray uses a separate monochrome/transparent icon set so the system
+    // tray stays theme-correct (window/taskbar wants the colorful tile).
+    let tray_bytes = tray_icon_bytes(dark);
+    match tauri::image::Image::from_bytes(tray_bytes) {
+        Ok(tray_image) => {
+            if let Some(tray) = app.tray_by_id(commands::tray::TRAY_ID) {
+                let _ = tray.set_icon(Some(tray_image));
+            }
+        }
+        Err(err) => {
+            tracing::warn!("[windows] could not decode tray icon: {err}");
+        }
     }
 }
 
@@ -580,11 +619,25 @@ pub fn run() {
             let separator = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&show_i, &hide_i, &separator, &quit_i])?;
 
-            let _tray = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
-                .icon(app.default_window_icon().cloned().unwrap())
+            // Tray uses a dedicated transparent icon set rather than the
+            // bundle icon. On macOS it's marked as a template image so the
+            // menu bar auto-tints with light/dark appearance; on Windows the
+            // initial variant follows the current OS theme and is re-applied
+            // by `apply_windows_theme_icon` on subsequent theme changes.
+            #[cfg(target_os = "macos")]
+            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes())
+                .expect("tray icon bytes must decode");
+            #[cfg(all(unix, not(target_os = "macos")))]
+            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes())
+                .expect("tray icon bytes must decode");
+            #[cfg(windows)]
+            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes(windows_uses_dark_mode()))
+                .expect("tray icon bytes must decode");
+
+            let tray_builder = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
+                .icon(tray_image)
                 .tooltip(identity::current_tray_tooltip())
                 .menu(&menu)
-                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => show_main_window(app),
                     "hide" => {
@@ -596,7 +649,22 @@ pub fn run() {
                         app.exit(0);
                     }
                     _ => {}
-                })
+                });
+
+            // macOS menu-bar convention: a single left-click opens the menu
+            // immediately (like Wi-Fi, Battery, Spotlight). Also flag the
+            // icon as a template so the menu bar auto-tints it to match
+            // light/dark menu-bar appearance.
+            #[cfg(target_os = "macos")]
+            let tray_builder = tray_builder
+                .show_menu_on_left_click(true)
+                .icon_as_template(true);
+
+            // Windows + Linux convention: left-click brings the window
+            // forward, right-click opens the menu.
+            #[cfg(not(target_os = "macos"))]
+            let tray_builder = tray_builder
+                .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -606,8 +674,9 @@ pub fn run() {
                     {
                         show_main_window(tray.app_handle());
                     }
-                })
-                .build(app)?;
+                });
+
+            let _tray = tray_builder.build(app)?;
 
             // Plan 1 §C.2: install the WM_NCHITTEST subclass on the main
             // HWND so Windows 11 surfaces the Snap-Layouts flyout when the

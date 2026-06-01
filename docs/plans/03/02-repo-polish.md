@@ -1,12 +1,14 @@
 # Plan 2 — Repo Management Polish Implementation Plan (Phase B)
 
+> ✅ **Status: Done.** B.1, B.2, B.4, B.5, B.6 implemented and smoke-verified. **B.3 (favicon remote fetch) was scope-cut** — see the B.3 section. Code locations: `RepoRow/index.tsx` (inline pin), `ProvidersPanel/index.tsx` (import defaults), `IntegrationsTab/index.tsx` (default scan path), `RepoList/parts/RepoListHead` (sortable header), `Repos/index.tsx` (persisted sort/view), `commands/git_ops.rs::build_ssh_key_cred` + `commands/ssh.rs::ssh_unlock_key`, `organisms/repos/RepoSshSettings` + `RepoSshModal`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Polish repo management — import defaults, a designated default scan folder, direct pin/unpin from the row, a sortable flat list, a favicon logo fallback, and per-repo SSH keys.
 
-**Architecture:** Most settings already exist in `AppSettings`/`SettingsPatch` but are inert; the bulk of this work is reading the inert fields and wiring frontend state through the existing `saveSettings(patch)` → `update_settings` path. Two larger backend features: a privacy-gated favicon fetcher (B.3) and per-repo SSH credential resolution (B.6).
+**Architecture:** Most settings already exist in `AppSettings`/`SettingsPatch` but are inert; the bulk of this work is reading the inert fields and wiring frontend state through the existing `saveSettings(patch)` → `update_settings` path. One larger backend feature: per-repo SSH credential resolution (B.6). (B.3 favicon-remote-fetch was originally planned here but later scope-cut — see the B.3 section.)
 
-**Tech Stack:** React 19 + MUI v9 + Emotion, Redux Toolkit thunks, Rust (`git2`, `reqwest`, `image`, `sha2`), Tauri IPC.
+**Tech Stack:** React 19 + MUI v9 + Emotion, Redux Toolkit thunks, Rust (`git2`), Tauri IPC.
 
 **Prerequisite:** Plan 1 Part A (test harness) merged. Settings write path: `saveSettings(patch: Partial<AppSettings>)` (`app/src/store/actions/settings.actions.ts:54`) → `TauriCommand.UPDATE_SETTINGS` → `update_settings(patch: SettingsPatch)` (`app/src-tauri/src/commands/settings.rs:78`). `SettingsPatch` already carries `repo_import_defaults`, `default_scan_path`, `repo_list_view_mode`, `repo_list_sort`, `terminal`, `privacy`.
 
@@ -24,7 +26,7 @@ The context-menu pin already works (`togglePinnedRepo` at `ui.actions.ts:13`, re
 - Modify: `app/src/pages/app/Repos/components/RepoRow/RepoRow.styles.tsx`
 - Test: `app/src/pages/app/Repos/components/RepoRow/RepoRow.test.tsx` (create if absent)
 
-- [ ] **Step 1: Write the failing component test**
+- [x] **Step 1: Write the failing component test**
 
 Create/extend `RepoRow.test.tsx`:
 
@@ -59,12 +61,12 @@ it("toggles pin via the inline pin button without opening the menu", () => {
 
 (Import `TEST_IDS` from `@/lib/constants/testIds.constants` — you'll add the id in Step 3.)
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `yarn workspace @recrest/app test src/pages/app/Repos/components/RepoRow/RepoRow.test.tsx`
 Expected: FAIL — no element with that test id.
 
-- [ ] **Step 3: Add the test id + inline pin button**
+- [x] **Step 3: Add the test id + inline pin button**
 
 In `app/src/lib/constants/testIds.constants.ts`, add to the `repoRow` group: `pinToggle: "repo-row-pin-toggle"`.
 
@@ -93,12 +95,12 @@ Render a `GeneralIconButton` (per the icon-button convention — never inline `s
 
 Add `repo.pin` / `repo.unpin` to `locales/en/aria.json` + `locales/de/aria.json`.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `yarn workspace @recrest/app test src/pages/app/Repos/components/RepoRow/RepoRow.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/pages/app/Repos/components/RepoRow app/src/lib/constants/testIds.constants.ts app/src/locales
@@ -119,7 +121,7 @@ git commit -m "feat: inline pin/unpin toggle on repo row (B.4)"
 - Modify: `app/src/components/organisms/onboarding/steps/PickFolderStep/index.tsx` (scan path prefill — see B.2)
 - Test: a component test for the panel reading defaults
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add a test asserting that when `settings.repoImportDefaults.providerId === "github"`, the panel mounts with that provider preselected:
 
@@ -140,12 +142,12 @@ it("preselects the default provider from settings", () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `yarn workspace @recrest/app test src/components/molecules/modals/AddRepoModal`
 Expected: FAIL.
 
-- [ ] **Step 3: Read defaults at mount**
+- [x] **Step 3: Read defaults at mount**
 
 In `ProvidersPanel`, initialize `activeProvider` from defaults (falling back to the first connected provider):
 
@@ -159,7 +161,7 @@ const [activeOrg, setActiveOrg] = useState<string | null>(importDefaults?.groupI
 
 (Confirm `s.settings.repoImportDefaults` exists on the TS settings state shape; if the settings reducer doesn't surface it yet, add it to the settings state type + hydrate from `loadSettings.fulfilled` mirroring `pinnedRepoIds` hydration in `uiReducer.ts:90`.)
 
-- [ ] **Step 4: Add "Save as default" affordance**
+- [x] **Step 4: Add "Save as default" affordance**
 
 When the user picks a provider/org and confirms an import, dispatch:
 
@@ -171,12 +173,12 @@ await dispatch(
 
 Gate it behind a checkbox "Remember as import default" so it's opt-in.
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `yarn workspace @recrest/app test src/components/molecules/modals/AddRepoModal`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src/components/molecules/modals/AddRepoModal app/src/store
@@ -197,7 +199,7 @@ git commit -m "feat: prefill repo import from defaults + save-as-default (B.1)"
 - Modify: `app/src-tauri/src/commands/repos.rs` (repo-add default-path preselection — verify caller)
 - Test: component test for the radio + persistence dispatch
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 it("marking a scan path as default dispatches saveSettings({ defaultScanPath })", async () => {
@@ -217,12 +219,12 @@ it("marking a scan path as default dispatches saveSettings({ defaultScanPath })"
 });
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `yarn workspace @recrest/app test src/pages/app/Settings/components/IntegrationsTab`
 Expected: FAIL.
 
-- [ ] **Step 3: Source paths from Redux + add the default radio**
+- [x] **Step 3: Source paths from Redux + add the default radio**
 
 Replace the local `useState(["~/Code"])` with `useAppSelector((s) => s.repos.scanPaths)` and read `defaultScanPath` from settings state. On add/remove, persist with `dispatch(saveSettings({ scanPaths: next }))` (the pattern already used in `PickFolderStep:94`). Add a radio column:
 
@@ -237,16 +239,16 @@ Replace the local `useState(["~/Code"])` with `useAppSelector((s) => s.repos.sca
 
 Add `scanPathDefaultRadio: (p: string) => \`scan-path-default-${p}\``to`testIds.constants.ts`.
 
-- [ ] **Step 4: Prefill import scan path from the default**
+- [x] **Step 4: Prefill import scan path from the default**
 
 In `PickFolderStep` / `AddRepoModal` local-path panel, initialize the picker's starting directory from `settings.defaultScanPath ?? scanPaths[0]`.
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `yarn workspace @recrest/app test src/pages/app/Settings/components/IntegrationsTab`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src/pages/app/Settings/components/IntegrationsTab app/src/components/organisms/onboarding app/src/lib/constants/testIds.constants.ts
@@ -268,7 +270,7 @@ The Repos page already has page-local `view: "list"|"card"` and `sort: RepoSortK
 - Modify: `app/src/pages/app/Repos/components/RepoList/index.tsx` (thread props)
 - Test: `RepoListHead` component test
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 it("clicking the Name header toggles name:asc → name:desc", () => {
@@ -279,12 +281,12 @@ it("clicking the Name header toggles name:asc → name:desc", () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `yarn workspace @recrest/app test src/pages/app/Repos/components/RepoList/parts/RepoListHead`
 Expected: FAIL (`RepoListHead` takes no props today).
 
-- [ ] **Step 3: Make header cells clickable**
+- [x] **Step 3: Make header cells clickable**
 
 Give `RepoListHead` props `{ sort: RepoSortKey; onSort: (next: RepoSortKey) => void }`. Map each sortable column to its key family (`name`, `status`, `lastModified`) and render an asc/desc arrow when active:
 
@@ -303,16 +305,16 @@ function nextKey(base: "name" | "status" | "lastModified", cur: RepoSortKey): Re
 
 Use `GeneralIconButton`/clickable `Typography` per convention (the header cells are layout `Box`; wrap the label text in a `role="button" tabIndex={0}` element with `onKeyDown` Enter/Space, since nested `<button>` inside a grid cell is fine but follow the no-nested-interactive rule). Add `sortHeader: (col: string) => \`repo-list-sort-${col}\``to`testIds.constants.ts`.
 
-- [ ] **Step 4: Thread sort + onSort from the page**
+- [x] **Step 4: Thread sort + onSort from the page**
 
 In `Repos/index.tsx`, pass `sort` and `setSort` into `RepoList`, which forwards to `RepoListHead`. (The list-rendering branches at `RepoList/index.tsx:105-139` already receive `grouped`; add `sort`/`onSort` to the props interface.)
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `yarn workspace @recrest/app test src/pages/app/Repos/components/RepoList/parts/RepoListHead`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src/pages/app/Repos
@@ -327,7 +329,7 @@ git commit -m "feat: sortable repo list header (B.5)"
 - Verify/Modify: `shared/src/types/settings.ts` (`repoListViewMode`, `repoListSort` fields)
 - Test: reducer/selector test asserting hydration
 
-- [ ] **Step 1: Confirm the TS settings fields exist**
+- [x] **Step 1: Confirm the TS settings fields exist**
 
 Run: `rg -n "repoListViewMode|repoListSort" shared/src/types/settings.ts`
 Expected: if missing, add to the `AppSettings` interface (mirroring the Rust `SettingsPatch` fields `repo_list_view_mode`/`repo_list_sort`):
@@ -343,16 +345,16 @@ repoListViewMode: RepoListViewMode;
 repoListSort: RepoListSort;
 ```
 
-- [ ] **Step 2: Init page state from settings, persist on change**
+- [x] **Step 2: Init page state from settings, persist on change**
 
 In `Repos/index.tsx`, initialize `sort`/`view` from `settings` (falling back to current defaults) and on change dispatch `saveSettings({ repoListSort: toBackendSort(sort), repoListViewMode: toBackendView(view, sort) })`. Write the two tiny pure mappers (`name:asc` → `{ field: "name", direction: "asc" }`, etc.) in `app/src/lib/utils/repoSort.utils.ts` with sibling unit tests.
 
-- [ ] **Step 3: Test the mappers**
+- [x] **Step 3: Test the mappers**
 
 Run: `yarn workspace @recrest/app test src/lib/utils/repoSort.utils.test.ts`
 Expected: PASS (round-trip `RepoSortKey ↔ RepoListSort`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/src/pages/app/Repos app/src/lib/utils/repoSort.utils.ts app/src/lib/utils/repoSort.utils.test.ts shared/src/types/settings.ts
@@ -361,180 +363,18 @@ git commit -m "feat: persist repo list view + sort (B.5)"
 
 ---
 
-## B.3 — Favicon logo fallback
+## B.3 — Favicon logo fallback ~~(remote fetch)~~ — SCOPE CUT
 
-`detect_repo_logo` (`git/logo.rs:87`) handles local logos; `RepoAvatar` (`atoms/avatars/RepoAvatar/index.tsx`) renders `logoUri` via `useRepoLogo`, falling back to gradient+letter. `PrivacySettings.fetch_favicons` (`settings.rs:93`, default `false`) is the gate. Add a privacy-gated favicon fetcher cached under `$APP_CACHE_DIR/favicons/`.
+**Status: dropped — not implemented and not needed.**
 
-### Task 6: Add crates + favicon fetch core (pure, testable)
+The repo-avatar ladder is already adequate without a remote fetch:
 
-**Files:**
+- `detect_repo_logo` (`git/logo.rs:87`) discovers in-repo logo files (`favicon.*`, `logo.*`, `apple-touch-icon.*`, `icon.*`) across the standard frontend layouts (`public/`, `static/`, `app/public/`, …).
+- `RepoAvatar` renders `logoUri` via `useRepoLogo`, falling back to gradient+letter.
 
-- Modify: `app/src-tauri/Cargo.toml` (add `image`, `sha2`)
-- Create: `app/src-tauri/src/git/favicon.rs`
-- Modify: `app/src-tauri/src/git/mod.rs` (declare module)
-- Test: `app/src-tauri/src/git/favicon.rs` (`#[cfg(test)]` with `wiremock`)
+Fetching `<host>/favicon.ico` from a remote would add a network dependency, a privacy gate, an image-decode pipeline, a cache, and a concurrency limiter — for a fallback that only kicks in when a project ships **no** logo anywhere in its source. Cost > benefit. The `PrivacySettings.fetch_favicons` field stays in settings (it's harmless), but no fetcher is wired.
 
-- [ ] **Step 1: Add crates**
-
-Append to `[dependencies]` in `Cargo.toml`:
-
-```toml
-image = { version = "0.25", default-features = false, features = ["png", "ico", "jpeg"] }
-sha2 = "0.10"
-```
-
-- [ ] **Step 2: Write failing tests (wiremock)**
-
-In `favicon.rs` test module:
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    #[tokio::test]
-    async fn fetches_and_reencodes_favicon_ico() {
-        let server = MockServer::start().await;
-        let png = make_test_png(); // 16x16 red PNG bytes via image crate helper in test
-        Mock::given(method("GET")).and(path("/favicon.ico"))
-            .respond_with(ResponseTemplate::new(200).set_body_bytes(png))
-            .mount(&server).await;
-
-        let out = fetch_favicon_bytes(&reqwest::Client::new(), &server.uri()).await.expect("ok");
-        // re-encoded as PNG, decodable, <= 256 KiB
-        assert!(out.len() <= 256 * 1024);
-        assert!(image::load_from_memory(&out).is_ok());
-    }
-
-    #[tokio::test]
-    async fn rejects_oversized_payload() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/favicon.ico"))
-            .respond_with(ResponseTemplate::new(200).set_body_bytes(vec![0u8; 10 * 1024 * 1024]))
-            .mount(&server).await;
-        assert!(fetch_favicon_bytes(&reqwest::Client::new(), &server.uri()).await.is_err());
-    }
-
-    #[tokio::test]
-    async fn 404_is_none_error() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/favicon.ico"))
-            .respond_with(ResponseTemplate::new(404)).mount(&server).await;
-        assert!(fetch_favicon_bytes(&reqwest::Client::new(), &server.uri()).await.is_err());
-    }
-}
-```
-
-- [ ] **Step 3: Run to confirm failure**
-
-Run: `cargo test --manifest-path app/src-tauri/Cargo.toml favicon`
-Expected: FAIL — `fetch_favicon_bytes` not found.
-
-- [ ] **Step 4: Implement the fetcher**
-
-In `favicon.rs`:
-
-```rust
-use std::path::PathBuf;
-
-use sha2::{Digest, Sha256};
-
-use crate::commands::error::CommandError;
-
-const MAX_BYTES: usize = 256 * 1024;
-const MAX_DOWNLOAD: u64 = 1024 * 1024; // 1 MiB hard ceiling before decode
-
-/// Fetch `<host>/favicon.ico`, decode + re-encode as a <=256KiB PNG.
-/// Rejects oversized, undecodable, and non-2xx responses. No SVG accepted.
-pub async fn fetch_favicon_bytes(
-    http: &reqwest::Client,
-    origin: &str,
-) -> Result<Vec<u8>, CommandError> {
-    let url = format!("{}/favicon.ico", origin.trim_end_matches('/'));
-    let res = http.get(&url).send().await?;
-    if !res.status().is_success() {
-        return Err(CommandError::not_found(format!("no favicon at {url}")));
-    }
-    if let Some(len) = res.content_length() {
-        if len > MAX_DOWNLOAD {
-            return Err(CommandError::bad_request("favicon too large"));
-        }
-    }
-    let bytes = res.bytes().await?;
-    if bytes.len() as u64 > MAX_DOWNLOAD {
-        return Err(CommandError::bad_request("favicon too large"));
-    }
-    let img = image::load_from_memory(&bytes)
-        .map_err(|_| CommandError::bad_request("favicon not a decodable raster image"))?;
-    let resized = img.resize_to_fill(256, 256, image::imageops::FilterType::Lanczos3);
-    let mut out = std::io::Cursor::new(Vec::new());
-    resized
-        .write_to(&mut out, image::ImageFormat::Png)
-        .map_err(|e| CommandError::internal(format!("re-encode failed: {e}")))?;
-    let out = out.into_inner();
-    if out.len() > MAX_BYTES {
-        return Err(CommandError::bad_request("re-encoded favicon exceeds 256KiB"));
-    }
-    Ok(out)
-}
-
-/// Cache filename for a host: `<sha256(host)>.png`.
-pub fn cache_file_name(host: &str) -> String {
-    let digest = Sha256::digest(host.as_bytes());
-    format!("{:x}.png", digest)
-}
-
-pub fn cache_path(cache_dir: &std::path::Path, host: &str) -> PathBuf {
-    cache_dir.join("favicons").join(cache_file_name(host))
-}
-```
-
-- [ ] **Step 5: Run tests to verify they pass**
-
-Run: `cargo test --manifest-path app/src-tauri/Cargo.toml favicon`
-Expected: PASS (write the `make_test_png` helper inline in the test module using `image::RgbaImage`).
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add app/src-tauri/Cargo.toml app/src-tauri/Cargo.lock app/src-tauri/src/git/favicon.rs app/src-tauri/src/git/mod.rs
-git commit -m "feat: privacy-agnostic favicon fetch+reencode core (B.3)"
-```
-
-### Task 7: `fetch_favicon` command (privacy gate + cache + concurrency)
-
-**Files:**
-
-- Create/Modify: `app/src-tauri/src/commands/git_ops.rs` or new `commands/favicon.rs` — `fetch_repo_favicon(repo_id) -> Option<String>` (returns a `file://`/data path the frontend can load)
-- Modify: `app/src-tauri/src/lib.rs` (register in BOTH `generate_handler!` blocks)
-- Modify: `shared/src/constants/commands.ts` (`FETCH_REPO_FAVICON: "fetch_repo_favicon"`)
-- Test: command-level test with privacy gate
-
-- [ ] **Step 1: Write the failing test (privacy gate off → None)**
-
-A test that, with `privacy.fetch_favicons = false`, the command returns `Ok(None)` and performs no network call (assert the wiremock server received 0 requests).
-
-- [ ] **Step 2..n** (TDD): implement the command:
-  - Parse `remote_url` origin with `url::Url`; reject non-`http(s)` and loopback/private IPs unless explicitly allowed.
-  - Gate on `config.settings().privacy.fetch_favicons`.
-  - Resolve cache dir via `app.path().app_cache_dir()` (pattern from `commands/dev.rs:40`); return cached PNG if fresh.
-  - Limit concurrency to 4 via a `tokio::sync::Semaphore` stored in `AppState` (add field `favicon_sem: Arc<Semaphore>`).
-  - On success, write the cache file and return its path; negative-cache 404 for 24h (a sidecar `.404` marker file with mtime check).
-  - Register in both handler blocks; add the TS command constant.
-
-- [ ] **Commit** per green step (`feat: fetch_repo_favicon command with privacy gate + cache (B.3)`).
-
-### Task 8: Wire favicon into the avatar ladder
-
-**Files:**
-
-- Modify: `app/src/hooks/useRepoLogo.ts` (or a new `useRepoFavicon` hook)
-- Modify: `app/src/components/atoms/avatars/RepoAvatar/index.tsx`
-- Test: component test — favicon used only when no local logo and setting on
-
-- [ ] Implement: when `logoUri` is null and `repo.remoteUrl` is set and `settings.privacy.fetchFavicons`, call `invoke(TauriCommand.FETCH_REPO_FAVICON, { repoId })` and feed the result into `GeneralAvatar.imageUrl`. Ladder becomes: local logo → favicon → gradient+letter. Add a component test mocking the invoke. Commit.
+If we ever revisit this, restore Tasks 6–8 from git history (commit prior to this scope-cut) — they were fully specified with `image`, `sha2`, `reqwest` + `wiremock`-driven TDD.
 
 ---
 
@@ -550,7 +390,7 @@ A test that, with `privacy.fetch_favicons = false`, the command returns `Ok(None
 - Modify: `app/src-tauri/src/lib.rs` (`AppState` gains a passphrase cache field)
 - Test: `app/src-tauri/src/commands/git_ops.rs` test module with a generated test key
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Using `TempRepo` + a generated ed25519 test key fixture (create under `app/src-tauri/tests/fixtures/ssh/` — never use the user's real key/name), assert that the credential closure built from a `ssh_key_path` yields a `Cred::ssh_key` (not agent). Test the _builder_ in isolation:
 
@@ -564,9 +404,9 @@ fn ssh_key_override_builds_ssh_key_cred() {
 }
 ```
 
-- [ ] **Step 2: Run to confirm failure** — `cargo test ... ssh_key_override` → no `build_ssh_key_cred`.
+- [x] **Step 2: Run to confirm failure** — `cargo test ... ssh_key_override` → no `build_ssh_key_cred`.
 
-- [ ] **Step 3: Implement the override**
+- [x] **Step 3: Implement the override**
 
 Add a small helper and thread `ssh_key_path` + passphrase into `install_credentials`:
 
@@ -592,7 +432,7 @@ In the `SSH_KEY` arm of `install_credentials`, if a per-repo `ssh_key_path` is p
 
 **Security:** never log the key path or passphrase (no `Debug`/`Display` of them).
 
-- [ ] **Step 4: Run the test** → PASS. **Commit** (`feat: per-repo SSH key in credential chain (B.6)`).
+- [x] **Step 4: Run the test** → PASS. **Commit** (`feat: per-repo SSH key in credential chain (B.6)`).
 
 ### Task 10: In-memory passphrase cache + unlock command
 
@@ -603,7 +443,7 @@ In the `SSH_KEY` arm of `install_credentials`, if a per-repo `ssh_key_path` is p
 - Modify: `lib.rs` handler blocks + `commands.ts`
 - Test: store/read round-trip; drop clears
 
-- [ ] TDD: add `zeroize = "1"` to deps; implement the cache + `ssh_unlock_key` command (keyed by repo id); on credential failure due to encrypted key with no cached passphrase, return `CommandError::bad_request("ssh-key-passphrase-required")` so the frontend can prompt. Commit per green step.
+- [x] TDD: add `zeroize = "1"` to deps; implement the cache + `ssh_unlock_key` command (keyed by repo id); on credential failure due to encrypted key with no cached passphrase, return `CommandError::bad_request("ssh-key-passphrase-required")` so the frontend can prompt. Commit per green step.
 
 ### Task 11: Repo SSH settings UI
 
@@ -614,15 +454,15 @@ In the `SSH_KEY` arm of `install_credentials`, if a per-repo `ssh_key_path` is p
 - Modify: repos thunk to persist `sshKeyPath` on the repo record (extend the repo update path; confirm a `RepoRecord`-update command exists, else add `set_repo_ssh_key(repo_id, path)`)
 - Test: component test (pick key → dispatch)
 
-- [ ] TDD: a key selector listing `~/.ssh/id_ed25519`/`id_rsa` plus an "Other…" file picker (Tauri dialog), a passphrase prompt dialog that calls `ssh_unlock_key`, and a "Test connection" button that runs `git_fetch`. Component test mocks invoke. Commit.
+- [x] TDD: a key selector listing `~/.ssh/id_ed25519`/`id_rsa` plus an "Other…" file picker (Tauri dialog), a passphrase prompt dialog that calls `ssh_unlock_key`, and a "Test connection" button that runs `git_fetch`. Component test mocks invoke. Commit.
 
-- [ ] **Manual:** clone/fetch a private repo with a custom key (per repo-convention live verification).
+- [x] **Manual:** clone/fetch a private repo with a custom key (per repo-convention live verification).
 
 ---
 
 ## Done-check (Phase B)
 
-- [ ] `cargo test --manifest-path app/src-tauri/Cargo.toml` green (favicon + ssh).
-- [ ] `yarn typecheck && yarn lint && yarn test` green.
-- [ ] Playwright-MCP live check for B.4 (inline pin), B.5 (sortable header), B.3 (favicon avatar), B.2 (default radio) — UI changes require it per repo convention.
-- [ ] Manual: B.6 with a private SSH repo + custom key.
+- [x] `cargo test --manifest-path app/src-tauri/Cargo.toml` green (ssh).
+- [x] `yarn typecheck && yarn lint && yarn test` green.
+- [x] Playwright-MCP live check for B.4 (inline pin), B.5 (sortable header), B.2 (default radio) — UI changes require it per repo convention.
+- [x] Manual: B.6 with a private SSH repo + custom key.

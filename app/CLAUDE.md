@@ -47,14 +47,44 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 - `providers/r#trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`.
 - Add a crate: `cargo add <name>` inside `src-tauri/`. Watch that it works under `vendored-libgit2` linking; avoid crates that pull in a second libgit2.
 
-## App icons (production vs dev)
+## App icons (production vs dev, per-platform layout)
 
-Two icon sets live under `src-tauri/`:
+Two icon trees live under `src-tauri/`, each split into four platform subfolders:
 
-- `icons/` — production build icon (dark chevrons on a white square). Sources aren't regenerated routinely; if you need to refresh them, feed `src/assets/recrest-icon-light.svg` to `tauri icon`.
-- `icons-dev/` — dev build icon (white chevrons with an orange `</>` badge bottom-right), so `yarn dev` is visually distinct from the installed app in the taskbar/dock. Regenerate with `yarn workspace @recrest/app gen:dev-icons` whenever you edit `src/assets/recrest-icon-dev.svg`.
+```
+src-tauri/icons/                 (production)
+├── mac/      icon.icns, icon-light.icns, icon-dark.icns
+├── windows/  icon.ico, icon-light.png, icon-dark.png, Square*Logo.png, StoreLogo.png
+├── linux/    32x32.png, 64x64.png, 128x128.png, 256x256.png, 512x512.png
+└── tray/     tray-template.png (44), tray-template@2x.png (88), tray-light.png (32), tray-dark.png (32)
+                                      (shared — used by both prod and dev runtimes)
 
-`tauri:dev` passes `--config src-tauri/tauri.dev.conf.json`, a minimal overlay that swaps `bundle.icon` to point at `icons-dev/`. Only `tauri dev` picks it up; `tauri build` ignores the overlay and keeps the production icon. Do not duplicate other fields in the overlay — keep it strictly about the icon swap so production config stays the single source of truth.
+src-tauri/icons-dev/             (dev — dark/light variants get an orange </> badge)
+├── mac/      icon.icns, icon-light.icns, icon-dark.icns
+├── windows/  icon.ico, icon-light.png, icon-dark.png, Square*Logo.png, StoreLogo.png
+└── linux/    32x32.png, 64x64.png, 128x128.png, 256x256.png, 512x512.png
+                                      (no tray/ — see below)
+```
+
+**Why subfolders:** macOS and Windows want **padded** artwork (Apple icon grid: 824 tile inside 1024 canvas with 100px transparent margin, rx ≈ 185; Microsoft recommends ~10% margin for the same optical reason). Linux is full-bleed. Tray icons are monochrome on transparent — macOS treats them as **template images** that the menu bar auto-tints (set via `TrayIconBuilder::icon_as_template(true)` on macOS only); Windows ships two variants (`tray-light.png` for light tray, `tray-dark.png` for dark) and `apply_windows_theme_icon` swaps them on `WindowEvent::ThemeChanged`.
+
+**Source SVGs** (`app/src/assets/logos/`):
+
+- `recrest-icon-mac-{light,dark,dev-light,dev-dark}.svg` — Apple-grid sources; feed `mac/` AND `windows/` output (both want padded artwork).
+- `recrest-icon-{light,dark,dev-light,dev-dark}.svg` — full-bleed sources; feed `linux/` output.
+- `recrest-icon-tray-{light,dark}.svg` — tray glyph (transparent monochrome chevrons, light = black for macOS template + Windows light tray, dark = white for Windows dark tray). **One set, used by both prod and dev** — tray icons are conventionally minimal/monochrome on every platform, and a dev-specific tray would clutter the menubar slot. The dev build is distinguished by its tooltip (`identity::current_tray_tooltip()` returns "Recrest Dev"), not by the glyph.
+
+**Regenerate** (`src-tauri/scripts/gen-icon-variants.mjs`):
+
+- `yarn workspace @recrest/app gen:icon-variants` — both sets, all four platforms (~13s).
+- `yarn workspace @recrest/app gen:prod-icons` — only `icons/` (~5-8s).
+- `yarn workspace @recrest/app gen:dev-icons` — only `icons-dev/` (~5-8s, common during dev-variant iteration).
+
+All three call the same script with `--prod` / `--dev` filters; the only-flagged variants run faster because they skip the other half. Run after editing any source SVG.
+
+**Runtime icon swapping** — both macOS (`set_macos_app_icon` on `AppleInterfaceThemeChangedNotification`) and Windows (`apply_windows_theme_icon` on `WindowEvent::ThemeChanged`) swap between the light/dark variants when the OS theme flips. The dock/taskbar icon is bundle-icon based, the tray uses `tray_icon_bytes()`.
+
+**`tauri:dev`** passes `--config src-tauri/tauri.dev.conf.json`, a minimal overlay that swaps `bundle.icon` to point at `icons-dev/`. Only `tauri dev` picks it up; `tauri build` ignores the overlay and keeps the production icon. Do not duplicate other fields in the overlay — keep it strictly about the icon swap. The dev EXE-resource icon (Windows) is wired via `build.rs::WindowsAttributes::window_icon_path("icons-dev/windows/icon.ico")` so the taskbar shows the dev variant from process start.
 
 ## Redux + i18n
 

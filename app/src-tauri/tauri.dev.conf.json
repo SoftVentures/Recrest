@@ -24,11 +24,11 @@
   },
   "bundle": {
     "icon": [
-      "icons-dev/32x32.png",
-      "icons-dev/128x128.png",
-      "icons-dev/128x128@2x.png",
-      "icons-dev/icon.icns",
-      "icons-dev/icon.ico"
+      "icons-dev/linux/32x32.png",
+      "icons-dev/linux/128x128.png",
+      "icons-dev/linux/256x256.png",
+      "icons-dev/mac/icon.icns",
+      "icons-dev/windows/icon.ico"
     ]
   }
 }
