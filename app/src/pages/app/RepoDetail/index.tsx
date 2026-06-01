@@ -32,6 +32,7 @@ import CiCard from "@/components/organisms/repos/CiCard";
 import CommitDialog from "@/components/organisms/repos/CommitDialog";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
 import DeploymentsCard from "@/components/organisms/repos/DeploymentsCard";
+import RepoGitConfigCard from "@/components/organisms/repos/RepoGitConfigCard";
 import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
 import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
@@ -91,6 +92,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function RepoDetailPage() {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t } = useTranslation(I18nNamespace.COMMON);
   const ide = useDefaultIde();
   const ideLabel = ide.name
     ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
@@ -355,6 +357,13 @@ export default function RepoDetailPage() {
                 <CleanStateSub>Working tree is clean.</CleanStateSub>
               </CleanState>
             )}
+          </Card>
+
+          <Card>
+            <CardHead>
+              <CardTitle>{t("settings.git.repo_card_title")}</CardTitle>
+            </CardHead>
+            <RepoGitConfigCard repoId={repo.id} />
           </Card>
         </Grid2>
 

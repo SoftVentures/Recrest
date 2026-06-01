@@ -4,6 +4,7 @@ import { invoke as mockedInvoke } from "@tauri-apps/api/core";
 
 import { TauriCommand } from "@recrest/shared";
 
+import { fireEvent } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -18,51 +19,102 @@ afterAll(() => {
   delete (window as unknown as Record<string, unknown>)[TAURI_MARKER];
 });
 
-describe("GitConfigSection", () => {
-  it("dispatches SET_GIT_CONFIG when the user edits a field and clicks Save", async () => {
+const GLOBAL_PATH = "/home/dev/.gitconfig";
+const WORK_PATH = "/home/dev/.gitconfig-work";
+
+function flushPromises() {
+  return act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+describe("GitConfigSection (layered)", () => {
+  it("loads layers + origins, renders a layered field with source badge, and writes to the resolved layer on blur", async () => {
     const mocked = vi.mocked(mockedInvoke);
     mocked.mockReset();
+
+    const initialOrigins = {
+      "user.email": {
+        value: "old@example.invalid",
+        sourcePath: WORK_PATH,
+        sourceCondition: "gitdir:~/work/",
+      },
+    };
+    const updatedOrigins = {
+      "user.email": {
+        value: "new@example.invalid",
+        sourcePath: WORK_PATH,
+        sourceCondition: "gitdir:~/work/",
+      },
+    };
+
+    let currentOrigins: Record<
+      string,
+      { value: string; sourcePath: string; sourceCondition: string | null }
+    > = initialOrigins;
+
     mocked.mockImplementation(async (cmd: unknown) => {
-      if (cmd === TauriCommand.GET_GIT_CONFIG) {
-        return { scope: "global", entries: { "user.name": "old" } };
+      if (cmd === TauriCommand.LIST_GIT_CONFIG_LAYERS) {
+        return [
+          {
+            path: GLOBAL_PATH,
+            condition: null,
+            active: true,
+            exists: true,
+            entries: {},
+          },
+          {
+            path: WORK_PATH,
+            condition: "gitdir:~/work/",
+            active: true,
+            exists: true,
+            entries: { "user.email": currentOrigins["user.email"]?.value ?? "" },
+          },
+        ];
       }
-      return { scope: "global", entries: { "user.name": "new" } };
+      if (cmd === TauriCommand.GET_GIT_CONFIG_WITH_ORIGINS) {
+        return currentOrigins;
+      }
+      if (cmd === TauriCommand.SET_GIT_CONFIG_IN_LAYER) {
+        currentOrigins = updatedOrigins;
+        return updatedOrigins;
+      }
+      return null;
     });
 
     const { getByTestId } = renderWithProviders(<GitConfigSection />);
 
-    // Wait for the initial GET to settle.
+    await flushPromises();
+
+    const sourceBadge = getByTestId(
+      TEST_IDS.gitConfigSettings.layeredFieldSourceBadge("user.email"),
+    );
+    expect(sourceBadge.textContent ?? "").toContain(".gitconfig-work");
+
+    const fieldInput = getByTestId(
+      TEST_IDS.gitConfigSettings.field("user.email"),
+    ) as HTMLInputElement;
+    expect(fieldInput).toBeTruthy();
+
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
     await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
+      setter?.call(fieldInput, "new@example.invalid");
+      fieldInput.dispatchEvent(new Event("input", { bubbles: true }));
     });
-
-    const input = getByTestId(TEST_IDS.gitConfigSettings.field("user.name")) as HTMLInputElement;
-    expect(input.value).toBe("old");
-
-    // The TextField forwards onChange via the native input — fire it manually.
-    act(() => {
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(input, "new");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-
-    const save = getByTestId(TEST_IDS.gitConfigSettings.save) as HTMLButtonElement;
-    expect(save.disabled).toBe(false);
-
     await act(async () => {
-      save.click();
+      fireEvent.blur(fieldInput);
       await Promise.resolve();
       await Promise.resolve();
     });
+    await flushPromises();
 
-    expect(mocked).toHaveBeenCalledWith(TauriCommand.SET_GIT_CONFIG, {
+    expect(mocked).toHaveBeenCalledWith(TauriCommand.SET_GIT_CONFIG_IN_LAYER, {
       repoId: null,
-      key: "user.name",
-      value: "new",
+      filePath: WORK_PATH,
+      key: "user.email",
+      value: "new@example.invalid",
     });
   });
 });

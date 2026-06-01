@@ -30,6 +30,7 @@ import {
   pgSlideL,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { SETTINGS_TAB_QUERY_PARAM, SettingsTab } from "@/lib/constants/settings.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { AboutSection } from "@/pages/app/Settings/components/AboutTab";
 import { AccountsSection } from "@/pages/app/Settings/components/AccountsTab";
@@ -244,19 +245,19 @@ function SettingsPage() {
   // of truth — we deliberately don't fall back to internal state to avoid
   // the two getting out of sync when the user navigates Back/Forward.
   const [searchParams, setSearchParams] = useSearchParams();
-  const queryTab = searchParams.get("tab") as TabId | null;
-  const tab: TabId = queryTab && KNOWN_TAB_IDS.has(queryTab) ? queryTab : "general";
+  const queryTab = searchParams.get(SETTINGS_TAB_QUERY_PARAM) as TabId | null;
+  const tab: TabId = queryTab && KNOWN_TAB_IDS.has(queryTab) ? queryTab : SettingsTab.GENERAL;
 
   const setTab = useCallback(
     (next: TabId) => {
       setSearchParams(
         (prev) => {
           const sp = new URLSearchParams(prev);
-          if (next === "general") {
+          if (next === SettingsTab.GENERAL) {
             // Default tab — keep the URL clean (no `?tab=general`).
-            sp.delete("tab");
+            sp.delete(SETTINGS_TAB_QUERY_PARAM);
           } else {
-            sp.set("tab", next);
+            sp.set(SETTINGS_TAB_QUERY_PARAM, next);
           }
           return sp;
         },

@@ -86,6 +86,135 @@ function installStub(seed: Required_<AppSeed>): void {
     "user.name": "Dev Stub",
     "user.email": "dev@example.invalid",
   };
+
+  // Layered git config — mimics a real `~/.gitconfig` that delegates work
+  // identity to an [includeIf] target, so the GitConfigTab can demo the
+  // source-badge + edit-in-layer UX without a real backend.
+  interface StubLayer {
+    path: string;
+    condition: string | null;
+    active: boolean;
+    exists: boolean;
+    entries: Record<string, string>;
+  }
+  const STUB_LAYERS: StubLayer[] = [
+    {
+      path: "/Users/dev/.gitconfig",
+      condition: null,
+      active: true,
+      exists: true,
+      entries: {
+        "user.name": "Dev Stub",
+        "user.email": "dev@example.invalid",
+        "core.editor": "vim",
+        "core.autocrlf": "input",
+        "init.defaultBranch": "main",
+        "pull.rebase": "true",
+        "push.default": "current",
+        "push.autoSetupRemote": "true",
+        "rebase.autoSquash": "true",
+        "fetch.prune": "true",
+        "commit.gpgsign": "false",
+        "alias.co": "checkout",
+        "alias.lol": "log --oneline --graph --decorate --all",
+        "url.https://github.com/.insteadOf": "git@github.com:",
+        "diff.tool": "vscode",
+      },
+    },
+    {
+      path: "/Users/dev/.gitconfig-work",
+      condition: "gitdir:/Users/dev/Developer/work/",
+      active: false,
+      exists: true,
+      entries: {
+        "user.name": "Dev Stub (Work)",
+        "user.email": "work@example.invalid",
+        "user.signingkey": "ABC1234DEF",
+        "commit.gpgsign": "true",
+        "gpg.format": "ssh",
+      },
+    },
+    {
+      path: "/Users/dev/.gitconfig-oss",
+      condition: "gitdir:/Users/dev/Developer/open-source/",
+      active: false,
+      exists: true,
+      entries: {
+        "user.email": "oss@example.invalid",
+        "commit.gpgsign": "true",
+      },
+    },
+    {
+      path: "/Users/dev/.gitconfig-private",
+      condition: "gitdir:/Users/dev/Developer/private/",
+      active: false,
+      exists: true,
+      entries: {
+        "user.email": "private@example.invalid",
+        "user.signingkey": "PRIV5678",
+      },
+    },
+  ];
+
+  // Whether `[includeIf gitdir:...]` matches a repo path. Mirrors the
+  // backend's `gitdir_matches` semantics: literal prefix with trailing `/`
+  // means "directory and everything under it".
+  function gitdirMatches(condition: string, target: string): boolean {
+    if (!condition.startsWith("gitdir:")) return false;
+    const pattern = condition.slice("gitdir:".length).trim();
+    if (pattern.includes("*") || pattern.includes("?")) return false;
+    if (pattern.endsWith("/")) return target.startsWith(pattern);
+    return target === pattern;
+  }
+
+  function repoLocalConfigPath(repoId: string): string {
+    return `/Users/dev/Developer/${repoId}/.git/config`;
+  }
+
+  function resolveLayers(repoId: string | null): StubLayer[] {
+    const targetPath = repoId ? `/Users/dev/Developer/${repoId.replace(/^repo-/, "")}` : null;
+    const out: StubLayer[] = [];
+    for (const layer of STUB_LAYERS) {
+      if (layer.condition === null) {
+        out.push({ ...layer });
+        continue;
+      }
+      // No target = global view → treat every includeIf as active so the
+      // Settings tab shows merged values. Repo scope keeps strict matching.
+      const matches = targetPath === null || gitdirMatches(layer.condition, targetPath);
+      out.push({ ...layer, active: matches });
+    }
+    if (repoId) {
+      out.push({
+        path: repoLocalConfigPath(repoId),
+        condition: null,
+        active: true,
+        exists: true,
+        entries: { "remote.origin.url": `git@github.com:dev/${repoId.replace(/^repo-/, "")}.git` },
+      });
+    }
+    return out;
+  }
+
+  function resolveOrigins(
+    layers: StubLayer[],
+  ): Record<string, { value: string; sourcePath: string; sourceCondition: string | null }> {
+    const out: Record<
+      string,
+      { value: string; sourcePath: string; sourceCondition: string | null }
+    > = {};
+    for (const layer of layers) {
+      if (!layer.active) continue;
+      for (const [k, v] of Object.entries(layer.entries)) {
+        out[k] = { value: v, sourcePath: layer.path, sourceCondition: layer.condition };
+      }
+    }
+    return out;
+  }
+
+  function findStubLayer(path: string): StubLayer | undefined {
+    return STUB_LAYERS.find((l) => l.path === path);
+  }
   // Mark a single dev repo as having a pre-commit hook so the CommitDialog
   // "Hooks active" badge has something to show without a real .git/hooks/.
   const STUB_PRE_COMMIT_HOOK_REPOS = new Set<string>(["repo-octo-notes"]);
@@ -458,6 +587,67 @@ function installStub(seed: Required_<AppSeed>): void {
           scope: a.repoId == null ? "global" : "repo",
           entries: a.repoId == null ? { ...STUB_GLOBAL_GIT_CONFIG } : {},
         };
+      }
+
+      // --- layered git config (Plan 6 / E.1)
+      case "list_git_config_layers": {
+        const layers = resolveLayers((a.repoId as string | null | undefined) ?? null);
+        return layers;
+      }
+      case "get_git_config_with_origins": {
+        const layers = resolveLayers((a.repoId as string | null | undefined) ?? null);
+        return resolveOrigins(layers);
+      }
+      case "set_git_config_in_layer": {
+        const filePath = (a.filePath as string | undefined) ?? "";
+        const key = (a.key as string | undefined) ?? "";
+        const value = (a.value as string | undefined) ?? "";
+        let layer = findStubLayer(filePath);
+        if (!layer && filePath.endsWith("/.git/config")) {
+          // Repo-local layer is generated on demand by `resolveLayers`; persist
+          // edits to it inside STUB_LAYERS so subsequent reads see the value.
+          layer = {
+            path: filePath,
+            condition: null,
+            active: true,
+            exists: true,
+            entries: {},
+          };
+          STUB_LAYERS.push(layer);
+        }
+        if (layer) {
+          if (value === "") delete layer.entries[key];
+          else layer.entries[key] = value;
+        }
+        const layers = resolveLayers((a.repoId as string | null | undefined) ?? null);
+        return resolveOrigins(layers);
+      }
+      case "add_git_config_include": {
+        const condition = (a.condition as string | null | undefined) ?? null;
+        const targetPath = (a.targetPath as string | undefined) ?? "";
+        const skeleton = Boolean(a.createTargetSkeleton);
+        const existing = STUB_LAYERS.find(
+          (l) => l.path === targetPath && l.condition === condition,
+        );
+        if (!existing) {
+          STUB_LAYERS.push({
+            path: targetPath,
+            condition,
+            active: false,
+            exists: true,
+            entries: skeleton ? {} : {},
+          });
+        }
+        return undefined;
+      }
+      case "remove_git_config_include": {
+        const condition = (a.condition as string | null | undefined) ?? null;
+        const targetPath = (a.targetPath as string | undefined) ?? "";
+        const idx = STUB_LAYERS.findIndex(
+          (l) => l.path === targetPath && l.condition === condition,
+        );
+        if (idx >= 0) STUB_LAYERS.splice(idx, 1);
+        return undefined;
       }
 
       // --- search

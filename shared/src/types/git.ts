@@ -51,9 +51,11 @@ export interface BranchInfo {
   lastCommit: BranchCommit | null;
 }
 
-/** Whitelisted set of git config keys the UI is allowed to read/write.
- *  Mirrors the Rust `WHITELIST` in `commands/git_config.rs`; keeping the
- *  string-union in one place lets the form know which fields to render. */
+/** Labelling helper for the structured-fields the settings UI renders.
+ *  The backend no longer treats this as a whitelist — `is_valid_config_key`
+ *  in `commands/git_config.rs` accepts any key matching git's grammar — so
+ *  these constants only exist so the schema in
+ *  `app/src/lib/constants/gitConfigSchema.ts` can reference them by name. */
 export const GitConfigKey = {
   USER_NAME: "user.name",
   USER_EMAIL: "user.email",
@@ -65,13 +67,70 @@ export const GitConfigKey = {
 } as const;
 export type GitConfigKey = (typeof GitConfigKey)[keyof typeof GitConfigKey];
 
-/** Snapshot returned by `get_git_config` / `set_git_config`. `scope` is
- *  `"global"` for `~/.gitconfig` reads and `"repo"` for a repo-local read.
- *  `entries` only contains keys that are actually set in the queried scope
- *  — never empty-string placeholders for unset values. */
+/** Snapshot returned by the legacy `get_git_config` / `set_git_config`
+ *  commands. `scope` is `"global"` for `~/.gitconfig` reads and `"repo"`
+ *  for a repo-local read. `entries` only contains keys that are actually
+ *  set in the queried scope — never empty-string placeholders for unset
+ *  values. New code should prefer the layered API
+ *  (`LIST_GIT_CONFIG_LAYERS` + `GET_GIT_CONFIG_WITH_ORIGINS`). */
 export interface GitConfigSnapshot {
   scope: "global" | "repo";
   entries: Partial<Record<GitConfigKey, string>>;
+}
+
+/** One file in the layered git-config resolution chain. The chain starts
+ *  at `~/.gitconfig` (or the local `.git/config` for a repo scope) and
+ *  includes every matching `[includeIf "gitdir:…"]` target. Non-matching
+ *  conditional includes are still surfaced with `active = false` so the
+ *  UI can list and edit them. */
+export interface GitConfigLayer {
+  /** Absolute path to the underlying file. */
+  path: string;
+  /** `null` for the unconditional root layer; otherwise the raw subsection
+   *  label of the `[include]` / `[includeIf]` entry that pulled it in
+   *  (e.g. `gitdir:~/Developer/work/`). */
+  condition: string | null;
+  /** `true` when this layer is part of the active resolution chain for
+   *  the queried scope. */
+  active: boolean;
+  /** `true` when the file exists on disk. */
+  exists: boolean;
+  /** Raw key/value pairs declared by THIS layer's file. Independent of
+   *  merge order — when two layers set the same key, both retain their
+   *  own value here so per-layer UIs can render without consulting
+   *  `origins`. */
+  entries: Record<string, string>;
+}
+
+/** One key/value pair in the effective config view, with provenance. The
+ *  `sourcePath` is the absolute path of the layer file that contributed
+ *  the *effective* value (the last matching layer in resolution order). */
+export interface GitConfigEntry {
+  value: string;
+  sourcePath: string;
+  sourceCondition: string | null;
+}
+
+/** Argument shape for the `ADD_GIT_CONFIG_INCLUDE` command. `condition`
+ *  is `null` for an unconditional `[include]`, or the raw `gitdir:…`
+ *  pattern for a conditional include. `createTargetSkeleton` writes a
+ *  minimal `[user]\n` body to `targetPath` when the file doesn't yet
+ *  exist (default: false on the backend). */
+export interface GitConfigIncludeRequest {
+  configFile: string;
+  condition: string | null;
+  targetPath: string;
+  createTargetSkeleton?: boolean;
+}
+
+/** Argument shape for the `REMOVE_GIT_CONFIG_INCLUDE` command. The
+ *  matching block in `configFile` is stripped; `deleteTargetFile` opts
+ *  into also removing `targetPath` from disk (default: false). */
+export interface GitConfigRemoveIncludeRequest {
+  configFile: string;
+  condition: string | null;
+  targetPath: string;
+  deleteTargetFile?: boolean;
 }
 
 /** One stash entry as returned by `git_stash_list`. `index` is the stack

@@ -2,6 +2,8 @@ import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 
 import {
   type DiscardResult,
+  type GitConfigEntry,
+  type GitConfigLayer,
   type GitMergeResult,
   type Repository,
   type RepositoryGroup,
@@ -253,3 +255,53 @@ export const gitCommit = createAsyncThunk<
   repoId,
   status: await invoke<RepositoryStatus>(TauriCommand.GIT_COMMIT, { repoId, message }),
 }));
+
+export const loadGitConfigLayers = createAsyncThunk<
+  GitConfigLayer[],
+  { repoId: RepositoryId | null }
+>("repos/gitConfigLayers", async ({ repoId }) =>
+  invoke<GitConfigLayer[]>(TauriCommand.LIST_GIT_CONFIG_LAYERS, { repoId }),
+);
+
+export const loadGitConfigWithOrigins = createAsyncThunk<
+  Record<string, GitConfigEntry>,
+  { repoId: RepositoryId | null }
+>("repos/gitConfigOrigins", async ({ repoId }) =>
+  invoke<Record<string, GitConfigEntry>>(TauriCommand.GET_GIT_CONFIG_WITH_ORIGINS, { repoId }),
+);
+
+export const setGitConfigInLayer = createAsyncThunk<
+  Record<string, GitConfigEntry>,
+  { repoId: RepositoryId | null; filePath: string; key: string; value: string }
+>("repos/setGitConfigInLayer", async ({ repoId, filePath, key, value }) =>
+  invoke<Record<string, GitConfigEntry>>(TauriCommand.SET_GIT_CONFIG_IN_LAYER, {
+    repoId,
+    filePath,
+    key,
+    value,
+  }),
+);
+
+export const addGitConfigInclude = createAsyncThunk<
+  void,
+  {
+    configFile: string;
+    condition: string | null;
+    targetPath: string;
+    createTargetSkeleton: boolean;
+  }
+>("repos/addGitConfigInclude", async (args) => {
+  await invoke<void>(TauriCommand.ADD_GIT_CONFIG_INCLUDE, args);
+});
+
+export const removeGitConfigInclude = createAsyncThunk<
+  void,
+  {
+    configFile: string;
+    condition: string | null;
+    targetPath: string;
+    deleteTargetFile: boolean;
+  }
+>("repos/removeGitConfigInclude", async (args) => {
+  await invoke<void>(TauriCommand.REMOVE_GIT_CONFIG_INCLUDE, args);
+});

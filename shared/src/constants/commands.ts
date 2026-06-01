@@ -50,6 +50,11 @@ export const TauriCommand = {
   GIT_HAS_PRE_COMMIT_HOOK: "git_has_pre_commit_hook",
   GET_GIT_CONFIG: "get_git_config",
   SET_GIT_CONFIG: "set_git_config",
+  LIST_GIT_CONFIG_LAYERS: "list_git_config_layers",
+  GET_GIT_CONFIG_WITH_ORIGINS: "get_git_config_with_origins",
+  SET_GIT_CONFIG_IN_LAYER: "set_git_config_in_layer",
+  ADD_GIT_CONFIG_INCLUDE: "add_git_config_include",
+  REMOVE_GIT_CONFIG_INCLUDE: "remove_git_config_include",
 
   // search
   FIND_ACROSS_REPOS: "find_across_repos",

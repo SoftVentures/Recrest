@@ -37,7 +37,7 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 | 2   | `02-repo-polish.md`          | ✅ Done     | B.1 import defaults, B.2 default scan path, ~~B.3 favicon fallback~~ (scope-cut), B.4 pin direct-click, B.5 flat list + sortable header, B.6 per-repo SSH key                                            | 1 (Part A) |
 | 3   | `03-working-copy.md`         | ✅ Done     | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                             | 1 (Part A) |
 | 4   | `04-provider-mr-ci-pages.md` | ✅ Done     | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                              | 1 (Part A) |
-| 5   | `05-provider-depth.md`       | 🔴 Open    | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                         | 1 (Part A) |
+| 5   | `05-provider-depth.md`       | ✅ Done     | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                         | 1 (Part A) |
 | 6   | `06-git-config-full.md`      | 🔴 Open    | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                                     | 3          |
 | 7   | `07-provider-merge.md`       | 🔴 Open    | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring           | 4          |
 
@@ -55,8 +55,8 @@ case of "project ships no logo file at all". See the B.3 section in
 `02-repo-polish.md` for the rationale and how to restore it from git history if
 ever needed.
 
-**Remaining work:** Plans 5, 6, 7 (provider depth, full git-config surface,
-provider-side merge). See execution order below.
+**Remaining work:** Plans 6, 7 (full git-config surface, provider-side merge).
+See execution order below.
 
 ---
 
