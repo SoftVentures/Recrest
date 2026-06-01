@@ -35,7 +35,7 @@ const meta = {
     (Story) => (
       <ReduxProvider store={store}>
         <I18nextProvider i18n={i18n}>
-          <MemoryRouter>
+          <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Story />
           </MemoryRouter>
         </I18nextProvider>

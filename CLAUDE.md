@@ -47,7 +47,7 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 
 ### Provider abstraction
 
-`app/src-tauri/src/providers/` defines `GitProvider` (async trait in `r#trait.rs`) + `ProviderRegistry`. The trait surface is deliberately narrow (`list_pull_requests`, token get/set) so a later WASM-plugin refactor can swap implementations without touching the frontend. Today there's a full GitHub implementation and stubs for GitLab/Bitbucket. Tokens are stored **only** in the OS keychain (`auth/token.rs` via the `keyring` crate) — never in `settings.json`.
+`app/src-tauri/src/providers/` defines `GitProvider` (async trait in `r#trait.rs`) + `ProviderRegistry`. The trait surface is deliberately narrow (`list_pull_requests`, token get/set) so a later WASM-plugin refactor can swap implementations without touching the frontend. GitHub/GitLab/Bitbucket all have full implementations (PR list/detail, repos, orgs/groups/workspaces, diffs, comments, CI). Tokens are stored in the OS keychain (`auth/token.rs` via the `keyring` crate) — never in `settings.json`. **Debug builds** swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` (see `app/CLAUDE.md` for why). Release builds keep keychain.
 
 ### Git subsystem
 

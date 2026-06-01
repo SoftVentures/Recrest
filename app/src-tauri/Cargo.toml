@@ -10,6 +10,19 @@ rust-version = "1.77.2"
 name = "recrest_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# The compiled binary filename drives the macOS Dock hover label for
+# unbundled `cargo run` dev binaries — macOS Dock reads `kLSDisplayNameKey`
+# from LaunchServices, which defaults to the executable filename for any
+# process without a `.app` bundle wrapper. NSProcessInfo.setProcessName
+# (called in lib.rs::run) updates internal app state but does NOT propagate
+# to that key, so it leaves the lowercase basename visible. Naming the
+# output "Recrest" makes the dev Dock show "Recrest" instead of "recrest".
+# Release `.app` builds keep CFBundleName/CFBundleDisplayName for the
+# user-facing name and aren't affected.
+[[bin]]
+name = "Recrest"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.5", features = [] }
 
@@ -84,11 +97,15 @@ windows = { version = "0.58", features = ["Win32_UI_WindowsAndMessaging", "Win32
 [target.'cfg(target_os = "macos")'.dependencies]
 # Sets NSApp.applicationIconImage at runtime so Stage Manager / Mission
 # Control show Recrest's icon in dev mode (where there's no .app bundle),
-# and re-applies it live when the user toggles system Dark Mode.
+# and re-applies it live when the user toggles system Dark Mode. The live
+# update is driven by a 1.5s poller in `spawn_macos_appearance_poller` —
+# `NSDistributedNotificationCenter` and `WindowEvent::ThemeChanged` were
+# both tried and proved unreliable for system-wide appearance flips, so
+# we no longer need `block2` or the `NSDistributedNotificationCenter`/
+# `NSNotification`/`NSOperation` features on `objc2-foundation`.
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSAppearance"] }
-objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSDistributedNotificationCenter", "NSNotification"] }
-block2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSAppearance", "NSDockTile"] }
+objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSProcessInfo"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Direct notify-rust use on Linux so we can attach the Recrest icon name +

@@ -4136,7 +4136,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
- "block2",
  "chrono",
  "deunicode",
  "dirs 5.0.1",

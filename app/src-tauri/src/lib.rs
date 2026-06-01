@@ -86,6 +86,23 @@ fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
     name.isEqualToString(&NSString::from_str("NSAppearanceNameDarkAqua"))
 }
 
+/// Main-thread query for "is the OS in dark mode" that doesn't require the
+/// caller to already hold an `NSApplication`. Exposed to the renderer via
+/// the `get_system_dark_mode` command so the frontend can resolve the real
+/// system theme even when WKWebView's `matchMedia("(prefers-color-scheme:
+/// dark)")` lies on cold start (a known WebKit quirk: the webview's
+/// effective appearance can lag the system appearance for the first JS
+/// tick after launch, causing the inline anti-flash script to paint light
+/// even on a dark-mode system). Returns `None` off the main thread — the
+/// caller should treat that as "unknown" and fall back to matchMedia.
+#[cfg(target_os = "macos")]
+pub fn macos_system_dark() -> Option<bool> {
+    use objc2_app_kit::NSApplication;
+    let mtm = objc2::MainThreadMarker::new()?;
+    let app = NSApplication::sharedApplication(mtm);
+    Some(is_system_dark(&app))
+}
+
 #[cfg(target_os = "macos")]
 fn pick_icon_bytes(dark: bool) -> &'static [u8] {
     let dev = cfg!(debug_assertions);
@@ -97,6 +114,37 @@ fn pick_icon_bytes(dark: bool) -> &'static [u8] {
     }
 }
 
+/// Set the process name macOS uses for the Dock hover label of an unbundled
+/// `cargo run` binary. Without this, the Dock reads the binary filename
+/// (`recrest`, lowercase) from `[NSProcessInfo processInfo].processName`.
+/// Must run BEFORE any other macOS-facing code so the name is in place before
+/// AppKit/Dock caches the initial value.
+#[cfg(target_os = "macos")]
+fn set_macos_process_name() {
+    use objc2_foundation::{NSProcessInfo, NSString};
+    let info = NSProcessInfo::processInfo();
+    let name = NSString::from_str(crate::identity::current_tray_tooltip());
+    info.setProcessName(&name);
+}
+
+/// Apply the dock icon variant matching the current system appearance.
+/// Must run on the main thread (NSApplication is main-thread-only). Idempotent,
+/// so the polling task in `spawn_macos_appearance_poller` can call it freely.
+///
+/// All live updates are driven by that poller. We previously tried two
+/// notification-based paths and both proved unreliable for system-wide
+/// appearance flips in Tauri dev/release builds:
+///
+///   - `NSDistributedNotificationCenter` observer for
+///     `AppleInterfaceThemeChangedNotification` — registered cleanly but the
+///     block never fired (likely because the dev binary is not a proper .app
+///     bundle and lacks the LSUIElement/sandbox plumbing that lets the
+///     distributed notification center route system-wide notifications to us).
+///   - Tauri's `WindowEvent::ThemeChanged` — tao only emits this on macOS for
+///     explicit per-window theme overrides, not system appearance flips.
+///
+/// Polling a single `effectiveAppearance` read every 1.5s is essentially free
+/// and guarantees the icon stays in sync.
 #[cfg(target_os = "macos")]
 fn set_macos_app_icon() {
     use objc2::AnyThread;
@@ -107,31 +155,69 @@ fn set_macos_app_icon() {
         return;
     };
     let app = NSApplication::sharedApplication(mtm);
-    let bytes = pick_icon_bytes(is_system_dark(&app));
+    let dark = is_system_dark(&app);
+    tracing::info!("[macos] applying app icon, dark={dark}");
+    let bytes = pick_icon_bytes(dark);
     let data = NSData::with_bytes(bytes);
     let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else {
         return;
     };
+    // Belt-and-suspenders against the macOS Dock's icon cache for unbundled
+    // `cargo run` binaries: clear NSApp's icon image first so AppKit can't
+    // short-circuit the second call as a no-op, set the new image, then
+    // tell the Dock tile to redraw immediately. Apple's documented fix for
+    // a stale Dock tile is `-[NSDockTile display]` — without it the Dock
+    // visually keeps the cached pixels even after `setApplicationIconImage`
+    // returns successfully.
     unsafe {
+        app.setApplicationIconImage(None);
         app.setApplicationIconImage(Some(&image));
+        let dock_tile = app.dockTile();
+        dock_tile.display();
     }
 }
 
+/// Poll `NSApp.effectiveAppearance` every 1.5s on the main thread; when the
+/// dark-mode bit flips, re-apply the dock icon. Runs for the lifetime of the
+/// process — no shutdown signal, the task dies with the runtime on exit.
+///
+/// 1.5s is chosen as a comfortable middle: a single `effectiveAppearance`
+/// read costs microseconds so the CPU cost is negligible, sub-2s latency
+/// after a manual theme toggle is imperceptible in practice, and the
+/// non-round interval avoids visibly syncing with any 1Hz system polls.
 #[cfg(target_os = "macos")]
-fn observe_macos_appearance() {
-    use block2::RcBlock;
-    use objc2_foundation::{NSDistributedNotificationCenter, NSNotification, NSString};
-    use std::ptr::NonNull;
+fn spawn_macos_appearance_poller(app: AppHandle) {
+    use std::sync::{Arc, Mutex as StdMutex};
+    use std::time::Duration;
 
-    let name = NSString::from_str("AppleInterfaceThemeChangedNotification");
-    let block = RcBlock::new(move |_n: NonNull<NSNotification>| {
-        set_macos_app_icon();
+    let initial = macos_system_dark().unwrap_or(false);
+    let last = Arc::new(StdMutex::new(initial));
+    tracing::info!("[macos] appearance poller spawning (initial dark={initial})");
+
+    // Use a plain std::thread instead of tokio::spawn to rule out any
+    // async-runtime interaction. The thread sleeps + hops to the main thread
+    // via `app.run_on_main_thread` once per tick.
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(Duration::from_millis(1500));
+            let last = Arc::clone(&last);
+            let result = app.run_on_main_thread(move || {
+                let dark = macos_system_dark().unwrap_or(false);
+                let mut guard = match last.lock() {
+                    Ok(g) => g,
+                    Err(poisoned) => poisoned.into_inner(),
+                };
+                if dark != *guard {
+                    *guard = dark;
+                    tracing::info!("[macos] appearance changed: dark={dark}");
+                    set_macos_app_icon();
+                }
+            });
+            if let Err(e) = result {
+                tracing::warn!("[macos] run_on_main_thread failed: {e:?}");
+            }
+        }
     });
-    let center = NSDistributedNotificationCenter::defaultCenter();
-    unsafe {
-        center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block);
-    }
-    std::mem::forget(block);
 }
 
 // Both light + dark 128×128 PNGs are embedded so the Windows runtime can
@@ -337,6 +423,19 @@ pub fn run() {
     // fix-path-env repariert den PATH einmalig beim Start.
     let _ = fix_path_env::fix();
 
+    // macOS: set the process name BEFORE any AppKit/Tauri init — the Dock
+    // captures the hover label from `NSProcessInfo.processName` the moment
+    // the process registers (which happens implicitly the first time NSApp
+    // is touched, deep inside Tauri's window creation). Calling this later
+    // (e.g. from inside `setup`) leaves the cached lowercase binary name
+    // ("recrest") in the Dock until the next `killall Dock`. Calling it
+    // here, before `Builder::default()`, guarantees the right name is read
+    // on first registration.
+    #[cfg(target_os = "macos")]
+    {
+        set_macos_process_name();
+    }
+
     // Windows-specific: register an explicit AppUserModelID so Toast
     // notifications attribute to "Recrest" instead of the parent process
     // (e.g. powershell.exe in `yarn dev`). Installed MSI builds already get
@@ -393,6 +492,31 @@ pub fn run() {
             // tracing's global dispatcher (only one logger can be installed).
 
             let handle = app.handle().clone();
+
+            // Debug builds store provider tokens in a JSON file under
+            // `app_data_dir` instead of the OS keychain — see
+            // `auth::token::TokenStore` for the rationale (macOS keychain
+            // ACL is bound to the binary's code signature, which `cargo
+            // build` regenerates on every rebuild, so dev builds would
+            // re-prompt on every launch). Release builds keep the keychain.
+            // We wire the path from here because the AppHandle is the only
+            // way to resolve `app_data_dir` portably.
+            #[cfg(debug_assertions)]
+            {
+                if let Ok(dir) = handle.path().app_data_dir() {
+                    auth::token::init_file_backend_path(dir.join("dev-tokens.json"));
+                }
+                // One-time migration of pre-existing dev tokens out of the
+                // OS keychain and into the file. Fires the macOS "Always
+                // Allow" prompt once per provider whose entry exists, then
+                // the file's existence becomes a sentinel and the keychain
+                // is never read again. See
+                // `auth::token::migrate_keychain_to_file_if_empty` for the
+                // rationale.
+                if let Err(err) = crate::auth::token::migrate_keychain_to_file_if_empty() {
+                    tracing::warn!("[token] keychain→file migration failed: {err}");
+                }
+            }
 
             // Window title carries the dev/prod marker. `tauri.conf.json`
             // hard-codes "Recrest" and the `tauri.dev.conf.json` overlay
@@ -545,6 +669,11 @@ pub fn run() {
             {
                 use tauri::TitleBarStyle;
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+                // (Process name is set at the very top of `run()` — calling
+                // it here would be too late, the Dock has already captured
+                // the cached lowercase binary name by this point.)
+
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.set_decorations(true);
                     let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
@@ -553,8 +682,25 @@ pub fn run() {
                     // themes simply cover it.
                     let _ = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None);
                 }
-                set_macos_app_icon();
-                observe_macos_appearance();
+
+                // Defer the initial icon set by 500ms so NSApp.effectiveAppearance
+                // has settled — it lags the system appearance for the first
+                // ~hundreds of ms after launch on macOS, the same WebKit cold-start
+                // quirk that makes matchMedia("(prefers-color-scheme: dark)")
+                // return false even on dark systems. Setting the icon too early
+                // picks the wrong variant, which the Dock then visually caches —
+                // subsequent correct `setApplicationIconImage` calls (driven by
+                // the poller) update NSApp's internal state but the Dock keeps
+                // showing the cached pixels. We deliberately don't also call
+                // `set_macos_app_icon()` synchronously here: doubling the call
+                // before the dock has settled tends to make caching worse.
+                let handle_for_initial = handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    let _ = handle_for_initial.run_on_main_thread(set_macos_app_icon);
+                });
+
+                spawn_macos_appearance_poller(handle.clone());
             }
 
             #[cfg(target_os = "windows")]
@@ -712,6 +858,11 @@ pub fn run() {
                 apply_windows_theme_icon(window.app_handle());
             }
 
+            // macOS does NOT hook `WindowEvent::ThemeChanged` — tao only
+            // emits it for explicit per-window overrides, not system
+            // appearance flips. The poller spawned in `setup` handles all
+            // macOS dock-icon updates instead.
+
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 // Persist window geometry before hiding, so it survives a force-quit.
                 // Values are stored in LOGICAL pixels so the TS side (which
@@ -836,6 +987,7 @@ pub fn run() {
         commands::window::validate_window_position,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
+        commands::system::get_system_dark_mode,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
@@ -916,6 +1068,7 @@ pub fn run() {
         commands::window::validate_window_position,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
+        commands::system::get_system_dark_mode,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,

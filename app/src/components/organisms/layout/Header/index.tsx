@@ -220,17 +220,22 @@ function Header() {
           </FindAcrossButton>
         </GeneralTooltip>
         <GeneralTooltip title={refreshLabel} arrow placement="bottom">
-          <RefreshButton
-            id="btn-refresh"
-            type="button"
-            aria-label={refreshLabel}
-            data-testid={TEST_IDS.header.btnRefresh}
-            disabled={reposLoading}
-            spinning={spinning}
-            onClick={onRefresh}
-          >
-            <RefreshCw size={16} aria-hidden />
-          </RefreshButton>
+          {/* Span wrap: `disabled` is dynamic (reposLoading toggles) and MUI Tooltip
+              can't attach listeners to a disabled <button>. The inline-flex span
+              receives pointer events and forwards them so the tooltip stays alive. */}
+          <span style={{ display: "inline-flex" }}>
+            <RefreshButton
+              id="btn-refresh"
+              type="button"
+              aria-label={refreshLabel}
+              data-testid={TEST_IDS.header.btnRefresh}
+              disabled={reposLoading}
+              spinning={spinning}
+              onClick={onRefresh}
+            >
+              <RefreshCw size={16} aria-hidden />
+            </RefreshButton>
+          </span>
         </GeneralTooltip>
         <AddRepoButton
           type="button"

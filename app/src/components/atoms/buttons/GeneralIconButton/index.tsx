@@ -200,9 +200,17 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
     if (tooltip === false) return button;
     const tooltipText = tooltip ?? rest["aria-label"];
     if (!tooltipText) return button;
+    // MUI Tooltip can't listen to events on a disabled <button>; wrap in a span so the
+    // pointer events bubble to a non-disabled element. Skip the wrapper otherwise to
+    // keep the DOM clean in the common, enabled case.
+    const trigger = rest.disabled ? (
+      <span style={{ display: "inline-flex" }}>{button}</span>
+    ) : (
+      button
+    );
     return (
       <GeneralTooltip title={tooltipText} placement={tooltipPlacement}>
-        {button}
+        {trigger}
       </GeneralTooltip>
     );
   },
