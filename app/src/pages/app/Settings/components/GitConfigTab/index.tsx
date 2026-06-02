@@ -55,7 +55,20 @@ export function GitConfigSection() {
     void refresh();
   }, [refresh]);
 
-  const writableLayers = useMemo(() => layers.filter((l) => l.active && l.exists), [layers]);
+  // Dedupe by `path`: a real `~/.gitconfig` may have multiple [includeIf]
+  // blocks (different gitdir conditions) pointing at the same identity file.
+  // The layer-picker selects ONE file to write into, so it must list each
+  // unique file once — duplicates produce React dup-key warnings on
+  // <MenuItem key={layer.path}>.
+  const writableLayers = useMemo(() => {
+    const seen = new Set<string>();
+    return layers.filter((l) => {
+      if (!l.active || !l.exists) return false;
+      if (seen.has(l.path)) return false;
+      seen.add(l.path);
+      return true;
+    });
+  }, [layers]);
 
   const rootConfigFile = useMemo(
     () => layers.find((l) => l.condition === null)?.path ?? "",

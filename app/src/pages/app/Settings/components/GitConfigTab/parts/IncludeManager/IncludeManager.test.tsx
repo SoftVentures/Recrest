@@ -63,7 +63,7 @@ describe("IncludeManager", () => {
     expect(screen.queryByTestId(TEST_IDS.gitConfigSettings.includeManager.row(""))).toBeNull();
   });
 
-  it("opens the row menu and invokes REMOVE_GIT_CONFIG_INCLUDE on confirm", async () => {
+  it("invokes REMOVE_GIT_CONFIG_INCLUDE on remove + confirm", async () => {
     const mocked = vi.mocked(mockedInvoke);
     mocked.mockReset();
     mocked.mockImplementation(async (cmd: unknown) => {
@@ -89,15 +89,6 @@ describe("IncludeManager", () => {
     });
 
     renderWithProviders(<GitConfigSection />);
-    await flushPromises();
-
-    const menuTrigger = screen.getByTestId(
-      TEST_IDS.gitConfigSettings.includeManager.rowMenu(WORK_CONDITION),
-    );
-    await act(async () => {
-      fireEvent.click(menuTrigger);
-      await Promise.resolve();
-    });
     await flushPromises();
 
     const removeItem = screen.getByTestId(

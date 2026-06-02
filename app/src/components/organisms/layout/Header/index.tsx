@@ -4,6 +4,8 @@ import { useLocation } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
+import { Box } from "@mui/material";
+
 import { PrState } from "@recrest/shared";
 
 import { BookPlus, FileSearch, RefreshCw, Search } from "lucide-react";
@@ -223,7 +225,7 @@ function Header() {
           {/* Span wrap: `disabled` is dynamic (reposLoading toggles) and MUI Tooltip
               can't attach listeners to a disabled <button>. The inline-flex span
               receives pointer events and forwards them so the tooltip stays alive. */}
-          <span style={{ display: "inline-flex" }}>
+          <Box component="span" style={{ display: "inline-flex" }}>
             <RefreshButton
               id="btn-refresh"
               type="button"
@@ -235,7 +237,7 @@ function Header() {
             >
               <RefreshCw size={16} aria-hidden />
             </RefreshButton>
-          </span>
+          </Box>
         </GeneralTooltip>
         <AddRepoButton
           type="button"

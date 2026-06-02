@@ -16,7 +16,10 @@ import GeneralIconButton, {
   IconButtonSize,
   IconButtonTone,
 } from "@/components/atoms/buttons/GeneralIconButton";
-import { SourceBadge } from "@/components/molecules/gitConfig/LayeredField/GitConfigStyles";
+import {
+  LayerChip,
+  LayerChipText,
+} from "@/components/molecules/gitConfig/LayeredField/GitConfigStyles";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { ALIAS_PREFIX } from "@/lib/constants/gitConfigSchema";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -31,20 +34,21 @@ import {
   CustomTable,
   InlineAddForm,
   InlineErrorText,
-  SectionCard,
-  SectionTitle,
 } from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setGitConfigInLayer } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 
 const AliasRow = styled(CustomRow)({
-  gridTemplateColumns: "minmax(120px, 1fr) minmax(160px, 2fr) auto auto",
+  gridTemplateColumns: "minmax(110px, 0.8fr) minmax(200px, 2.4fr) auto auto",
 }) as typeof CustomRow;
 
 const StaticLayerLabel = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.information,
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  textAlign: "center",
+  flex: "0 0 auto",
 })) as typeof Typography;
 
 const RowMetaCell = styled(CustomCellValue)({
@@ -108,12 +112,12 @@ function AliasRowItem({ entry, onCommit, onRequestRemove, editLabel, removeLabel
         aria-label={editLabel}
       />
       <RowMetaCell component="div">
-        <SourceBadge>
-          <FileText size={11} aria-hidden />
-          {basename(entry.sourcePath)}
-        </SourceBadge>
+        <LayerChip title={entry.sourcePath}>
+          <FileText size={12} aria-hidden />
+          <LayerChipText>{basename(entry.sourcePath)}</LayerChipText>
+        </LayerChip>
       </RowMetaCell>
-      <CustomRowActions className="row-actions">
+      <CustomRowActions>
         <GeneralIconButton
           icon={<Trash2 size={ICON_BUTTON_ICON_SIZES[IconButtonSize.SM]} />}
           size={IconButtonSize.SM}
@@ -228,9 +232,10 @@ export default function AliasesEditor({
   const singleLayer = writableLayers.length === 1 ? writableLayers[0] : null;
 
   return (
-    <SectionCard data-testid={TEST_IDS.gitConfigSettings.aliasesEditor.root}>
-      <SectionTitle component="h3">{t("settings.git.aliases_title")}</SectionTitle>
-
+    <SettingsSection
+      title={t("settings.git.aliases_title")}
+      testId={TEST_IDS.gitConfigSettings.aliasesEditor.root}
+    >
       <CustomTable>
         {aliases.length === 0 && <CustomEmpty>{t("settings.git.aliases_empty")}</CustomEmpty>}
         {aliases.map((entry) => (
@@ -248,7 +253,7 @@ export default function AliasesEditor({
           <InlineAddForm>
             <TextField
               size="small"
-              label={t("settings.git.alias_name_label")}
+              placeholder={t("settings.git.alias_name_label")}
               value={draft.name}
               onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
               slotProps={{
@@ -259,7 +264,7 @@ export default function AliasesEditor({
             />
             <TextField
               size="small"
-              label={t("settings.git.alias_command_label")}
+              placeholder={t("settings.git.alias_command_label")}
               value={draft.command}
               onChange={(e) => setDraft((p) => ({ ...p, command: e.target.value }))}
               slotProps={{
@@ -291,7 +296,6 @@ export default function AliasesEditor({
             )}
             <AddFormActions>
               <GeneralButton
-                size="sm"
                 variant="default"
                 startIcon={<Plus size={14} />}
                 onClick={() => void submitAdd()}
@@ -317,6 +321,6 @@ export default function AliasesEditor({
         onCancel={() => (submitting ? undefined : setRemoveTarget(null))}
         onConfirm={() => void confirmRemove()}
       />
-    </SectionCard>
+    </SettingsSection>
   );
 }

@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Checkbox, FormControlLabel, Radio, TextField, Typography } from "@mui/material";
+import { Box, Checkbox, FormControlLabel, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, Info } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralModal from "@/components/molecules/modals/GeneralModal";
@@ -17,9 +17,31 @@ import { pickFolder } from "@/lib/utils/pickFolder.utils";
 const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: 18,
   padding: "8px 0",
 }) as typeof Box;
+
+const Intro = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  padding: "12px 14px",
+  borderRadius: 8,
+  background: theme.palette.surface.interface.backElevation,
+  border: `1px solid ${theme.palette.divider}`,
+})) as typeof Box;
+
+const IntroIcon = styled(Box)(({ theme }) => ({
+  flex: "0 0 auto",
+  marginTop: 2,
+  color: theme.palette.text.information,
+})) as typeof Box;
+
+const IntroText = styled(Typography)(({ theme }) => ({
+  fontSize: 12.5,
+  lineHeight: 1.45,
+  color: theme.palette.text.information,
+})) as typeof Typography;
 
 const Field = styled(Box)({
   display: "flex",
@@ -28,37 +50,26 @@ const Field = styled(Box)({
 }) as typeof Box;
 
 const FieldLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 500,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
-const PatternRow = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-}) as typeof Box;
-
-const PatternOption = styled(Box)({
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-}) as typeof Box;
-
-const PatternHint = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+const FieldHelp = styled(Typography)(({ theme }) => ({
+  fontSize: 11.5,
   color: theme.palette.text.information,
-  fontStyle: "italic",
+  lineHeight: 1.35,
 })) as typeof Typography;
 
 const DirectoryRow = styled(Box)({
   display: "flex",
   alignItems: "stretch",
   gap: 8,
+  "& > .MuiFormControl-root": { flex: "1 1 auto", minWidth: 0 },
 }) as typeof Box;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: 11.5,
   color: theme.palette.error.main,
 })) as typeof Typography;
 
@@ -161,38 +172,19 @@ export default function AddGitConfigIncludeModal({
   return (
     <GeneralModal
       open={open}
-      modalWidth={560}
+      modalWidth={580}
       customTitle={t("settings.git.add_identity_modal_title")}
       textCapitalize={false}
       onCloseModal={() => !busy && onCancel()}
       data-testid={TEST_IDS.gitConfigSettings.addIncludeModal.root}
       contentChildren={
         <Body>
-          <Field>
-            <FieldLabel>{t("settings.git.add_identity_pattern_label")}</FieldLabel>
-            <PatternRow>
-              <PatternOption>
-                <Radio
-                  size="small"
-                  color="primary"
-                  checked
-                  readOnly
-                  slotProps={{
-                    input: {
-                      "data-testid": TEST_IDS.gitConfigSettings.addIncludeModal.patternGitdir,
-                    } as React.InputHTMLAttributes<HTMLInputElement>,
-                  }}
-                />
-                <Typography component="span" variant="body2">
-                  {t("settings.git.add_identity_pattern_gitdir")}
-                </Typography>
-              </PatternOption>
-              <PatternOption>
-                <Radio size="small" disabled />
-                <PatternHint>{t("settings.git.add_identity_pattern_other_disabled")}</PatternHint>
-              </PatternOption>
-            </PatternRow>
-          </Field>
+          <Intro>
+            <IntroIcon>
+              <Info size={14} aria-hidden />
+            </IntroIcon>
+            <IntroText>{t("settings.git.add_identity_modal_intro")}</IntroText>
+          </Intro>
 
           <Field>
             <FieldLabel>{t("settings.git.add_identity_directory_label")}</FieldLabel>
@@ -210,16 +202,16 @@ export default function AddGitConfigIncludeModal({
                 }}
               />
               <GeneralButton
-                size="sm"
                 variant="outline"
                 onClick={() => void onBrowse()}
                 disabled={!isTauri()}
-                startIcon={<FolderOpen size={13} />}
+                startIcon={<FolderOpen size={14} />}
                 data-testid={TEST_IDS.gitConfigSettings.addIncludeModal.directoryPicker}
               >
                 {t("settings.git.add_identity_directory_browse")}
               </GeneralButton>
             </DirectoryRow>
+            <FieldHelp>{t("settings.git.add_identity_directory_help")}</FieldHelp>
           </Field>
 
           <Field>
@@ -239,6 +231,7 @@ export default function AddGitConfigIncludeModal({
                 },
               }}
             />
+            <FieldHelp>{t("settings.git.add_identity_target_help")}</FieldHelp>
           </Field>
 
           <FormControlLabel

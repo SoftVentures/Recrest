@@ -16,7 +16,10 @@ import GeneralIconButton, {
   IconButtonSize,
   IconButtonTone,
 } from "@/components/atoms/buttons/GeneralIconButton";
-import { SourceBadge } from "@/components/molecules/gitConfig/LayeredField/GitConfigStyles";
+import {
+  LayerChip,
+  LayerChipText,
+} from "@/components/molecules/gitConfig/LayeredField/GitConfigStyles";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { URL_PREFIX } from "@/lib/constants/gitConfigSchema";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -31,40 +34,40 @@ import {
   CustomTable,
   InlineAddForm,
   InlineErrorText,
-  SectionCard,
-  SectionTitle,
 } from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setGitConfigInLayer } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 
 type Direction = "insteadOf" | "pushInsteadOf";
 
 const UrlRow = styled(CustomRow)({
-  gridTemplateColumns: "minmax(160px, 1.4fr) minmax(160px, 1.4fr) minmax(120px, auto) auto auto",
+  gridTemplateColumns: "minmax(170px, 1.2fr) minmax(180px, 1.6fr) minmax(110px, auto) auto auto",
 }) as typeof CustomRow;
 
 const StaticLayerLabel = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.information,
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  textAlign: "center",
+  flex: "0 0 auto",
 })) as typeof Typography;
 
 const DirectionChip = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  padding: "2px 8px",
-  borderRadius: 999,
-  background: theme.palette.surface.interface.base,
+  justifyContent: "center",
+  padding: "0 12px",
+  height: 38,
+  minWidth: 120,
+  borderRadius: 8,
+  background: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
-  fontSize: 11,
+  fontSize: 12,
   color: theme.palette.text.information,
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  whiteSpace: "nowrap",
 })) as typeof Typography;
-
-const InlineAddFormUrl = styled(InlineAddForm)({
-  gridTemplateColumns:
-    "minmax(160px, 1.4fr) minmax(160px, 1.4fr) minmax(140px, auto) minmax(140px, 1fr) auto",
-}) as typeof InlineAddForm;
 
 const RowMetaCell = styled(CustomCellValue)({
   display: "flex",
@@ -164,12 +167,12 @@ function UrlRowItem({
         {entry.direction === "pushInsteadOf" ? pushInsteadOfLabel : insteadOfLabel}
       </DirectionChip>
       <RowMetaCell component="div">
-        <SourceBadge>
-          <FileText size={11} aria-hidden />
-          {basename(entry.sourcePath)}
-        </SourceBadge>
+        <LayerChip title={entry.sourcePath}>
+          <FileText size={12} aria-hidden />
+          <LayerChipText>{basename(entry.sourcePath)}</LayerChipText>
+        </LayerChip>
       </RowMetaCell>
-      <CustomRowActions className="row-actions">
+      <CustomRowActions>
         <GeneralIconButton
           icon={<Trash2 size={ICON_BUTTON_ICON_SIZES[IconButtonSize.SM]} />}
           size={IconButtonSize.SM}
@@ -291,9 +294,10 @@ export default function UrlRewritesEditor({
   const singleLayer = writableLayers.length === 1 ? writableLayers[0] : null;
 
   return (
-    <SectionCard data-testid={TEST_IDS.gitConfigSettings.urlRewritesEditor.root}>
-      <SectionTitle component="h3">{t("settings.git.url_rewrites_title")}</SectionTitle>
-
+    <SettingsSection
+      title={t("settings.git.url_rewrites_title")}
+      testId={TEST_IDS.gitConfigSettings.urlRewritesEditor.root}
+    >
       <CustomTable>
         {rewrites.length === 0 && <CustomEmpty>{t("settings.git.url_rewrites_empty")}</CustomEmpty>}
         {rewrites.map((entry) => (
@@ -310,10 +314,10 @@ export default function UrlRewritesEditor({
         ))}
 
         {writableLayers.length > 0 && (
-          <InlineAddFormUrl>
+          <InlineAddForm>
             <TextField
               size="small"
-              label={t("settings.git.url_rewrite_from_label")}
+              placeholder={t("settings.git.url_rewrite_from_label")}
               value={draft.from}
               onChange={(e) => setDraft((p) => ({ ...p, from: e.target.value }))}
               slotProps={{
@@ -324,7 +328,7 @@ export default function UrlRewritesEditor({
             />
             <TextField
               size="small"
-              label={t("settings.git.url_rewrite_to_label")}
+              placeholder={t("settings.git.url_rewrite_to_label")}
               value={draft.to}
               onChange={(e) => setDraft((p) => ({ ...p, to: e.target.value }))}
               slotProps={{
@@ -336,7 +340,6 @@ export default function UrlRewritesEditor({
             <TextField
               select
               size="small"
-              label={t("settings.git.url_rewrite_direction_label")}
               value={draft.direction}
               onChange={(e) => setDraft((p) => ({ ...p, direction: e.target.value as Direction }))}
               slotProps={{
@@ -371,7 +374,6 @@ export default function UrlRewritesEditor({
             )}
             <AddFormActions>
               <GeneralButton
-                size="sm"
                 variant="default"
                 startIcon={<Plus size={14} />}
                 onClick={() => void submitAdd()}
@@ -383,7 +385,7 @@ export default function UrlRewritesEditor({
               </GeneralButton>
             </AddFormActions>
             {error && <InlineErrorText>{error}</InlineErrorText>}
-          </InlineAddFormUrl>
+          </InlineAddForm>
         )}
       </CustomTable>
 
@@ -397,6 +399,6 @@ export default function UrlRewritesEditor({
         onCancel={() => (submitting ? undefined : setRemoveTarget(null))}
         onConfirm={() => void confirmRemove()}
       />
-    </SectionCard>
+    </SettingsSection>
   );
 }

@@ -455,7 +455,6 @@ export const TEST_IDS = {
     includeManager: {
       root: "git-config-include-manager",
       row: (condition: string) => `git-config-include-row-${condition}` as const,
-      rowMenu: (condition: string) => `git-config-include-menu-${condition}` as const,
       rowReveal: (condition: string) => `git-config-include-reveal-${condition}` as const,
       rowRemove: (condition: string) => `git-config-include-remove-${condition}` as const,
       rowUserName: (condition: string) => `git-config-include-user-name-${condition}` as const,
@@ -465,7 +464,6 @@ export const TEST_IDS = {
     },
     addIncludeModal: {
       root: "add-git-config-include-modal",
-      patternGitdir: "add-include-pattern-gitdir",
       directoryInput: "add-include-directory",
       directoryPicker: "add-include-directory-picker",
       targetInput: "add-include-target",

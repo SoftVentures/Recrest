@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { MenuItem, TextField } from "@mui/material";
+import { MenuItem, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import type { GitConfigEntry, GitConfigLayer } from "@recrest/shared";
@@ -16,8 +16,8 @@ import GeneralIconButton, {
   IconButtonTone,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import {
-  FieldLabel,
-  SourceBadge,
+  LayerChip,
+  LayerChipText,
 } from "@/components/molecules/gitConfig/LayeredField/GitConfigStyles";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -31,13 +31,18 @@ import {
   CustomTable,
   InlineAddForm,
   InlineErrorText,
-  SectionCard,
-  SectionTitle,
 } from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 const CustomRowFour = styled(CustomRow)({
-  gridTemplateColumns: "minmax(160px, 1fr) minmax(160px, 2fr) auto auto",
+  gridTemplateColumns: "minmax(140px, 1fr) minmax(220px, 2.2fr) auto auto",
 }) as typeof CustomRow;
+
+const ErrorText = styled(Typography)(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.error.main,
+  paddingTop: 4,
+})) as typeof Typography;
 
 export interface CustomKeysListProps {
   entries: ReadonlyArray<[string, GitConfigEntry]>;
@@ -84,11 +89,11 @@ function CustomRowItem({ rowKey, entry, onSave, onRemove, removeLabel }: RowProp
           htmlInput: { "data-testid": TEST_IDS.gitConfigSettings.field(rowKey) },
         }}
       />
-      <SourceBadge>
-        <FileText size={11} aria-hidden />
-        {basename(entry.sourcePath)}
-      </SourceBadge>
-      <CustomRowActions className="row-actions">
+      <LayerChip title={entry.sourcePath}>
+        <FileText size={12} aria-hidden />
+        <LayerChipText>{basename(entry.sourcePath)}</LayerChipText>
+      </LayerChip>
+      <CustomRowActions>
         <GeneralIconButton
           icon={<Trash2 size={ICON_BUTTON_ICON_SIZES[IconButtonSize.SM]} />}
           size={IconButtonSize.SM}
@@ -150,9 +155,10 @@ export default function CustomKeysList({ entries, writableLayers, onSave }: Cust
   };
 
   return (
-    <SectionCard data-testid={TEST_IDS.gitConfigSettings.customKeysList}>
-      <SectionTitle component="h3">{t("settings.git.custom_keys_title")}</SectionTitle>
-
+    <SettingsSection
+      title={t("settings.git.custom_keys_title")}
+      testId={TEST_IDS.gitConfigSettings.customKeysList}
+    >
       <CustomTable>
         {entries.length === 0 && !adding && (
           <CustomEmpty>{t("settings.git.custom_keys_empty")}</CustomEmpty>
@@ -204,23 +210,22 @@ export default function CustomKeysList({ entries, writableLayers, onSave }: Cust
             </TextField>
             <AddFormActions>
               <GeneralButton
-                size="sm"
-                variant="default"
-                onClick={() => void submitAdd()}
-                loading={submitting}
-                disabled={!draft.key.trim() || !draft.filePath}
-                data-testid={TEST_IDS.gitConfigSettings.customKeyAddSubmit}
-              >
-                {t("settings.git.save")}
-              </GeneralButton>
-              <GeneralButton
-                size="sm"
                 variant="ghost"
                 onClick={cancelAdd}
                 disabled={submitting}
                 data-testid={TEST_IDS.gitConfigSettings.customKeyAddCancel}
               >
                 {t("settings.git.cancel")}
+              </GeneralButton>
+              <GeneralButton
+                variant="default"
+                startIcon={<Plus size={14} />}
+                onClick={() => void submitAdd()}
+                loading={submitting}
+                disabled={!draft.key.trim() || !draft.filePath}
+                data-testid={TEST_IDS.gitConfigSettings.customKeyAddSubmit}
+              >
+                {t("settings.git.add_custom_key")}
               </GeneralButton>
             </AddFormActions>
             {error && <InlineErrorText>{error}</InlineErrorText>}
@@ -242,7 +247,7 @@ export default function CustomKeysList({ entries, writableLayers, onSave }: Cust
         </CustomFooter>
       )}
 
-      {error && !adding && <FieldLabel>{error}</FieldLabel>}
-    </SectionCard>
+      {error && !adding && <ErrorText>{error}</ErrorText>}
+    </SettingsSection>
   );
 }

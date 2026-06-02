@@ -2,26 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import {
-  Box,
-  Checkbox,
-  FormControlLabel,
-  Menu,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Checkbox, FormControlLabel, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import type { GitConfigLayer } from "@recrest/shared";
 
-import { AlertTriangle, FolderOpen, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralIconButton, {
   ICON_BUTTON_ICON_SIZES,
   IconButtonSize,
+  IconButtonTone,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import AddGitConfigIncludeModal from "@/components/molecules/modals/AddGitConfigIncludeModal";
@@ -29,10 +22,7 @@ import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { revealPathInSystem } from "@/lib/tauri";
-import {
-  SectionCard,
-  SectionTitle,
-} from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import {
   addGitConfigInclude,
   removeGitConfigInclude,
@@ -44,7 +34,9 @@ const Empty = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.information,
   fontStyle: "italic",
-  padding: "8px 0",
+  padding: "10px 14px",
+  border: `1px dashed ${theme.palette.divider}`,
+  borderRadius: 8,
 })) as typeof Typography;
 
 interface RowProps {
@@ -56,26 +48,28 @@ const Row = styled(Box, {
 })<RowProps>(({ theme, $inactive }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
-  padding: 12,
+  gap: 10,
+  padding: "12px 14px",
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  background: theme.palette.background.paper,
-  opacity: $inactive ? 0.6 : 1,
+  background: theme.palette.surface.interface.base,
+  opacity: $inactive ? 0.65 : 1,
 }));
 
 const RowHeader = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: 10,
   justifyContent: "space-between",
+  minWidth: 0,
+  flexWrap: "wrap",
 }) as typeof Box;
 
 const RowHeaderLeft = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 8,
-  flex: 1,
+  flex: "1 1 280px",
   minWidth: 0,
 }) as typeof Box;
 
@@ -85,12 +79,15 @@ const ConditionChip = styled(Box)(({ theme }) => ({
   gap: 4,
   padding: "2px 8px",
   borderRadius: 999,
-  background: theme.palette.surface.interface.base,
+  background: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 11,
   color: theme.palette.text.information,
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
   whiteSpace: "nowrap",
+  maxWidth: "100%",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 })) as typeof Box;
 
 interface PathProps {
@@ -109,7 +106,7 @@ const PathText = styled(Typography, {
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  flex: 1,
+  flex: "1 1 auto",
   minWidth: 0,
   "&:hover": $clickable
     ? {
@@ -121,21 +118,33 @@ const PathText = styled(Typography, {
 
 const QuickRow = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "minmax(180px, 1fr) minmax(220px, 2fr)",
-  gap: 8,
+  gridTemplateColumns: "minmax(180px, 1fr) minmax(220px, 1.4fr)",
+  gap: 10,
+  "@media (max-width: 900px)": {
+    gridTemplateColumns: "1fr",
+  },
 }) as typeof Box;
 
 const RowActions = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 4,
+  flex: "0 0 auto",
 }) as typeof Box;
 
-const Markers = styled(Box)({
+const InactivePill = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-}) as typeof Box;
+  padding: "2px 8px",
+  borderRadius: 999,
+  border: `1px solid ${theme.palette.divider}`,
+  fontSize: 10.5,
+  color: theme.palette.text.information,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  fontWeight: 600,
+  background: theme.palette.surface.interface.backElevation,
+})) as typeof Box;
 
 const MissingIcon = styled(Box)(({ theme }) => ({
   display: "inline-flex",
@@ -163,7 +172,6 @@ const Footer = styled(Box)({
 
 export interface IncludeManagerProps {
   layers: GitConfigLayer[];
-  /** Path to the unconditional root config file the include is recorded in. */
   rootConfigFile: string;
   onRefresh: () => Promise<void>;
 }
@@ -184,11 +192,22 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
   const { t } = useTranslation(I18nNamespace.COMMON);
   const dispatch = useAppDispatch();
 
-  const includeLayers = useMemo(() => layers.filter((l) => l.condition !== null), [layers]);
+  // The row key is `${path}::${condition}` so two distinct gitdir patterns
+  // pointing at the same identity file each render as their own row. Defend
+  // against literal-duplicate (path, condition) pairs the backend could
+  // theoretically return — they would collide on key + confuse the remove
+  // flow.
+  const includeLayers = useMemo(() => {
+    const seen = new Set<string>();
+    return layers.filter((l) => {
+      if (l.condition === null) return false;
+      const key = `${l.path}::${l.condition}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [layers]);
 
-  // Per-layer `user.name` / `user.email` drives the quick-edit row inputs.
-  // Reading directly from each layer's own `entries` (not the merged origins
-  // map) means overlapping keys on multiple layers each show their own value.
   const initialDraftsByPath = useMemo(() => {
     const out: Record<string, QuickDraft> = {};
     for (const layer of includeLayers) {
@@ -206,18 +225,11 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
     setDrafts(initialDraftsByPath);
   }, [initialDraftsByPath]);
 
-  const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement; layer: GitConfigLayer } | null>(
-    null,
-  );
   const [addOpen, setAddOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<GitConfigLayer | null>(null);
   const [removeDeleteFile, setRemoveDeleteFile] = useState(false);
   const [removeBusy, setRemoveBusy] = useState(false);
 
-  const closeMenu = () => setMenuAnchor(null);
-
-  // Latest-draft ref so the blur handler reads the in-flight value even when
-  // multiple fields are edited in quick succession.
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
 
@@ -245,13 +257,11 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
   };
 
   const reveal = async (layer: GitConfigLayer) => {
-    closeMenu();
     if (!layer.exists) return;
     await revealPathInSystem(layer.path);
   };
 
   const openRemove = (layer: GitConfigLayer) => {
-    closeMenu();
     setRemoveDeleteFile(false);
     setRemoveTarget(layer);
   };
@@ -296,9 +306,10 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
   const homeDir = deriveHomeDir(rootConfigFile);
 
   return (
-    <SectionCard data-testid={TEST_IDS.gitConfigSettings.includeManager.root}>
-      <SectionTitle component="h3">{t("settings.git.identities_title")}</SectionTitle>
-
+    <SettingsSection
+      title={t("settings.git.identities_title")}
+      testId={TEST_IDS.gitConfigSettings.includeManager.root}
+    >
       {includeLayers.length === 0 && (
         <Empty data-testid={TEST_IDS.gitConfigSettings.includeManager.empty}>
           {t("settings.git.identities_empty")}
@@ -324,29 +335,44 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
                 >
                   {layer.path}
                 </PathText>
-                <Markers>
-                  {!layer.active && (
-                    <GeneralTooltip title={t("settings.git.include_inactive")} placement="top">
-                      <ConditionChip>{t("settings.git.include_inactive")}</ConditionChip>
-                    </GeneralTooltip>
-                  )}
-                  {!layer.exists && (
-                    <GeneralTooltip title={t("settings.git.include_missing_file")} placement="top">
-                      <MissingIcon>
-                        <AlertTriangle size={13} color="currentColor" />
-                      </MissingIcon>
-                    </GeneralTooltip>
-                  )}
-                </Markers>
+                {!layer.active && (
+                  <GeneralTooltip title={t("settings.git.include_inactive")} placement="top">
+                    <InactivePill>{t("settings.git.include_inactive")}</InactivePill>
+                  </GeneralTooltip>
+                )}
+                {!layer.exists && (
+                  <GeneralTooltip title={t("settings.git.include_missing_file")} placement="top">
+                    <MissingIcon>
+                      <AlertTriangle size={14} color="currentColor" />
+                    </MissingIcon>
+                  </GeneralTooltip>
+                )}
               </RowHeaderLeft>
               <RowActions>
-                <GeneralIconButton
-                  icon={<MoreHorizontal size={ICON_BUTTON_ICON_SIZES[IconButtonSize.SM]} />}
-                  size={IconButtonSize.SM}
-                  aria-label={t("settings.git.edit")}
-                  onClick={(e) => setMenuAnchor({ el: e.currentTarget, layer })}
-                  data-testid={TEST_IDS.gitConfigSettings.includeManager.rowMenu(condition)}
-                />
+                <GeneralTooltip title={t("settings.git.include_reveal")} placement="top">
+                  <Box component="span">
+                    <GeneralIconButton
+                      icon={<FolderOpen size={ICON_BUTTON_ICON_SIZES[IconButtonSize.SM]} />}
+                      size={IconButtonSize.SM}
+                      aria-label={t("settings.git.include_reveal")}
+                      disabled={!layer.exists}
+                      onClick={() => void reveal(layer)}
+                      data-testid={TEST_IDS.gitConfigSettings.includeManager.rowReveal(condition)}
+                    />
+                  </Box>
+                </GeneralTooltip>
+                <GeneralTooltip title={t("settings.git.remove")} placement="top">
+                  <Box component="span">
+                    <GeneralIconButton
+                      icon={<Trash2 size={ICON_BUTTON_ICON_SIZES[IconButtonSize.SM]} />}
+                      size={IconButtonSize.SM}
+                      tone={IconButtonTone.DANGER}
+                      aria-label={t("settings.git.remove")}
+                      onClick={() => openRemove(layer)}
+                      data-testid={TEST_IDS.gitConfigSettings.includeManager.rowRemove(condition)}
+                    />
+                  </Box>
+                </GeneralTooltip>
               </RowActions>
             </RowHeader>
 
@@ -395,32 +421,6 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
           {t("settings.git.add_identity")}
         </GeneralButton>
       </Footer>
-
-      <Menu open={menuAnchor !== null} anchorEl={menuAnchor?.el ?? null} onClose={closeMenu}>
-        {menuAnchor && [
-          <MenuItem
-            key="reveal"
-            disabled={!menuAnchor.layer.exists}
-            onClick={() => void reveal(menuAnchor.layer)}
-            data-testid={TEST_IDS.gitConfigSettings.includeManager.rowReveal(
-              menuAnchor.layer.condition ?? "",
-            )}
-          >
-            <FolderOpen size={14} style={{ marginRight: 8 }} />
-            {t("settings.git.include_reveal")}
-          </MenuItem>,
-          <MenuItem
-            key="remove"
-            onClick={() => openRemove(menuAnchor.layer)}
-            data-testid={TEST_IDS.gitConfigSettings.includeManager.rowRemove(
-              menuAnchor.layer.condition ?? "",
-            )}
-          >
-            <Trash2 size={14} style={{ marginRight: 8 }} />
-            {t("settings.git.remove")}
-          </MenuItem>,
-        ]}
-      </Menu>
 
       <AddGitConfigIncludeModal
         open={addOpen}
@@ -486,6 +486,6 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
           </>
         }
       />
-    </SectionCard>
+    </SettingsSection>
   );
 }

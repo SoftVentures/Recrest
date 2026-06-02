@@ -6,10 +6,7 @@ import LayeredField from "@/components/molecules/gitConfig/LayeredField";
 import { GIT_CONFIG_SECTIONS, type GitConfigSectionSpec } from "@/lib/constants/gitConfigSchema";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import {
-  SectionCard,
-  SectionTitle,
-} from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 const EXCLUDED_SECTION_IDS = new Set<GitConfigSectionSpec["id"]>([
   "aliases",
@@ -30,11 +27,11 @@ export default function SectionList({ origins, writableLayers, onSaveField }: Se
   return (
     <>
       {sections.map((section) => (
-        <SectionCard
+        <SettingsSection
           key={section.id}
-          data-testid={TEST_IDS.gitConfigSettings.sectionCard(section.id)}
+          title={t(section.titleKey)}
+          testId={TEST_IDS.gitConfigSettings.sectionCard(section.id)}
         >
-          <SectionTitle component="h3">{t(section.titleKey)}</SectionTitle>
           {section.fields.map((field) => (
             <LayeredField
               key={field.key}
@@ -44,7 +41,7 @@ export default function SectionList({ origins, writableLayers, onSaveField }: Se
               onSave={(filePath, value) => onSaveField(filePath, field.key, value)}
             />
           ))}
-        </SectionCard>
+        </SettingsSection>
       ))}
     </>
   );

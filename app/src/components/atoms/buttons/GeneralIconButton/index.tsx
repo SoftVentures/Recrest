@@ -1,5 +1,6 @@
 import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from "react";
 
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
@@ -204,7 +205,9 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
     // pointer events bubble to a non-disabled element. Skip the wrapper otherwise to
     // keep the DOM clean in the common, enabled case.
     const trigger = rest.disabled ? (
-      <span style={{ display: "inline-flex" }}>{button}</span>
+      <Box component="span" style={{ display: "inline-flex" }}>
+        {button}
+      </Box>
     ) : (
       button
     );

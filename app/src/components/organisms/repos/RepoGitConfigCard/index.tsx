@@ -139,7 +139,19 @@ export default function RepoGitConfigCard({ repoId }: RepoGitConfigCardProps) {
     void refresh();
   }, [refresh]);
 
-  const writableLayers = useMemo(() => layers.filter((l) => l.active && l.exists), [layers]);
+  // Dedupe by `path` — `~/.gitconfig` can route multiple [includeIf] gitdir
+  // patterns to the same identity file, which yields multiple GitConfigLayer
+  // entries sharing one path. The layer/select pickers and the chain display
+  // both use `path` as a React key, so duplicates fire dup-key warnings.
+  const writableLayers = useMemo(() => {
+    const seen = new Set<string>();
+    return layers.filter((l) => {
+      if (!l.active || !l.exists) return false;
+      if (seen.has(l.path)) return false;
+      seen.add(l.path);
+      return true;
+    });
+  }, [layers]);
 
   const saveField = useCallback(
     async (filePath: string, key: string, value: string) => {
