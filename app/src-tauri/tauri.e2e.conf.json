@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Recrest E2E",
+  "identifier": "eu.softventures.recrest.e2e",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Recrest E2E",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 720,
+        "center": true,
+        "resizable": true,
+        "decorations": true,
+        "dragDropEnabled": false,
+        "acceptFirstMouse": true
+      }
+    ],
+    "security": {
+      "capabilities": [
+        "default",
+        {
+          "identifier": "e2e",
+          "description": "Plan-8 capability granting devtools access in the E2E build. Inert in release builds because the `devtools` Cargo feature is gated to debug profiles. Inlined here so capability auto-discovery never picks it up for production.",
+          "windows": ["main"],
+          "permissions": ["core:webview:allow-internal-toggle-devtools"]
+        }
+      ]
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["recrest-e2e"]
+      }
+    },
+    "updater": {
+      "active": false,
+      "pubkey": "",
+      "endpoints": [],
+      "dialog": false
+    }
+  },
+  "bundle": {
+    "active": false,
+    "createUpdaterArtifacts": false
+  }
+}

@@ -149,6 +149,12 @@ impl ConfigStore {
 }
 
 fn config_dir(app: &AppHandle) -> anyhow::Result<PathBuf> {
+    // Plan-8 E2E harness: when running under `RECREST_TEST_PROFILE`, redirect
+    // settings.json into an isolated tmpdir so the test can't corrupt the
+    // user's real `~/Library/Application Support/eu.softventures.recrest/`.
+    if let Some(root) = crate::identity::test_profile_root() {
+        return Ok(root);
+    }
     app.path()
         .app_config_dir()
         .map_err(|e| anyhow::anyhow!("could not resolve config dir: {e}"))

@@ -322,6 +322,9 @@ fn expand_home(p: &Path) -> std::borrow::Cow<'_, Path> {
 }
 
 fn global_config_path() -> Result<PathBuf, CommandError> {
+    if let Some(root) = crate::identity::test_profile_root() {
+        return Ok(root.join(".gitconfig"));
+    }
     dirs::home_dir()
         .map(|h| h.join(".gitconfig"))
         .ok_or_else(|| CommandError::internal("no home dir".to_string()))

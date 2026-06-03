@@ -503,7 +503,13 @@ pub fn run() {
             // way to resolve `app_data_dir` portably.
             #[cfg(debug_assertions)]
             {
-                if let Ok(dir) = handle.path().app_data_dir() {
+                // Plan-8 E2E harness: `RECREST_TEST_PROFILE` redirects the
+                // dev-tokens file into a tmpdir so test PATs never land in
+                // the user's real app-data dir.
+                let token_dir = identity::test_profile_root()
+                    .or_else(|| handle.path().app_data_dir().ok());
+                if let Some(dir) = token_dir {
+                    let _ = std::fs::create_dir_all(&dir);
                     auth::token::init_file_backend_path(dir.join("dev-tokens.json"));
                 }
                 // One-time migration of pre-existing dev tokens out of the

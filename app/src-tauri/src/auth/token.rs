@@ -553,4 +553,39 @@ mod tests {
             & 0o777;
         assert_eq!(mode, 0o600, "dev-tokens.json must be 0600");
     }
+
+    /// Plan-8 cross-language schema fixture: the TS `injectTokens()` helper
+    /// (tests/src/helpers/tokenInjection.ts) writes a `dev-tokens.json` of
+    /// the exact shape captured at tests/fixtures/tokens/sample-dev-tokens.json.
+    /// This test loads that fixture verbatim and asserts every provider
+    /// token comes back through `FileBackend`. If the JSON shape ever drifts
+    /// between TS writer and Rust reader, this test fails and forces the
+    /// fixture (and both implementations) into sync.
+    #[test]
+    fn file_backend_loads_cross_language_fixture() {
+        let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("tests")
+            .join("fixtures")
+            .join("tokens")
+            .join("sample-dev-tokens.json");
+        assert!(
+            fixture.exists(),
+            "fixture missing — TS helper and Rust reader must stay pinned: {fixture:?}"
+        );
+        let backend = FileBackend::new(fixture);
+        assert_eq!(
+            backend.read("github").unwrap().as_deref(),
+            Some("ghp_test_token_for_e2e_only")
+        );
+        assert_eq!(
+            backend.read("gitlab").unwrap().as_deref(),
+            Some("glpat_test_token_for_e2e_only")
+        );
+        assert_eq!(
+            backend.read("bitbucket").unwrap().as_deref(),
+            Some("bb_test_token_for_e2e_only")
+        );
+    }
 }

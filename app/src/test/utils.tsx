@@ -9,7 +9,7 @@ import { ThemeProvider } from "@mui/material/styles";
 
 import { type Store, configureStore } from "@reduxjs/toolkit";
 
-import { render } from "@testing-library/react";
+import { type RenderResult, render } from "@testing-library/react";
 
 import { type ThemeId } from "@/lib/constants/theme.constants";
 import i18n from "@/locales";
@@ -73,7 +73,7 @@ export function renderWithTheme(ui: React.ReactElement, opts?: { themeId?: Theme
 export function renderWithProviders(
   ui: React.ReactElement,
   opts?: { themeId?: ThemeId; route?: string; store?: Store<RootState> },
-) {
+): RenderResult & { store: Store<RootState> } {
   const store = opts?.store ?? makeTestStore();
   const theme = getTheme(opts?.themeId ?? "light");
   const result = render(

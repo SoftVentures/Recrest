@@ -49,7 +49,13 @@ impl BitbucketProvider {
         }
     }
 
+    /// Effective API base URL. See `github::api_base` for the layering
+    /// rationale — the Plan-8 E2E env-var (`RECREST_PROVIDER_BASE_URLS`)
+    /// wins over any user-configured override.
     fn api_base(&self) -> String {
+        if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
+            return url;
+        }
         self.base_url_override
             .read()
             .ok()

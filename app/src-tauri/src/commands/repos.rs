@@ -395,6 +395,9 @@ pub async fn load_logo_bytes(
 const UPLOAD_EXTENSIONS: &[&str] = &["svg", "png", "webp", "jpg", "jpeg", "gif"];
 
 fn custom_logo_dir(app: &AppHandle) -> Result<PathBuf, CommandError> {
+    if let Some(root) = crate::identity::test_profile_root() {
+        return Ok(root.join("repo-logos"));
+    }
     let base = app
         .path()
         .app_data_dir()

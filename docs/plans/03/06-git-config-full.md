@@ -1150,7 +1150,7 @@ Component test: provide a mocked store where the repo's path matches an `include
 - [x] `yarn typecheck && yarn lint && yarn test` green.
 - [x] Playwright-MCP live check on the maintainer's real machine: load the Git config tab with the existing `~/.gitconfig` (pure `includeIf` manifest); the Identity field shows the value sourced from `~/.gitconfig-private` (or matching include), with the source badge visible. Editing `user.name` and picking `~/.gitconfig-private` as the write target persists to that file (`grep "name = " ~/.gitconfig-private` shows the change).
 - [x] Add a new identity (`gitdir:~/tmp/scratch/`) via the UI → `cat ~/.gitconfig` confirms the `[includeIf]` block is present + the target file exists with `[user]`. Remove → block stripped, optional target deletion honored.
-- [x] `yarn test:e2e` covers: open Settings → Git config → add identity → remove identity flow. _(automated coverage delivered by Plan 8 — Task 12 / E.6.)_
+- [ ] `yarn test:e2e` covers: open Settings → Git config → add identity → remove identity flow. _(Plan 8 ships the harness; the spec is scaffolded as `.skip` in `tests/src/e2e-tauri/git-config.spec.ts` pending dynamic-testid wiring — see file header for the concrete unblock list.)_
 - [x] Manual sanity: an existing repo under `~/Developer/private/...` shows the same effective `user.email` in Recrest as `git -C <repo> config user.email` from the shell. (Plan-3 C.3's whitelist made this comparison meaningless — now it must match.)
 
 ---

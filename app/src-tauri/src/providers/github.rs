@@ -52,9 +52,16 @@ impl GithubProvider {
         }
     }
 
-    /// Effective API base URL: the user override (e.g. GitHub Enterprise) if
-    /// set, otherwise the public cloud endpoint.
+    /// Effective API base URL. Layering, highest-to-lowest:
+    ///   1. `RECREST_PROVIDER_BASE_URLS` env (Plan-8 E2E harness) — wins over
+    ///      everything so a test can point at its mock server even if the user
+    ///      has a self-hosted override configured.
+    ///   2. `set_base_url` runtime override (self-hosted GitHub Enterprise).
+    ///   3. `API_BASE` cloud default.
     fn api_base(&self) -> String {
+        if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
+            return url;
+        }
         self.base_url_override
             .read()
             .ok()
