@@ -83,7 +83,7 @@
       "merging": "Merging…",
       "merge_failed": "Merge failed",
       "merged_ok": "Merged",
-      "provider_note": "Strategy is applied locally via git2. Provider-side merge (squash/rebase through the host's API) is tracked in plan 03/07 — not yet implemented.",
+      "provider_unsupported_rebase": "Bitbucket Cloud does not support rebase merges via its API — pick Merge or Squash.",
       "delete_branch_label": "Delete source branch after merge",
       "delete_branch_hint": "Deletes the local '{{source}}' branch once the merge succeeds.",
       "branch_deleted_ok": "Deleted branch '{{source}}'",

@@ -6,9 +6,9 @@ use serde::Deserialize;
 
 use super::api::{
     CiStatus, CommentDto, CommentPosition, CommentSide, FileChangeDto, FileChangeStatus,
-    FileDiffDto, OrganizationDto, PagesStatusDto, PrState, PullRequestDetailDto, PullRequestDto,
-    RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto, WorkflowInputs,
-    WorkflowRunDto,
+    FileDiffDto, MergePullRequestInput, MergePullRequestResult, MergeStrategy, OrganizationDto,
+    PagesStatusDto, PrState, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto,
+    ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto, WorkflowInputs, WorkflowRunDto,
 };
 use super::diff_parse::parse_hunks;
 use super::r#trait::GitProvider;
@@ -665,6 +665,176 @@ impl GitProvider for GitlabProvider {
             custom_domain,
         }))
     }
+
+    async fn merge_pull_request(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        input: MergePullRequestInput,
+    ) -> Result<MergePullRequestResult, CommandError> {
+        let token = self.require_token().await?;
+        let project_path = parse_project_path(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse GitLab project from remote")
+        })?;
+        let encoded = urlencoding::encode(&project_path);
+        let base = self.api_base();
+        let mr_path = format!("{base}/projects/{encoded}/merge_requests/{pr_number}");
+
+        if input.strategy == MergeStrategy::Rebase {
+            let rebase_url = format!("{mr_path}/rebase");
+            let res = self
+                .http
+                .put(&rebase_url)
+                .header("PRIVATE-TOKEN", &token)
+                .send()
+                .await?;
+            if !res.status().is_success() {
+                return Err(CommandError::bad_request(format!(
+                    "gitlab rebase trigger: {}",
+                    res.status()
+                )));
+            }
+
+            let mut rebase_ready = false;
+            for _ in 0..30 {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                let poll: GlMrPoll = gl_json(&self.http, &token, &mr_path).await?;
+                if poll.rebase_in_progress.unwrap_or(false) {
+                    continue;
+                }
+                if let Some(err) = poll.merge_error.filter(|s| !s.is_empty()) {
+                    return Err(CommandError::bad_request(format!("gitlab rebase: {err}")));
+                }
+                if poll
+                    .merge_status
+                    .as_deref()
+                    .map(|s| s == "can_be_merged" || s == "mergeable")
+                    .unwrap_or(false)
+                {
+                    rebase_ready = true;
+                    break;
+                }
+            }
+            if !rebase_ready {
+                return Err(CommandError::bad_request(
+                    "GitLab rebase did not finish within 30s — try again or switch to squash.",
+                ));
+            }
+        }
+
+        let combined_message = match (
+            input.commit_title.as_ref().filter(|s| !s.is_empty()),
+            input.commit_message.as_ref().filter(|s| !s.is_empty()),
+        ) {
+            (Some(title), Some(body)) => Some(format!("{title}\n\n{body}")),
+            (Some(title), None) => Some(title.clone()),
+            (None, Some(body)) => Some(body.clone()),
+            (None, None) => None,
+        };
+
+        let mut body = serde_json::Map::new();
+        body.insert(
+            "squash".into(),
+            serde_json::Value::Bool(matches!(input.strategy, MergeStrategy::Squash)),
+        );
+        body.insert(
+            "should_remove_source_branch".into(),
+            serde_json::Value::Bool(input.delete_source_branch),
+        );
+        if let Some(msg) = combined_message {
+            let field = if matches!(input.strategy, MergeStrategy::Squash) {
+                "squash_commit_message"
+            } else {
+                "merge_commit_message"
+            };
+            body.insert(field.into(), serde_json::Value::String(msg));
+        }
+
+        let merge_url = format!("{mr_path}/merge");
+        let res = self
+            .http
+            .put(&merge_url)
+            .header("PRIVATE-TOKEN", &token)
+            .json(&serde_json::Value::Object(body))
+            .send()
+            .await?;
+        let status = res.status();
+        if status == reqwest::StatusCode::METHOD_NOT_ALLOWED
+            || status == reqwest::StatusCode::NOT_ACCEPTABLE
+        {
+            let msg = extract_gitlab_message(res).await;
+            return Err(CommandError::bad_request(msg.unwrap_or_else(|| {
+                "GitLab refused the merge — MR is not in a mergeable state.".into()
+            })));
+        }
+        if !status.is_success() {
+            return Err(CommandError::internal(format!(
+                "gitlab merge: {status} ({merge_url})"
+            )));
+        }
+
+        let merged: GlMrMerged = res.json().await?;
+        let merge_succeeded = merged.state.as_deref() == Some("merged");
+
+        // GitLab's `should_remove_source_branch: true` is best-effort — for
+        // protected branches the merge succeeds but the branch survives. Verify
+        // by querying the branch endpoint; 404 means the delete landed.
+        let mut source_branch_deleted = false;
+        if merge_succeeded && input.delete_source_branch {
+            if let Some(branch) = merged.source_branch.as_deref().filter(|s| !s.is_empty()) {
+                let branch_enc = urlencoding::encode(branch);
+                let check_url = format!(
+                    "{base}/projects/{encoded}/repository/branches/{branch_enc}"
+                );
+                let check = self
+                    .http
+                    .get(&check_url)
+                    .header("PRIVATE-TOKEN", &token)
+                    .send()
+                    .await?;
+                source_branch_deleted = check.status() == reqwest::StatusCode::NOT_FOUND;
+            }
+        }
+
+        Ok(MergePullRequestResult {
+            merged: merge_succeeded,
+            merge_sha: merged.merge_commit_sha.or(merged.sha),
+            source_branch_deleted,
+            message: None,
+        })
+    }
+}
+
+async fn extract_gitlab_message(res: reqwest::Response) -> Option<String> {
+    let raw: serde_json::Value = res.json().await.ok()?;
+    raw.get("message")
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+        .or_else(|| {
+            raw.get("error")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+        })
+}
+
+#[derive(serde::Deserialize)]
+struct GlMrPoll {
+    #[serde(default)]
+    rebase_in_progress: Option<bool>,
+    #[serde(default)]
+    merge_status: Option<String>,
+    #[serde(default)]
+    merge_error: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct GlMrMerged {
+    #[serde(default)]
+    state: Option<String>,
+    #[serde(default)]
+    merge_commit_sha: Option<String>,
+    #[serde(default)]
+    sha: Option<String>,
+    #[serde(default)]
+    source_branch: Option<String>,
 }
 
 fn map_pipeline_run(p: GlPipelineRun) -> WorkflowRunDto {
@@ -1264,5 +1434,182 @@ mod tests {
             prs[0].author_avatar_url.as_deref(),
             Some("https://gitlab.example/uploads/ada.png")
         );
+    }
+
+    #[tokio::test]
+    async fn gitlab_merge_mr_squash_with_branch_delete() {
+        use wiremock::matchers::{body_string_contains, path};
+        let server = MockServer::start().await;
+
+        Mock::given(method("PUT"))
+            .and(path("/projects/group%2Fproj/merge_requests/5/merge"))
+            .and(body_string_contains("\"squash\":true"))
+            .and(body_string_contains("\"should_remove_source_branch\":true"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "state": "merged",
+                "merge_commit_sha": "abc123",
+                "source_branch": "feature-y"
+            })))
+            .mount(&server)
+            .await;
+
+        // Branch existence GET after merge — 404 means the source branch was
+        // actually removed. The provider only sets `source_branch_deleted: true`
+        // when this verification confirms the deletion.
+        Mock::given(method("GET"))
+            .and(path("/projects/group%2Fproj/repository/branches/feature-y"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let result = provider
+            .merge_pull_request(
+                "https://gitlab.com/group/proj",
+                5,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Squash,
+                    commit_title: None,
+                    commit_message: Some("squash msg".into()),
+                    delete_source_branch: true,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(result.merged);
+        assert_eq!(result.merge_sha.as_deref(), Some("abc123"));
+        assert!(result.source_branch_deleted);
+    }
+
+    #[tokio::test]
+    async fn gitlab_merge_mr_protected_branch_reports_not_deleted() {
+        use wiremock::matchers::{body_string_contains, path};
+        let server = MockServer::start().await;
+
+        Mock::given(method("PUT"))
+            .and(path("/projects/group%2Fproj/merge_requests/6/merge"))
+            .and(body_string_contains("\"should_remove_source_branch\":true"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "state": "merged",
+                "merge_commit_sha": "feedcab",
+                "source_branch": "release/protected"
+            })))
+            .mount(&server)
+            .await;
+
+        // 200 means the branch still exists — protected branch refused delete.
+        Mock::given(method("GET"))
+            .and(path(
+                "/projects/group%2Fproj/repository/branches/release%2Fprotected",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "name": "release/protected"
+            })))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let result = provider
+            .merge_pull_request(
+                "https://gitlab.com/group/proj",
+                6,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Merge,
+                    commit_title: None,
+                    commit_message: None,
+                    delete_source_branch: true,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(result.merged);
+        assert!(!result.source_branch_deleted);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gitlab_merge_rebase_timeout_surfaces_error() {
+        use wiremock::matchers::path;
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/projects/group%2Fproj/merge_requests/8/rebase"))
+            .respond_with(ResponseTemplate::new(202).set_body_json(serde_json::json!({})))
+            .mount(&server)
+            .await;
+        // Stuck mid-rebase forever — every poll claims rebase_in_progress=false
+        // but merge_status="checking", which is the silent-fallthrough trap
+        // the timeout sentinel guards against.
+        Mock::given(method("GET"))
+            .and(path("/projects/group%2Fproj/merge_requests/8"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "rebase_in_progress": false,
+                "merge_status": "checking"
+            })))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let err = provider
+            .merge_pull_request(
+                "https://gitlab.com/group/proj",
+                8,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Rebase,
+                    commit_title: None,
+                    commit_message: None,
+                    delete_source_branch: false,
+                },
+            )
+            .await
+            .unwrap_err();
+        let serialized = serde_json::to_string(&err).unwrap();
+        assert!(serialized.contains("rebase"), "{serialized}");
+    }
+
+    #[tokio::test]
+    async fn gitlab_merge_mr_rebase_polls_then_merges() {
+        use wiremock::matchers::{body_string_contains, path};
+        let server = MockServer::start().await;
+
+        Mock::given(method("PUT"))
+            .and(path("/projects/group%2Fproj/merge_requests/7/rebase"))
+            .respond_with(ResponseTemplate::new(202).set_body_json(serde_json::json!({})))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/projects/group%2Fproj/merge_requests/7"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "rebase_in_progress": false,
+                "merge_status": "can_be_merged"
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("PUT"))
+            .and(path("/projects/group%2Fproj/merge_requests/7/merge"))
+            .and(body_string_contains("\"squash\":false"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "state": "merged",
+                "merge_commit_sha": "deadbeef"
+            })))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let result = provider
+            .merge_pull_request(
+                "https://gitlab.com/group/proj",
+                7,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Rebase,
+                    commit_title: None,
+                    commit_message: None,
+                    delete_source_branch: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(result.merged);
+        assert_eq!(result.merge_sha.as_deref(), Some("deadbeef"));
     }
 }

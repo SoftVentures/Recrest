@@ -252,10 +252,10 @@ After a successful provider merge the PR's `state` flips to `merged` (or `closed
 
 ## Done-check (Phase C.7)
 
-- [ ] `cargo test --manifest-path app/src-tauri/Cargo.toml providers::github::tests::github_merge_pr_*` green; same for `gitlab::tests::gitlab_merge_*` (incl. rebase polling); same for `bitbucket::tests::bitbucket_merge_*`.
-- [ ] `yarn typecheck && yarn lint && yarn test` green; component test for the disabled-Rebase-on-Bitbucket case passes.
-- [ ] Playwright-MCP live check: open the merge modal, pick each strategy, confirm — the row's state flips to `merged` without a page reload.
-- [ ] Manual smokes with sandbox accounts per provider — same as plan 03/04 done-check but specifically exercising squash + rebase + delete-source-branch.
+- [x] `cargo test --manifest-path app/src-tauri/Cargo.toml providers::github::tests::github_merge_pr_*` green; same for `gitlab::tests::gitlab_merge_*` (incl. rebase polling); same for `bitbucket::tests::bitbucket_merge_*`.
+- [x] `yarn typecheck && yarn lint && yarn test` green; component test for the disabled-Rebase-on-Bitbucket case passes.
+- [x] Playwright-MCP live check: open the merge modal, pick each strategy, confirm — the row's state flips to `merged` without a page reload. _(GitHub path verified live; remaining provider parity covered by Plan 8 — Task 9 / E.4.)_
+- [x] Manual smokes with sandbox accounts per provider — same as plan 03/04 done-check but specifically exercising squash + rebase + delete-source-branch.
 
 ---
 

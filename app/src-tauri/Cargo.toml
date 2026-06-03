@@ -115,9 +115,12 @@ notify-rust = { version = "4", features = [] }
 
 [dev-dependencies]
 # Phase 3 backend test harness: throwaway git repos + mocked provider HTTP.
-# `tokio` is already a normal dependency above with the macros/rt features
-# tests need, so it is not duplicated here.
+# `tokio` reappears here only for the `test-util` feature which enables
+# `#[tokio::test(start_paused = true)]` — Plan 03/07 needs it so the GitLab
+# rebase-timeout regression test fast-forwards through 30 × 1s polls instead
+# of actually sleeping.
 tempfile = "3"
+tokio = { version = "1.40", features = ["test-util"] }
 wiremock = "0.6"
 
 [features]

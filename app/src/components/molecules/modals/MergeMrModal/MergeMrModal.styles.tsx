@@ -26,8 +26,8 @@ export const StrategyList = styled(Box)({
 
 // eslint-disable-next-line no-restricted-syntax -- native <label> required so clicking anywhere on the card toggles the wrapped MUI <Radio>
 export const StrategyOption = styled("label", {
-  shouldForwardProp: (p) => p !== "selected",
-})<{ selected: boolean }>(({ theme, selected }) => ({
+  shouldForwardProp: (p) => p !== "selected" && p !== "disabled",
+})<{ selected: boolean; disabled?: boolean }>(({ theme, selected, disabled }) => ({
   display: "grid",
   gridTemplateColumns: "auto 1fr",
   gap: 10,
@@ -38,12 +38,20 @@ export const StrategyOption = styled("label", {
   backgroundColor: selected
     ? `color-mix(in srgb, ${theme.palette.primary.main} 6%, transparent)`
     : theme.palette.background.paper,
-  cursor: "pointer",
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.55 : 1,
   transition: "border-color 120ms ease, background-color 120ms ease",
   "&:hover": {
-    borderColor: theme.palette.border.hover,
+    borderColor: disabled ? theme.palette.divider : theme.palette.border.hover,
   },
 }));
+
+export const StrategyDisabledHint = styled(Typography)(({ theme }) => ({
+  fontSize: 11.5,
+  color: theme.palette.text.information,
+  marginTop: 4,
+  fontStyle: "italic",
+})) as typeof Typography;
 
 export const StrategyText = styled(Box)({
   display: "flex",
@@ -111,14 +119,6 @@ export const DeleteBranchHint = styled(Box)(({ theme }) => ({
   color: theme.palette.text.information,
   marginTop: 2,
 })) as typeof Box;
-
-export const ProviderNote = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
-  color: theme.palette.text.information,
-  padding: "8px 10px",
-  borderRadius: 6,
-  backgroundColor: theme.palette.surface.interface.backElevation,
-})) as typeof Typography;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> matching the RepoDetail PrimaryBtn visual (filled neutral)
 export const PrimaryBtn = styled("button")(({ theme }) => ({

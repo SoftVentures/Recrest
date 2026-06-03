@@ -75,6 +75,7 @@ export const TauriCommand = {
   GET_PR_DETAIL: "get_pr_detail",
   GET_PR_DIFF: "get_pr_diff",
   POST_PR_COMMENT: "post_pr_comment",
+  MERGE_PULL_REQUEST: "merge_pull_request",
   LIST_WORKFLOWS: "list_workflows",
   LIST_WORKFLOW_RUNS: "list_workflow_runs",
   TRIGGER_WORKFLOW: "trigger_workflow",

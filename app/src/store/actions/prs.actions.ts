@@ -4,6 +4,8 @@ import {
   type Comment,
   type CommentPosition,
   type FileDiff,
+  type MergePullRequestInput,
+  type MergePullRequestResult,
   type PrFilters,
   type PullRequest,
   type PullRequestDetail,
@@ -43,6 +45,18 @@ export const loadPrDiff = createAsyncThunk<
 >("prs/diff", async ({ repoId, prNumber }) => {
   const files = await invoke<FileDiff[]>(TauriCommand.GET_PR_DIFF, { repoId, prNumber });
   return { key: detailKey(repoId, prNumber), files };
+});
+
+export const mergePr = createAsyncThunk<
+  { repoId: RepositoryId; prNumber: number; result: MergePullRequestResult },
+  { repoId: RepositoryId; prNumber: number; input: MergePullRequestInput }
+>("prs/merge", async ({ repoId, prNumber, input }) => {
+  const result = await invoke<MergePullRequestResult>(TauriCommand.MERGE_PULL_REQUEST, {
+    repoId,
+    prNumber,
+    input,
+  });
+  return { repoId, prNumber, result };
 });
 
 export const postPrComment = createAsyncThunk<

@@ -228,4 +228,21 @@ pub trait GitProvider: Send + Sync {
     ) -> Result<Option<PagesStatusDto>, CommandError> {
         Ok(None)
     }
+
+    // ─── Plan 03/07 C.7: Provider-side PR/MR merge ──────────────────────────
+
+    /// Merge a PR/MR through the provider's API (not the local clone).
+    /// Default impl errors so a provider that doesn't override stays inert
+    /// rather than silently no-opping.
+    async fn merge_pull_request(
+        &self,
+        _remote_url: &str,
+        _pr_number: u64,
+        _input: crate::providers::api::MergePullRequestInput,
+    ) -> Result<crate::providers::api::MergePullRequestResult, CommandError> {
+        Err(CommandError::bad_request(format!(
+            "{}: merge_pull_request not implemented",
+            self.id()
+        )))
+    }
 }

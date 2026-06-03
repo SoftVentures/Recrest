@@ -155,3 +155,24 @@ export interface Comment {
   path: string | null;
   createdAt: string; // ISO-8601
 }
+
+export const MergeStrategy = {
+  MERGE: "merge",
+  SQUASH: "squash",
+  REBASE: "rebase",
+} as const;
+export type MergeStrategy = (typeof MergeStrategy)[keyof typeof MergeStrategy];
+
+export interface MergePullRequestInput {
+  strategy: MergeStrategy;
+  commitTitle: string | null;
+  commitMessage: string | null;
+  deleteSourceBranch: boolean;
+}
+
+export interface MergePullRequestResult {
+  merged: boolean;
+  mergeSha: string | null;
+  sourceBranchDeleted: boolean;
+  message: string | null;
+}

@@ -56,6 +56,23 @@ export function prDetailStub(
     return { ...base, body, mergeable: true, reviewers, files: [], timeline };
   }
 
+  if (cmd === "merge_pull_request") {
+    // Frontend optimistically flips the row's state via `setPrs(...)` after
+    // this resolves; we don't try to mutate the seed (Redux freezes it via
+    // Immer once `fetch_pull_requests` flows through the store).
+    const prNumber = a.prNumber as number | undefined;
+    const input = (a.input ?? {}) as {
+      strategy?: string;
+      deleteSourceBranch?: boolean;
+    };
+    return {
+      merged: true,
+      mergeSha: `devstub${prNumber ?? "0"}`,
+      sourceBranchDeleted: !!input.deleteSourceBranch,
+      message: `dev-stub merge (${input.strategy ?? "merge"})`,
+    };
+  }
+
   if (
     cmd === "get_pr_diff" ||
     cmd === "post_pr_comment" ||

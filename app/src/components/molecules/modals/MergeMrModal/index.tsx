@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Checkbox, FormControlLabel, Radio } from "@mui/material";
 
+import { MergeStrategy } from "@recrest/shared";
+
 import { GitMerge } from "lucide-react";
 
 import RichTextEditor from "@/components/atoms/text/RichTextEditor";
@@ -15,10 +17,10 @@ import {
   DescriptionWrap,
   Field,
   PrimaryBtn,
-  ProviderNote,
   SecondaryBtn,
   SectionLabel,
   StrategyDesc,
+  StrategyDisabledHint,
   StrategyList,
   StrategyName,
   StrategyOption,
@@ -28,7 +30,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-export type MergeStrategy = "merge" | "squash" | "rebase";
+export { MergeStrategy } from "@recrest/shared";
 
 export interface MergeMrSubmit {
   strategy: MergeStrategy;
@@ -48,11 +50,19 @@ export interface MergeMrModalProps {
   sourceBranch: string;
   targetBranch: string;
   busy?: boolean;
+  /** Provider id of the connected remote (`github`, `gitlab`, `bitbucket`).
+   *  Drives strategy availability — Bitbucket Cloud has no rebase-on-merge
+   *  endpoint, so the Rebase radio is disabled when this is `"bitbucket"`. */
+  providerId?: string | null;
   onCancel: () => void;
   onConfirm: (data: MergeMrSubmit) => void | Promise<void>;
 }
 
-const STRATEGIES: readonly MergeStrategy[] = ["merge", "squash", "rebase"];
+const STRATEGIES: readonly MergeStrategy[] = [
+  MergeStrategy.MERGE,
+  MergeStrategy.SQUASH,
+  MergeStrategy.REBASE,
+];
 
 function MergeMrModal({
   open,
@@ -62,18 +72,21 @@ function MergeMrModal({
   sourceBranch,
   targetBranch,
   busy = false,
+  providerId,
   onCancel,
   onConfirm,
 }: MergeMrModalProps) {
   const { t } = useTranslation(I18nNamespace.PRS);
-  const [strategy, setStrategy] = useState<MergeStrategy>("merge");
+  const [strategy, setStrategy] = useState<MergeStrategy>(MergeStrategy.MERGE);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deleteSourceBranch, setDeleteSourceBranch] = useState(false);
 
+  const rebaseDisabled = providerId === "bitbucket";
+
   useEffect(() => {
     if (!open) return;
-    setStrategy("merge");
+    setStrategy(MergeStrategy.MERGE);
     setTitle(`${prTitle} (#${prNumber})`);
     setDescription(prBody ?? "");
     setDeleteSourceBranch(false);
@@ -105,15 +118,22 @@ function MergeMrModal({
             <StrategyList>
               {STRATEGIES.map((s) => {
                 const selected = strategy === s;
+                const disabled = s === MergeStrategy.REBASE && rebaseDisabled;
                 const params = { source: sourceBranch, target: targetBranch };
                 return (
-                  <StrategyOption key={s} selected={selected} htmlFor={`merge-strategy-${s}`}>
+                  <StrategyOption
+                    key={s}
+                    selected={selected}
+                    disabled={disabled}
+                    htmlFor={`merge-strategy-${s}`}
+                  >
                     <Radio
                       id={`merge-strategy-${s}`}
                       name="merge-strategy"
                       value={s}
                       checked={selected}
-                      onChange={() => setStrategy(s)}
+                      onChange={() => !disabled && setStrategy(s)}
+                      disabled={disabled}
                       size="small"
                       color="primary"
                       slotProps={{
@@ -129,6 +149,11 @@ function MergeMrModal({
                       <StrategyDesc component="span" variant="caption">
                         {t(`detail.merge_modal.strategy_${s}_desc`, params)}
                       </StrategyDesc>
+                      {disabled && (
+                        <StrategyDisabledHint component="span">
+                          {t("detail.merge_modal.provider_unsupported_rebase")}
+                        </StrategyDisabledHint>
+                      )}
                     </StrategyText>
                   </StrategyOption>
                 );
@@ -189,10 +214,6 @@ function MergeMrModal({
               </Box>
             }
           />
-
-          <ProviderNote component="div" variant="caption">
-            {t("detail.merge_modal.provider_note")}
-          </ProviderNote>
         </Body>
       }
       actionsChildren={

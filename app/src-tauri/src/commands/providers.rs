@@ -185,6 +185,25 @@ pub async fn post_pr_comment(
         .await
 }
 
+// ─── Plan 03/07 C.7 — Provider-side PR/MR merge ─────────────────────────────
+
+#[tauri::command]
+pub async fn merge_pull_request(
+    state: State<'_, AppState>,
+    repo_id: String,
+    pr_number: u64,
+    input: crate::providers::api::MergePullRequestInput,
+) -> Result<crate::providers::api::MergePullRequestResult, CommandError> {
+    let (provider_id, remote_url) = resolve_repo_provider(&state, &repo_id).await?;
+    let provider = state
+        .providers
+        .get(&provider_id)
+        .ok_or_else(|| CommandError::not_found(format!("provider {provider_id} not found")))?;
+    provider
+        .merge_pull_request(&remote_url, pr_number, input)
+        .await
+}
+
 // ─── Plan 03/04 C.4 — CI workflows / pipelines ──────────────────────────────
 
 #[tauri::command]

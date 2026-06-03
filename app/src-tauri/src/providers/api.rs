@@ -317,6 +317,34 @@ pub struct CheckRunSummaryDto {
     pub sha_samples: Vec<String>,
 }
 
+// ─── Plan 03/07 C.7 — Provider-side PR/MR merge ──────────────────────────────
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MergeStrategy {
+    Merge,
+    Squash,
+    Rebase,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergePullRequestInput {
+    pub strategy: MergeStrategy,
+    pub commit_title: Option<String>,
+    pub commit_message: Option<String>,
+    pub delete_source_branch: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergePullRequestResult {
+    pub merged: bool,
+    pub merge_sha: Option<String>,
+    pub source_branch_deleted: bool,
+    pub message: Option<String>,
+}
+
 /// Remote URL → `(owner, repo)` extraction.
 /// Supports both HTTPS and SSH URLs.
 pub fn parse_owner_repo(remote_url: &str) -> Option<(String, String)> {

@@ -24,7 +24,14 @@ import MrNotFound from "@/pages/app/MrDetail/parts/MrNotFound";
 import MrReviewersCard from "@/pages/app/MrDetail/parts/MrReviewersCard";
 import MrTimelineCard from "@/pages/app/MrDetail/parts/MrTimelineCard";
 import TargetBranchPopover from "@/pages/app/MrDetail/parts/TargetBranchPopover";
-import { detailKey, loadPrDetail, loadPrDiff, postPrComment } from "@/store/actions/prs.actions";
+import {
+  detailKey,
+  loadPrDetail,
+  loadPrDiff,
+  mergePr,
+  postPrComment,
+  setPrs,
+} from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function MrDetailPage() {
@@ -137,35 +144,62 @@ export default function MrDetailPage() {
     }
     setBusy("merge");
     try {
-      // TODO(plan-03/04 follow-up): switch to a provider `merge_pull_request`
-      // IPC that honours `data.strategy` on the remote (GH/GL/BB). For now we
-      // dispatch the local `git_merge` with the user-supplied title + body so
-      // the visible side-effect at least uses their input.
-      const message = data.description.trim() ? `${data.title}\n\n${data.description}` : data.title;
-      await invoke(TauriCommand.GIT_MERGE, {
-        repoId,
-        source: pr.sourceBranch,
-        target: effectiveTarget,
-        message,
-      });
-      toast.success(tPrs("detail.merge_modal.merged_ok"));
-      setMergeModalOpen(false);
-
-      if (data.deleteSourceBranch) {
-        try {
-          await invoke(TauriCommand.GIT_BRANCH_DELETE, {
+      const providerId = repos[repoId]?.providerId ?? null;
+      if (providerId) {
+        const { result } = await dispatch(
+          mergePr({
             repoId,
-            branch: pr.sourceBranch,
-          });
+            prNumber: pr.number,
+            input: {
+              strategy: data.strategy,
+              commitTitle: data.title || null,
+              commitMessage: data.description || null,
+              deleteSourceBranch: data.deleteSourceBranch,
+            },
+          }),
+        ).unwrap();
+        toast.success(tPrs("detail.merge_modal.merged_ok"));
+        setMergeModalOpen(false);
+
+        const optimistic = prs.map((p) =>
+          p.number === pr.number ? { ...p, state: "merged" as const } : p,
+        );
+        dispatch(setPrs({ repoId, prs: optimistic }));
+        void dispatch(loadPrDetail({ repoId, prNumber: pr.number }));
+        if (result.sourceBranchDeleted) {
           toast.success(tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }));
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          toast.error(
-            tPrs("detail.merge_modal.branch_delete_failed", {
-              source: pr.sourceBranch,
-              message: msg,
-            }),
-          );
+        }
+      } else {
+        const message = data.description.trim()
+          ? `${data.title}\n\n${data.description}`
+          : data.title;
+        await invoke(TauriCommand.GIT_MERGE, {
+          repoId,
+          source: pr.sourceBranch,
+          target: effectiveTarget,
+          message,
+        });
+        toast.success(tPrs("detail.merge_modal.merged_ok"));
+        setMergeModalOpen(false);
+
+        if (data.deleteSourceBranch) {
+          try {
+            await invoke(TauriCommand.GIT_BRANCH_DELETE, {
+              repoId,
+              branch: pr.sourceBranch,
+            });
+            toast.success(
+              tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }),
+            );
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            toast.error(
+              tPrs("detail.merge_modal.branch_delete_failed", {
+                source: pr.sourceBranch,
+                message: msg,
+              }),
+            );
+          }
         }
       }
     } catch (err) {
@@ -279,6 +313,7 @@ export default function MrDetailPage() {
           sourceBranch={pr.sourceBranch}
           targetBranch={effectiveTarget}
           busy={busy === "merge"}
+          providerId={repos[repoId]?.providerId ?? null}
           onCancel={() => setMergeModalOpen(false)}
           onConfirm={onConfirmMerge}
         />

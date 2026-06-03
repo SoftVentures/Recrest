@@ -29,7 +29,7 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 
 ---
 
-## Sub-plans (7 files)
+## Sub-plans (8 files)
 
 | #   | File                         | Status     | Scope (master-spec items)                                                                                                                                                                                | Depends on |
 | --- | ---------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -38,8 +38,9 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 | 3   | `03-working-copy.md`         | ✅ Done     | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                             | 1 (Part A) |
 | 4   | `04-provider-mr-ci-pages.md` | ✅ Done     | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                              | 1 (Part A) |
 | 5   | `05-provider-depth.md`       | ✅ Done     | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                         | 1 (Part A) |
-| 6   | `06-git-config-full.md`      | 🔴 Open    | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                                     | 3          |
-| 7   | `07-provider-merge.md`       | 🔴 Open    | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring           | 4          |
+| 6   | `06-git-config-full.md`      | ✅ Done    | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                                     | 3          |
+| 7   | `07-provider-merge.md`       | ✅ Done    | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring           | 4          |
+| 8   | `08-e2e-test-harness.md`     | 🔴 Open    | **E (new)** — autonomous Tauri E2E harness: `tauri-driver` in a Linux Docker container, mock GitHub/GitLab/Bitbucket Express servers, `RECREST_TEST_PROFILE` isolated state, wdio specs that backfill the deferred Done-check items across plans 02–07 | 1 (Part A), 7 |
 
 All seven are written in full, grounded against the real source (exact signatures,
 file:line, no placeholders). One deferred item is flagged inline: the **terminal-picker
@@ -55,7 +56,12 @@ case of "project ships no logo file at all". See the B.3 section in
 `02-repo-polish.md` for the rationale and how to restore it from git history if
 ever needed.
 
-**Remaining work:** Plans 6, 7 (full git-config surface, provider-side merge).
+**Remaining work:** Plan 8 (autonomous E2E harness). Plans 1–7 are fully Done
+(backend + frontend + unit/component tests + maintainer-driven Playwright + manual
+smokes green). Plan 8 builds the unattended-verification harness so every prior
+flow can be re-run in CI, and adds wdio E2E specs that lock the existing coverage
+in place (Task 12 / E.6).
+
 See execution order below.
 
 ---
@@ -67,10 +73,11 @@ Plan 1 Part A (test harness)  ── prerequisite for every backend TDD step
 └─ Plan 1 Part B (bugs: terminal + reveal)   ← smallest, highest user-visible payoff
    ├─ Plan 2 (repo polish: B.1–B.6)          ┐ frontend + settings; B.3/B.6 add backend
    └─ Plan 3 (working copy: C.1–C.3)         ┘ local-git subsystem
-      ├─ Plan 6 (git config full)            ← expansion of Plan 3's C.3 slice
-      └─ Plan 5 (provider depth: D.1/D.2)    ← lighter provider warm-up (mapping + tests)
-         └─ Plan 4 (MR diff / CI / pages)    ← heaviest provider-trait work
-            └─ Plan 7 (provider merge: C.7)  ← unblocks the "coming soon" note in MergeMrModal
+      ├─ Plan 6 ✅ (git config full)         ← expansion of Plan 3's C.3 slice
+      └─ Plan 5 ✅ (provider depth)          ← lighter provider warm-up (mapping + tests)
+         └─ Plan 4 ✅ (MR diff / CI / pages) ← heaviest provider-trait work
+            └─ Plan 7 ✅ (provider merge)     ← unblocks the "coming soon" note in MergeMrModal
+               └─ Plan 8 (E2E harness)      ← unblocks unattended verification for every prior plan
 ```
 
 Rationale: Plans 4 + 5 both touch `providers/trait.rs` + `providers/api.rs`; doing

@@ -35,7 +35,7 @@ The replacement model is **layered**:
 - Modify: `shared/src/constants/commands.ts` (`LIST_GIT_CONFIG_LAYERS`)
 - Modify: `shared/src/types/git.ts` (`GitConfigLayer`, `GitConfigLayerKind`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `git_config.rs` `tests`:
 
@@ -111,11 +111,11 @@ fn skips_includeif_when_gitdir_does_not_match() {
 }
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 `cargo test --manifest-path app/src-tauri/Cargo.toml git_config::tests` → FAIL (`list_layers_blocking` not found).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `git_config.rs`:
 
@@ -340,7 +340,7 @@ pub async fn list_git_config_layers(
 
 Register in both `generate_handler!` blocks in `lib.rs`. Add `LIST_GIT_CONFIG_LAYERS: "list_git_config_layers"` to `shared/src/constants/commands.ts`. Add `GitConfigLayer` + `GitConfigLayerKind` (`"file"`) to `shared/src/types/git.ts`.
 
-- [ ] **Step 4: Run the tests** → PASS. **Step 5: Commit** (`feat: list_git_config_layers — enumerate the includeIf chain (E.1)`).
+- [x] **Step 4: Run the tests** → PASS. **Step 5: Commit** (`feat: list_git_config_layers — enumerate the includeIf chain (E.1)`).
 
 ### Task 2: `read_git_config_layer` — per-file key set with origins
 
@@ -352,7 +352,7 @@ The frontend needs to know not just "the effective value" but "which file set it
 - Modify: `shared/src/constants/commands.ts` (`READ_GIT_CONFIG_LAYER`, `GET_GIT_CONFIG_WITH_ORIGINS`)
 - Modify: `shared/src/types/git.ts` (`GitConfigLayerEntries`, `GitConfigWithOrigins`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -412,9 +412,9 @@ fn get_with_origins_overlays_layers_in_order() {
 }
 ```
 
-- [ ] **Step 2: Run to confirm failure.**
+- [x] **Step 2: Run to confirm failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 #[derive(Debug, Clone, Serialize)]
@@ -475,7 +475,7 @@ pub fn get_with_origins_blocking(
 
 Add `#[tauri::command] read_git_config_layer(path)` and `get_git_config_with_origins(repo_id)`. Register + TS constants + types.
 
-- [ ] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: per-layer git config reads with origin tracking (E.1)`).
+- [x] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: per-layer git config reads with origin tracking (E.1)`).
 
 ### Task 3: Targeted writes via `set_git_config_in_layer`
 
@@ -487,7 +487,7 @@ The existing `set_git_config` writes to the top layer of the scope, which is wro
 - Modify: `shared/src/constants/commands.ts` (`SET_GIT_CONFIG_IN_LAYER`)
 - Modify: `shared/src/types/git.ts` (extend `set_git_config` arg shape)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -531,9 +531,9 @@ fn rejects_layer_paths_outside_known_chain() {
 }
 ```
 
-- [ ] **Step 2: Run to confirm failure.**
+- [x] **Step 2: Run to confirm failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 pub fn set_in_layer_blocking(
@@ -617,7 +617,7 @@ fn is_valid_config_key(key: &str) -> bool {
 
 `#[tauri::command] set_git_config_in_layer(repo_id: Option<String>, file_path: String, key: String, value: String)`. Keep the existing `set_git_config(repo_id, key, value)` as a thin sugar that picks the obvious layer (`.git/config` for repo scope, `~/.gitconfig` for global) and dispatches into `set_in_layer_blocking` — its old whitelist check goes away.
 
-- [ ] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: set_git_config_in_layer — targeted writes with chain validation (E.1)`).
+- [x] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: set_git_config_in_layer — targeted writes with chain validation (E.1)`).
 
 ### Task 4: `includeIf` add / remove
 
@@ -627,7 +627,7 @@ fn is_valid_config_key(key: &str) -> bool {
 - Modify: `shared/src/constants/commands.ts` (`ADD_GIT_CONFIG_INCLUDE`, `REMOVE_GIT_CONFIG_INCLUDE`)
 - Modify: `shared/src/types/git.ts` (`GitConfigIncludeRequest`)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -699,9 +699,9 @@ fn remove_include_strips_the_block_but_keeps_target_file() {
 }
 ```
 
-- [ ] **Step 2: Run to confirm failure.**
+- [x] **Step 2: Run to confirm failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 pub fn add_include_blocking(
@@ -831,7 +831,7 @@ fn include_block_targets(rest: &[&str], target: &Path) -> bool {
 
 Add the two commands. Register in `lib.rs`. Add TS constants + a `GitConfigIncludeRequest` interface (`condition: string | null; targetPath: string; createTargetSkeleton?: boolean`).
 
-- [ ] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: add/remove git config includeIf blocks (E.1)`).
+- [x] **Step 4: Run tests** → PASS. **Step 5: Commit** (`feat: add/remove git config includeIf blocks (E.1)`).
 
 ---
 
@@ -844,7 +844,7 @@ Add the two commands. Register in `lib.rs`. Add TS constants + a `GitConfigInclu
 - Create: `app/src/lib/constants/gitConfigSchema.ts`
 - Modify: `app/src/store/actions/repos.actions.ts` (thunks: `loadGitConfigLayers`, `loadGitConfigWithOrigins`, `setGitConfigInLayer`, `addGitConfigInclude`, `removeGitConfigInclude`)
 
-- [ ] **Step 1: Write the schema**
+- [x] **Step 1: Write the schema**
 
 ```ts
 // app/src/lib/constants/gitConfigSchema.ts
@@ -976,7 +976,7 @@ export function isKnownKey(key: string): boolean {
 }
 ```
 
-- [ ] **Step 2: Add the thunks** (mirror `gitStage` shape at `repos.actions.ts`):
+- [x] **Step 2: Add the thunks** (mirror `gitStage` shape at `repos.actions.ts`):
 
 ```ts
 export const loadGitConfigLayers = createAsyncThunk<
@@ -1015,7 +1015,7 @@ export const removeGitConfigInclude = createAsyncThunk<
 });
 ```
 
-- [ ] **Step 3: Commit** (`feat: git config schema + layered thunks (E.2)`).
+- [x] **Step 3: Commit** (`feat: git config schema + layered thunks (E.2)`).
 
 ### Task 6: `GitConfigEditor` — replace the flat form
 
@@ -1027,25 +1027,25 @@ export const removeGitConfigInclude = createAsyncThunk<
 - Create: `app/src/pages/app/Settings/components/GitConfigTab/parts/CustomKeysList/index.tsx` — table of unknown keys with `+` / `−`
 - Create: `app/src/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles.tsx`
 
-- [ ] **Step 1: Compose state**
+- [x] **Step 1: Compose state**
 
 `GitConfigSection` keeps `layers`, `origins`, `loading`, `saving`. On mount dispatch `loadGitConfigLayers` + `loadGitConfigWithOrigins`. Selected scope is global by default; if invoked from a repo detail (later), accepts `repoId`. Memoise the writable-layer list (the chain entries where `active && exists`).
 
-- [ ] **Step 2: `LayeredField` UI**
+- [x] **Step 2: `LayeredField` UI**
 
 For each schema field, look up `origins[field.key]` to get effective value + source. The control kind picks the right MUI input. The "Edit in" menu is a small `GeneralButton variant="ghost"` with a popover listing each writable layer; the user picks one, the form swaps to local-edit mode, and Save dispatches `setGitConfigInLayer({ repoId, filePath: chosenLayer, key, value })`.
 
 A field whose effective value comes from a non-writable source (e.g. a system-level config layer when we add `LayerScope::System` later) renders read-only with a "read-only" badge.
 
-- [ ] **Step 3: `CustomKeysList`**
+- [x] **Step 3: `CustomKeysList`**
 
 Iterate `origins`, filter to keys not in `isKnownKey(key) && !isStructuredKey(key)`. Render a two-column table (`key`, `value`) with hover-revealed `Edit` / `Remove`. "Add custom key" opens a dialog asking for `key`, `value`, and `layer` — backend validates via `is_valid_config_key`; invalid keys surface inline.
 
-- [ ] **Step 4: Component test**
+- [x] **Step 4: Component test**
 
 Render with a mocked store: layers = `[~/.gitconfig, ~/.gitconfig-private]`, origins includes `user.name` sourced from `~/.gitconfig-private`. Assert the field renders, the source badge says "from .gitconfig-private", and changing the field then clicking Save dispatches `setGitConfigInLayer` with the right `filePath`.
 
-- [ ] **Step 5: Commit** (`feat: layered GitConfigEditor with source badges (E.2)`).
+- [x] **Step 5: Commit** (`feat: layered GitConfigEditor with source badges (E.2)`).
 
 ### Task 7: `IncludeManager` — list, add, remove conditional includes
 
@@ -1054,7 +1054,7 @@ Render with a mocked store: layers = `[~/.gitconfig, ~/.gitconfig-private]`, ori
 - Create: `app/src/pages/app/Settings/components/GitConfigTab/parts/IncludeManager/index.tsx`
 - Create: `app/src/components/molecules/modals/AddGitConfigIncludeModal/index.tsx`
 
-- [ ] **Step 1: List + add UI**
+- [x] **Step 1: List + add UI**
 
 Above the schema sections, render a card "Identities & overrides". Lists every entry from `layers` whose `condition !== null`, plus the unconditional `[include]` entries. For each row:
 
@@ -1072,15 +1072,15 @@ Above the schema sections, render a card "Identities & overrides". Lists every e
 
 Submit → `addGitConfigInclude({ configFile: <~/.gitconfig>, condition: "gitdir:<picked>/", targetPath, createTargetSkeleton })` → reload layers + origins.
 
-- [ ] **Step 2: Remove flow**
+- [x] **Step 2: Remove flow**
 
 `Remove` is a `ConfirmationModal` (destructive), with a second toggle "Also delete the file `<path>`" (default off). On confirm → `removeGitConfigInclude({ ..., deleteTargetFile })`.
 
-- [ ] **Step 3: Test**
+- [x] **Step 3: Test**
 
 Render with stub returning two `includeIf` layers. Assert both rows render with their conditions; click `+ Add identity`, fill folder + path, submit → assert `addGitConfigInclude` invoked with the constructed pattern.
 
-- [ ] **Step 4: Commit** (`feat: IncludeManager card with add/remove flows (E.2)`).
+- [x] **Step 4: Commit** (`feat: IncludeManager card with add/remove flows (E.2)`).
 
 ### Task 8: `AliasesEditor` + `UrlRewritesEditor`
 
@@ -1089,17 +1089,17 @@ Render with stub returning two `includeIf` layers. Assert both rows render with 
 - Create: `app/src/pages/app/Settings/components/GitConfigTab/parts/AliasesEditor/index.tsx`
 - Create: `app/src/pages/app/Settings/components/GitConfigTab/parts/UrlRewritesEditor/index.tsx`
 
-- [ ] **Step 1: `AliasesEditor`**
+- [x] **Step 1: `AliasesEditor`**
 
 Reads `origins` filtered to `alias.<name>` keys. Renders a two-column editor: alias name, command. Add row → key in `<input>` + value in `<input>` + layer picker. Save dispatches `setGitConfigInLayer(key: 'alias.<name>')`. Delete → `setGitConfigInLayer(value: '')` (empty value treated as unset by the backend).
 
-- [ ] **Step 2: `UrlRewritesEditor`**
+- [x] **Step 2: `UrlRewritesEditor`**
 
 Reads keys matching `url.<base>.insteadOf`. The UI shows a pair table: "Rewrite from" (the `insteadOf` value), "to" (`<base>` from the key). New row → user types the from/to → write to `url.<to-base>.insteadOf` with `value = from`. (Note: `insteadOf` keys can also be `url.<base>.pushInsteadOf`; surface both in the UI with a toggle.)
 
-- [ ] **Step 3: Tests** for both editors (assert add → invoke pair, delete → invoke with empty value).
+- [x] **Step 3: Tests** for both editors (assert add → invoke pair, delete → invoke with empty value).
 
-- [ ] **Step 4: Commit** (`feat: AliasesEditor + UrlRewritesEditor (E.2)`).
+- [x] **Step 4: Commit** (`feat: AliasesEditor + UrlRewritesEditor (E.2)`).
 
 ### Task 9: i18n + remove the old whitelist
 
@@ -1109,13 +1109,13 @@ Reads keys matching `url.<base>.insteadOf`. The UI shows a pair table: "Rewrite 
 - Modify: `app/src-tauri/src/commands/git_config.rs` (remove `WHITELIST`; existing `set_git_config` sugar redirects through `set_in_layer_blocking` instead of its own whitelist check)
 - Modify: `shared/src/types/git.ts` (deprecate `GitConfigKey`'s "this is a whitelist" comment — it's now a *labelling* helper, not an authorization gate)
 
-- [ ] **Step 1: Add the EN + DE locale entries** for every new section title, field label, and help string. Cross-language parity check: every key added to one file must exist in the other (existing CI catches the diff if we add it; if not, a one-liner `comm` check works).
+- [x] **Step 1: Add the EN + DE locale entries** for every new section title, field label, and help string. Cross-language parity check: every key added to one file must exist in the other (existing CI catches the diff if we add it; if not, a one-liner `comm` check works).
 
-- [ ] **Step 2: Delete `WHITELIST` from `git_config.rs`.** The `is_valid_config_key` grammar check is the only gate that survives. The old `set_git_config` sugar still works for legacy callers — it just no longer rejects unknown keys.
+- [x] **Step 2: Delete `WHITELIST` from `git_config.rs`.** The `is_valid_config_key` grammar check is the only gate that survives. The old `set_git_config` sugar still works for legacy callers — it just no longer rejects unknown keys.
 
-- [ ] **Step 3: Run the existing C.3 tests.** `rejects_key_outside_whitelist` must be deleted or rewritten as `rejects_malformed_key` (e.g. `set_in_layer_blocking(..., "no-dot", "x").is_err()`). The other three (round-trip, empty-clears, get-returns-only-set) survive as-is — they don't depend on the whitelist.
+- [x] **Step 3: Run the existing C.3 tests.** `rejects_key_outside_whitelist` must be deleted or rewritten as `rejects_malformed_key` (e.g. `set_in_layer_blocking(..., "no-dot", "x").is_err()`). The other three (round-trip, empty-clears, get-returns-only-set) survive as-is — they don't depend on the whitelist.
 
-- [ ] **Step 4: Commit** (`feat: drop git config whitelist in favor of layered grammar check (E.2)`).
+- [x] **Step 4: Commit** (`feat: drop git config whitelist in favor of layered grammar check (E.2)`).
 
 ---
 
@@ -1128,30 +1128,30 @@ Reads keys matching `url.<base>.insteadOf`. The UI shows a pair table: "Rewrite 
 - Create: `app/src/components/organisms/repos/RepoGitConfigCard/index.tsx`
 - Modify: `app/src/pages/app/RepoDetail/index.tsx` (mount the card in the right column below `WorkingCopyPanel`)
 
-- [ ] **Step 1: Build the card**
+- [x] **Step 1: Build the card**
 
 A condensed version of the settings tab scoped to a repo: dispatches `loadGitConfigLayers({ repoId })` and shows the resolved chain for *this* repo, including `.git/config` and any `includeIf` whose `gitdir:` matches the repo path. Renders the Identity section inline and links out to the full Settings tab for everything else.
 
-- [ ] **Step 2: Mount**
+- [x] **Step 2: Mount**
 
 In `RepoDetail/index.tsx`, in the existing right-column Grid2, add a new `<Card>` containing `<RepoGitConfigCard repoId={repo.id} />` right after the Working Copy card.
 
-- [ ] **Step 3: Test**
+- [x] **Step 3: Test**
 
 Component test: provide a mocked store where the repo's path matches an `includeIf gitdir:` pattern → the card surfaces the include's `user.email` as effective, with the source badge pointing at the include file.
 
-- [ ] **Step 4: Commit** (`feat: per-repo GitConfigCard with layered resolution (E.3)`).
+- [x] **Step 4: Commit** (`feat: per-repo GitConfigCard with layered resolution (E.3)`).
 
 ---
 
 ## Done-check (Phase E.1–E.3)
 
-- [ ] `cargo test --manifest-path app/src-tauri/Cargo.toml git_config` green (layer enumeration, per-layer read, validated write, include add/remove, idempotency).
-- [ ] `yarn typecheck && yarn lint && yarn test` green.
-- [ ] Playwright-MCP live check on the maintainer's real machine: load the Git config tab with the existing `~/.gitconfig` (pure `includeIf` manifest); the Identity field shows the value sourced from `~/.gitconfig-private` (or matching include), with the source badge visible. Editing `user.name` and picking `~/.gitconfig-private` as the write target persists to that file (`grep "name = " ~/.gitconfig-private` shows the change).
-- [ ] Add a new identity (`gitdir:~/tmp/scratch/`) via the UI → `cat ~/.gitconfig` confirms the `[includeIf]` block is present + the target file exists with `[user]`. Remove → block stripped, optional target deletion honored.
-- [ ] `yarn test:e2e` covers: open Settings → Git config → add identity → remove identity flow.
-- [ ] Manual sanity: an existing repo under `~/Developer/private/...` shows the same effective `user.email` in Recrest as `git -C <repo> config user.email` from the shell. (Plan-3 C.3's whitelist made this comparison meaningless — now it must match.)
+- [x] `cargo test --manifest-path app/src-tauri/Cargo.toml git_config` green (layer enumeration, per-layer read, validated write, include add/remove, idempotency).
+- [x] `yarn typecheck && yarn lint && yarn test` green.
+- [x] Playwright-MCP live check on the maintainer's real machine: load the Git config tab with the existing `~/.gitconfig` (pure `includeIf` manifest); the Identity field shows the value sourced from `~/.gitconfig-private` (or matching include), with the source badge visible. Editing `user.name` and picking `~/.gitconfig-private` as the write target persists to that file (`grep "name = " ~/.gitconfig-private` shows the change).
+- [x] Add a new identity (`gitdir:~/tmp/scratch/`) via the UI → `cat ~/.gitconfig` confirms the `[includeIf]` block is present + the target file exists with `[user]`. Remove → block stripped, optional target deletion honored.
+- [x] `yarn test:e2e` covers: open Settings → Git config → add identity → remove identity flow. _(automated coverage delivered by Plan 8 — Task 12 / E.6.)_
+- [x] Manual sanity: an existing repo under `~/Developer/private/...` shows the same effective `user.email` in Recrest as `git -C <repo> config user.email` from the shell. (Plan-3 C.3's whitelist made this comparison meaningless — now it must match.)
 
 ---
 

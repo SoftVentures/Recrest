@@ -6,10 +6,10 @@ use serde::Deserialize;
 
 use super::api::{
     parse_owner_repo, CheckRunSummaryDto, CiStatus, CommentDto, CommentPosition, CommentSide,
-    FileChangeDto, FileChangeStatus, FileDiffDto, OrganizationDto, PrEventDto, PrEventKind,
-    PrState, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto,
-    TimelineEventDto, WorkflowDto, WorkflowInputDef, WorkflowInputType, WorkflowInputs,
-    WorkflowRunDto,
+    FileChangeDto, FileChangeStatus, FileDiffDto, MergePullRequestInput, MergePullRequestResult,
+    MergeStrategy, OrganizationDto, PrEventDto, PrEventKind, PrState, PullRequestDetailDto,
+    PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto,
+    WorkflowInputDef, WorkflowInputType, WorkflowInputs, WorkflowRunDto,
 };
 use super::diff_parse::parse_hunks;
 use super::r#trait::GitProvider;
@@ -949,6 +949,110 @@ impl GitProvider for GithubProvider {
             custom_domain: pages.cname,
         }))
     }
+
+    async fn merge_pull_request(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        input: MergePullRequestInput,
+    ) -> Result<MergePullRequestResult, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+
+        let merge_method = match input.strategy {
+            MergeStrategy::Merge => "merge",
+            MergeStrategy::Squash => "squash",
+            MergeStrategy::Rebase => "rebase",
+        };
+
+        let mut body = serde_json::Map::new();
+        body.insert("merge_method".into(), serde_json::Value::String(merge_method.into()));
+        if let Some(title) = input.commit_title.as_ref().filter(|s| !s.is_empty()) {
+            body.insert("commit_title".into(), serde_json::Value::String(title.clone()));
+        }
+        if let Some(msg) = input.commit_message.as_ref().filter(|s| !s.is_empty()) {
+            body.insert("commit_message".into(), serde_json::Value::String(msg.clone()));
+        }
+
+        let url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}/merge");
+        let res = self
+            .http
+            .put(&url)
+            .bearer_auth(&token)
+            .header("Accept", "application/vnd.github+json")
+            .json(&serde_json::Value::Object(body))
+            .send()
+            .await?;
+        let status = res.status();
+        if status == reqwest::StatusCode::METHOD_NOT_ALLOWED {
+            let msg = extract_github_message(res).await;
+            return Err(CommandError::bad_request(msg.unwrap_or_else(|| {
+                "GitHub refused the merge — PR is not mergeable (conflicts, branch protection, or review/CI gates).".into()
+            })));
+        }
+        if status == reqwest::StatusCode::CONFLICT {
+            let msg = extract_github_message(res).await;
+            return Err(CommandError::bad_request(msg.unwrap_or_else(|| {
+                "GitHub rejected the merge — head branch has new commits since this modal opened. Reload and try again.".into()
+            })));
+        }
+        if !status.is_success() {
+            return Err(CommandError::internal(format!(
+                "github merge: {status} ({url})"
+            )));
+        }
+        let result: GhMergeResult = res.json().await?;
+        if !result.merged {
+            return Err(CommandError::bad_request(
+                result.message.unwrap_or_else(|| "GitHub returned merged=false without a message".into()),
+            ));
+        }
+
+        let mut source_branch_deleted = false;
+        if input.delete_source_branch {
+            let pr_url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}");
+            let pr: GhPullDetail = gh_json(&self.http, &token, &pr_url, None).await?;
+            let head_ref = pr.base_pull.head.branch;
+            let del_url = format!("{base}/repos/{owner}/{repo}/git/refs/heads/{head_ref}");
+            let del = self
+                .http
+                .delete(&del_url)
+                .bearer_auth(&token)
+                .header("Accept", "application/vnd.github+json")
+                .send()
+                .await?;
+            if del.status().is_success()
+                || del.status() == reqwest::StatusCode::UNPROCESSABLE_ENTITY
+            {
+                source_branch_deleted = true;
+            }
+        }
+
+        Ok(MergePullRequestResult {
+            merged: true,
+            merge_sha: result.sha,
+            source_branch_deleted,
+            message: result.message,
+        })
+    }
+}
+
+async fn extract_github_message(res: reqwest::Response) -> Option<String> {
+    let raw: serde_json::Value = res.json().await.ok()?;
+    raw.get("message")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+#[derive(Deserialize)]
+struct GhMergeResult {
+    #[serde(default)]
+    sha: Option<String>,
+    merged: bool,
+    #[serde(default)]
+    message: Option<String>,
 }
 
 fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
@@ -1620,5 +1724,93 @@ on:
             repos[0].clone_url_ssh.as_deref(),
             Some("git@github.com:acme/platform-api.git")
         );
+    }
+
+    #[tokio::test]
+    async fn github_merge_pr_squash_with_branch_delete() {
+        use wiremock::matchers::{body_string_contains, path};
+        let server = MockServer::start().await;
+
+        Mock::given(method("PUT"))
+            .and(path("/repos/acme/widget/pulls/1/merge"))
+            .and(body_string_contains("\"merge_method\":\"squash\""))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "sha": "abc123",
+                "merged": true,
+                "message": "Pull Request successfully merged"
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/acme/widget/pulls/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "id": 1, "number": 1, "title": "t", "html_url": "u",
+                "state": "open", "user": null,
+                "head": { "ref": "feature-x", "sha": "deadbeef" },
+                "base": { "ref": "main", "sha": "cafe" },
+                "merged_at": null,
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-01T00:00:00Z"
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/acme/widget/git/refs/heads/feature-x"))
+            .respond_with(ResponseTemplate::new(204))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let result = provider
+            .merge_pull_request(
+                "https://github.com/acme/widget",
+                1,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Squash,
+                    commit_title: Some("My title".into()),
+                    commit_message: Some("My body".into()),
+                    delete_source_branch: true,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(result.merged);
+        assert_eq!(result.merge_sha.as_deref(), Some("abc123"));
+        assert!(result.source_branch_deleted);
+    }
+
+    #[tokio::test]
+    async fn github_merge_pr_405_not_mergeable_surfaces_message() {
+        use wiremock::matchers::path;
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/repos/acme/widget/pulls/2/merge"))
+            .respond_with(
+                ResponseTemplate::new(405).set_body_json(serde_json::json!({
+                    "message": "Pull Request is not mergeable",
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let err = provider
+            .merge_pull_request(
+                "https://github.com/acme/widget",
+                2,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Merge,
+                    commit_title: None,
+                    commit_message: None,
+                    delete_source_branch: false,
+                },
+            )
+            .await
+            .unwrap_err();
+        let serialized = serde_json::to_string(&err).unwrap();
+        assert!(serialized.contains("not mergeable"), "{serialized}");
     }
 }

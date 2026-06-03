@@ -6,9 +6,10 @@ use serde::Deserialize;
 
 use super::api::{
     CiStatus, CommentDto, CommentPosition, CommentSide, DiffHunk, DiffLine, DiffLineKind,
-    FileChangeDto, FileChangeStatus, FileDiffDto, OrganizationDto, PagesStatusDto, PrState,
-    PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto,
-    TimelineEventDto, WorkflowDto, WorkflowInputs, WorkflowRunDto,
+    FileChangeDto, FileChangeStatus, FileDiffDto, MergePullRequestInput, MergePullRequestResult,
+    MergeStrategy, OrganizationDto, PagesStatusDto, PrState, PullRequestDetailDto, PullRequestDto,
+    RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto, WorkflowInputs,
+    WorkflowRunDto,
 };
 use super::r#trait::GitProvider;
 use crate::auth::token::TokenStore;
@@ -655,6 +656,102 @@ impl GitProvider for BitbucketProvider {
             Ok(None)
         }
     }
+
+    async fn merge_pull_request(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        input: MergePullRequestInput,
+    ) -> Result<MergePullRequestResult, CommandError> {
+        let merge_strategy = match input.strategy {
+            MergeStrategy::Merge => "merge_commit",
+            MergeStrategy::Squash => "squash",
+            MergeStrategy::Rebase => {
+                return Err(CommandError::bad_request(
+                    "Bitbucket does not support rebase merges via API — use squash or merge_commit instead.",
+                ));
+            }
+        };
+
+        let (username, password) = self.require_credentials().await?;
+        let (workspace, repo) = parse_workspace_repo(remote_url).ok_or_else(|| {
+            CommandError::bad_request("could not parse Bitbucket workspace/repo from remote")
+        })?;
+        let base = self.api_base();
+        let url =
+            format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/merge");
+
+        let mut body = serde_json::Map::new();
+        body.insert(
+            "type".into(),
+            serde_json::Value::String("pullrequest_merge_parameters".into()),
+        );
+        body.insert(
+            "merge_strategy".into(),
+            serde_json::Value::String(merge_strategy.into()),
+        );
+        body.insert(
+            "close_source_branch".into(),
+            serde_json::Value::Bool(input.delete_source_branch),
+        );
+        if let Some(msg) = input.commit_message.as_ref().filter(|s| !s.is_empty()) {
+            body.insert("message".into(), serde_json::Value::String(msg.clone()));
+        }
+
+        let res = self
+            .http
+            .post(&url)
+            .basic_auth(&username, Some(&password))
+            .json(&serde_json::Value::Object(body))
+            .send()
+            .await?;
+        let status = res.status();
+        if status == reqwest::StatusCode::BAD_REQUEST {
+            let msg = extract_bitbucket_message(res).await;
+            return Err(CommandError::bad_request(msg.unwrap_or_else(|| {
+                "Bitbucket refused the merge — PR is not in a mergeable state.".into()
+            })));
+        }
+        if !status.is_success() {
+            return Err(CommandError::internal(format!(
+                "bitbucket merge: {status} ({url})"
+            )));
+        }
+
+        let merged: BbMerged = res.json().await?;
+        let merge_sha = merged
+            .merge_commit
+            .as_ref()
+            .and_then(|m| m.hash.clone());
+        Ok(MergePullRequestResult {
+            merged: merged.state.as_deref() == Some("MERGED"),
+            merge_sha,
+            source_branch_deleted: input.delete_source_branch,
+            message: None,
+        })
+    }
+}
+
+async fn extract_bitbucket_message(res: reqwest::Response) -> Option<String> {
+    let raw: serde_json::Value = res.json().await.ok()?;
+    raw.get("error")
+        .and_then(|e| e.get("message"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+#[derive(serde::Deserialize)]
+struct BbMerged {
+    #[serde(default)]
+    state: Option<String>,
+    #[serde(default)]
+    merge_commit: Option<BbMergeCommit>,
+}
+
+#[derive(serde::Deserialize)]
+struct BbMergeCommit {
+    #[serde(default)]
+    hash: Option<String>,
 }
 
 fn map_pipeline(p: BbPipeline) -> WorkflowRunDto {
@@ -1559,5 +1656,60 @@ mod tests {
             prs[0].author_avatar_url.as_deref(),
             Some("https://bitbucket.org/account/dora/avatar.png")
         );
+    }
+
+    #[tokio::test]
+    async fn bitbucket_merge_pr_squash_with_close_source_branch() {
+        use wiremock::matchers::{body_string_contains, path};
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/repositories/acme/widget/pullrequests/3/merge"))
+            .and(body_string_contains("\"merge_strategy\":\"squash\""))
+            .and(body_string_contains("\"close_source_branch\":true"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "state": "MERGED",
+                "merge_commit": { "hash": "0123abc" }
+            })))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let result = provider
+            .merge_pull_request(
+                "https://bitbucket.org/acme/widget",
+                3,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Squash,
+                    commit_title: None,
+                    commit_message: Some("squashed".into()),
+                    delete_source_branch: true,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(result.merged);
+        assert_eq!(result.merge_sha.as_deref(), Some("0123abc"));
+        assert!(result.source_branch_deleted);
+    }
+
+    #[tokio::test]
+    async fn bitbucket_merge_pr_rebase_is_unsupported() {
+        let server = MockServer::start().await;
+        let provider = provider_with_credentials(&server).await;
+        let err = provider
+            .merge_pull_request(
+                "https://bitbucket.org/acme/widget",
+                3,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Rebase,
+                    commit_title: None,
+                    commit_message: None,
+                    delete_source_branch: false,
+                },
+            )
+            .await
+            .unwrap_err();
+        let serialized = serde_json::to_string(&err).unwrap();
+        assert!(serialized.contains("rebase"), "{serialized}");
     }
 }
