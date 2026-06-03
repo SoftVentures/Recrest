@@ -255,6 +255,8 @@ export function MrRow({ pr, repoId, repoName, selected, onClick }: MrRowProps) {
       tabIndex={0}
       data-testid={TEST_IDS.mr.row}
       data-mr-number={pr.number}
+      data-mr-state={pr.state}
+      data-mr-author={pr.author || undefined}
       data-selected={selected ? "true" : undefined}
       data-context-menu-open={position !== null ? "true" : undefined}
       onClick={() => onClick?.(pr)}

@@ -1,5 +1,4 @@
 import type { MockProviderSuite } from "./index";
-
 /// Plan-8 failure-mode scenarios. Each named scenario flips a few of the
 /// in-memory flags in `MockState.scenarios.*` so a spec can assert error-
 /// handling paths without re-stubbing routes.
@@ -8,25 +7,12 @@ import type { MockProviderSuite } from "./index";
 /// branch in the Rust provider clients — anything that fails locally
 /// (parse-failures, missing-token) is exercised by Rust unit tests and
 /// doesn't need a mock scenario.
+import type { ProviderScenarioFlags } from "./state";
 
 export interface ScenarioPatch {
-  github?: Partial<{
-    mergeConflict: boolean;
-    authExpired: boolean;
-    rateLimitedUntil: number | null;
-  }>;
-  gitlab?: Partial<{
-    mergeConflict: boolean;
-    authExpired: boolean;
-    rateLimitedUntil: number | null;
-    rebaseStuckForever: boolean;
-    deleteSucceedsButBranchSurvives: boolean;
-  }>;
-  bitbucket?: Partial<{
-    mergeConflict: boolean;
-    authExpired: boolean;
-    rateLimitedUntil: number | null;
-  }>;
+  github?: Partial<ProviderScenarioFlags>;
+  gitlab?: Partial<ProviderScenarioFlags>;
+  bitbucket?: Partial<ProviderScenarioFlags>;
 }
 
 export const SCENARIOS = {
@@ -35,6 +21,9 @@ export const SCENARIOS = {
   github_rate_limited: {
     github: { rateLimitedUntil: Number.MAX_SAFE_INTEGER },
   },
+  github_pages_disabled: { github: { pagesDisabled: true } },
+  github_workflow_inputs_required: { github: { workflowInputsRequired: true } },
+  github_workflow_dispatch_404: { github: { workflowDispatch404: true } },
 
   gitlab_pr_merge_conflict: { gitlab: { mergeConflict: true } },
   gitlab_auth_expired: { gitlab: { authExpired: true } },
@@ -51,12 +40,14 @@ export const SCENARIOS = {
   gitlab_protected_branch: {
     gitlab: { deleteSucceedsButBranchSurvives: true },
   },
+  gitlab_pages_disabled: { gitlab: { pagesDisabled: true } },
 
   bitbucket_pr_merge_conflict: { bitbucket: { mergeConflict: true } },
   bitbucket_auth_expired: { bitbucket: { authExpired: true } },
   bitbucket_rate_limited: {
     bitbucket: { rateLimitedUntil: Number.MAX_SAFE_INTEGER },
   },
+  bitbucket_pages_via_pipeline: { bitbucket: { bitbucketPipelinePages: true } },
 } satisfies Record<string, ScenarioPatch>;
 
 export type ScenarioName = keyof typeof SCENARIOS;

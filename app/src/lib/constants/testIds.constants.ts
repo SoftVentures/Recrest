@@ -115,8 +115,8 @@ export const TEST_IDS = {
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
     sparkCell: "repo-detail-spark-cell",
-    prRow: "repo-detail-pr-row",
-    prDrawer: "repo-detail-pr-drawer",
+    mrRow: "repo-detail-mr-row",
+    mrDrawer: "repo-detail-mr-drawer",
     ssh: {
       trigger: "repo-ssh-trigger",
       modal: "repo-ssh-modal",

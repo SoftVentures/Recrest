@@ -122,6 +122,179 @@ export function buildGithubApp(state: MockState): Express {
     });
   });
 
+  // ----- PR diff (Plan-10 mr-diff spec) ---------------------------------
+  app.get("/repos/:owner/:repo/pulls/:n/files", (_req, res) => {
+    res.json([
+      {
+        filename: "src/lib.ts",
+        status: "modified",
+        additions: 4,
+        deletions: 1,
+        blob_url: "https://github.com/test/test/blob/sha/src/lib.ts",
+        patch:
+          "@@ -1,3 +1,6 @@\n context-line\n-removed-line\n+added-1\n+added-2\n+added-3\n+added-4\n",
+      },
+      {
+        filename: "README.md",
+        status: "added",
+        additions: 2,
+        deletions: 0,
+        blob_url: "https://github.com/test/test/blob/sha/README.md",
+        patch: "@@ -0,0 +1,2 @@\n+new line 1\n+new line 2\n",
+      },
+    ]);
+  });
+
+  // ----- PR review comment (Plan-10 mr-diff spec) -----------------------
+  app.post("/repos/:owner/:repo/pulls/:n/comments", (req, res) => {
+    const body = (req.body ?? {}) as {
+      body?: string;
+      path?: string;
+      line?: number;
+      side?: string;
+      commit_id?: string;
+    };
+    res.status(201).json({
+      id: 9001,
+      body: body.body ?? "",
+      path: body.path ?? null,
+      created_at: "2026-06-03T12:00:00Z",
+      user: { login: "e2e-tester", avatar_url: "https://avatars.example.com/e2e-tester", id: 1 },
+    });
+  });
+
+  // ----- CI workflows (Plan-10 ci-tab spec) -----------------------------
+  app.get("/repos/:owner/:repo/actions/workflows", (_req, res) => {
+    res.json({
+      workflows: [
+        { id: 101, name: "CI", path: ".github/workflows/ci.yml", state: "active" },
+        { id: 102, name: "Release", path: ".github/workflows/release.yml", state: "active" },
+      ],
+    });
+  });
+
+  // YAML content fetched per workflow to extract `workflow_dispatch.inputs`.
+  // Base64-encoded (`encoding: base64`) per the Contents API contract.
+  app.get("/repos/:owner/:repo/contents/*", (req, res) => {
+    const filePath = req.path.split("/contents/")[1] ?? "";
+    const yaml = state.scenarios.github.workflowInputsRequired
+      ? [
+          "name: CI",
+          "on:",
+          "  workflow_dispatch:",
+          "    inputs:",
+          "      environment:",
+          "        description: target env",
+          "        required: true",
+          "        type: choice",
+          "        options: [staging, production]",
+          "      version:",
+          "        description: version tag",
+          "        required: true",
+          "        type: string",
+          "",
+        ].join("\n")
+      : ["name: CI", "on: [push]", ""].join("\n");
+    res.json({
+      name: filePath.split("/").pop() ?? "ci.yml",
+      path: filePath,
+      content: Buffer.from(yaml, "utf8").toString("base64"),
+      encoding: "base64",
+    });
+  });
+
+  app.get("/repos/:owner/:repo/actions/workflows/:id/runs", (_req, res) => {
+    res.json({
+      workflow_runs: [
+        {
+          id: 5001,
+          run_number: 42,
+          status: "completed",
+          conclusion: "success",
+          head_sha: "feedface",
+          created_at: "2026-06-02T08:00:00Z",
+          html_url: "https://github.com/test/test/actions/runs/5001",
+          actor: {
+            login: "e2e-tester",
+            avatar_url: "https://avatars.example.com/e2e-tester",
+            id: 1,
+          },
+        },
+      ],
+    });
+  });
+
+  app.post("/repos/:owner/:repo/actions/workflows/:id/dispatches", (_req, res) => {
+    if (state.scenarios.github.workflowDispatch404) {
+      res.status(404).json({ message: "Not Found" });
+      return;
+    }
+    res.status(204).end();
+  });
+
+  app.post("/repos/:owner/:repo/actions/runs/:run_id/cancel", (_req, res) => {
+    res.status(202).json({ message: "cancellation requested" });
+  });
+
+  // ----- Pages (Plan-10 pages-deploy spec) ------------------------------
+  app.get("/repos/:owner/:repo/pages", (_req, res) => {
+    if (state.scenarios.github.pagesDisabled) {
+      res.status(404).json({ message: "Not Found" });
+      return;
+    }
+    res.json({
+      html_url: "https://test-org.github.io/test-repo/",
+      status: "built",
+      cname: "docs.example.com",
+    });
+  });
+
+  app.get("/repos/:owner/:repo/pages/builds/latest", (_req, res) => {
+    if (state.scenarios.github.pagesDisabled) {
+      res.status(404).json({ message: "Not Found" });
+      return;
+    }
+    res.json({
+      created_at: "2026-06-01T08:00:00Z",
+      updated_at: "2026-06-01T08:05:00Z",
+    });
+  });
+
+  // ----- Orgs (Plan-10 provider-depth orgs filter spec) -----------------
+  app.get("/user/orgs", (_req, res) => {
+    res.json([
+      { id: 9001, login: "acme", avatar_url: "https://avatars.example.com/acme" },
+      { id: 9002, login: "globex", avatar_url: "https://avatars.example.com/globex" },
+    ]);
+  });
+
+  app.get("/orgs/:org/repos", (req, res) => {
+    res.json([
+      {
+        id: 1,
+        name: `${req.params.org}-repo-a`,
+        full_name: `${req.params.org}/${req.params.org}-repo-a`,
+        description: null,
+        default_branch: "main",
+        private: false,
+        fork: false,
+        archived: false,
+        clone_url: `https://github.com/${req.params.org}/${req.params.org}-repo-a.git`,
+        ssh_url: `git@github.com:${req.params.org}/${req.params.org}-repo-a.git`,
+        html_url: `https://github.com/${req.params.org}/${req.params.org}-repo-a`,
+        updated_at: "2026-06-01T08:00:00Z",
+        pushed_at: "2026-06-01T08:00:00Z",
+        size: 100,
+        language: "TypeScript",
+        owner: {
+          login: req.params.org,
+          avatar_url: `https://avatars.example.com/${req.params.org}`,
+          id: 9001,
+        },
+      },
+    ]);
+  });
+
   app.use(unknownRouteHandler("github"));
   return app;
 }

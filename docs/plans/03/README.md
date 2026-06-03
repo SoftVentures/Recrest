@@ -29,18 +29,20 @@ Stale path map (master spec → real): `organisms/repos/RepoRow` → `pages/app/
 
 ---
 
-## Sub-plans (8 files)
+## Sub-plans (10 files)
 
-| #   | File                         | Status     | Scope (master-spec items)                                                                                                                                                                                | Depends on |
-| --- | ---------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 1   | `01-foundations-and-os.md`   | ✅ Done     | **Part A:** Rust test harness (`tempfile`/`wiremock` + `TempRepo`), stale-doc fix, `gitConfigOverride` field. **Part B:** A.1 terminal (settings-driven argv + auto-detect), A.2 reveal-in-folder        | —          |
-| 2   | `02-repo-polish.md`          | ✅ Done     | B.1 import defaults, B.2 default scan path, ~~B.3 favicon fallback~~ (scope-cut), B.4 pin direct-click, B.5 flat list + sortable header, B.6 per-repo SSH key                                            | 1 (Part A) |
-| 3   | `03-working-copy.md`         | ✅ Done     | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                             | 1 (Part A) |
-| 4   | `04-provider-mr-ci-pages.md` | ✅ Done     | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                              | 1 (Part A) |
-| 5   | `05-provider-depth.md`       | ✅ Done     | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                         | 1 (Part A) |
-| 6   | `06-git-config-full.md`      | ✅ Done    | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                                     | 3          |
-| 7   | `07-provider-merge.md`       | ✅ Done    | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring           | 4          |
-| 8   | `08-e2e-test-harness.md`     | 🔴 Open    | **E (new)** — autonomous Tauri E2E harness: `tauri-driver` in a Linux Docker container, mock GitHub/GitLab/Bitbucket Express servers, `RECREST_TEST_PROFILE` isolated state, wdio specs that backfill the deferred Done-check items across plans 02–07 | 1 (Part A), 7 |
+| #   | File                            | Status     | Scope (master-spec items)                                                                                                                                                                                | Depends on |
+| --- | ------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | `01-foundations-and-os.md`      | ✅ Done     | **Part A:** Rust test harness (`tempfile`/`wiremock` + `TempRepo`), stale-doc fix, `gitConfigOverride` field. **Part B:** A.1 terminal (settings-driven argv + auto-detect), A.2 reveal-in-folder        | —          |
+| 2   | `02-repo-polish.md`             | ✅ Done     | B.1 import defaults, B.2 default scan path, ~~B.3 favicon fallback~~ (scope-cut), B.4 pin direct-click, B.5 flat list + sortable header, B.6 per-repo SSH key                                            | 1 (Part A) |
+| 3   | `03-working-copy.md`            | ✅ Done     | C.1 stage/unstage/discard/stash, C.2 commit (hook-aware, template), C.3 git config view/edit                                                                                                             | 1 (Part A) |
+| 4   | `04-provider-mr-ci-pages.md`    | ✅ Done     | C.5 PR diff + inline comments, C.4 CI workflows/pipelines, C.6 Pages/deploy status — across all 3 providers                                                                                              | 1 (Part A) |
+| 5   | `05-provider-depth.md`          | ✅ Done     | D.1 avatars + real names, D.2 orgs/groups/workspaces (mostly lock-in-with-tests — providers already implemented)                                                                                         | 1 (Part A) |
+| 6   | `06-git-config-full.md`         | ✅ Done    | C.3 expansion — full git config view/edit surface beyond the minimal slice in Plan 3                                                                                                                     | 3          |
+| 7   | `07-provider-merge.md`          | ✅ Done    | **C.7 (new)** — provider-side PR/MR merge: trait method + per-provider implementations (GH `PUT /merge`, GL `PUT /merge` + rebase polling, BB `POST /merge`), command + thunk + modal rewiring           | 4          |
+| 8   | `08-e2e-test-harness.md`        | ✅ Done    | **E (new)** — autonomous Tauri E2E harness: `tauri-driver` in a Linux Docker container, mock GitHub/GitLab/Bitbucket Express servers, `RECREST_TEST_PROFILE` isolated state, wdio fixture + Plan-7 spec   | 1 (Part A), 7 |
+| 9   | `09-dev-prod-coexistence.md`    | ✅ Done    | **E.1 (master spec)** — `identity.rs` + `tauri.dev.conf.json` + `lib.rs`/`auth/token.rs` wiring so a dev build and an installed prod build run side-by-side. Retroactive doc; work landed out-of-band.   | —          |
+| 10  | `10-e2e-spec-backfill.md`       | 🔴 Open    | Unskip the four `describe.skip` specs (`repo-management`, `working-copy`, `provider-depth`, `git-config`) + add `mr-diff`, `ci-tab`, `pages-deploy`, `repo-ssh`. Mock-server extensions for diff/CI/Pages/orgs. | 8          |
 
 All seven are written in full, grounded against the real source (exact signatures,
 file:line, no placeholders). One deferred item is flagged inline: the **terminal-picker
@@ -56,11 +58,15 @@ case of "project ships no logo file at all". See the B.3 section in
 `02-repo-polish.md` for the rationale and how to restore it from git history if
 ever needed.
 
-**Remaining work:** Plan 8 (autonomous E2E harness). Plans 1–7 are fully Done
-(backend + frontend + unit/component tests + maintainer-driven Playwright + manual
-smokes green). Plan 8 builds the unattended-verification harness so every prior
-flow can be re-run in CI, and adds wdio E2E specs that lock the existing coverage
-in place (Task 12 / E.6).
+**Remaining work:** Plan 10 (E2E spec backfill). Plans 1–9 are fully Done:
+- 1–7: backend + frontend + unit/component tests + maintainer-driven Playwright + manual smokes green.
+- 8: unattended Tauri harness runs in Docker (`tauri-driver` + mock providers + wdio) and one active spec covers Plan-7 merge end-to-end.
+- 9: retroactive doc for master-spec E.1 (dev/prod parallel) — work landed out-of-band; the doc exists so the index matches reality.
+
+Plan 10 closes the unattended-coverage gap by unskipping the four `describe.skip`
+specs Plan 8 scaffolded and adding new specs for diff view, CI tab, Pages block,
+orgs filter, and per-repo SSH — every new Phase-3 feature gets at least one wdio
+spec driving the real Tauri binary against the mock providers.
 
 See execution order below.
 
@@ -77,7 +83,10 @@ Plan 1 Part A (test harness)  ── prerequisite for every backend TDD step
       └─ Plan 5 ✅ (provider depth)          ← lighter provider warm-up (mapping + tests)
          └─ Plan 4 ✅ (MR diff / CI / pages) ← heaviest provider-trait work
             └─ Plan 7 ✅ (provider merge)     ← unblocks the "coming soon" note in MergeMrModal
-               └─ Plan 8 (E2E harness)      ← unblocks unattended verification for every prior plan
+               └─ Plan 8 ✅ (E2E harness)     ← unattended-verification infrastructure
+                  └─ Plan 10 (spec backfill) ← per-feature wdio coverage on top of Plan 8
+
+Plan 9 (dev/prod parallel) is independent — work landed out-of-band; doc only.
 ```
 
 Rationale: Plans 4 + 5 both touch `providers/trait.rs` + `providers/api.rs`; doing

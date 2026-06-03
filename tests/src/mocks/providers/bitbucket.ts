@@ -64,6 +64,178 @@ export function buildBitbucketApp(state: MockState): Express {
     res.json(buildPr(n, "Fix flaky test", "feature-x", "main", state.mergedPrs.bitbucket));
   });
 
+  // ----- PR diff (Plan-10 mr-diff spec) ---------------------------------
+  // Bitbucket returns a single unified-diff text blob; the Rust client
+  // splits it with the `unidiff` crate.
+  app.get("/repositories/:workspace/:repo/pullrequests/:n/diff", (_req, res) => {
+    const diff = [
+      "diff --git a/src/lib.ts b/src/lib.ts",
+      "index aaaaaaa..bbbbbbb 100644",
+      "--- a/src/lib.ts",
+      "+++ b/src/lib.ts",
+      "@@ -1,3 +1,4 @@",
+      " keep",
+      "-old",
+      "+new1",
+      "+new2",
+      "diff --git a/README.md b/README.md",
+      "new file mode 100644",
+      "index 0000000..ccccccc",
+      "--- /dev/null",
+      "+++ b/README.md",
+      "@@ -0,0 +1,2 @@",
+      "+a",
+      "+b",
+      "",
+    ].join("\n");
+    res.type("text/plain").send(diff);
+  });
+
+  app.post("/repositories/:workspace/:repo/pullrequests/:n/comments", (req, res) => {
+    const body = (req.body ?? {}) as {
+      content?: { raw?: string };
+      inline?: { path?: string; to?: number };
+    };
+    res.status(201).json({
+      id: 5001,
+      content: { raw: body.content?.raw ?? "", html: body.content?.raw ?? "" },
+      inline: body.inline ?? null,
+      created_on: "2026-06-03T12:00:00Z",
+      user: {
+        uuid: "{e2e-uuid}",
+        display_name: "E2E Tester",
+        links: { avatar: { href: "https://avatars.example.com/bb-e2e-tester" } },
+      },
+    });
+  });
+
+  // ----- Pipelines (Plan-10 ci-tab spec) --------------------------------
+  app.get("/repositories/:workspace/:repo/pipelines/", (_req, res) => {
+    res.json({
+      values: [
+        {
+          uuid: "{bb-pipe-1}",
+          build_number: 11,
+          state: { name: "COMPLETED", result: { name: "SUCCESSFUL" } },
+          created_on: "2026-06-02T08:00:00Z",
+          target: { ref_name: "main", ref_type: "branch" },
+          repository: { full_name: "test-ws/test-repo" },
+        },
+      ],
+      page: 1,
+      pagelen: 50,
+      size: 1,
+    });
+  });
+
+  app.post("/repositories/:workspace/:repo/pipelines/", (req, res) => {
+    const body = (req.body ?? {}) as {
+      target?: { ref_name?: string; ref_type?: string; selector?: unknown };
+    };
+    res.status(201).json({
+      uuid: "{bb-pipe-new}",
+      build_number: 12,
+      state: { name: "PENDING" },
+      created_on: "2026-06-03T12:00:00Z",
+      target: {
+        ref_name: body.target?.ref_name ?? "main",
+        ref_type: body.target?.ref_type ?? "branch",
+      },
+      repository: { full_name: "test-ws/test-repo" },
+    });
+  });
+
+  // Rust client uses POST (`bitbucket.rs::cancel_workflow_run`), not the
+  // Atlassian docs' historical PUT. Match the client.
+  app.post("/repositories/:workspace/:repo/pipelines/:uuid/stopPipeline", (_req, res) => {
+    res.status(204).end();
+  });
+
+  // ----- Pages fallback (Plan-10 pages-deploy spec) ---------------------
+  // Bitbucket has no first-class Pages — the provider falls back to
+  // parsing `bitbucket-pipelines.yml` for known deploy pipes. The Rust
+  // client hits `/src/HEAD/...`; the param is named `:ref` to match the
+  // Bitbucket REST contract (it accepts a branch name, tag, or commit
+  // hash — `HEAD` is the special-case the client uses).
+  app.get("/repositories/:workspace/:repo/src/:ref/bitbucket-pipelines.yml", (_req, res) => {
+    if (!state.scenarios.bitbucket.bitbucketPipelinePages) {
+      res.status(404).json({ error: { message: "Not Found" } });
+      return;
+    }
+    const yaml = [
+      "pipelines:",
+      "  branches:",
+      "    main:",
+      "      - step:",
+      "          name: deploy",
+      "          script:",
+      "            - pipe: atlassian/aws-s3-deploy:1.1.0",
+      "              variables:",
+      "                BUCKET: docs.example.com",
+      "",
+    ].join("\n");
+    res.type("text/yaml").send(yaml);
+  });
+
+  // ----- Workspaces (Plan-10 provider-depth orgs filter spec) ----------
+  app.get("/workspaces", (_req, res) => {
+    res.json({
+      values: [
+        {
+          uuid: "{ws-acme}",
+          slug: "acme",
+          name: "Acme Workspace",
+          links: { avatar: { href: "https://avatars.example.com/bb-acme" } },
+        },
+        {
+          uuid: "{ws-globex}",
+          slug: "globex",
+          name: "Globex Workspace",
+          links: { avatar: { href: "https://avatars.example.com/bb-globex" } },
+        },
+      ],
+      page: 1,
+      pagelen: 50,
+      size: 2,
+    });
+  });
+
+  app.get("/repositories/:workspace", (req, res) => {
+    res.json({
+      values: [
+        {
+          uuid: "{repo-a}",
+          name: `${req.params.workspace}-repo-a`,
+          full_name: `${req.params.workspace}/${req.params.workspace}-repo-a`,
+          slug: `${req.params.workspace}-repo-a`,
+          description: null,
+          is_private: false,
+          mainbranch: { name: "main" },
+          language: "typescript",
+          updated_on: "2026-06-01T08:00:00Z",
+          links: {
+            html: {
+              href: `https://bitbucket.org/${req.params.workspace}/${req.params.workspace}-repo-a`,
+            },
+            clone: [
+              {
+                href: `https://bitbucket.org/${req.params.workspace}/${req.params.workspace}-repo-a.git`,
+                name: "https",
+              },
+              {
+                href: `git@bitbucket.org:${req.params.workspace}/${req.params.workspace}-repo-a.git`,
+                name: "ssh",
+              },
+            ],
+          },
+        },
+      ],
+      page: 1,
+      pagelen: 50,
+      size: 1,
+    });
+  });
+
   app.post("/repositories/:workspace/:repo/pullrequests/:n/merge", (req, res) => {
     if (state.scenarios.bitbucket.mergeConflict) {
       res.status(409).json({ error: { message: "Pull request has conflicts" } });

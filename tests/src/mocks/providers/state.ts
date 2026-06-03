@@ -38,6 +38,17 @@ export interface ProviderScenarioFlags {
   /// GitLab-only: pretend the source branch still exists after a merge
   /// with `should_remove_source_branch=true` (protected-branch case).
   deleteSucceedsButBranchSurvives: boolean;
+  /// Pages-disabled — GH/GL `/pages` endpoint returns 404.
+  pagesDisabled: boolean;
+  /// Bitbucket-only — return a `bitbucket-pipelines.yml` that contains an
+  /// `aws-s3-deploy` pipe so the Pages fallback detects it.
+  bitbucketPipelinePages: boolean;
+  /// GitHub-only — workflow detail returns required inputs so the CI
+  /// dispatch form has fields to render.
+  workflowInputsRequired: boolean;
+  /// GitHub-only — workflow dispatch endpoint returns 404 to exercise the
+  /// error-toast surfacing.
+  workflowDispatch404: boolean;
 }
 
 export function freshScenarioFlags(): ProviderScenarioFlags {
@@ -47,6 +58,10 @@ export function freshScenarioFlags(): ProviderScenarioFlags {
     rateLimitedUntil: null,
     rebaseStuckForever: false,
     deleteSucceedsButBranchSurvives: false,
+    pagesDisabled: false,
+    bitbucketPipelinePages: false,
+    workflowInputsRequired: false,
+    workflowDispatch404: false,
   };
 }
 

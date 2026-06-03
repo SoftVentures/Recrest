@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { buildBitbucketApp } from "./bitbucket";
 import { buildGithubApp } from "./github";
 import { buildGitlabApp } from "./gitlab";
-import { type MockState, type ProviderId, freshState } from "./state";
+import { type MockState, type ProviderId, freshScenarioFlags, freshState } from "./state";
 
 /// One bundle of all three mock provider servers + their shared mutable
 /// state. Lifecycle: `start()` → wdio specs run with the returned URLs
@@ -58,11 +58,9 @@ export class MockProviderSuite {
     s.requests.gitlab.length = 0;
     s.requests.bitbucket.length = 0;
     (["github", "gitlab", "bitbucket"] as ProviderId[]).forEach((p) => {
-      s.scenarios[p].mergeConflict = false;
-      s.scenarios[p].authExpired = false;
-      s.scenarios[p].rateLimitedUntil = null;
-      s.scenarios[p].rebaseStuckForever = false;
-      s.scenarios[p].deleteSucceedsButBranchSurvives = false;
+      // Reset every flag — assign via freshScenarioFlags() so adding a new
+      // flag to ProviderScenarioFlags can't silently leak across specs.
+      Object.assign(s.scenarios[p], freshScenarioFlags());
     });
   }
 

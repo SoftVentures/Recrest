@@ -322,7 +322,10 @@ export default function RepoDetailPage() {
                   {prs.map((pr) => (
                     <PrRowSlot
                       key={pr.number}
-                      data-testid={TEST_IDS.repoDetail.prRow}
+                      data-testid={TEST_IDS.repoDetail.mrRow}
+                      data-mr-number={pr.number}
+                      data-mr-state={pr.state}
+                      data-mr-author={pr.author || undefined}
                       onClick={() => setSelectedPr(pr)}
                     >
                       <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
@@ -440,7 +443,7 @@ export default function RepoDetailPage() {
         repoName={repo.name}
         size="lg"
         onClose={() => setSelectedPr(null)}
-        data-testid={TEST_IDS.repoDetail.prDrawer}
+        data-testid={TEST_IDS.repoDetail.mrDrawer}
       />
 
       <CreateBranchDialog
