@@ -16,6 +16,7 @@ export const AppRoute = {
   CHANGES: "/changes",
   MERGE_REQUESTS: "/merge-requests",
   MERGE_REQUESTS_LEGACY: "/pull-requests",
+  MR: "/mr/:repoId/:prNumber",
   BRANCHES: "/branches",
   ACTIVITY: "/activity",
   SETTINGS: "/settings",
@@ -25,4 +26,8 @@ export type AppRoutePath = (typeof AppRoute)[keyof typeof AppRoute];
 
 export function routeToRepo(repoId: string): string {
   return `/repo/${repoId}`;
+}
+
+export function routeToMr(repoId: string, prNumber: number): string {
+  return `/mr/${repoId}/${prNumber}`;
 }

@@ -1,0 +1,18 @@
+{
+  "id": 12345,
+  "number": 7,
+  "title": "Refactor lib",
+  "html_url": "https://github.com/acme/widget/pull/7",
+  "state": "open",
+  "draft": false,
+  "user": { "login": "alice", "avatar_url": "https://example.com/alice.png" },
+  "head": { "ref": "feature", "sha": "deadbeefcafef00d000000000000000000000000" },
+  "base": { "ref": "main", "sha": "0000000000000000000000000000000000000000" },
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-02T00:00:00Z",
+  "merged_at": null,
+  "additions": 3,
+  "deletions": 2,
+  "assignees": [],
+  "requested_reviewers": []
+}

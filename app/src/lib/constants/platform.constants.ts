@@ -53,3 +53,14 @@ export const PLATFORM_WINDOW_CHROME: Record<Platform, WindowChrome> = {
   [Platform.WINDOWS]: WindowChrome.WIN11,
   [Platform.LINUX]: WindowChrome.GNOME,
 };
+
+/** Height in pixels of each chrome variant. Mirrors the `height` set in the
+ *  matching titlebar component (`MacOverlayTitlebar`, `Win11Titlebar`,
+ *  `GnomeTitlebar`). Anything that paints over the app frame (drawers,
+ *  fixed overlays) needs to add this to the 64 px app header. */
+export const WINDOW_CHROME_HEIGHT_PX: Record<WindowChrome, number> = {
+  [WindowChrome.MACOS_OVERLAY]: 38,
+  [WindowChrome.WIN11]: 32,
+  [WindowChrome.GNOME]: 42,
+  [WindowChrome.NONE]: 0,
+};

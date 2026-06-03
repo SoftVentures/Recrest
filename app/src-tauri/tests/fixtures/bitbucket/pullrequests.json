@@ -1,0 +1,36 @@
+{
+  "values": [
+    {
+      "id": 42,
+      "title": "Lock-in author mapping",
+      "state": "OPEN",
+      "links": {
+        "html": { "href": "https://bitbucket.org/myws/myrepo/pull-requests/42" }
+      },
+      "author": {
+        "display_name": "Dora Developer",
+        "nickname": "dora",
+        "links": {
+          "avatar": { "href": "https://bitbucket.org/account/dora/avatar.png" }
+        }
+      },
+      "source": {
+        "branch": { "name": "feature/lockin" }
+      },
+      "destination": {
+        "branch": { "name": "main" }
+      },
+      "reviewers": [
+        {
+          "display_name": "Eve Reviewer",
+          "nickname": "eve",
+          "links": {
+            "avatar": { "href": "https://bitbucket.org/account/eve/avatar.png" }
+          }
+        }
+      ],
+      "created_on": "2026-05-01T12:00:00Z",
+      "updated_on": "2026-05-02T08:30:00Z"
+    }
+  ]
+}

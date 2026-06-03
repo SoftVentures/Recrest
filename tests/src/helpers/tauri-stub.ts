@@ -119,7 +119,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         repoName: repo.name,
         number: num,
         title,
-        author: "valentin",
+        author: "sasha",
         url,
         timestamp: new Date(nowMs - (d + 1) * 86_400_000).toISOString(),
         kind: "opened",
@@ -129,7 +129,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         repoName: repo.name,
         number: num,
         title,
-        author: "valentin",
+        author: "sasha",
         url,
         timestamp: ts,
         kind: "merged",
@@ -200,11 +200,97 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
           providerId: null,
           logoPath: null,
           logoDarkPath: null,
+          sshKeyPath: null,
           status: SEED.repos[0]?.status ?? null,
         };
         return repo;
       }
       case "remove_repo":
+        return undefined;
+      case "forget_repos_under_path": {
+        // Mirror the Rust prune: drop seed repos under the removed root that
+        // no remaining root still covers, return their ids, and shrink SEED so
+        // a follow-up list_repos reflects the prune.
+        const norm = (p) => String(p).replace(/\\\\/g, "/").replace(/[/]+$/, "");
+        const under = (child, root) => {
+          if (!root) return false;
+          const c = norm(child);
+          const r = norm(root);
+          return c === r || c.startsWith(r + "/");
+        };
+        const removed = (args && args.removedPath) || "";
+        const remaining = (args && args.remainingPaths) || [];
+        const ids = SEED.repos
+          .filter((r) => under(r.path, removed) && !remaining.some((rem) => under(r.path, rem)))
+          .map((r) => r.id);
+        SEED.repos = SEED.repos.filter((r) => !ids.includes(r.id));
+        return ids;
+      }
+      // --- drift parity: commands registered in lib.rs that the stub had not
+      // grown a branch for yet. Minimal returns mirroring devStub.ts so the
+      // app's thunks resolve with a usable shape instead of null. Kept here in
+      // one block so the rust-command-drift spec stays green as lib.rs grows.
+      case "delete_repo":
+        return undefined;
+      case "set_repo_logo": {
+        const i = SEED.repos.findIndex((r) => r.id === (args && args.repoId));
+        if (i >= 0)
+          SEED.repos[i] = { ...SEED.repos[i], logoPath: "stub://logo/" + SEED.repos[i].id, logoIsCustom: true };
+        return SEED.repos[i] || null;
+      }
+      case "clear_repo_logo": {
+        const i = SEED.repos.findIndex((r) => r.id === (args && args.repoId));
+        if (i >= 0) SEED.repos[i] = { ...SEED.repos[i], logoPath: null, logoIsCustom: false };
+        return SEED.repos[i] || null;
+      }
+      case "ssh_unlock_key":
+        return undefined;
+      case "set_repo_ssh_key": {
+        const i = SEED.repos.findIndex((r) => r.id === (args && args.repoId));
+        if (i >= 0) SEED.repos[i] = { ...SEED.repos[i], sshKeyPath: (args && args.keyPath) ?? null };
+        return undefined;
+      }
+      case "list_ssh_keys":
+        return {
+          dir: "/Users/dev/.ssh",
+          keys: [{ path: "/Users/dev/.ssh/id_ed25519", name: "id_ed25519", hasPublic: true }],
+        };
+      case "git_branch_delete":
+      case "git_stage":
+      case "git_unstage":
+      case "git_stash":
+      case "git_stash_pop":
+      case "git_stash_drop":
+      case "git_commit":
+        return resolveStatus(args?.repoId);
+      case "git_discard":
+        return {
+          discarded: (args && args.paths) || [],
+          requiresConfirmation: [],
+          status: resolveStatus(args?.repoId),
+        };
+      case "git_stash_list":
+        return [];
+      case "git_has_pre_commit_hook":
+        return false;
+      case "get_git_config":
+      case "set_git_config":
+        return { scope: args && args.repoId == null ? "global" : "repo", entries: {} };
+      case "get_pr_diff":
+        return { files: [], truncated: false };
+      case "post_pr_comment":
+        return undefined;
+      case "list_workflows":
+      case "list_workflow_runs":
+        return [];
+      case "trigger_workflow":
+      case "cancel_workflow_run":
+        return undefined;
+      case "get_pages_status":
+        return null;
+      case "factory_reset":
+        return undefined;
+      case "set_caption_button_bounds":
         return undefined;
       case "list_recent_commits":
         return resolveRecentCommits(args);
@@ -280,10 +366,36 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return { authorizationUrl: "about:blank", state: "stub" };
       case "complete_oauth":
         return undefined;
-      case "get_settings":
+      case "get_settings": {
+        // Read a localStorage overlay (written by update_settings below) so a
+        // page reload re-hydrates the user's last settings — mirroring real
+        // Tauri's settings.json persistence and devStub.ts. Without this the
+        // stub re-seeds on every navigation and persistence can't be tested.
+        try {
+          const overlay = window.localStorage.getItem("__RECREST_TEST_SETTINGS__");
+          if (overlay) SEED.settings = { ...SEED.settings, ...JSON.parse(overlay) };
+        } catch (e) { void e; }
         return SEED.settings;
-      case "update_settings":
-        return undefined;
+      }
+      case "update_settings": {
+        // The real command returns the patched AppSettings. Returning undefined
+        // made every saveSettings.fulfilled consumer choke (e.g.
+        // reposReducer does state.scanPaths = action.payload.scanPaths), which
+        // silently broke sidebar-collapse, theme persistence and scan-path
+        // edits under the stub. Mirror prod: apply the patch, persist a
+        // localStorage overlay (for reload), and return the merged settings.
+        const patch = (args && args.patch) || {};
+        SEED.settings = { ...SEED.settings, ...patch };
+        try {
+          const prev = window.localStorage.getItem("__RECREST_TEST_SETTINGS__");
+          const stored = prev ? JSON.parse(prev) : {};
+          window.localStorage.setItem(
+            "__RECREST_TEST_SETTINGS__",
+            JSON.stringify({ ...stored, ...patch }),
+          );
+        } catch (e) { void e; }
+        return SEED.settings;
+      }
       case "save_window_state":
         return undefined;
       case "load_window_state":
@@ -312,6 +424,13 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "get_build_triple":
         return "windows-x86_64";
       case "dev_panic":
+        return undefined;
+      // The devLog forwarder (main.tsx, DEV builds) mirrors every console.*
+      // call to invoke("dev_log"). Without this branch it hits the default
+      // console.warn below, which the forwarder re-forwards as another
+      // dev_log invoke — an unbounded loop that pegs the main thread and
+      // stops the app ever rendering under the stub.
+      case "dev_log":
         return undefined;
 
       // --- Tauri plugin: event

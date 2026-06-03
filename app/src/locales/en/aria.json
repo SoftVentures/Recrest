@@ -34,6 +34,9 @@
   },
   "repo": {
     "open_in_ide": "Open in IDE",
+    "ssh_key": "SSH key",
+    "pin": "Pin repository",
+    "unpin": "Unpin repository",
     "open_in_terminal": "Open in Terminal",
     "open_in_explorer": "Open in Explorer",
     "open_remote": "Open remote",
@@ -54,5 +57,8 @@
   },
   "activity": {
     "timeline_filter": "Event type"
+  },
+  "dashboard": {
+    "main": "Dashboard content"
   }
 }

@@ -17,11 +17,13 @@ export * from "./constants/terminal.js";
 export * from "./constants/ui.js";
 
 export * from "./types/activity.js";
+export * from "./types/ci.js";
 export * from "./types/errors.js";
 export * from "./types/git.js";
 export * from "./types/ide.js";
 export * from "./types/legal.js";
 export * from "./types/notifications.js";
+export * from "./types/pages.js";
 export * from "./types/pr.js";
 export * from "./types/provider.js";
 export * from "./types/remote.js";

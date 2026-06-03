@@ -1,11 +1,10 @@
-import { useState } from "react";
-
 import { useTranslation } from "react-i18next";
 
 import { Box, MenuItem, type SelectChangeEvent, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import {
+  type AppSettings,
   IDE_DEFINITIONS,
   IDE_IDS,
   type IdeId,
@@ -19,6 +18,8 @@ import {
   type TerminalId,
 } from "@recrest/shared";
 
+import { toast } from "sonner";
+
 import IdeIcon from "@/assets/icons/IdeIcon";
 import ShellIcon from "@/assets/icons/ShellIcon";
 import TerminalIcon from "@/assets/icons/TerminalIcon";
@@ -26,7 +27,7 @@ import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
-import { setPollingIntervalMinutes } from "@/store/actions/settings.actions";
+import { saveSettings, setPollingIntervalMinutes } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 const DETECTED_IDES: IdeId[] = ["vscode", "cursor"];
@@ -88,9 +89,20 @@ export function SystemSection() {
   const platform = usePlatform();
   const dispatch = useAppDispatch();
   const polling = useAppSelector((s) => s.settings.pollingIntervalMinutes);
-  const [defaultIde, setDefaultIde] = useState<string>("auto");
-  const [defaultTerminal, setDefaultTerminal] = useState<string>("auto");
-  const [defaultShell, setDefaultShell] = useState<string>("auto");
+  // Source of truth is the persisted backend settings, not local state — local
+  // state was lost on tab switch (component remount), resetting the dropdowns.
+  const backend = useAppSelector((s) => s.settings.backend);
+  const defaultIde = backend?.defaultIde ?? "auto";
+  const defaultTerminal = backend?.terminal?.id ?? "auto";
+  const defaultShell = backend?.shell ?? "auto";
+
+  const persist = (patch: Partial<AppSettings>) => {
+    void dispatch(saveSettings(patch))
+      .unwrap()
+      .then(() => toast.success(t("settings.saved")))
+      .catch((err) => toast.error(String((err as Error)?.message ?? err)));
+  };
+
   const detectedSet = new Set(DETECTED_IDES);
 
   const detectedTerminals = new Set<TerminalId>(DETECTED_TERMINALS_BY_PLATFORM[platform]);
@@ -142,6 +154,7 @@ export function SystemSection() {
             const n = Number(e.target.value);
             if (Number.isFinite(n)) dispatch(setPollingIntervalMinutes(n));
           }}
+          aria-label={t("settings.fields.polling_interval")}
           data-testid={TEST_IDS.settings.general.pollingInput}
         />
       </SettingsRow>
@@ -153,7 +166,11 @@ export function SystemSection() {
         <WideSelect
           size="small"
           value={defaultIde}
-          onChange={(e: SelectChangeEvent<unknown>) => setDefaultIde(e.target.value as string)}
+          onChange={(e: SelectChangeEvent<unknown>) => {
+            const v = e.target.value as string;
+            persist({ defaultIde: v === "auto" ? null : v });
+          }}
+          slotProps={{ input: { "aria-label": t("settings.fields.default_ide") } }}
           data-testid={TEST_IDS.settings.general.defaultIdeSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -207,7 +224,17 @@ export function SystemSection() {
         <WideSelect
           size="small"
           value={defaultTerminal}
-          onChange={(e: SelectChangeEvent<unknown>) => setDefaultTerminal(e.target.value as string)}
+          onChange={(e: SelectChangeEvent<unknown>) => {
+            const v = e.target.value as string;
+            persist({
+              terminal: {
+                id: v === "auto" ? null : v,
+                profile: backend?.terminal?.profile ?? null,
+                customCommand: backend?.terminal?.customCommand ?? null,
+              },
+            });
+          }}
+          slotProps={{ input: { "aria-label": t("settings.fields.default_terminal") } }}
           data-testid={TEST_IDS.settings.general.defaultTerminalSelect}
           renderValue={(value) => {
             const v = value as string;
@@ -247,7 +274,11 @@ export function SystemSection() {
         <WideSelect
           size="small"
           value={defaultShell}
-          onChange={(e: SelectChangeEvent<unknown>) => setDefaultShell(e.target.value as string)}
+          onChange={(e: SelectChangeEvent<unknown>) => {
+            const v = e.target.value as string;
+            persist({ shell: v === "auto" ? null : v });
+          }}
+          slotProps={{ input: { "aria-label": t("settings.fields.default_shell") } }}
           data-testid={TEST_IDS.settings.general.defaultShellSelect}
           renderValue={(value) => {
             const v = value as string;

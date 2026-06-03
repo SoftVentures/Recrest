@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-import { Box, Checkbox } from "@mui/material";
+import { Checkbox } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
 import { type RemoteRepository } from "@recrest/shared";
@@ -17,10 +17,15 @@ import {
   RepoRow,
   RepoTitle,
   RepoTitleRow,
+  RepoUpdatedAbsolute,
+  RepoUpdatedColumn,
+  RepoUpdatedRelative,
   Spin,
   StatusInline,
 } from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/ProvidersPanel.styles";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { formatDateShort } from "@/lib/utils/dateFormat.utils";
+import { timeAgo } from "@/lib/utils/timeAgo.utils";
 
 const FlushCheckbox = styled(Checkbox)({ padding: 0 });
 
@@ -30,6 +35,10 @@ interface RepoRowCardProps {
   alreadyLocal: boolean;
   onToggle: () => void;
   progress?: string;
+  /** When set, strip this slug prefix from `repo.fullName` because the
+   *  containing group is already visible in the sidebar — no need to repeat
+   *  `org/sub/...` in every row. */
+  groupPrefix?: string | null;
 }
 
 export function RepoRowCard({
@@ -38,8 +47,14 @@ export function RepoRowCard({
   alreadyLocal,
   onToggle,
   progress,
+  groupPrefix,
 }: RepoRowCardProps): ReactNode {
   const theme = useTheme();
+  const updatedIso = repo.pushedAt ?? repo.updatedAt;
+  const displayName =
+    groupPrefix && repo.fullName.startsWith(`${groupPrefix}/`)
+      ? repo.fullName.slice(groupPrefix.length + 1)
+      : repo.fullName;
   return (
     <RepoRow selected={selected} disabled={alreadyLocal}>
       <FlushCheckbox
@@ -51,8 +66,8 @@ export function RepoRowCard({
       />
       <RepoBody>
         <RepoTitleRow>
-          <RepoTitle component="span" variant="caption">
-            {repo.fullName}
+          <RepoTitle component="span" variant="caption" title={repo.fullName}>
+            {displayName}
           </RepoTitle>
           {repo.isPrivate && <MetaBadge tone="neutral">private</MetaBadge>}
           {repo.isFork && <MetaBadge tone="neutral">fork</MetaBadge>}
@@ -64,21 +79,25 @@ export function RepoRowCard({
           )}
         </RepoTitleRow>
         {repo.description && <RepoDesc>{repo.description}</RepoDesc>}
-        <RepoMeta>
-          {repo.language && (
+        {repo.language && (
+          <RepoMeta>
             <LangChip component="span">
               <LangDot component="span" variant="caption" />
               {repo.language}
             </LangChip>
-          )}
-          {repo.language && repo.updatedAt && (
-            <Box component="span" aria-hidden>
-              ·
-            </Box>
-          )}
-          {repo.updatedAt && <Box component="span">updated {repo.updatedAt.slice(0, 10)}</Box>}
-        </RepoMeta>
+          </RepoMeta>
+        )}
       </RepoBody>
+      {updatedIso && (
+        <RepoUpdatedColumn title={updatedIso}>
+          <RepoUpdatedRelative component="span" variant="caption">
+            {timeAgo(updatedIso)}
+          </RepoUpdatedRelative>
+          <RepoUpdatedAbsolute component="span" variant="caption">
+            {formatDateShort(updatedIso)}
+          </RepoUpdatedAbsolute>
+        </RepoUpdatedColumn>
+      )}
       {progress === "cloning" && (
         <StatusInline component="span" variant="caption">
           <Spin size={11} />

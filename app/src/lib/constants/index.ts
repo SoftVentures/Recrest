@@ -7,6 +7,7 @@ export * from "@/lib/constants/ides.constants";
 export * from "@/lib/constants/prStates.constants";
 export * from "@/lib/constants/providers.constants";
 export * from "@/lib/constants/searchKinds.constants";
+export * from "@/lib/constants/settings.constants";
 export * from "@/lib/constants/sortKeys.constants";
 export * from "@/lib/constants/statusChips.constants";
 export * from "@/lib/constants/storage.constants";

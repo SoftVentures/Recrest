@@ -1,0 +1,20 @@
+[
+  {
+    "id": 5001,
+    "iid": 88,
+    "status": "success",
+    "sha": "abc123def456abc123def456abc123def456abcd",
+    "web_url": "https://gitlab.com/acme/widget/-/pipelines/5001",
+    "created_at": "2025-01-04T10:00:00Z",
+    "user": { "username": "alice", "name": "Alice", "avatar_url": null }
+  },
+  {
+    "id": 5000,
+    "iid": 87,
+    "status": "failed",
+    "sha": "0000000000000000000000000000000000000000",
+    "web_url": "https://gitlab.com/acme/widget/-/pipelines/5000",
+    "created_at": "2025-01-03T10:00:00Z",
+    "user": { "username": "bob", "name": "Bob", "avatar_url": null }
+  }
+]

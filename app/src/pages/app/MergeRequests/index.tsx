@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -22,13 +22,31 @@ import {
 } from "@/lib/animations/pageAnimations";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
-import { useAppSelector } from "@/store/hooks";
+import { isTauri } from "@/lib/tauri";
+import MrFiltersPopover, {
+  type AuthorOption,
+  type RepoOption,
+} from "@/pages/app/MergeRequests/parts/MrFiltersPopover";
+import MrGroup from "@/pages/app/MergeRequests/parts/MrGroup";
+import {
+  EMPTY_MR_FILTERS,
+  type MrFiltersState,
+  activeMrFilterCount,
+  applyMrFilters,
+} from "@/pages/app/MergeRequests/utils/mrFilters";
+import { detailKey, loadPrDetail, loadPrDiff } from "@/store/actions/prs.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 interface Row {
   pr: PullRequest;
   repoId: string;
   repoName: string;
+}
+
+interface Group {
+  repoId: string;
+  repoName: string;
+  rows: Row[];
 }
 
 const Root = styled(Box)({
@@ -43,15 +61,13 @@ const Toolbar = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
-  // Right padding compensates for the page-scroll gutter so the toolbar's
-  // right edge lines up with the table card inside the scroll surface.
   padding: "12px 24px 12px 24px",
   paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 });
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
+// eslint-disable-next-line no-restricted-syntax -- native <button> required: must own the anchor ref for the filter Popover (MUI accepts only a DOM element ref). A wrapping Box or a regular MUI Button would change focus/keyboard semantics for what is structurally a toggle.
 const FilterBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -70,10 +86,28 @@ const FilterBtn = styled("button")(({ theme }) => ({
     backgroundColor: theme.palette.surface.interface.active,
     borderColor: theme.palette.border.hover,
   },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 1,
+  },
 }));
 
+const FilterBadge = styled(Box)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 16,
+  height: 16,
+  padding: "0 5px",
+  borderRadius: 8,
+  fontSize: 10,
+  fontWeight: 700,
+  fontVariantNumeric: "tabular-nums",
+  background: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText ?? "#fff",
+})) as typeof Box;
+
 const Card = styled(Box)(({ theme }) => ({
-  // Right margin compensates for the parent Scroll's 4px scrollbar gutter.
   margin: theme.spacing(0, 3),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(1),
@@ -85,20 +119,31 @@ const Scroll = styled(Box)({
   flex: 1,
   minHeight: 0,
   overflow: "auto",
-  // Reserve scrollbar gutter so width is identical whether the page
-  // currently overflows or not — keeps page-swap horizontally stable.
   scrollbarGutter: "stable",
   paddingBottom: 24,
 });
 
 export default function MergeRequestsPage() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const items = useAppSelector((s) => s.prs.items);
   const repos = useAppSelector((s) => s.repos.items);
   const connections = useAppSelector((s) => s.providers.connections);
-  const [filter, setFilter] = useState("");
+  const cachedDiffs = useAppSelector((s) => s.prs.diff);
+  const cachedDetails = useAppSelector((s) => s.prs.detail);
+  const diffsLoading = useAppSelector((s) => s.prs.diffLoading);
+  const detailsLoading = useAppSelector((s) => s.prs.detailLoading);
 
-  const rows = useMemo<Row[]>(() => {
+  const [filter, setFilter] = useState("");
+  const [filters, setFilters] = useState<MrFiltersState>(EMPTY_MR_FILTERS);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Single source of truth — every open MR the user could possibly see on
+  // this page before any search/filter narrowing. Filter-popover options are
+  // derived from this so toggling a filter doesn't make its own option
+  // disappear (a common GitHub/Linear UX gotcha).
+  const allRows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     for (const [repoId, prs] of Object.entries(items)) {
       const repo = repos[repoId];
@@ -109,15 +154,100 @@ export default function MergeRequestsPage() {
         out.push({ pr, repoId, repoName: repo.name });
       }
     }
-    if (!filter.trim()) return out;
-    const q = filter.toLowerCase();
-    return out.filter(
-      (r) =>
-        r.pr.title.toLowerCase().includes(q) ||
-        r.repoName.toLowerCase().includes(q) ||
-        r.pr.author.toLowerCase().includes(q),
-    );
-  }, [items, repos, connections, filter]);
+    return out;
+  }, [items, repos, connections]);
+
+  // Preload diff + detail for every visible MR so:
+  //   1) Rows can show +/− stats even when the provider list endpoint omits
+  //      them (GitLab) — derived from the cached diff via deriveDiffStats
+  //   2) Opening the drawer / detail page reveals data instantly instead of
+  //      flashing a loading state
+  // Dispatch is idempotent — guard against re-dispatching when the slice
+  // already has the data or a request is in flight.
+  useEffect(() => {
+    if (!isTauri()) return;
+    for (const row of allRows) {
+      const key = detailKey(row.repoId, row.pr.number);
+      if (!cachedDiffs[key] && !diffsLoading[key]) {
+        void dispatch(loadPrDiff({ repoId: row.repoId, prNumber: row.pr.number }));
+      }
+      if (!cachedDetails[key] && !detailsLoading[key]) {
+        void dispatch(loadPrDetail({ repoId: row.repoId, prNumber: row.pr.number }));
+      }
+    }
+  }, [allRows, cachedDiffs, cachedDetails, diffsLoading, detailsLoading, dispatch]);
+
+  const repoOptions = useMemo<RepoOption[]>(() => {
+    const map = new Map<string, RepoOption>();
+    for (const r of allRows) {
+      const existing = map.get(r.repoId);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        const repo = repos[r.repoId];
+        map.set(r.repoId, {
+          id: r.repoId,
+          name: r.repoName,
+          count: 1,
+          logoPath: repo?.logoPath ?? null,
+          logoDarkPath: repo?.logoDarkPath ?? null,
+        });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [allRows, repos]);
+
+  const authorOptions = useMemo<AuthorOption[]>(() => {
+    const map = new Map<string, AuthorOption>();
+    for (const r of allRows) {
+      const login = r.pr.author;
+      const existing = map.get(login);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(login, { login, count: 1, avatarUrl: r.pr.authorAvatarUrl ?? null });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.login.localeCompare(b.login));
+  }, [allRows]);
+
+  const hasDrafts = useMemo(() => allRows.some((r) => r.pr.draft), [allRows]);
+
+  const visibleRows = useMemo<Row[]>(() => {
+    let out = applyMrFilters(allRows, filters);
+    const q = filter.trim().toLowerCase();
+    if (q) {
+      out = out.filter(
+        (r) =>
+          r.pr.title.toLowerCase().includes(q) ||
+          r.repoName.toLowerCase().includes(q) ||
+          r.pr.author.toLowerCase().includes(q),
+      );
+    }
+    return out;
+  }, [allRows, filters, filter]);
+
+  const groups = useMemo<Group[]>(() => {
+    const byRepo = new Map<string, Group>();
+    for (const r of visibleRows) {
+      const g = byRepo.get(r.repoId);
+      if (g) g.rows.push(r);
+      else byRepo.set(r.repoId, { repoId: r.repoId, repoName: r.repoName, rows: [r] });
+    }
+    return [...byRepo.values()].sort((a, b) => a.repoName.localeCompare(b.repoName));
+  }, [visibleRows]);
+
+  // Per-repo collapse state — store *collapsed* IDs so newly appearing groups
+  // default to expanded (matching the Repos page's `useState(true)` default).
+  const [collapsedRepoIds, setCollapsedRepoIds] = useState<Set<string>>(new Set());
+  const toggleGroup = (repoId: string) => {
+    setCollapsedRepoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(repoId)) next.delete(repoId);
+      else next.add(repoId);
+      return next;
+    });
+  };
 
   const [selected, setSelected] = useState<Row | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
@@ -127,6 +257,8 @@ export default function MergeRequestsPage() {
     onClose: () => setSelected(null),
     direction: "right",
   });
+
+  const activeCount = activeMrFilterCount(filters);
 
   return (
     <Root data-testid={TEST_IDS.mr.page}>
@@ -140,33 +272,66 @@ export default function MergeRequestsPage() {
           data-testid={TEST_IDS.mr.filterInput}
           clearTestId={TEST_IDS.mr.filterClear}
         />
-        <FilterBtn type="button" data-testid={TEST_IDS.mr.filterBtn}>
+        <FilterBtn
+          ref={filterBtnRef}
+          type="button"
+          onClick={() => setPopoverOpen((o) => !o)}
+          aria-haspopup="dialog"
+          aria-expanded={popoverOpen}
+          data-testid={TEST_IDS.mr.filterBtn}
+        >
           <Filter size={13} />
           {t("mrs.filters")}
+          {activeCount > 0 && (
+            <FilterBadge component="span" data-testid={TEST_IDS.mr.filterBadge}>
+              {activeCount}
+            </FilterBadge>
+          )}
           <ChevronDown size={13} />
         </FilterBtn>
       </Toolbar>
 
       <Scroll>
-        {rows.length === 0 ? (
+        {allRows.length === 0 ? (
           <EmptyState
             mascot="snoozing"
             title="No open merge requests"
             description="Connected providers haven't returned any open PRs yet."
           />
+        ) : visibleRows.length === 0 ? (
+          <EmptyState
+            mascot="shrugging"
+            title="No merge requests match"
+            description="Try clearing the search or relaxing your filters."
+          />
         ) : (
           <Card>
-            {rows.map((row) => (
-              <MrRow
-                key={`${row.repoId}#${row.pr.number}`}
-                pr={row.pr}
-                repoName={row.repoName}
-                onClick={() => setSelected(row)}
+            {groups.map((g) => (
+              <MrGroup
+                key={g.repoId}
+                repoId={g.repoId}
+                repoName={g.repoName}
+                prs={g.rows}
+                collapsed={collapsedRepoIds.has(g.repoId)}
+                selectedKey={selected ? `${selected.repoId}#${selected.pr.number}` : null}
+                onToggle={() => toggleGroup(g.repoId)}
+                onSelectRow={(row) => setSelected(row)}
               />
             ))}
           </Card>
         )}
       </Scroll>
+
+      <MrFiltersPopover
+        open={popoverOpen}
+        anchorEl={filterBtnRef.current}
+        filters={filters}
+        onChange={setFilters}
+        onClose={() => setPopoverOpen(false)}
+        repos={repoOptions}
+        authors={authorOptions}
+        hasDrafts={hasDrafts}
+      />
 
       <MrDetailDrawer
         pr={selected?.pr ?? null}

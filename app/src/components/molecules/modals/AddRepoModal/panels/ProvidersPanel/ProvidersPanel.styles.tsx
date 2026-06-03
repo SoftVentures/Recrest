@@ -5,7 +5,7 @@ import { RefreshCw } from "lucide-react";
 
 export const ProvidersGrid = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "240px 1fr",
+  gridTemplateColumns: "280px 1fr",
   height: "100%",
 }) as typeof Box;
 
@@ -35,30 +35,48 @@ export const AsideHeading = styled(Typography)(({ theme }) => ({
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 export const AsideItem = styled("button", {
-  shouldForwardProp: (p) => p !== "active" && p !== "indent",
-})<{ active: boolean; indent?: boolean }>(({ theme, active, indent }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  width: "100%",
-  textAlign: "left",
-  padding: indent ? "5px 10px 5px 28px" : "7px 10px",
-  borderRadius: 8,
-  border: 0,
-  background: active
-    ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
-    : "transparent",
-  color: active ? theme.palette.primary.dark : theme.palette.text.primary,
-  fontFamily: "inherit",
-  fontSize: 12.5,
-  fontWeight: active ? 600 : 500,
-  cursor: "pointer",
-  "&:hover": {
-    backgroundColor: active
+  shouldForwardProp: (p) => p !== "active" && p !== "depth",
+})<{ active: boolean; depth?: number }>(({ theme, active, depth = 0 }) => {
+  // Tree guide: a vertical line drops from the parent column for every nested
+  // child so the eye can trace which subgroup belongs to which parent.
+  const indentBase = 14;
+  const leftPad = depth === 0 ? 10 : 10 + depth * indentBase;
+  return {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+    textAlign: "left",
+    padding: depth === 0 ? "7px 10px" : `5px 10px 5px ${leftPad}px`,
+    borderRadius: 8,
+    border: 0,
+    background: active
       ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
-      : theme.palette.surface.interface.active,
-  },
-}));
+      : "transparent",
+    color: active ? theme.palette.primary.dark : theme.palette.text.primary,
+    fontFamily: "inherit",
+    fontSize: 12.5,
+    fontWeight: active ? 600 : 500,
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: active
+        ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
+        : theme.palette.surface.interface.active,
+    },
+    ...(depth > 0 && {
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        left: 10 + indentBase / 2,
+        top: 0,
+        bottom: 0,
+        width: 1,
+        backgroundColor: theme.palette.divider,
+      },
+    }),
+  };
+});
 
 export const AsideIcon = styled(Box)({
   width: 18,
@@ -166,9 +184,12 @@ export const RepoTitleRow = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 8,
+  minWidth: 0,
 }) as typeof Box;
 
 export const RepoTitle = styled(Typography)(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
   fontSize: 13,
   fontWeight: 600,
   color: theme.palette.text.primary,
@@ -194,6 +215,35 @@ export const RepoMeta = styled(Box)(({ theme }) => ({
   fontSize: 10.5,
   color: theme.palette.text.informationLight,
 })) as typeof Box;
+
+export const RepoUpdatedColumn = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  justifyContent: "center",
+  gap: 2,
+  flexShrink: 0,
+  minWidth: 88,
+  paddingLeft: 12,
+  color: theme.palette.text.information,
+  textAlign: "right",
+})) as typeof Box;
+
+export const RepoUpdatedRelative = styled(Typography)(({ theme }) => ({
+  fontSize: 11.5,
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  lineHeight: 1.2,
+  whiteSpace: "nowrap",
+})) as typeof Typography;
+
+export const RepoUpdatedAbsolute = styled(Typography)(({ theme }) => ({
+  fontSize: 10,
+  color: theme.palette.text.informationLight,
+  lineHeight: 1.2,
+  whiteSpace: "nowrap",
+  fontVariantNumeric: "tabular-nums",
+})) as typeof Typography;
 
 export const LangChip = styled(Box)({
   display: "inline-flex",

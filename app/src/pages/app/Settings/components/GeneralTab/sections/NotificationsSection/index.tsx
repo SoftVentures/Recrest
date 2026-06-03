@@ -90,12 +90,14 @@ export function NotificationsSection() {
     show,
     testId,
     kind,
+    label,
   }: {
     checked: boolean;
     onChange: (v: boolean) => void;
     show: boolean;
     testId: string;
     kind: NotificationKind;
+    label: string;
   }) => (
     <InlineRow>
       {show && (
@@ -111,6 +113,7 @@ export function NotificationsSection() {
         checked={checked}
         onCheckedChange={onChange}
         disabled={!enabled && testId !== "master"}
+        aria-label={label}
         data-testid={TEST_IDS.settings.general.notifications(testId)}
       />
     </InlineRow>
@@ -135,6 +138,7 @@ export function NotificationsSection() {
           <GeneralSwitchInput
             checked={enabled}
             onCheckedChange={setEnabled}
+            aria-label={t("settings.notifications.enabled")}
             data-testid={TEST_IDS.settings.general.notificationsMaster}
           />
         </InlineRow>
@@ -146,6 +150,7 @@ export function NotificationsSection() {
           show={enabled && newPr}
           testId={TEST_IDS.settings.general.notificationsField.newPr}
           kind={NotificationKind.NEW_PR}
+          label={t("settings.notifications.new_pr")}
         />
       </SettingsRow>
       <SettingsRow label={t("settings.notifications.ci_failed")}>
@@ -155,6 +160,7 @@ export function NotificationsSection() {
           show={enabled && ciFailed}
           testId={TEST_IDS.settings.general.notificationsField.ciFailed}
           kind={NotificationKind.CI_FAILED}
+          label={t("settings.notifications.ci_failed")}
         />
       </SettingsRow>
       <SettingsRow label={t("settings.notifications.merge_ready")}>
@@ -164,6 +170,7 @@ export function NotificationsSection() {
           show={enabled && mergeReady}
           testId={TEST_IDS.settings.general.notificationsField.mergeReady}
           kind={NotificationKind.MERGE_READY}
+          label={t("settings.notifications.merge_ready")}
         />
       </SettingsRow>
     </SettingsSection>

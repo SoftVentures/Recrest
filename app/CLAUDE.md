@@ -44,17 +44,53 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 - `Cargo.toml` uses `git2` with `vendored-libgit2` (no system libgit2 needed) and `keyring` with native backends.
 - `git/scanner.rs` calls `skip_current_dir` on discovery so nested repos aren't re-scanned.
 - `git/watcher.rs` is instantiated in `lib.rs::run()` and held in `AppState.watcher`; it auto-subscribes existing repos on startup and is kept in sync by the `commands/repos.rs` add/remove paths and `commands/clone.rs`. Any new command that creates or removes a repo must update the watcher too.
-- `providers/r#trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`.
+- `providers/r#trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`. **Debug builds** transparently swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` — the macOS keychain ACL is bound to the binary's code signature, which `cargo build` regenerates on every rebuild, so the keychain prompt would fire on every `yarn dev` launch. Release builds keep the OS keychain unchanged. On first dev launch after the file-backend migration shipped, existing keychain tokens are auto-migrated into the file (one set of keychain prompts the user clicks through; the file then becomes the sentinel and migration never re-runs).
 - Add a crate: `cargo add <name>` inside `src-tauri/`. Watch that it works under `vendored-libgit2` linking; avoid crates that pull in a second libgit2.
 
-## App icons (production vs dev)
+## App icons (production vs dev, per-platform layout)
 
-Two icon sets live under `src-tauri/`:
+Two icon trees live under `src-tauri/`, each split into four platform subfolders:
 
-- `icons/` — production build icon (dark chevrons on a white square). Sources aren't regenerated routinely; if you need to refresh them, feed `src/assets/recrest-icon-light.svg` to `tauri icon`.
-- `icons-dev/` — dev build icon (white chevrons with an orange `</>` badge bottom-right), so `yarn dev` is visually distinct from the installed app in the taskbar/dock. Regenerate with `yarn workspace @recrest/app gen:dev-icons` whenever you edit `src/assets/recrest-icon-dev.svg`.
+```
+src-tauri/icons/                 (production)
+├── mac/      icon.icns, icon-light.icns, icon-dark.icns
+├── windows/  icon.ico, icon-light.png, icon-dark.png, Square*Logo.png, StoreLogo.png
+├── linux/    32x32.png, 64x64.png, 128x128.png, 256x256.png, 512x512.png
+└── tray/     tray-template.png (44), tray-template@2x.png (88), tray-light.png (32), tray-dark.png (32)
+                                      (shared — used by both prod and dev runtimes)
 
-`tauri:dev` passes `--config src-tauri/tauri.dev.conf.json`, a minimal overlay that swaps `bundle.icon` to point at `icons-dev/`. Only `tauri dev` picks it up; `tauri build` ignores the overlay and keeps the production icon. Do not duplicate other fields in the overlay — keep it strictly about the icon swap so production config stays the single source of truth.
+src-tauri/icons-dev/             (dev — dark/light variants get an orange </> badge)
+├── mac/      icon.icns, icon-light.icns, icon-dark.icns
+├── windows/  icon.ico, icon-light.png, icon-dark.png, Square*Logo.png, StoreLogo.png
+└── linux/    32x32.png, 64x64.png, 128x128.png, 256x256.png, 512x512.png
+                                      (no tray/ — see below)
+```
+
+**Why subfolders:** macOS and Windows want **padded** artwork (Apple icon grid: 824 tile inside 1024 canvas with 100px transparent margin, rx ≈ 185; Microsoft recommends ~10% margin for the same optical reason). Linux is full-bleed. Tray icons are monochrome on transparent — macOS treats them as **template images** that the menu bar auto-tints (set via `TrayIconBuilder::icon_as_template(true)` on macOS only); Windows ships two variants (`tray-light.png` for light tray, `tray-dark.png` for dark) and `apply_windows_theme_icon` swaps them on `WindowEvent::ThemeChanged`.
+
+**Source SVGs** (`app/src/assets/logos/`):
+
+- `recrest-icon-mac-{light,dark,dev-light,dev-dark}.svg` — Apple-grid sources; feed `mac/` AND `windows/` output (both want padded artwork).
+- `recrest-icon-{light,dark,dev-light,dev-dark}.svg` — full-bleed sources; feed `linux/` output.
+- `recrest-icon-tray-{light,dark}.svg` — tray glyph (transparent monochrome chevrons, light = black for macOS template + Windows light tray, dark = white for Windows dark tray). **One set, used by both prod and dev** — tray icons are conventionally minimal/monochrome on every platform, and a dev-specific tray would clutter the menubar slot. The dev build is distinguished by its tooltip (`identity::current_tray_tooltip()` returns "Recrest Dev"), not by the glyph.
+
+**Regenerate** (`src-tauri/scripts/gen-icon-variants.mjs`):
+
+- `yarn workspace @recrest/app gen:icon-variants` — both sets, all four platforms (~13s).
+- `yarn workspace @recrest/app gen:prod-icons` — only `icons/` (~5-8s).
+- `yarn workspace @recrest/app gen:dev-icons` — only `icons-dev/` (~5-8s, common during dev-variant iteration).
+
+All three call the same script with `--prod` / `--dev` filters; the only-flagged variants run faster because they skip the other half. Run after editing any source SVG.
+
+**Runtime icon swapping** — both macOS (`set_macos_app_icon`) and Windows (`apply_windows_theme_icon`) swap between the light/dark variants when the OS theme flips. **Windows** hooks Tauri's `WindowEvent::ThemeChanged` (dispatched on the main thread by the event loop) and re-applies window + tray icons from there. **macOS** uses a 1.5s polling task spawned in `spawn_macos_appearance_poller` instead — both notification paths were tried and discarded as unreliable for system-wide appearance flips: `WindowEvent::ThemeChanged` on macOS only fires for explicit per-window theme overrides (a known tao behaviour), and an `NSDistributedNotificationCenter` observer for `AppleInterfaceThemeChangedNotification` registered cleanly but its block never fired against the Tauri dev/release binary (likely because the dev binary isn't a proper `.app` bundle and lacks the LSUIElement/sandbox plumbing needed to receive system-wide distributed notifications). The poller reads `NSApp.effectiveAppearance` on the main thread via `app_handle.run_on_main_thread(...)` and calls `set_macos_app_icon()` only when the dark-mode bit actually flips. The dock/taskbar icon is bundle-icon based, the tray uses `tray_icon_bytes()`.
+
+**Tray click behavior** — platform-conditional in `TrayIconBuilder`:
+- macOS: `.show_menu_on_left_click(true)` + `.icon_as_template(true)` — single left-click opens the menu (like Wi-Fi, Battery, Spotlight). No `on_tray_icon_event` handler.
+- Windows + Linux: `.show_menu_on_left_click(false)` + `on_tray_icon_event` left-click → `show_main_window`. Right-click opens the menu.
+
+**System dark-mode detection at boot** — Tauri's WKWebView has a documented quirk on macOS where `window.matchMedia("(prefers-color-scheme: dark)")` returns `false` on cold start even when the system is dark, because the webview's effective appearance lags the system. To unstick the UI, `ThemeWrapper` calls the `get_system_dark_mode` Tauri command on mount (macOS reads `NSApp.effectiveAppearance` on the main thread; Windows reads the registry; Linux returns `None` since GTK matchMedia is reliable) and dispatches `syncSystemTheme` if the OS truth disagrees with matchMedia. The first paint frame may still flash because the `index.html` anti-flash script still consults the lying matchMedia; eliminating that frame would require `WebviewWindowBuilder::initialization_script`, which means moving window creation out of `tauri.conf.json`.
+
+**`tauri:dev`** passes `--config src-tauri/tauri.dev.conf.json`, a minimal overlay that swaps `bundle.icon` to point at `icons-dev/`. Only `tauri dev` picks it up; `tauri build` ignores the overlay and keeps the production icon. Do not duplicate other fields in the overlay — keep it strictly about the icon swap. The dev EXE-resource icon (Windows) is wired via `build.rs::WindowsAttributes::window_icon_path("icons-dev/windows/icon.ico")` so the taskbar shows the dev variant from process start.
 
 ## Redux + i18n
 

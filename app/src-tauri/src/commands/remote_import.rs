@@ -278,11 +278,14 @@ pub async fn create_and_open_workspace(
     let body = serde_json::json!({ "folders": folders });
 
     use tauri::Manager;
-    let dir = app
-        .path()
-        .app_config_dir()
-        .map_err(|e| CommandError::internal(format!("config dir failed: {e}")))?
-        .join("workspaces");
+    let base = if let Some(root) = crate::identity::test_profile_root() {
+        root
+    } else {
+        app.path()
+            .app_config_dir()
+            .map_err(|e| CommandError::internal(format!("config dir failed: {e}")))?
+    };
+    let dir = base.join("workspaces");
     std::fs::create_dir_all(&dir)
         .map_err(|e| CommandError::internal(format!("mkdir failed: {e}")))?;
 

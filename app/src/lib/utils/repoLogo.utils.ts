@@ -22,6 +22,14 @@ export function loadRepoLogoUri(path: string): Promise<string | null> {
   return promise;
 }
 
+/** Drop the data-URI cache for a given path so a fresh `load_logo_bytes`
+ *  fires next time the avatar is rendered. Used after upload/clear: the
+ *  file at `<app_data>/repo-logos/<repo_id>.<ext>` may have been replaced
+ *  in place, and without busting we'd keep showing the previous bytes. */
+export function invalidateRepoLogoCache(path: string | null | undefined): void {
+  if (path) cache.delete(path);
+}
+
 export function pickLogoPath(
   logoPath: string | null,
   logoDarkPath: string | null,

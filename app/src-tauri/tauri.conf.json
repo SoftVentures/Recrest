@@ -47,11 +47,11 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/linux/32x32.png",
+      "icons/linux/128x128.png",
+      "icons/linux/256x256.png",
+      "icons/mac/icon.icns",
+      "icons/windows/icon.ico"
     ],
     "category": "DeveloperTool",
     "shortDescription": "Lightweight developer dashboard",
@@ -63,7 +63,7 @@
       "nsis": {
         "displayLanguageSelector": true,
         "languages": ["English", "German"],
-        "installerIcon": "icons/icon.ico",
+        "installerIcon": "icons/windows/icon.ico",
         "headerImage": "installer-assets/build/nsis-header.bmp",
         "sidebarImage": "installer-assets/build/nsis-sidebar.bmp"
       }
@@ -84,9 +84,9 @@
         "files": {
           "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
           "/usr/share/applications/recrest.desktop": "resources/recrest.desktop",
-          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/64x64.png",
-          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/128x128.png",
-          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/128x128@2x.png"
+          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/linux/64x64.png",
+          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/linux/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/linux/256x256.png"
         }
       },
       "appimage": {
@@ -94,9 +94,9 @@
         "files": {
           "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
           "/usr/share/applications/recrest.desktop": "resources/recrest.desktop",
-          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/64x64.png",
-          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/128x128.png",
-          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/128x128@2x.png"
+          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/linux/64x64.png",
+          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/linux/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/linux/256x256.png"
         }
       }
     },

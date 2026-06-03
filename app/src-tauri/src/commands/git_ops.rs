@@ -8,8 +8,18 @@ use super::error::CommandError;
 #[cfg(target_os = "windows")]
 use super::process::configure as no_window;
 use crate::auth::token::TokenStore;
+use crate::config::settings::{AppSettings, RepoRecord};
 use crate::git::{branches, status};
 use crate::AppState;
+
+/// The SSH key a repo should use: its own override first, then the global
+/// default key, else `None` (ssh-agent / global config).
+fn resolve_ssh_key(settings: &AppSettings, record: &RepoRecord) -> Option<String> {
+    record
+        .ssh_key_path
+        .clone()
+        .or_else(|| settings.default_ssh_key_path.clone())
+}
 
 /// Matches a remote URL's host against our known providers so we can pick the
 /// right keychain entry even when a repo wasn't tagged with a provider at
@@ -65,7 +75,37 @@ fn resolve_provider_for_remote(repo: &Repository, hint: Option<&str>) -> Option<
 /// not connected the provider in Settings. When a provider token is present
 /// but fails, we surface a clear auth error instead of silently shelling out
 /// to the system helper.
-fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<String>) {
+/// Per-repo SSH credentials threaded into the credentials callback. Holds no
+/// `Debug`/`Display` impl so the passphrase can never leak into logs.
+#[derive(Clone, Default)]
+pub struct SshCreds {
+    pub key_path: Option<PathBuf>,
+    pub passphrase: Option<String>,
+}
+
+/// Build an `ssh-key` credential from a private key on disk, pairing it with
+/// the sibling `<key>.pub` when present. The username comes from the remote
+/// URL (libgit2 contract), never from settings.
+fn build_ssh_key_cred(
+    username: Option<&str>,
+    private_key: &Path,
+    passphrase: Option<&str>,
+) -> Result<git2::Cred, git2::Error> {
+    let pub_key = private_key.with_extension("pub");
+    let pub_opt = pub_key.exists().then_some(pub_key);
+    git2::Cred::ssh_key(
+        username.unwrap_or("git"),
+        pub_opt.as_deref(),
+        private_key,
+        passphrase,
+    )
+}
+
+fn install_credentials(
+    callbacks: &mut RemoteCallbacks<'_>,
+    provider_id: Option<String>,
+    ssh: SshCreds,
+) {
     let store = TokenStore::new();
     let token = provider_id
         .as_deref()
@@ -91,11 +131,17 @@ fn install_credentials(callbacks: &mut RemoteCallbacks<'_>, provider_id: Option<
         if allowed.contains(git2::CredentialType::SSH_KEY) {
             if tried_ssh {
                 return Err(git2::Error::from_str(
-                    "ssh-agent did not have a usable key for this remote",
+                    "ssh key was not accepted for this remote",
                 ));
             }
             tried_ssh = true;
-            return git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"));
+            let user = username_from_url.unwrap_or("git");
+            // A per-repo key wins over the agent so a repo with its own deploy
+            // key authenticates even when ssh-agent holds unrelated keys.
+            if let Some(key) = ssh.key_path.as_deref() {
+                return build_ssh_key_cred(Some(user), key, ssh.passphrase.as_deref());
+            }
+            return git2::Cred::ssh_key_from_agent(user);
         }
 
         if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
@@ -166,7 +212,7 @@ pub async fn open_in_explorer(
     #[cfg(target_os = "windows")]
     {
         let mut cmd = std::process::Command::new("explorer");
-        cmd.arg(path_str);
+        cmd.arg(format!("/select,{path_str}"));
         no_window(&mut cmd);
         cmd.spawn()
             .map_err(|e| CommandError::internal(format!("explorer failed: {e}")))?;
@@ -176,7 +222,7 @@ pub async fn open_in_explorer(
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
-            .arg(path_str)
+            .args(["-R", path_str])
             .spawn()
             .map_err(|e| CommandError::internal(format!("open failed: {e}")))?;
         return Ok(());
@@ -199,16 +245,21 @@ pub async fn git_fetch(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<status::RepoStatusDto, CommandError> {
-    let (path, provider_id) = {
+    let (path, provider_id, key_path) = {
         let config = state.config.lock().await;
-        let record = config
-            .settings()
+        let settings = config.settings();
+        let record = settings
             .repos
             .get(&repo_id)
             .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
-        (record.path.clone(), record.provider_id.clone())
+        (
+            record.path.clone(),
+            record.provider_id.clone(),
+            resolve_ssh_key(settings, record),
+        )
     };
-    tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref()))
+    let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref(), ssh))
         .await
         .map_err(|e| CommandError::internal(format!("fetch task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
@@ -221,18 +272,26 @@ pub async fn git_fetch(
 #[tauri::command]
 pub async fn git_fetch_all(state: State<'_, AppState>) -> Result<u32, CommandError> {
     let config = state.config.lock().await;
-    let repos: Vec<(PathBuf, Option<String>)> = config
-        .settings()
+    let settings = config.settings();
+    let repos: Vec<(String, PathBuf, Option<String>, Option<String>)> = settings
         .repos
         .values()
-        .map(|r| (r.path.clone(), r.provider_id.clone()))
+        .map(|r| {
+            (
+                r.id.clone(),
+                r.path.clone(),
+                r.provider_id.clone(),
+                resolve_ssh_key(settings, r),
+            )
+        })
         .collect();
     drop(config);
 
     let mut ok = 0u32;
-    for (path, provider_id) in repos {
+    for (repo_id, path, provider_id, key_path) in repos {
+        let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
         let result =
-            tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref()))
+            tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref(), ssh))
                 .await;
         match result {
             Ok(Ok(())) => ok += 1,
@@ -313,17 +372,22 @@ pub async fn git_push(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<status::RepoStatusDto, CommandError> {
-    let (path, provider_id) = {
+    let (path, provider_id, key_path) = {
         let config = state.config.lock().await;
-        let record = config
-            .settings()
+        let settings = config.settings();
+        let record = settings
             .repos
             .get(&repo_id)
             .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
-        (record.path.clone(), record.provider_id.clone())
+        (
+            record.path.clone(),
+            record.provider_id.clone(),
+            resolve_ssh_key(settings, record),
+        )
     };
 
-    tokio::task::spawn_blocking(move || push_blocking(&path, provider_id.as_deref()))
+    let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    tokio::task::spawn_blocking(move || push_blocking(&path, provider_id.as_deref(), ssh))
         .await
         .map_err(|e| CommandError::internal(format!("push task failed: {e}")))??;
 
@@ -393,6 +457,25 @@ pub async fn git_branch_create(
     Ok(status::read_status(&path2)?)
 }
 
+/// Deletes a local branch. Refuses to delete the currently-checked-out branch
+/// (would orphan HEAD); the UI must `git_checkout` somewhere else first. Used
+/// by the merge-modal "Delete source branch after merge" affordance — after a
+/// merge HEAD lives on the target, so deleting the source is safe.
+#[tauri::command]
+pub async fn git_branch_delete(
+    state: State<'_, AppState>,
+    repo_id: String,
+    branch: String,
+) -> Result<status::RepoStatusDto, CommandError> {
+    let path = resolve_repo_path(&state, &repo_id).await?;
+    let branch_clone = branch.clone();
+    tokio::task::spawn_blocking(move || branch_delete_blocking(&path, &branch_clone))
+        .await
+        .map_err(|e| CommandError::internal(format!("branch_delete task failed: {e}")))??;
+    let path2 = resolve_repo_path(&state, &repo_id).await?;
+    Ok(status::read_status(&path2)?)
+}
+
 /// Fast-forward `git pull` — fetches then fast-forwards HEAD when possible.
 /// Refuses to pull when the working tree is dirty or a merge would be needed;
 /// that's a UX call rather than a limitation (real merge conflicts should
@@ -402,23 +485,45 @@ pub async fn git_pull(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<status::RepoStatusDto, CommandError> {
-    let (path, provider_id) = {
+    let (path, provider_id, key_path) = {
         let config = state.config.lock().await;
-        let record = config
-            .settings()
+        let settings = config.settings();
+        let record = settings
             .repos
             .get(&repo_id)
             .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
-        (record.path.clone(), record.provider_id.clone())
+        (
+            record.path.clone(),
+            record.provider_id.clone(),
+            resolve_ssh_key(settings, record),
+        )
     };
-    tokio::task::spawn_blocking(move || pull_blocking(&path, provider_id.as_deref()))
+    let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    tokio::task::spawn_blocking(move || pull_blocking(&path, provider_id.as_deref(), ssh))
         .await
         .map_err(|e| CommandError::internal(format!("pull task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
     Ok(status::read_status(&path2)?)
 }
 
-async fn resolve_repo_path(
+/// Assemble the per-repo SSH credentials: the key path comes from the repo
+/// record, the passphrase (if any) from the session cache.
+async fn ssh_creds_for(
+    state: &State<'_, AppState>,
+    repo_id: &str,
+    key_path: Option<String>,
+) -> SshCreds {
+    let passphrase = {
+        let cache = state.ssh_passphrases.lock().await;
+        cache.get(repo_id).map(|z| z.to_string())
+    };
+    SshCreds {
+        key_path: key_path.map(PathBuf::from),
+        passphrase,
+    }
+}
+
+pub(crate) async fn resolve_repo_path(
     state: &State<'_, AppState>,
     repo_id: &str,
 ) -> Result<PathBuf, CommandError> {
@@ -433,7 +538,7 @@ async fn resolve_repo_path(
     Ok(path)
 }
 
-fn fetch_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandError> {
+fn fetch_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
     let effective = resolve_provider_for_remote(&repo, provider_id);
@@ -441,7 +546,7 @@ fn fetch_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandE
         .find_remote("origin")
         .map_err(|e| CommandError::bad_request(format!("no 'origin' remote: {e}")))?;
     let mut callbacks = RemoteCallbacks::new();
-    install_credentials(&mut callbacks, effective);
+    install_credentials(&mut callbacks, effective, ssh);
     let mut opts = FetchOptions::new();
     opts.remote_callbacks(callbacks);
     // Prune refs/remotes/origin/* for branches that were deleted upstream.
@@ -661,6 +766,32 @@ fn branch_create_blocking(
     Ok(())
 }
 
+fn branch_delete_blocking(path: &Path, branch: &str) -> Result<(), CommandError> {
+    let repo = Repository::open(path)
+        .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
+
+    // Refuse to delete the currently-checked-out branch — it would orphan
+    // HEAD. The UI is expected to switch off this branch first (the merge
+    // flow naturally lands us on `target`, so the source becomes deletable).
+    if let Ok(head) = repo.head() {
+        if let Some(name) = head.shorthand() {
+            if name == branch {
+                return Err(CommandError::bad_request(format!(
+                    "cannot delete '{branch}': it's the currently checked-out branch"
+                )));
+            }
+        }
+    }
+
+    let mut local = repo
+        .find_branch(branch, git2::BranchType::Local)
+        .map_err(|_| CommandError::bad_request(format!("local branch '{branch}' not found")))?;
+    local
+        .delete()
+        .map_err(|e| CommandError::bad_request(format!("delete branch failed: {e}")))?;
+    Ok(())
+}
+
 fn checkout_remote_blocking(path: &Path, remote: &str, branch: &str) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
@@ -715,7 +846,7 @@ fn checkout_blocking(path: &Path, branch: &str) -> Result<(), CommandError> {
     Ok(())
 }
 
-fn push_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandError> {
+fn push_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
 
@@ -734,7 +865,7 @@ fn push_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandEr
         .map_err(|e| CommandError::bad_request(format!("no 'origin' remote: {e}")))?;
 
     let mut callbacks = RemoteCallbacks::new();
-    install_credentials(&mut callbacks, effective);
+    install_credentials(&mut callbacks, effective, ssh);
 
     let mut opts = PushOptions::new();
     opts.remote_callbacks(callbacks);
@@ -744,7 +875,7 @@ fn push_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandEr
     Ok(())
 }
 
-fn pull_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandError> {
+fn pull_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
 
@@ -754,7 +885,7 @@ fn pull_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandEr
         .find_remote("origin")
         .map_err(|e| CommandError::bad_request(format!("no 'origin' remote: {e}")))?;
     let mut callbacks = RemoteCallbacks::new();
-    install_credentials(&mut callbacks, effective);
+    install_credentials(&mut callbacks, effective, ssh);
     let mut opts = FetchOptions::new();
     opts.remote_callbacks(callbacks);
     remote
@@ -806,4 +937,38 @@ fn pull_blocking(path: &Path, provider_id: Option<&str>) -> Result<(), CommandEr
     repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
         .map_err(|e| CommandError::internal(format!("checkout failed: {e}")))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    /// Write a throwaway private key (+ optional `.pub`) into a temp dir. We
+    /// never commit a key to the repo — and `git2::Cred::ssh_key` only records
+    /// the paths, it doesn't parse the file, so placeholder bytes are enough to
+    /// exercise the builder.
+    fn temp_key(with_public: bool) -> (TempDir, std::path::PathBuf) {
+        let dir = TempDir::new().expect("tempdir");
+        let key = dir.path().join("id_ed25519");
+        std::fs::write(&key, b"-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n").expect("write key");
+        if with_public {
+            std::fs::write(key.with_extension("pub"), b"ssh-ed25519 AAAA test").expect("write pub");
+        }
+        (dir, key)
+    }
+
+    #[test]
+    fn ssh_key_override_builds_ssh_key_cred() {
+        let (_dir, key) = temp_key(false);
+        let cred = build_ssh_key_cred(Some("git"), &key, None).expect("cred builds");
+        assert!(cred.credtype() as u32 & git2::CredentialType::SSH_KEY.bits() != 0);
+    }
+
+    #[test]
+    fn ssh_key_override_pairs_public_key_when_present() {
+        let (_dir, key) = temp_key(true);
+        assert!(key.with_extension("pub").exists());
+        assert!(build_ssh_key_cred(None, &key, None).is_ok());
+    }
 }

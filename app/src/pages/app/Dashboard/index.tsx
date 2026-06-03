@@ -31,6 +31,7 @@ import {
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
 import { ciFor } from "@/lib/constants/ciStates.constants";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
@@ -247,7 +248,11 @@ function DashboardPage() {
   }
 
   return (
-    <Root data-testid={TEST_IDS.dashboard.page}>
+    <Root
+      data-testid={TEST_IDS.dashboard.page}
+      tabIndex={0}
+      aria-label={t("dashboard.main", { ns: I18nNamespace.ARIA })}
+    >
       <StaggeredReveal component={Kpis} step={50} maxDelay={200}>
         <KpiCard
           label={t("dash.kpi.repositories")}

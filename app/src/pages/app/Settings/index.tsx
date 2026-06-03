@@ -13,6 +13,7 @@ import {
   Box as BoxIcon,
   Code2,
   FolderOpen,
+  GitBranch,
   Keyboard,
   Settings as SettingsIcon,
   User,
@@ -29,6 +30,7 @@ import {
   pgSlideL,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { SETTINGS_TAB_QUERY_PARAM, SettingsTab } from "@/lib/constants/settings.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { AboutSection } from "@/pages/app/Settings/components/AboutTab";
 import { AccountsSection } from "@/pages/app/Settings/components/AccountsTab";
@@ -40,6 +42,7 @@ import {
   SystemSection,
   UpdatesSection,
 } from "@/pages/app/Settings/components/GeneralTab";
+import { GitConfigSection } from "@/pages/app/Settings/components/GitConfigTab";
 import { IntegrationsSection } from "@/pages/app/Settings/components/IntegrationsTab";
 import { ShortcutsSection } from "@/pages/app/Settings/components/ShortcutsTab";
 import { StorageSection } from "@/pages/app/Settings/components/StorageTab";
@@ -52,6 +55,7 @@ type TabId =
   | "general"
   | "accounts"
   | "integrations"
+  | "git"
   | "shortcuts"
   | "storage"
   | "about"
@@ -67,6 +71,7 @@ const TABS: TabDescriptor[] = [
   { id: "general", icon: SettingsIcon, labelKey: "settings.tab.general" },
   { id: "accounts", icon: User, labelKey: "settings.tab.accounts" },
   { id: "integrations", icon: Code2, labelKey: "settings.tab.integrations" },
+  { id: "git", icon: GitBranch, labelKey: "settings.tab.git" },
   { id: "shortcuts", icon: Keyboard, labelKey: "settings.tab.shortcuts" },
   { id: "storage", icon: FolderOpen, labelKey: "settings.tab.storage" },
   { id: "about", icon: BoxIcon, labelKey: "settings.tab.about" },
@@ -221,6 +226,7 @@ const KNOWN_TAB_IDS = new Set<TabId>([
   "general",
   "accounts",
   "integrations",
+  "git",
   "shortcuts",
   "storage",
   "about",
@@ -239,19 +245,19 @@ function SettingsPage() {
   // of truth — we deliberately don't fall back to internal state to avoid
   // the two getting out of sync when the user navigates Back/Forward.
   const [searchParams, setSearchParams] = useSearchParams();
-  const queryTab = searchParams.get("tab") as TabId | null;
-  const tab: TabId = queryTab && KNOWN_TAB_IDS.has(queryTab) ? queryTab : "general";
+  const queryTab = searchParams.get(SETTINGS_TAB_QUERY_PARAM) as TabId | null;
+  const tab: TabId = queryTab && KNOWN_TAB_IDS.has(queryTab) ? queryTab : SettingsTab.GENERAL;
 
   const setTab = useCallback(
     (next: TabId) => {
       setSearchParams(
         (prev) => {
           const sp = new URLSearchParams(prev);
-          if (next === "general") {
+          if (next === SettingsTab.GENERAL) {
             // Default tab — keep the URL clean (no `?tab=general`).
-            sp.delete("tab");
+            sp.delete(SETTINGS_TAB_QUERY_PARAM);
           } else {
-            sp.set("tab", next);
+            sp.set(SETTINGS_TAB_QUERY_PARAM, next);
           }
           return sp;
         },
@@ -323,6 +329,15 @@ function SettingsPage() {
               <PageIntro>{t("settings.integrations.intro")}</PageIntro>
             </PageHead>
             <IntegrationsSection />
+          </PageInner>
+        )}
+        {tab === "git" && (
+          <PageInner>
+            <PageHead>
+              <PageH2 component="h2">{t("settings.git.title")}</PageH2>
+              <PageIntro>{t("settings.git.intro")}</PageIntro>
+            </PageHead>
+            <GitConfigSection />
           </PageInner>
         )}
         {tab === "shortcuts" && (

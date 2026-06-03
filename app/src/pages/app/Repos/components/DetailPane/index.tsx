@@ -29,18 +29,18 @@ import { toast } from "sonner";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
-import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import GeneralIconButton, {
   IconButtonSize,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
+import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { timeAgo } from "@/lib/utils/timeAgo.utils";
 import {
@@ -90,6 +90,10 @@ export interface DetailPaneProps {
 
 export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const ide = useDefaultIde();
+  const ideLabel = ide.name
+    ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
+    : tAria("actions.open_in_ide", { ns: I18nNamespace.COMMON });
   const navigate = useNavigate();
   const prs = useAppSelector((s) => s.prs.items[repo.id] ?? []);
   const { commits } = useRecentCommits({ repoId: repo.id, days: 30, limit: 4 });
@@ -110,7 +114,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     <Pane data-testid={TEST_IDS.repos.detailPane} data-repo-id={repo.id}>
       <Header>
         <HeaderTopRow>
-          <RepoAvatar repo={repo} size={36} radius={8} />
+          <EditableRepoAvatar repo={repo} size={36} radius={8} />
           <HeaderTitleStack>
             <RepoName>{repo.name}</RepoName>
             <RepoPath>{repo.path}</RepoPath>
@@ -132,43 +136,35 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
         </HeaderTopRow>
 
         <IconRow>
-          <GeneralTooltip title="Open in VS Code" placement="top">
-            <PrimaryIde
-              type="button"
-              onClick={() => void run(TauriCommand.OPEN_IN_IDE, "Open in IDE")}
-            >
-              <IdeIcon id="vscode" size={13} />
-              <Box component="span">Open in VS Code</Box>
-            </PrimaryIde>
-          </GeneralTooltip>
-          <GeneralTooltip title="Open in Terminal" placement="top">
-            <GeneralIconButton
-              size={IconButtonSize.MD}
-              variant={IconButtonVariant.OUTLINE}
-              aria-label={tAria("repo.open_in_terminal")}
-              onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
-              icon={<TerminalLucide size={13} />}
-            />
-          </GeneralTooltip>
-          <GeneralTooltip title="Open in Explorer" placement="top">
-            <GeneralIconButton
-              size={IconButtonSize.MD}
-              variant={IconButtonVariant.OUTLINE}
-              aria-label={tAria("repo.open_in_explorer")}
-              onClick={() => void run(TauriCommand.OPEN_IN_EXPLORER, "Explorer")}
-              icon={<Folder size={13} />}
-            />
-          </GeneralTooltip>
+          <PrimaryIde type="button" onClick={() => void run(TauriCommand.OPEN_IN_IDE, ideLabel)}>
+            <IdeIcon id={ide.iconId} size={13} color="currentColor" style={{ opacity: 1 }} />
+            <Box component="span">{ideLabel}</Box>
+          </PrimaryIde>
+          <GeneralIconButton
+            size={IconButtonSize.MD}
+            variant={IconButtonVariant.OUTLINE}
+            aria-label={tAria("repo.open_in_terminal")}
+            tooltip="Open in Terminal"
+            onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
+            icon={<TerminalLucide size={13} />}
+          />
+          <GeneralIconButton
+            size={IconButtonSize.MD}
+            variant={IconButtonVariant.OUTLINE}
+            aria-label={tAria("repo.open_in_explorer")}
+            tooltip="Open in Explorer"
+            onClick={() => void revealPathInSystem(repo.path)}
+            icon={<Folder size={13} />}
+          />
           {repo.remoteUrl && (
-            <GeneralTooltip title="Open on host" placement="top">
-              <GeneralIconButton
-                size={IconButtonSize.MD}
-                variant={IconButtonVariant.OUTLINE}
-                aria-label={tAria("repo.open_remote")}
-                onClick={() => void openExternal(repo.remoteUrl!)}
-                icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
-              />
-            </GeneralTooltip>
+            <GeneralIconButton
+              size={IconButtonSize.MD}
+              variant={IconButtonVariant.OUTLINE}
+              aria-label={tAria("repo.open_remote")}
+              tooltip="Open on host"
+              onClick={() => void openExternal(repo.remoteUrl!)}
+              icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
+            />
           )}
         </IconRow>
       </Header>

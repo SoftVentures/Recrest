@@ -1,0 +1,23 @@
+[
+  {
+    "id": 999,
+    "name": "platform-api",
+    "full_name": "acme/platform-api",
+    "description": "The API service.",
+    "default_branch": "main",
+    "private": true,
+    "fork": false,
+    "archived": false,
+    "clone_url": "https://github.com/acme/platform-api.git",
+    "ssh_url": "git@github.com:acme/platform-api.git",
+    "html_url": "https://github.com/acme/platform-api",
+    "updated_at": "2026-05-20T10:00:00Z",
+    "pushed_at": "2026-05-20T10:05:00Z",
+    "size": 8421,
+    "language": "Rust",
+    "owner": {
+      "login": "acme",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+    }
+  }
+]

@@ -22,13 +22,16 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { gitCloneUrl, loadRepos } from "@/store/actions/repos.actions";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export function ClonePanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const defaultDest = useAppSelector(
+    (s) => s.settings.backend?.defaultScanPath ?? s.repos.scanPaths[0] ?? "",
+  );
   const [url, setUrl] = useState("");
-  const [destination, setDestination] = useState("");
+  const [destination, setDestination] = useState(defaultDest);
   const [subFolder, setSubFolder] = useState("");
   const [busy, setBusy] = useState(false);
 

@@ -24,9 +24,11 @@ export const Card = styled(Box)(({ theme }) => ({
     borderColor: theme.palette.border.hover,
     backgroundColor: theme.palette.surface.interface.active,
   },
-  "&[data-selected='true']": {
+  "&[data-selected='true'], &[data-context-menu-open='true']": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -1,
     borderColor: theme.palette.primary.main,
-    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 6%, transparent)`,
+    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 10%, transparent)`,
   },
   // Mount stagger: cards rise in row by row.
   animation: `${pgRise} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
@@ -41,10 +43,18 @@ export const CardTop = styled(Box)({
   gap: 8,
 }) as typeof Box;
 
-export const Actions = styled(Box)({
+export const Actions = styled(Box)(({ theme }) => ({
   display: "flex",
-  gap: 4,
-}) as typeof Box;
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: 2,
+  padding: 3,
+  borderRadius: 8,
+  backgroundColor: theme.palette.surface.interface.base,
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 6px -2px rgba(0, 0, 0, 0.08)",
+})) as typeof Box;
 
 export const Body = styled(Box)({
   display: "flex",

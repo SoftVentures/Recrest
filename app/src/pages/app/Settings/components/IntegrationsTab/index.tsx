@@ -2,16 +2,22 @@ import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Typography } from "@mui/material";
+import { Box, Radio, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { Folder, FolderOpen, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
+import { pickFolder } from "@/lib/utils/pickFolder.utils";
+import { forgetReposUnderPath, scanForRepos, setScanPaths } from "@/store/actions/repos.actions";
+import { saveSettings } from "@/store/actions/settings.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 const Section = styled(Box)({
   marginBottom: 22,
@@ -113,23 +119,110 @@ const PathRow = styled(Box)(({ theme }) => ({
 
 const PathText = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 
+const DefaultBadge = styled(Box)(({ theme }) => ({
+  fontSize: 10,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  color: theme.palette.primary.main,
+  fontFamily: "inherit",
+})) as typeof Box;
+
 const AddRepoCard = styled(GeneralCard)(({ theme }) => ({
   marginBottom: theme.spacing(1.25),
 }));
 
 export function IntegrationsSection() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const paths = useAppSelector((s) => s.repos.scanPaths);
+  const defaultScanPath = useAppSelector((s) => s.settings.backend?.defaultScanPath ?? null);
+  // Used only to count how many repos a freshly added root surfaced (ids that
+  // weren't known before the scan) so the success toast can report a number.
+  const repoItems = useAppSelector((s) => s.repos.items);
   const [draft, setDraft] = useState("");
-  const [paths, setPaths] = useState<string[]>(["~/Code"]);
+
+  // Adding a root scans it and reports via Sonner. `scanForRepos` persists the
+  // new path list itself (it writes `scanPaths` before walking), so there's no
+  // separate save round-trip — and the discovered repos land in the store in
+  // the same gesture, which is the "data changes immediately" the editor owes.
+  const addPath = async (path: string) => {
+    const next = [...paths, path];
+    const knownBefore = new Set(Object.keys(repoItems));
+    dispatch(setScanPaths(next));
+    const toastId = toast.loading(t("settings.integrations.scanning", { path }));
+    try {
+      const found = await dispatch(scanForRepos(next)).unwrap();
+      const discovered = found.filter((repo) => !knownBefore.has(repo.id)).length;
+      toast.success(
+        discovered > 0
+          ? t("settings.integrations.path_added", { path, count: discovered })
+          : t("settings.integrations.path_added_none", { path }),
+        { id: toastId },
+      );
+    } catch {
+      // Roll the optimistic entry back out so the list never shows a root that
+      // failed to persist.
+      dispatch(setScanPaths(paths));
+      toast.error(t("internal", { ns: I18nNamespace.ERRORS }), { id: toastId });
+    }
+  };
 
   const onAdd = () => {
     const next = draft.trim();
     if (!next || paths.includes(next)) return;
-    setPaths([...paths, next]);
     setDraft("");
+    void addPath(next);
   };
 
-  const onRemove = (p: string) => setPaths(paths.filter((x) => x !== p));
+  const onBrowse = async () => {
+    if (!isTauri()) return;
+    // Fall back to the user's preferred root (or the first existing scan
+    // path) so a new entry usually starts as a sibling of what's there
+    // already — beats reopening at $HOME every time.
+    const fallback = defaultScanPath ?? paths[0] ?? undefined;
+    const picked = await pickFolder(draft.trim() || fallback);
+    if (picked && !paths.includes(picked)) {
+      void addPath(picked);
+    }
+  };
+
+  // Removing a root drops the repos it surfaced from the dashboard in the same
+  // gesture (the backend prunes only repos not still covered by a remaining
+  // root). The folder on disk is left alone.
+  const onRemove = async (p: string) => {
+    const previous = paths;
+    const next = paths.filter((x) => x !== p);
+    const nextDefault = defaultScanPath === p ? null : defaultScanPath;
+    dispatch(setScanPaths(next));
+    try {
+      await dispatch(saveSettings({ scanPaths: next, defaultScanPath: nextDefault })).unwrap();
+    } catch {
+      // The path itself didn't persist — put it back so the editor stays
+      // truthful, and bail before pruning anything.
+      dispatch(setScanPaths(previous));
+      toast.error(t("internal", { ns: I18nNamespace.ERRORS }));
+      return;
+    }
+    try {
+      const forgotten = await dispatch(
+        forgetReposUnderPath({ removedPath: p, remainingPaths: next }),
+      ).unwrap();
+      toast.success(
+        forgotten.length > 0
+          ? t("settings.integrations.path_removed", { path: p, count: forgotten.length })
+          : t("settings.integrations.path_removed_none", { path: p }),
+      );
+    } catch {
+      // The path is already gone; only the repo cleanup failed. Don't resurrect
+      // the path — just report that the prune didn't complete.
+      toast.error(t("internal", { ns: I18nNamespace.ERRORS }));
+    }
+  };
+
+  const onSetDefault = (p: string) => {
+    void dispatch(saveSettings({ defaultScanPath: p }));
+  };
 
   return (
     <Section component="section">
@@ -154,7 +247,12 @@ export function IntegrationsSection() {
             }}
             data-testid={TEST_IDS.settings.integrations.scanInput}
           />
-          <BrowseBtn type="button" data-testid={TEST_IDS.settings.integrations.scanBrowse}>
+          <BrowseBtn
+            type="button"
+            onClick={() => void onBrowse()}
+            disabled={!isTauri()}
+            data-testid={TEST_IDS.settings.integrations.scanBrowse}
+          >
             <FolderOpen size={13} />
             Browse…
           </BrowseBtn>
@@ -173,10 +271,23 @@ export function IntegrationsSection() {
         <PathRow key={p}>
           <Folder size={13} />
           <PathText component="span">{p}</PathText>
+          {defaultScanPath === p && (
+            <DefaultBadge component="span">{t("settings.integrations.default_badge")}</DefaultBadge>
+          )}
+          <Radio
+            size="small"
+            checked={defaultScanPath === p}
+            onChange={() => onSetDefault(p)}
+            name="default-scan-path"
+            data-testid={TEST_IDS.settings.integrations.scanDefaultRadio(p)}
+            slotProps={{
+              input: { "aria-label": t("settings.integrations.set_default", { path: p }) },
+            }}
+          />
           <GeneralIconButton
             size={IconButtonSize.SM}
             aria-label={t("settings.remove_path", { ns: I18nNamespace.ARIA, path: p })}
-            onClick={() => onRemove(p)}
+            onClick={() => void onRemove(p)}
             data-testid={TEST_IDS.settings.integrations.scanRemove(p)}
             icon={<X size={13} />}
           />

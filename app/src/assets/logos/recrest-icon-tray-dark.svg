@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img">
+  <title>Recrest tray icon (dark)</title>
+  <desc>Recrest tray glyph — white chevrons on transparent. Used for Windows dark-mode tray (macOS uses the light variant as a template image and tints automatically). Proportions mirror the app icon's chevron geometry (width:depth ≈ 2.24:1, total ratio 1.4:1).</desc>
+  <g transform="translate(8 15)" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+    <path d="M0 21 L24 0 L48 21"/>
+    <path d="M0 34 L24 13 L48 34" opacity="0.5"/>
+  </g>
+</svg>

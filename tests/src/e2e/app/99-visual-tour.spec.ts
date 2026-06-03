@@ -4,11 +4,8 @@ import { expect, test } from "../../fixtures/app.fixture.js";
 import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / visual tour", () => {
-  test.beforeEach((_, testInfo) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "app-desktop", "desktop visual tour only");
-  });
-
-  test.beforeEach(async ({ page }) => {
     await page.addStyleTag({
       content: `*, *::before, *::after {
         animation-duration: 0.001ms !important;
@@ -39,9 +36,12 @@ test.describe("app / visual tour", () => {
     await capture(page, "02-repos-grouped");
   });
 
-  test("repos — flat view", async ({ page }) => {
+  // The Repos view toggle only exposes "grouped" and "card" — there is no
+  // flat-view control to drive, so this capture has nothing to screenshot.
+  // Skipped until/unless a flat view toggle ships in the UI.
+  test.skip("repos — flat view", async ({ page }) => {
     await page.goto(AppRoute.REPOS);
-    await page.getByTestId("repo-view-toggle-flat").click();
+    await page.getByTestId(TEST_IDS.repos.viewToggle.card).click();
     await expect(page.getByTestId(TEST_IDS.repos.page)).toBeVisible();
     await capture(page, "03-repos-flat");
   });

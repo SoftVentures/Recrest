@@ -4,6 +4,8 @@ import { useLocation } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
+import { Box } from "@mui/material";
+
 import { PrState } from "@recrest/shared";
 
 import { BookPlus, FileSearch, RefreshCw, Search } from "lucide-react";
@@ -59,6 +61,22 @@ function useHeaderContext(): HeaderContext {
       meta: t("view.dashboard.meta", { count: repoList.length }),
     };
   }
+  // `/mr/:repoId/:prNumber` — the top-bar shows `Merge Request` as the
+  // bold title with the `#N` rendered as the small/muted meta (same visual
+  // pattern as the list view's "{count} open"). The PR's full title already
+  // lives on the detail page itself, so repeating it here would crowd the
+  // chrome. Falls back to the plural label until the route param parses.
+  if (path.startsWith("/mr/")) {
+    const numberRaw = path.slice("/mr/".length).split("/")[1];
+    const prNumber = Number(numberRaw);
+    if (Number.isFinite(prNumber) && prNumber > 0) {
+      return { title: t("view.mr.title"), meta: `#${prNumber}` };
+    }
+    return {
+      title: t("view.mrs.title"),
+      meta: t("view.mrs.meta", { count: mrOpen }),
+    };
+  }
   if (path.startsWith("/merge-requests")) {
     return {
       title: t("view.mrs.title"),
@@ -93,10 +111,9 @@ function useHeaderContext(): HeaderContext {
     const repoId = path.slice("/repo/".length).split("/")[0];
     const repo = repoId ? repos[repoId] : null;
     if (repo) {
-      return {
-        title: repo.name,
-        meta: repo.path,
-      };
+      // Path is already shown inside the detail page header card — don't
+      // repeat it in the top bar.
+      return { title: repo.name, meta: null };
     }
   }
   if (path.startsWith("/repos") || path.startsWith("/repo/")) {
@@ -205,17 +222,22 @@ function Header() {
           </FindAcrossButton>
         </GeneralTooltip>
         <GeneralTooltip title={refreshLabel} arrow placement="bottom">
-          <RefreshButton
-            id="btn-refresh"
-            type="button"
-            aria-label={refreshLabel}
-            data-testid={TEST_IDS.header.btnRefresh}
-            disabled={reposLoading}
-            spinning={spinning}
-            onClick={onRefresh}
-          >
-            <RefreshCw size={16} aria-hidden />
-          </RefreshButton>
+          {/* Span wrap: `disabled` is dynamic (reposLoading toggles) and MUI Tooltip
+              can't attach listeners to a disabled <button>. The inline-flex span
+              receives pointer events and forwards them so the tooltip stays alive. */}
+          <Box component="span" style={{ display: "inline-flex" }}>
+            <RefreshButton
+              id="btn-refresh"
+              type="button"
+              aria-label={refreshLabel}
+              data-testid={TEST_IDS.header.btnRefresh}
+              disabled={reposLoading}
+              spinning={spinning}
+              onClick={onRefresh}
+            >
+              <RefreshCw size={16} aria-hidden />
+            </RefreshButton>
+          </Box>
         </GeneralTooltip>
         <AddRepoButton
           type="button"

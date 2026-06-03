@@ -1,6 +1,9 @@
 import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from "react";
 
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
+
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 
 /**
  * Size of the icon-button hitbox. The icon itself sits in the middle — pass
@@ -31,6 +34,15 @@ export const ICON_BUTTON_ICON_SIZES: Record<IconButtonSize, number> = {
   [IconButtonSize.SM]: 13,
   [IconButtonSize.MD]: 14,
   [IconButtonSize.LG]: 16,
+};
+
+/** Square-shape corner radius per size — a flat 8px reads as a circle on the
+ *  smaller hitboxes (8/22 ≈ 36%, 8/16 = 50%), so we scale it. */
+const ICON_BUTTON_SQUARE_RADII: Record<IconButtonSize, number> = {
+  [IconButtonSize.XS]: 4,
+  [IconButtonSize.SM]: 5,
+  [IconButtonSize.MD]: 6,
+  [IconButtonSize.LG]: 8,
 };
 
 export const IconButtonVariant = {
@@ -96,7 +108,7 @@ const Root = styled("button", {
     cursor: "pointer",
     fontFamily: "inherit",
     flexShrink: 0,
-    borderRadius: $shape === IconButtonShape.CIRCLE ? "50%" : 8,
+    borderRadius: $shape === IconButtonShape.CIRCLE ? "50%" : ICON_BUTTON_SQUARE_RADII[$size],
     border: $variant === IconButtonVariant.OUTLINE ? `1px solid ${theme.palette.divider}` : 0,
     backgroundColor:
       $variant === IconButtonVariant.OUTLINE ? theme.palette.surface.interface.base : "transparent",
@@ -126,7 +138,7 @@ const Root = styled("button", {
 
 export interface GeneralIconButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
-  "ref" | "children"
+  "ref" | "children" | "title"
 > {
   /** The icon to render inside the hitbox. Pass the Lucide (or any other) icon
    *  element pre-sized via the `iconSize` lookup `ICON_BUTTON_ICON_SIZES[size]`. */
@@ -137,6 +149,13 @@ export interface GeneralIconButtonProps extends Omit<
   tone?: IconButtonTone;
   /** Required accessibility label — icon-only buttons must announce their purpose. */
   "aria-label": string;
+  /** Tooltip text shown on hover/focus. Defaults to `aria-label` since
+   *  icon-only buttons must always announce their purpose visually too.
+   *  Pass `false` to opt out (e.g. when the button already sits inside a
+   *  larger labelled context where a tooltip would be redundant noise). */
+  tooltip?: string | false;
+  /** Tooltip placement, forwarded to GeneralTooltip. */
+  tooltipPlacement?: "top" | "bottom" | "left" | "right";
 }
 
 /**
@@ -145,6 +164,10 @@ export interface GeneralIconButtonProps extends Omit<
  * sidebar collapse — composes this. Custom inline `styled("button")` icon
  * buttons are forbidden; extend `IconButtonSize`/`IconButtonVariant` if a new
  * shape is needed.
+ *
+ * Tooltip is auto-rendered using `aria-label` by default, since icon-only
+ * affordances should always announce their purpose on hover too. Pass
+ * `tooltip={false}` to suppress, or a string to override the displayed text.
  */
 const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
   function GeneralIconButton(
@@ -155,11 +178,13 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
       shape = IconButtonShape.SQUARE,
       tone = IconButtonTone.NEUTRAL,
       type = "button",
+      tooltip,
+      tooltipPlacement = "top",
       ...rest
     },
     ref,
   ) {
-    return (
+    const button = (
       <Root
         ref={ref}
         type={type}
@@ -171,6 +196,25 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
       >
         {icon}
       </Root>
+    );
+
+    if (tooltip === false) return button;
+    const tooltipText = tooltip ?? rest["aria-label"];
+    if (!tooltipText) return button;
+    // MUI Tooltip can't listen to events on a disabled <button>; wrap in a span so the
+    // pointer events bubble to a non-disabled element. Skip the wrapper otherwise to
+    // keep the DOM clean in the common, enabled case.
+    const trigger = rest.disabled ? (
+      <Box component="span" style={{ display: "inline-flex" }}>
+        {button}
+      </Box>
+    ) : (
+      button
+    );
+    return (
+      <GeneralTooltip title={tooltipText} placement={tooltipPlacement}>
+        {trigger}
+      </GeneralTooltip>
     );
   },
 );

@@ -178,6 +178,7 @@ export function AppearanceSection() {
           size="small"
           value={themeChoice}
           onChange={(e: SelectChangeEvent<unknown>) => onThemeChoice(e.target.value as ThemeChoice)}
+          slotProps={{ input: { "aria-label": t("settings.fields.theme") } }}
           data-testid={TEST_IDS.settings.general.themeSelect}
           renderValue={(value) => {
             const c = value as ThemeChoice;
@@ -211,6 +212,7 @@ export function AppearanceSection() {
             void i18n.changeLanguage(next);
             dispatch(setLocale(next));
           }}
+          slotProps={{ input: { "aria-label": t("settings.fields.language") } }}
           data-testid={TEST_IDS.settings.general.localeSelect}
         >
           {LOCALES.map((l) => (
@@ -248,6 +250,7 @@ export function AppearanceSection() {
           size="small"
           value={font}
           onChange={(e: SelectChangeEvent<unknown>) => dispatch(setFont(e.target.value as FontId))}
+          slotProps={{ input: { "aria-label": t("settings.fields.font") } }}
           data-testid={TEST_IDS.settings.general.fontSelect}
           renderValue={(value) => (
             <Box component="span" style={{ fontFamily: fontCssFamily(value as FontId) }}>
@@ -281,6 +284,7 @@ export function AppearanceSection() {
           onChange={(e: SelectChangeEvent<unknown>) =>
             dispatch(setFontSize(e.target.value as FontSizeId))
           }
+          slotProps={{ input: { "aria-label": t("settings.fields.font_size") } }}
           data-testid={TEST_IDS.settings.general.fontSizeSelect}
           renderValue={(value) => {
             const Icon = FONT_SIZE_ICONS[value as FontSizeId];

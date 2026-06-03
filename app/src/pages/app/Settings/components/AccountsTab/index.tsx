@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { PROVIDER_IDS } from "@/lib/constants/providers.constants";
+import { DefaultSshKey } from "@/pages/app/Settings/components/AccountsTab/parts/DefaultSshKey";
 import { ProviderRow } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow";
 
 const Section = styled(Box)({
@@ -36,6 +37,12 @@ export function AccountsSection() {
       {PROVIDER_IDS.map((id) => (
         <ProviderRow key={id} providerId={id} />
       ))}
+
+      <SectionLabel component="h3">{t("settings.accounts.ssh")}</SectionLabel>
+      <SectionDesc component="p" variant="body2">
+        {t("settings.accounts.ssh_sub")}
+      </SectionDesc>
+      <DefaultSshKey />
     </Section>
   );
 }

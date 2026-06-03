@@ -18,3 +18,44 @@ export async function pickFolder(defaultPath?: string): Promise<string | null> {
     return null;
   }
 }
+
+/** Native single-file picker (counterpart to {@link pickFolder}). Returns the
+ *  chosen absolute path or `null` when cancelled / outside Tauri. */
+export async function pickFile(defaultPath?: string): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const picked = await open({
+      directory: false,
+      multiple: false,
+      defaultPath: defaultPath || undefined,
+    });
+    return typeof picked === "string" ? picked : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Native single-image picker — limits the dialog to the formats the repo
+ *  avatar upload accepts. Mirrors `UPLOAD_EXTENSIONS` in
+ *  `commands/repos.rs::set_repo_logo`. */
+export async function pickImageFile(defaultPath?: string): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const picked = await open({
+      directory: false,
+      multiple: false,
+      defaultPath: defaultPath || undefined,
+      filters: [
+        {
+          name: "Image",
+          extensions: ["svg", "png", "webp", "jpg", "jpeg", "gif"],
+        },
+      ],
+    });
+    return typeof picked === "string" ? picked : null;
+  } catch {
+    return null;
+  }
+}

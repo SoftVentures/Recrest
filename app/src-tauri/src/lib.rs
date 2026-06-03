@@ -2,20 +2,32 @@ mod auth;
 mod commands;
 mod config;
 mod git;
+mod identity;
 mod platform;
 mod providers;
 mod update;
 
+#[cfg(test)]
+mod test_support;
+
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use tauri::{
-    AppHandle, Manager,
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::TrayIconBuilder,
+    AppHandle, Manager,
 };
+// Click-routing types are only used on Windows + Linux, where the tray's
+// left-click brings the window forward. macOS follows the menu-bar
+// convention (left-click opens the menu directly via
+// `show_menu_on_left_click(true)`), so it never reads click events.
+#[cfg(not(target_os = "macos"))]
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use tracing_subscriber::EnvFilter;
+use zeroize::Zeroizing;
 
 use crate::config::store::ConfigStore;
 use crate::git::watcher::RepoWatcher;
@@ -29,16 +41,42 @@ pub struct AppState {
     /// Tuple of (provider_id, CSRF nonce) for the in-flight OAuth flow.
     /// Cleared as soon as `complete_oauth` consumes it.
     pub oauth_pending: Arc<Mutex<Option<(String, String)>>>,
+    /// Session-only cache of SSH key passphrases keyed by repo id. Never
+    /// persisted; `Zeroizing` wipes the bytes on drop.
+    pub ssh_passphrases: Arc<Mutex<HashMap<String, Zeroizing<String>>>>,
 }
 
 #[cfg(target_os = "macos")]
-const ICON_PROD_LIGHT: &[u8] = include_bytes!("../icons/icon.icns");
+const ICON_PROD_LIGHT: &[u8] = include_bytes!("../icons/mac/icon.icns");
 #[cfg(target_os = "macos")]
-const ICON_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.icns");
+const ICON_PROD_DARK: &[u8] = include_bytes!("../icons/mac/icon-dark.icns");
 #[cfg(target_os = "macos")]
-const ICON_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/icon-light.icns");
+const ICON_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/mac/icon-light.icns");
 #[cfg(target_os = "macos")]
-const ICON_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.icns");
+const ICON_DEV_DARK: &[u8] = include_bytes!("../icons-dev/mac/icon-dark.icns");
+
+// Tray icon: single monochrome set, shared between prod and dev. macOS
+// treats it as a template image (alpha-only, auto-tinted by the menu bar);
+// Windows swaps between light/dark on `WindowEvent::ThemeChanged`. Dev
+// builds reuse the same artwork — the tray tooltip
+// (`identity::current_tray_tooltip()`) is what distinguishes them.
+#[cfg(any(target_os = "macos", all(unix, not(target_os = "macos"))))]
+const TRAY_ICON: &[u8] = include_bytes!("../icons/tray/tray-template@2x.png");
+
+#[cfg(windows)]
+const TRAY_ICON_LIGHT: &[u8] = include_bytes!("../icons/tray/tray-light.png");
+#[cfg(windows)]
+const TRAY_ICON_DARK: &[u8] = include_bytes!("../icons/tray/tray-dark.png");
+
+#[cfg(any(target_os = "macos", all(unix, not(target_os = "macos"))))]
+fn tray_icon_bytes() -> &'static [u8] {
+    TRAY_ICON
+}
+
+#[cfg(windows)]
+fn tray_icon_bytes(dark: bool) -> &'static [u8] {
+    if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT }
+}
 
 #[cfg(target_os = "macos")]
 fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
@@ -46,6 +84,23 @@ fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
     let appearance = app.effectiveAppearance();
     let name = appearance.name();
     name.isEqualToString(&NSString::from_str("NSAppearanceNameDarkAqua"))
+}
+
+/// Main-thread query for "is the OS in dark mode" that doesn't require the
+/// caller to already hold an `NSApplication`. Exposed to the renderer via
+/// the `get_system_dark_mode` command so the frontend can resolve the real
+/// system theme even when WKWebView's `matchMedia("(prefers-color-scheme:
+/// dark)")` lies on cold start (a known WebKit quirk: the webview's
+/// effective appearance can lag the system appearance for the first JS
+/// tick after launch, causing the inline anti-flash script to paint light
+/// even on a dark-mode system). Returns `None` off the main thread — the
+/// caller should treat that as "unknown" and fall back to matchMedia.
+#[cfg(target_os = "macos")]
+pub fn macos_system_dark() -> Option<bool> {
+    use objc2_app_kit::NSApplication;
+    let mtm = objc2::MainThreadMarker::new()?;
+    let app = NSApplication::sharedApplication(mtm);
+    Some(is_system_dark(&app))
 }
 
 #[cfg(target_os = "macos")]
@@ -59,6 +114,37 @@ fn pick_icon_bytes(dark: bool) -> &'static [u8] {
     }
 }
 
+/// Set the process name macOS uses for the Dock hover label of an unbundled
+/// `cargo run` binary. Without this, the Dock reads the binary filename
+/// (`recrest`, lowercase) from `[NSProcessInfo processInfo].processName`.
+/// Must run BEFORE any other macOS-facing code so the name is in place before
+/// AppKit/Dock caches the initial value.
+#[cfg(target_os = "macos")]
+fn set_macos_process_name() {
+    use objc2_foundation::{NSProcessInfo, NSString};
+    let info = NSProcessInfo::processInfo();
+    let name = NSString::from_str(crate::identity::current_tray_tooltip());
+    info.setProcessName(&name);
+}
+
+/// Apply the dock icon variant matching the current system appearance.
+/// Must run on the main thread (NSApplication is main-thread-only). Idempotent,
+/// so the polling task in `spawn_macos_appearance_poller` can call it freely.
+///
+/// All live updates are driven by that poller. We previously tried two
+/// notification-based paths and both proved unreliable for system-wide
+/// appearance flips in Tauri dev/release builds:
+///
+///   - `NSDistributedNotificationCenter` observer for
+///     `AppleInterfaceThemeChangedNotification` — registered cleanly but the
+///     block never fired (likely because the dev binary is not a proper .app
+///     bundle and lacks the LSUIElement/sandbox plumbing that lets the
+///     distributed notification center route system-wide notifications to us).
+///   - Tauri's `WindowEvent::ThemeChanged` — tao only emits this on macOS for
+///     explicit per-window theme overrides, not system appearance flips.
+///
+/// Polling a single `effectiveAppearance` read every 1.5s is essentially free
+/// and guarantees the icon stays in sync.
 #[cfg(target_os = "macos")]
 fn set_macos_app_icon() {
     use objc2::AnyThread;
@@ -69,31 +155,69 @@ fn set_macos_app_icon() {
         return;
     };
     let app = NSApplication::sharedApplication(mtm);
-    let bytes = pick_icon_bytes(is_system_dark(&app));
+    let dark = is_system_dark(&app);
+    tracing::info!("[macos] applying app icon, dark={dark}");
+    let bytes = pick_icon_bytes(dark);
     let data = NSData::with_bytes(bytes);
     let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else {
         return;
     };
+    // Belt-and-suspenders against the macOS Dock's icon cache for unbundled
+    // `cargo run` binaries: clear NSApp's icon image first so AppKit can't
+    // short-circuit the second call as a no-op, set the new image, then
+    // tell the Dock tile to redraw immediately. Apple's documented fix for
+    // a stale Dock tile is `-[NSDockTile display]` — without it the Dock
+    // visually keeps the cached pixels even after `setApplicationIconImage`
+    // returns successfully.
     unsafe {
+        app.setApplicationIconImage(None);
         app.setApplicationIconImage(Some(&image));
+        let dock_tile = app.dockTile();
+        dock_tile.display();
     }
 }
 
+/// Poll `NSApp.effectiveAppearance` every 1.5s on the main thread; when the
+/// dark-mode bit flips, re-apply the dock icon. Runs for the lifetime of the
+/// process — no shutdown signal, the task dies with the runtime on exit.
+///
+/// 1.5s is chosen as a comfortable middle: a single `effectiveAppearance`
+/// read costs microseconds so the CPU cost is negligible, sub-2s latency
+/// after a manual theme toggle is imperceptible in practice, and the
+/// non-round interval avoids visibly syncing with any 1Hz system polls.
 #[cfg(target_os = "macos")]
-fn observe_macos_appearance() {
-    use block2::RcBlock;
-    use objc2_foundation::{NSDistributedNotificationCenter, NSNotification, NSString};
-    use std::ptr::NonNull;
+fn spawn_macos_appearance_poller(app: AppHandle) {
+    use std::sync::{Arc, Mutex as StdMutex};
+    use std::time::Duration;
 
-    let name = NSString::from_str("AppleInterfaceThemeChangedNotification");
-    let block = RcBlock::new(move |_n: NonNull<NSNotification>| {
-        set_macos_app_icon();
+    let initial = macos_system_dark().unwrap_or(false);
+    let last = Arc::new(StdMutex::new(initial));
+    tracing::info!("[macos] appearance poller spawning (initial dark={initial})");
+
+    // Use a plain std::thread instead of tokio::spawn to rule out any
+    // async-runtime interaction. The thread sleeps + hops to the main thread
+    // via `app.run_on_main_thread` once per tick.
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(Duration::from_millis(1500));
+            let last = Arc::clone(&last);
+            let result = app.run_on_main_thread(move || {
+                let dark = macos_system_dark().unwrap_or(false);
+                let mut guard = match last.lock() {
+                    Ok(g) => g,
+                    Err(poisoned) => poisoned.into_inner(),
+                };
+                if dark != *guard {
+                    *guard = dark;
+                    tracing::info!("[macos] appearance changed: dark={dark}");
+                    set_macos_app_icon();
+                }
+            });
+            if let Err(e) = result {
+                tracing::warn!("[macos] run_on_main_thread failed: {e:?}");
+            }
+        }
     });
-    let center = NSDistributedNotificationCenter::defaultCenter();
-    unsafe {
-        center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block);
-    }
-    std::mem::forget(block);
 }
 
 // Both light + dark 128×128 PNGs are embedded so the Windows runtime can
@@ -103,13 +227,13 @@ fn observe_macos_appearance() {
 // process start, but as soon as `set_windows_app_icon` runs the runtime
 // version wins and starts following the OS theme.
 #[cfg(windows)]
-const ICON_WIN_PROD_LIGHT: &[u8] = include_bytes!("../icons/128x128.png");
+const ICON_WIN_PROD_LIGHT: &[u8] = include_bytes!("../icons/windows/icon-light.png");
 #[cfg(windows)]
-const ICON_WIN_PROD_DARK: &[u8] = include_bytes!("../icons/icon-dark.png");
+const ICON_WIN_PROD_DARK: &[u8] = include_bytes!("../icons/windows/icon-dark.png");
 #[cfg(windows)]
-const ICON_WIN_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/128x128.png");
+const ICON_WIN_DEV_LIGHT: &[u8] = include_bytes!("../icons-dev/windows/icon-light.png");
 #[cfg(windows)]
-const ICON_WIN_DEV_DARK: &[u8] = include_bytes!("../icons-dev/icon-dark.png");
+const ICON_WIN_DEV_DARK: &[u8] = include_bytes!("../icons-dev/windows/icon-dark.png");
 
 #[cfg(windows)]
 fn pick_windows_icon_bytes(dark: bool) -> &'static [u8] {
@@ -131,10 +255,11 @@ fn pick_windows_icon_bytes(dark: bool) -> &'static [u8] {
 /// the renderer is using.
 #[cfg(windows)]
 fn windows_uses_dark_mode() -> bool {
-    use windows::Win32::System::Registry::{
-        HKEY, HKEY_CURRENT_USER, KEY_READ, RRF_RT_REG_DWORD, RegCloseKey, RegGetValueW, RegOpenKeyExW,
-    };
     use windows::core::PCWSTR;
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegGetValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, KEY_READ,
+        RRF_RT_REG_DWORD,
+    };
 
     let subkey: Vec<u16> = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
         .encode_utf16()
@@ -147,8 +272,14 @@ fn windows_uses_dark_mode() -> bool {
 
     unsafe {
         let mut hkey = HKEY::default();
-        if RegOpenKeyExW(HKEY_CURRENT_USER, PCWSTR(subkey.as_ptr()), 0, KEY_READ, &mut hkey)
-            .is_err()
+        if RegOpenKeyExW(
+            HKEY_CURRENT_USER,
+            PCWSTR(subkey.as_ptr()),
+            0,
+            KEY_READ,
+            &mut hkey,
+        )
+        .is_err()
         {
             return false; // Default to light if registry isn't readable.
         }
@@ -187,12 +318,12 @@ fn windows_uses_dark_mode() -> bool {
 fn apply_windows_theme_icon(app: &AppHandle) {
     use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows::Win32::UI::WindowsAndMessaging::{
-        ICON_BIG, ICON_SMALL, SendMessageW, WM_GETICON, WM_SETICON,
+        SendMessageW, ICON_BIG, ICON_SMALL, WM_GETICON, WM_SETICON,
     };
 
     let dark = windows_uses_dark_mode();
-    let bytes = pick_windows_icon_bytes(dark);
-    let image = match tauri::image::Image::from_bytes(bytes) {
+    let window_bytes = pick_windows_icon_bytes(dark);
+    let window_image = match tauri::image::Image::from_bytes(window_bytes) {
         Ok(image) => image,
         Err(err) => {
             tracing::warn!("[windows] could not decode app icon: {err}");
@@ -201,17 +332,13 @@ fn apply_windows_theme_icon(app: &AppHandle) {
     };
 
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.set_icon(image.clone());
+        let _ = window.set_icon(window_image);
 
         if let Ok(raw) = window.hwnd() {
             let hwnd = HWND(raw.0 as *mut _);
             unsafe {
-                let small_hicon = SendMessageW(
-                    hwnd,
-                    WM_GETICON,
-                    WPARAM(ICON_SMALL as usize),
-                    LPARAM(0),
-                );
+                let small_hicon =
+                    SendMessageW(hwnd, WM_GETICON, WPARAM(ICON_SMALL as usize), LPARAM(0));
                 if small_hicon.0 != 0 {
                     SendMessageW(
                         hwnd,
@@ -224,8 +351,18 @@ fn apply_windows_theme_icon(app: &AppHandle) {
         }
     }
 
-    if let Some(tray) = app.tray_by_id(commands::tray::TRAY_ID) {
-        let _ = tray.set_icon(Some(image));
+    // Tray uses a separate monochrome/transparent icon set so the system
+    // tray stays theme-correct (window/taskbar wants the colorful tile).
+    let tray_bytes = tray_icon_bytes(dark);
+    match tauri::image::Image::from_bytes(tray_bytes) {
+        Ok(tray_image) => {
+            if let Some(tray) = app.tray_by_id(commands::tray::TRAY_ID) {
+                let _ = tray.set_icon(Some(tray_image));
+            }
+        }
+        Err(err) => {
+            tracing::warn!("[windows] could not decode tray icon: {err}");
+        }
     }
 }
 
@@ -240,14 +377,12 @@ fn set_app_user_model_id() {
     // Dev builds get a `.dev` suffix so the Windows taskbar doesn't
     // recycle the prod build's cached pin icon / RelaunchIconResource —
     // the two identities are now distinct in Explorer's per-AUMID store.
-    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+    // Resolved via `identity::current_identifier()` so this and the Tauri
+    // config (overlaid by `tauri.dev.conf.json` in debug builds) stay in
+    // lock-step — diverging would re-introduce the icon-cache collision.
     use windows::core::PCWSTR;
-    let id = if cfg!(debug_assertions) {
-        "eu.softventures.recrest.dev"
-    } else {
-        "eu.softventures.recrest"
-    };
-    let aumid: Vec<u16> = id
+    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+    let aumid: Vec<u16> = identity::current_identifier()
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
@@ -277,7 +412,9 @@ fn show_main_window(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     // GUI-gestartete Apps erben auf macOS/Linux nicht den interaktiven $PATH
@@ -285,6 +422,19 @@ pub fn run() {
     // Prod-Builds oft fehlschlägt obwohl `code`/`cursor` im Terminal laufen.
     // fix-path-env repariert den PATH einmalig beim Start.
     let _ = fix_path_env::fix();
+
+    // macOS: set the process name BEFORE any AppKit/Tauri init — the Dock
+    // captures the hover label from `NSProcessInfo.processName` the moment
+    // the process registers (which happens implicitly the first time NSApp
+    // is touched, deep inside Tauri's window creation). Calling this later
+    // (e.g. from inside `setup`) leaves the cached lowercase binary name
+    // ("recrest") in the Dock until the next `killall Dock`. Calling it
+    // here, before `Builder::default()`, guarantees the right name is read
+    // on first registration.
+    #[cfg(target_os = "macos")]
+    {
+        set_macos_process_name();
+    }
 
     // Windows-specific: register an explicit AppUserModelID so Toast
     // notifications attribute to "Recrest" instead of the parent process
@@ -297,6 +447,12 @@ pub fn run() {
     {
         set_app_user_model_id();
     }
+
+    // Mark a session boundary in `.claude-dev.log` so successive `yarn dev`
+    // sessions are visually demarcated when reading the file. Debug-only —
+    // production builds neither register the command nor write the file.
+    #[cfg(debug_assertions)]
+    commands::dev_log::log_session_start(identity::current_identifier());
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
@@ -336,7 +492,57 @@ pub fn run() {
             // tracing's global dispatcher (only one logger can be installed).
 
             let handle = app.handle().clone();
-            let config = ConfigStore::load_or_default(&handle)?;
+
+            // Debug builds store provider tokens in a JSON file under
+            // `app_data_dir` instead of the OS keychain — see
+            // `auth::token::TokenStore` for the rationale (macOS keychain
+            // ACL is bound to the binary's code signature, which `cargo
+            // build` regenerates on every rebuild, so dev builds would
+            // re-prompt on every launch). Release builds keep the keychain.
+            // We wire the path from here because the AppHandle is the only
+            // way to resolve `app_data_dir` portably.
+            #[cfg(debug_assertions)]
+            {
+                // Plan-8 E2E harness: `RECREST_TEST_PROFILE` redirects the
+                // dev-tokens file into a tmpdir so test PATs never land in
+                // the user's real app-data dir.
+                let token_dir = identity::test_profile_root()
+                    .or_else(|| handle.path().app_data_dir().ok());
+                if let Some(dir) = token_dir {
+                    let _ = std::fs::create_dir_all(&dir);
+                    auth::token::init_file_backend_path(dir.join("dev-tokens.json"));
+                }
+                // One-time migration of pre-existing dev tokens out of the
+                // OS keychain and into the file. Fires the macOS "Always
+                // Allow" prompt once per provider whose entry exists, then
+                // the file's existence becomes a sentinel and the keychain
+                // is never read again. See
+                // `auth::token::migrate_keychain_to_file_if_empty` for the
+                // rationale.
+                if let Err(err) = crate::auth::token::migrate_keychain_to_file_if_empty() {
+                    tracing::warn!("[token] keychain→file migration failed: {err}");
+                }
+            }
+
+            // Window title carries the dev/prod marker. `tauri.conf.json`
+            // hard-codes "Recrest" and the `tauri.dev.conf.json` overlay
+            // can't safely replace `app.windows[]` (array-replace would
+            // require duplicating every Window property), so we set the
+            // title at runtime via `identity::current_tray_tooltip()` —
+            // same string that goes on the tray, kept in one place.
+            if let Some(window) = handle.get_webview_window("main") {
+                let _ = window.set_title(identity::current_tray_tooltip());
+            }
+
+            let mut config = ConfigStore::load_or_default(&handle)?;
+            // Reconcile on boot: drop auto-discovered repos that no longer sit
+            // under any configured scan root (junk from an earlier too-broad
+            // scan, or a scan path removed by an older build before pruning
+            // existed). Manual adds are kept. Persist only when something
+            // actually changed.
+            if !config.prune_orphan_scanned_repos().is_empty() {
+                let _ = config.save(&handle);
+            }
 
             // Crash reporting — opt-in via the `crashReporting` setting + a
             // compile-time DSN. `mem::forget` on the returned guard is the
@@ -387,9 +593,8 @@ pub fn run() {
                     .await;
 
                     // Then every 4h for the rest of the app's lifetime.
-                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(
-                        4 * 60 * 60,
-                    ));
+                    let mut interval =
+                        tokio::time::interval(std::time::Duration::from_secs(4 * 60 * 60));
                     // The first tick fires immediately — skip it since we
                     // just ran the check above.
                     interval.tick().await;
@@ -462,6 +667,7 @@ pub fn run() {
                 providers: Arc::new(registry),
                 watcher: watcher_slot,
                 oauth_pending: Arc::new(Mutex::new(None)),
+                ssh_passphrases: Arc::new(Mutex::new(HashMap::new())),
             };
             app.manage(state);
 
@@ -469,6 +675,11 @@ pub fn run() {
             {
                 use tauri::TitleBarStyle;
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+                // (Process name is set at the very top of `run()` — calling
+                // it here would be too late, the Dock has already captured
+                // the cached lowercase binary name by this point.)
+
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.set_decorations(true);
                     let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
@@ -477,8 +688,25 @@ pub fn run() {
                     // themes simply cover it.
                     let _ = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None);
                 }
-                set_macos_app_icon();
-                observe_macos_appearance();
+
+                // Defer the initial icon set by 500ms so NSApp.effectiveAppearance
+                // has settled — it lags the system appearance for the first
+                // ~hundreds of ms after launch on macOS, the same WebKit cold-start
+                // quirk that makes matchMedia("(prefers-color-scheme: dark)")
+                // return false even on dark systems. Setting the icon too early
+                // picks the wrong variant, which the Dock then visually caches —
+                // subsequent correct `setApplicationIconImage` calls (driven by
+                // the poller) update NSApp's internal state but the Dock keeps
+                // showing the cached pixels. We deliberately don't also call
+                // `set_macos_app_icon()` synchronously here: doubling the call
+                // before the dock has settled tends to make caching worse.
+                let handle_for_initial = handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    let _ = handle_for_initial.run_on_main_thread(set_macos_app_icon);
+                });
+
+                spawn_macos_appearance_poller(handle.clone());
             }
 
             #[cfg(target_os = "windows")]
@@ -499,10 +727,11 @@ pub fn run() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 let deep_handle = handle.clone();
+                let callback_prefix = identity::current_oauth_callback_prefix();
                 handle.deep_link().on_open_url(move |event| {
                     for url in event.urls() {
                         let s = url.as_str();
-                        if s.starts_with("recrest://oauth/callback") {
+                        if s.starts_with(&callback_prefix) {
                             let _ = tauri::Emitter::emit(
                                 &deep_handle,
                                 "oauth://callback",
@@ -542,11 +771,25 @@ pub fn run() {
             let separator = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&show_i, &hide_i, &separator, &quit_i])?;
 
-            let _tray = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
-                .icon(app.default_window_icon().cloned().unwrap())
-                .tooltip("Recrest")
+            // Tray uses a dedicated transparent icon set rather than the
+            // bundle icon. On macOS it's marked as a template image so the
+            // menu bar auto-tints with light/dark appearance; on Windows the
+            // initial variant follows the current OS theme and is re-applied
+            // by `apply_windows_theme_icon` on subsequent theme changes.
+            #[cfg(target_os = "macos")]
+            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes())
+                .expect("tray icon bytes must decode");
+            #[cfg(all(unix, not(target_os = "macos")))]
+            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes())
+                .expect("tray icon bytes must decode");
+            #[cfg(windows)]
+            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes(windows_uses_dark_mode()))
+                .expect("tray icon bytes must decode");
+
+            let tray_builder = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
+                .icon(tray_image)
+                .tooltip(identity::current_tray_tooltip())
                 .menu(&menu)
-                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => show_main_window(app),
                     "hide" => {
@@ -558,7 +801,22 @@ pub fn run() {
                         app.exit(0);
                     }
                     _ => {}
-                })
+                });
+
+            // macOS menu-bar convention: a single left-click opens the menu
+            // immediately (like Wi-Fi, Battery, Spotlight). Also flag the
+            // icon as a template so the menu bar auto-tints it to match
+            // light/dark menu-bar appearance.
+            #[cfg(target_os = "macos")]
+            let tray_builder = tray_builder
+                .show_menu_on_left_click(true)
+                .icon_as_template(true);
+
+            // Windows + Linux convention: left-click brings the window
+            // forward, right-click opens the menu.
+            #[cfg(not(target_os = "macos"))]
+            let tray_builder = tray_builder
+                .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -568,8 +826,9 @@ pub fn run() {
                     {
                         show_main_window(tray.app_handle());
                     }
-                })
-                .build(app)?;
+                });
+
+            let _tray = tray_builder.build(app)?;
 
             // Plan 1 §C.2: install the WM_NCHITTEST subclass on the main
             // HWND so Windows 11 surfaces the Snap-Layouts flyout when the
@@ -604,6 +863,11 @@ pub fn run() {
                 // tray icons so the taskbar tile stays in sync with Explorer.
                 apply_windows_theme_icon(window.app_handle());
             }
+
+            // macOS does NOT hook `WindowEvent::ThemeChanged` — tao only
+            // emits it for explicit per-window overrides, not system
+            // appearance flips. The poller spawned in `setup` handles all
+            // macOS dock-icon updates instead.
 
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 // Persist window geometry before hiding, so it survives a force-quit.
@@ -647,8 +911,7 @@ pub fn run() {
                 // else: fall through — let the OS close the window, then the
                 // app exits because the webview was the only window.
             }
-        })
-        ;
+        });
 
     // `tauri::generate_handler!` cannot accept `#[cfg]` attrs on individual
     // arms, so we duplicate the handler registration — release builds get the
@@ -663,12 +926,18 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::forget_repos_under_path,
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
+        commands::repos::set_repo_logo,
+        commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::ide::detect_ides,
         commands::repos::open_terminal,
+        commands::ssh::ssh_unlock_key,
+        commands::ssh::set_repo_ssh_key,
+        commands::ssh::list_ssh_keys,
         commands::git_ops::open_in_explorer,
         commands::git_ops::git_fetch,
         commands::git_ops::git_fetch_all,
@@ -678,7 +947,24 @@ pub fn run() {
         commands::git_ops::git_checkout_remote,
         commands::git_ops::git_list_branches,
         commands::git_ops::git_branch_create,
+        commands::git_ops::git_branch_delete,
         commands::git_ops::git_merge,
+        commands::git_index::git_stage,
+        commands::git_index::git_unstage,
+        commands::git_index::git_discard,
+        commands::git_index::git_stash,
+        commands::git_index::git_stash_list,
+        commands::git_index::git_stash_pop,
+        commands::git_index::git_stash_drop,
+        commands::git_index::git_commit,
+        commands::git_index::git_has_pre_commit_hook,
+        commands::git_config::get_git_config,
+        commands::git_config::set_git_config,
+        commands::git_config::list_git_config_layers,
+        commands::git_config::get_git_config_with_origins,
+        commands::git_config::set_git_config_in_layer,
+        commands::git_config::add_git_config_include,
+        commands::git_config::remove_git_config_include,
         commands::clone::git_clone,
         commands::search::find_across_repos,
         commands::remote_import::list_remote_repositories,
@@ -692,6 +978,14 @@ pub fn run() {
         commands::providers::clear_provider_token,
         commands::providers::fetch_pull_requests,
         commands::providers::get_pr_detail,
+        commands::providers::get_pr_diff,
+        commands::providers::post_pr_comment,
+        commands::providers::merge_pull_request,
+        commands::providers::list_workflows,
+        commands::providers::list_workflow_runs,
+        commands::providers::trigger_workflow,
+        commands::providers::cancel_workflow_run,
+        commands::providers::get_pages_status,
         commands::activity::list_pr_events,
         commands::activity::list_check_runs,
         commands::notifications::notify,
@@ -705,6 +999,7 @@ pub fn run() {
         commands::window::validate_window_position,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
+        commands::system::get_system_dark_mode,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
@@ -718,12 +1013,18 @@ pub fn run() {
         commands::repos::repo_status,
         commands::repos::add_repo,
         commands::repos::remove_repo,
+        commands::repos::forget_repos_under_path,
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
         commands::repos::load_logo_bytes,
+        commands::repos::set_repo_logo,
+        commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::ide::detect_ides,
         commands::repos::open_terminal,
+        commands::ssh::ssh_unlock_key,
+        commands::ssh::set_repo_ssh_key,
+        commands::ssh::list_ssh_keys,
         commands::git_ops::open_in_explorer,
         commands::git_ops::git_fetch,
         commands::git_ops::git_fetch_all,
@@ -733,7 +1034,24 @@ pub fn run() {
         commands::git_ops::git_checkout_remote,
         commands::git_ops::git_list_branches,
         commands::git_ops::git_branch_create,
+        commands::git_ops::git_branch_delete,
         commands::git_ops::git_merge,
+        commands::git_index::git_stage,
+        commands::git_index::git_unstage,
+        commands::git_index::git_discard,
+        commands::git_index::git_stash,
+        commands::git_index::git_stash_list,
+        commands::git_index::git_stash_pop,
+        commands::git_index::git_stash_drop,
+        commands::git_index::git_commit,
+        commands::git_index::git_has_pre_commit_hook,
+        commands::git_config::get_git_config,
+        commands::git_config::set_git_config,
+        commands::git_config::list_git_config_layers,
+        commands::git_config::get_git_config_with_origins,
+        commands::git_config::set_git_config_in_layer,
+        commands::git_config::add_git_config_include,
+        commands::git_config::remove_git_config_include,
         commands::clone::git_clone,
         commands::search::find_across_repos,
         commands::remote_import::list_remote_repositories,
@@ -747,6 +1065,14 @@ pub fn run() {
         commands::providers::clear_provider_token,
         commands::providers::fetch_pull_requests,
         commands::providers::get_pr_detail,
+        commands::providers::get_pr_diff,
+        commands::providers::post_pr_comment,
+        commands::providers::merge_pull_request,
+        commands::providers::list_workflows,
+        commands::providers::list_workflow_runs,
+        commands::providers::trigger_workflow,
+        commands::providers::cancel_workflow_run,
+        commands::providers::get_pages_status,
         commands::activity::list_pr_events,
         commands::activity::list_check_runs,
         commands::notifications::notify,
@@ -760,6 +1086,7 @@ pub fn run() {
         commands::window::validate_window_position,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
+        commands::system::get_system_dark_mode,
         commands::git_info::check_git,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
@@ -767,6 +1094,7 @@ pub fn run() {
         commands::dev::get_dev_paths,
         commands::dev::get_build_triple,
         commands::dev::dev_panic,
+        commands::dev_log::dev_log,
     ]);
 
     let app = builder

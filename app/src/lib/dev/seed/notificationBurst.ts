@@ -56,5 +56,6 @@ export function makeBurstRepo(): Repository {
     },
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
   };
 }

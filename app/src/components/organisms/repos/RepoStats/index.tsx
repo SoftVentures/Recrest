@@ -22,7 +22,9 @@ export interface RepoStatsProps {
 
 const Grid = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  // Auto-fit so the 4 KPI cells collapse to 2 (or 1) on narrow viewports
+  // instead of crushing labels like "OPEN MERGE REQUESTS" past readable width.
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   gap: 12,
 }) as typeof Box;
 

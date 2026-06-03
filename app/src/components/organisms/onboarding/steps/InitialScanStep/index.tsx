@@ -19,7 +19,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { loadRepos } from "@/store/actions/repos.actions";
+import { scanForRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export interface InitialScanStepProps {
@@ -66,7 +66,12 @@ function InitialScanStep({ onBack, onNext }: InitialScanStepProps) {
     setScanning(true);
     void (async () => {
       try {
-        await dispatch(loadRepos()).unwrap();
+        // Actually walk the filesystem for `.git` entries under the paths
+        // the user picked in PickFolderStep. The previous `loadRepos`
+        // call only returned what was already persisted in settings.repos —
+        // for a fresh onboarding that's always empty, so the step rendered
+        // "no repos found" no matter what the user pointed it at.
+        await dispatch(scanForRepos(scanPaths)).unwrap();
       } finally {
         if (!cancelled) setScanning(false);
       }
@@ -74,7 +79,7 @@ function InitialScanStep({ onBack, onNext }: InitialScanStepProps) {
     return () => {
       cancelled = true;
     };
-  }, [dispatch]);
+  }, [dispatch, scanPaths]);
 
   return (
     <StepRoot data-testid={TEST_IDS.onboarding.step(OnboardingStep.SCAN)}>

@@ -110,6 +110,13 @@ pub struct RepoImportDefaults {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GitConfigOverride {
+    pub user_name: Option<String>,
+    pub user_email: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalSettings {
     /// Stable id of the chosen terminal (e.g. `iterm`, `wezterm`, `wt`).
@@ -200,10 +207,21 @@ pub struct AppSettings {
     pub default_scan_path: Option<String>,
     #[serde(default)]
     pub terminal: TerminalSettings,
+    /// Stable id of the preferred shell (e.g. `zsh`, `fish`) launched inside the
+    /// terminal. `None` = auto / system default. See `shared` `SHELL_IDS`.
+    #[serde(default)]
+    pub shell: Option<String>,
     #[serde(default = "default_commit_message_template")]
     pub commit_message_template: String,
     #[serde(default)]
     pub privacy: PrivacySettings,
+    #[serde(default)]
+    pub git_config_override: GitConfigOverride,
+    /// Global default SSH private key path used for all SSH remotes. A repo's
+    /// own `ssh_key_path` overrides it; otherwise this is tried before
+    /// ssh-agent. `None` = rely on ssh-agent / global config.
+    #[serde(default)]
+    pub default_ssh_key_path: Option<String>,
 
     // ---- Phase 2: renderer-scoped preferences moved off localStorage ----
     #[serde(default)]
@@ -255,8 +273,11 @@ impl Default for AppSettings {
             repo_import_defaults: RepoImportDefaults::default(),
             default_scan_path: None,
             terminal: TerminalSettings::default(),
+            shell: None,
             commit_message_template: default_commit_message_template(),
             privacy: PrivacySettings::default(),
+            git_config_override: GitConfigOverride::default(),
+            default_ssh_key_path: None,
             appearance: AppearanceSettings::default(),
             accessibility: AccessibilitySettings::default(),
             window_state: WindowStateSettings::default(),
@@ -287,6 +308,18 @@ pub struct RepoRecord {
     /// specific repo. `None` means "use ssh-agent / global config".
     #[serde(default)]
     pub ssh_key_path: Option<String>,
+    /// User-uploaded logo override (absolute path under
+    /// `<app_data>/repo-logos/`). Takes precedence over the in-repo
+    /// auto-detection when set. Cleared by `clear_repo_logo`.
+    #[serde(default)]
+    pub custom_logo_path: Option<PathBuf>,
+    /// `true` when the user added this repo explicitly (Add-repo / clone),
+    /// `false` when it was auto-discovered by a scan. Scanned repos that no
+    /// longer sit under any configured scan root are pruned on the next
+    /// scan/boot; manual ones are kept wherever they live. Legacy records
+    /// (no field) default to `false` — i.e. treated as scanned.
+    #[serde(default)]
+    pub manual: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -338,7 +371,22 @@ mod tests {
         let json = serde_json::to_string(&original).expect("serialize");
         let parsed: AppSettings = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(original.theme, parsed.theme);
-        assert_eq!(original.commit_message_template, parsed.commit_message_template);
+        assert_eq!(
+            original.commit_message_template,
+            parsed.commit_message_template
+        );
+    }
+
+    #[test]
+    fn git_config_override_round_trips_and_defaults_empty() {
+        let s = AppSettings::default();
+        assert!(s.git_config_override.user_name.is_none());
+        assert!(s.git_config_override.user_email.is_none());
+
+        let json = serde_json::to_string(&s).expect("serialize");
+        assert!(json.contains("gitConfigOverride"));
+        let back: AppSettings = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.git_config_override.user_name, None);
     }
 
     /// Legacy `RepoRecord` (no `sshKeyPath`) still loads.

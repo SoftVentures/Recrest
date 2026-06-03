@@ -4,7 +4,7 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::Serialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::config::settings::RepoRecord;
 use crate::git::logo;
@@ -24,15 +24,38 @@ pub struct RepoDto {
     pub remote_url: Option<String>,
     pub provider_id: Option<String>,
     pub status: status::RepoStatusDto,
-    /// Filesystem path of the auto-detected light-theme logo (if any).
-    /// The frontend fetches its bytes on demand via `load_logo_bytes`.
+    /// Resolved light-theme logo path. When the user uploaded a custom
+    /// avatar this points into `<app_data>/repo-logos/`; otherwise it's the
+    /// path of the best in-repo match from `detect_repo_logo`.
     pub logo_path: Option<String>,
     pub logo_dark_path: Option<String>,
+    /// `true` when `logo_path` is the user-uploaded override (so the UI can
+    /// surface a "reset to auto-detected" affordance).
+    pub logo_is_custom: bool,
+    /// Per-repo SSH private key path, or `None` for ssh-agent / global config.
+    pub ssh_key_path: Option<String>,
 }
 
 impl RepoDto {
     pub fn from_record(record: &RepoRecord, status: status::RepoStatusDto) -> Self {
-        let logos = logo::detect_repo_logo(&record.path);
+        // Custom upload wins over the in-repo auto-detect. We still pass the
+        // detected dark variant through — the override is a single image, not
+        // a paired light/dark set; if the user wanted both, they'd commit the
+        // pair into the repo itself.
+        let (logo_path, logo_is_custom) = match record.custom_logo_path.as_ref() {
+            Some(p) if p.exists() => (Some(p.to_string_lossy().to_string()), true),
+            _ => {
+                let logos = logo::detect_repo_logo(&record.path);
+                (logos.light.map(|p| p.to_string_lossy().to_string()), false)
+            }
+        };
+        let logo_dark_path = if logo_is_custom {
+            None
+        } else {
+            logo::detect_repo_logo(&record.path)
+                .dark
+                .map(|p| p.to_string_lossy().to_string())
+        };
         Self {
             id: record.id.clone(),
             name: record.name.clone(),
@@ -41,8 +64,10 @@ impl RepoDto {
             remote_url: record.remote_url.clone(),
             provider_id: record.provider_id.clone(),
             status,
-            logo_path: logos.light.map(|p| p.to_string_lossy().to_string()),
-            logo_dark_path: logos.dark.map(|p| p.to_string_lossy().to_string()),
+            logo_path,
+            logo_dark_path,
+            logo_is_custom,
+            ssh_key_path: record.ssh_key_path.clone(),
         }
     }
 }
@@ -56,26 +81,54 @@ pub async fn scan_repos(
     let options = ScanOptions::default();
     let discovered = crate::git::scanner::scan_many(&paths, &options)?;
 
-    let mut config = state.config.lock().await;
-    config.settings_mut().scan_paths = paths;
+    // Upsert everything discovered under the new paths, then reconcile: drop
+    // auto-discovered repos that no longer sit under any scan root (a removed
+    // path, or junk from an earlier too-broad scan). The returned set is the
+    // FULL authoritative repo list (discovered + surviving manual adds), so the
+    // renderer can replace its store wholesale instead of merging stale rows.
+    let (records, new_records, orphans) = {
+        let mut config = state.config.lock().await;
+        config.settings_mut().scan_paths = paths;
 
-    let mut out = Vec::with_capacity(discovered.len());
-    let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
-    for repo_path in discovered {
-        let record = config.upsert_scanned_repo(&repo_path)?;
-        let status = status::read_status(&record.path)?;
-        new_records.push((record.id.clone(), record.path.clone()));
-        out.push(RepoDto::from_record(&record, status));
-    }
+        let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
+        for repo_path in discovered {
+            let record = config.upsert_scanned_repo(&repo_path)?;
+            new_records.push((record.id.clone(), record.path.clone()));
+        }
 
-    config.save(&app)?;
-    drop(config);
+        let orphans = config.prune_orphan_scanned_repos();
+        config.save(&app)?;
 
-    // Subscribe the filesystem watcher to every scanned repo (best-effort).
+        let records: Vec<RepoRecord> = config.settings().repos.values().cloned().collect();
+        (records, new_records, orphans)
+    };
+
+    // Watcher: subscribe freshly-discovered repos, unwatch pruned orphans.
     if let Some(watcher) = state.watcher.lock().await.as_mut() {
         for (id, path) in new_records {
             let _ = watcher.watch_repo(&id, &path).await;
         }
+        for (_, path) in &orphans {
+            let _ = watcher.unwatch_repo(path.as_path()).await;
+        }
+    }
+
+    // Statuses for the full set, computed concurrently (mirrors `list_repos`).
+    let handles: Vec<_> = records
+        .iter()
+        .map(|r| {
+            let path = r.path.clone();
+            tokio::task::spawn_blocking(move || {
+                status::read_status(&path).unwrap_or_else(|_| status::RepoStatusDto::unknown())
+            })
+        })
+        .collect();
+    let mut out = Vec::with_capacity(records.len());
+    for (record, handle) in records.iter().zip(handles) {
+        let status = handle
+            .await
+            .unwrap_or_else(|_| status::RepoStatusDto::unknown());
+        out.push(RepoDto::from_record(record, status));
     }
     Ok(out)
 }
@@ -139,6 +192,9 @@ pub async fn add_repo(
     let mut config = state.config.lock().await;
     let mut record = config.upsert_scanned_repo(std::path::Path::new(&path))?;
     record.group_id = group_id.clone();
+    // Explicit user add — flag it so a later scan's orphan-prune never removes
+    // it, even when it lives outside every configured scan root.
+    record.manual = true;
     config
         .settings_mut()
         .repos
@@ -282,6 +338,7 @@ pub struct LogoBlobDto {
 /// files via this command).
 #[tauri::command]
 pub async fn load_logo_bytes(
+    app: AppHandle,
     state: State<'_, AppState>,
     path: String,
 ) -> Result<LogoBlobDto, CommandError> {
@@ -289,17 +346,24 @@ pub async fn load_logo_bytes(
     let canonical = std::fs::canonicalize(&requested)
         .map_err(|e| CommandError::not_found(format!("logo not found: {e}")))?;
 
-    // Authorise: the resolved path must live under at least one registered repo.
+    // Authorise: the resolved path must live either under at least one
+    // registered repo (auto-detected logos) or under our managed
+    // `<app_data>/repo-logos/` directory (user-uploaded overrides).
     let config = state.config.lock().await;
-    let allowed = config.settings().repos.values().any(|r| {
+    let under_repo = config.settings().repos.values().any(|r| {
         std::fs::canonicalize(&r.path)
             .map(|root| canonical.starts_with(root))
             .unwrap_or(false)
     });
     drop(config);
-    if !allowed {
+    let under_uploads = custom_logo_dir(&app)
+        .ok()
+        .and_then(|d| std::fs::canonicalize(&d).ok())
+        .map(|root| canonical.starts_with(root))
+        .unwrap_or(false);
+    if !under_repo && !under_uploads {
         return Err(CommandError::bad_request(
-            "logo path outside any registered repo",
+            "logo path outside any registered repo or uploads dir",
         ));
     }
 
@@ -325,6 +389,125 @@ pub async fn load_logo_bytes(
     })
 }
 
+/// Allowed image extensions for user uploads. Mirrors `logo::EXTENSIONS`
+/// minus the favicon-only `ico` since users uploading their own avatar are
+/// always picking a real graphic, not a browser shortcut.
+const UPLOAD_EXTENSIONS: &[&str] = &["svg", "png", "webp", "jpg", "jpeg", "gif"];
+
+fn custom_logo_dir(app: &AppHandle) -> Result<PathBuf, CommandError> {
+    if let Some(root) = crate::identity::test_profile_root() {
+        return Ok(root.join("repo-logos"));
+    }
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::internal(format!("app data dir unavailable: {e}")))?;
+    Ok(base.join("repo-logos"))
+}
+
+/// Copies the picked image into `<app_data>/repo-logos/<repo_id>.<ext>` and
+/// records the path on the repo. Replaces any previous override (different
+/// extensions are cleaned up so we don't accumulate stale files).
+#[tauri::command]
+pub async fn set_repo_logo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+    source_path: String,
+) -> Result<RepoDto, CommandError> {
+    let source = PathBuf::from(&source_path);
+    let source_canon = std::fs::canonicalize(&source)
+        .map_err(|e| CommandError::not_found(format!("source image not found: {e}")))?;
+    let ext = source_canon
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_ascii_lowercase())
+        .ok_or_else(|| CommandError::bad_request("image has no extension"))?;
+    if !UPLOAD_EXTENSIONS.iter().any(|e| *e == ext) {
+        return Err(CommandError::bad_request(format!(
+            "unsupported image format `.{ext}` — use one of {}",
+            UPLOAD_EXTENSIONS.join(", ")
+        )));
+    }
+    let meta = std::fs::metadata(&source_canon)
+        .map_err(|e| CommandError::not_found(format!("image stat failed: {e}")))?;
+    if !meta.is_file() {
+        return Err(CommandError::bad_request("source is not a file"));
+    }
+    if meta.len() == 0 {
+        return Err(CommandError::bad_request("source image is empty"));
+    }
+    if meta.len() > logo::MAX_LOGO_BYTES {
+        return Err(CommandError::bad_request(format!(
+            "image too large ({} bytes, max {})",
+            meta.len(),
+            logo::MAX_LOGO_BYTES
+        )));
+    }
+
+    let dest_dir = custom_logo_dir(&app)?;
+    std::fs::create_dir_all(&dest_dir)
+        .map_err(|e| CommandError::internal(format!("create repo-logos dir failed: {e}")))?;
+
+    // Wipe stale extensions for this repo so a `.png` upload after a `.svg`
+    // doesn't leave the old SVG sitting next to the new file.
+    for stale_ext in UPLOAD_EXTENSIONS {
+        if *stale_ext == ext {
+            continue;
+        }
+        let stale = dest_dir.join(format!("{repo_id}.{stale_ext}"));
+        if stale.exists() {
+            let _ = std::fs::remove_file(&stale);
+        }
+    }
+
+    let dest = dest_dir.join(format!("{repo_id}.{ext}"));
+    std::fs::copy(&source_canon, &dest)
+        .map_err(|e| CommandError::internal(format!("copy image failed: {e}")))?;
+
+    let mut config = state.config.lock().await;
+    let record = config
+        .settings_mut()
+        .repos
+        .get_mut(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+    record.custom_logo_path = Some(dest.clone());
+    let record_snapshot = record.clone();
+    config.save(&app)?;
+    drop(config);
+
+    let status = status::read_status(&record_snapshot.path)?;
+    Ok(RepoDto::from_record(&record_snapshot, status))
+}
+
+/// Removes the per-repo avatar override. The file on disk is best-effort
+/// deleted; even when it fails the record is cleared so the UI falls back to
+/// auto-detection.
+#[tauri::command]
+pub async fn clear_repo_logo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<RepoDto, CommandError> {
+    let mut config = state.config.lock().await;
+    let record = config
+        .settings_mut()
+        .repos
+        .get_mut(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+    let stale = record.custom_logo_path.take();
+    let record_snapshot = record.clone();
+    config.save(&app)?;
+    drop(config);
+
+    if let Some(p) = stale {
+        let _ = std::fs::remove_file(&p);
+    }
+
+    let status = status::read_status(&record_snapshot.path)?;
+    Ok(RepoDto::from_record(&record_snapshot, status))
+}
+
 #[tauri::command]
 pub async fn remove_repo(
     app: AppHandle,
@@ -347,6 +530,76 @@ pub async fn remove_repo(
         let _ = watcher.unwatch_repo(&path).await;
     }
     Ok(())
+}
+
+/// Unregister every repo discovered under `removed_path` that is **not** also
+/// covered by one of `remaining_paths`. Invoked when the user deletes a scan
+/// root in Settings → Integrations so the repositories that root surfaced drop
+/// out of the dashboard immediately — while repos still reached by an
+/// overlapping root (e.g. `D:\` when `D:\Projects` is removed), and repos added
+/// manually outside every scan root, survive untouched.
+///
+/// Containment is a component-wise `Path::starts_with` on the **raw** stored
+/// paths (after `normalize_scan_root` folds the bare drive form `D:` to `D:\`),
+/// so `D:\Projects` never swallows `D:\ProjectsX`. We deliberately do NOT
+/// canonicalise: discovered repo paths are the verbatim result of walking the
+/// scan root, so matching that same raw form mirrors discovery exactly — and it
+/// also prunes a repo whose folder was deleted on disk while still registered
+/// (the very stale state this command should clean). `std::fs::canonicalize`
+/// would defeat that — it only resolves paths that still exist and returns the
+/// Windows verbatim (`\\?\`) form, so a missing repo path would fall back to
+/// its raw form and never prefix-match a canonicalised root. Returns the ids
+/// that were forgotten so the renderer can prune its store without a full
+/// reload, and best-effort unwatches each (mirrors `remove_repo`).
+#[tauri::command]
+pub async fn forget_repos_under_path(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    removed_path: String,
+    remaining_paths: Vec<String>,
+) -> Result<Vec<String>, CommandError> {
+    use crate::git::scanner::normalize_scan_root;
+
+    let removed = normalize_scan_root(std::path::Path::new(&removed_path));
+    let remaining: Vec<PathBuf> = remaining_paths
+        .iter()
+        .map(|p| normalize_scan_root(std::path::Path::new(p)))
+        .collect();
+
+    let mut config = state.config.lock().await;
+
+    // Snapshot victims under an immutable borrow first; the mutable borrow for
+    // removal can't overlap the iteration.
+    let victims: Vec<(String, PathBuf)> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|record| {
+            record.path.starts_with(&removed)
+                && !remaining.iter().any(|root| record.path.starts_with(root))
+        })
+        .map(|record| (record.id.clone(), record.path.clone()))
+        .collect();
+
+    if victims.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let settings = config.settings_mut();
+    for (id, _) in &victims {
+        settings.repos.remove(id);
+        settings.pinned_repo_ids.retain(|pinned| pinned != id);
+    }
+    config.save(&app)?;
+    drop(config);
+
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        for (_, path) in &victims {
+            let _ = watcher.unwatch_repo(path.as_path()).await;
+        }
+    }
+
+    Ok(victims.into_iter().map(|(id, _)| id).collect())
 }
 
 /// Refuse to send "obviously dangerous" paths to the trash. The user can
@@ -453,11 +706,7 @@ pub async fn delete_repo(
     }
 
     trash::delete(&path).map_err(|e| {
-        CommandError::internal(format!(
-            "failed to move {} to trash: {}",
-            path.display(),
-            e
-        ))
+        CommandError::internal(format!("failed to move {} to trash: {}", path.display(), e))
     })?;
 
     let mut config = state.config.lock().await;
@@ -504,6 +753,7 @@ pub async fn open_terminal(
         .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
         .path
         .clone();
+    let terminal = config.settings().terminal.clone();
     drop(config);
-    crate::commands::terminal::open_at(&record_path)
+    crate::commands::terminal::open_at(&record_path, &terminal)
 }

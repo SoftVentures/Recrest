@@ -30,10 +30,14 @@
     "more_info": "Weitere Informationen",
     "send_test_notification": "Testbenachrichtigung senden",
     "remove_integration": "{{provider}} entfernen",
+    "remove_path": "{{path}} entfernen",
     "theme_swatch": "Design {{label}}"
   },
   "repo": {
     "open_in_ide": "In IDE öffnen",
+    "ssh_key": "SSH-Key",
+    "pin": "Repository anheften",
+    "unpin": "Repository lösen",
     "open_in_terminal": "Im Terminal öffnen",
     "open_in_explorer": "Im Explorer öffnen",
     "open_remote": "Remote öffnen",
@@ -54,5 +58,8 @@
   },
   "activity": {
     "timeline_filter": "Event-Typ"
+  },
+  "dashboard": {
+    "main": "Dashboard-Inhalt"
   }
 }

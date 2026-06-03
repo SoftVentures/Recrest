@@ -40,17 +40,19 @@ function GeneralDrawer({
     <Drawer
       anchor={anchor}
       hideBackdrop={hideBackdrop}
-      // The drawer sits below the 64 px global app header so the header
-      // chrome (search, refresh, scope toggle, add-repo button) stays
-      // visible AND interactive while the user inspects an MR. Mirrors
-      // the original mocks: drawer reads as a sidebar inside the page
-      // area, not as a viewport overlay.
+      // The drawer sits below the app header so its controls stay visible
+      // AND interactive while the user inspects an MR. The vertical offset
+      // is the 64 px app header plus whatever OS titlebar variant is active
+      // (38 mac / 32 win11 / 42 gnome / 0 web). `AppLayout` publishes the
+      // combined value on `:root` as `--recrest-app-chrome-bottom`; we
+      // fall back to 64 for the pure-web/no-titlebar case so the drawer
+      // still works during SSR / before the hook runs.
       slotProps={{
         ...slotProps,
         root: {
           ...(slotProps?.root ?? {}),
           sx: {
-            top: 64,
+            top: "var(--recrest-app-chrome-bottom, 64px)",
             // The MuiModal root still paints a full-viewport presentation
             // div behind the paper; lock its events to "none" so it
             // doesn't swallow header / sidebar clicks. Per-paper
@@ -67,8 +69,8 @@ function GeneralDrawer({
                 sx: {
                   width,
                   maxWidth: "100vw",
-                  top: 64,
-                  height: "calc(100% - 64px)",
+                  top: "var(--recrest-app-chrome-bottom, 64px)",
+                  height: "calc(100% - var(--recrest-app-chrome-bottom, 64px))",
                   pointerEvents: "auto",
                   borderLeft: (theme: Theme) => `1px solid ${theme.palette.divider}`,
                   borderRight: 0,

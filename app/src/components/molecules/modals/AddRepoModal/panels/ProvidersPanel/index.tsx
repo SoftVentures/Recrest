@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import BrandIcon from "@/assets/icons/BrandIcon";
 import GeneralAvatar from "@/components/atoms/avatars/GeneralAvatar";
 import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
+import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import {
   AsideHeading,
   AsideIcon,
@@ -36,8 +37,10 @@ import RepoRowCard from "@/components/molecules/modals/AddRepoModal/panels/Provi
 import {
   BrowseBtn,
   Footer,
+  Hint,
   Input,
   PrimaryBtn,
+  RememberToggle,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -52,6 +55,7 @@ import {
   fetchRemoteRepositories,
 } from "@/store/actions/remoteImport.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
+import { saveSettings } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { keyFor } from "@/store/types/remoteImport.types";
 
@@ -78,13 +82,25 @@ function gradientForOrg(id: string): readonly [string, string] {
 export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelProps) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const importDefaults = useAppSelector((s) => s.settings.backend?.repoImportDefaults);
+  const defaultProvider =
+    importDefaults?.providerId &&
+    connectedProviders.includes(importDefaults.providerId as ProviderId)
+      ? (importDefaults.providerId as ProviderId)
+      : null;
   const [activeProvider, setActiveProvider] = useState<ProviderId | null>(
-    connectedProviders[0] ?? null,
+    defaultProvider ?? connectedProviders[0] ?? null,
   );
-  const [activeOrg, setActiveOrg] = useState<string | null>(null);
+  const [activeOrg, setActiveOrg] = useState<string | null>(
+    defaultProvider ? (importDefaults?.groupId ?? null) : null,
+  );
+  const [rememberDefault, setRememberDefault] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [destination, setDestination] = useState("");
+  const defaultDest = useAppSelector(
+    (s) => s.settings.backend?.defaultScanPath ?? s.repos.scanPaths[0] ?? "",
+  );
+  const [destination, setDestination] = useState(defaultDest);
   const [cloning, setCloning] = useState(false);
 
   useEffect(() => {
@@ -102,6 +118,31 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
   const orgs = useAppSelector((s) =>
     activeProvider ? (s.remoteImport.organizations[activeProvider] ?? []) : [],
   );
+
+  // GitLab returns groups with path-style slugs (`benova/infrastructure`).
+  // We render subgroups indented under their parent when the parent is also in
+  // the list, so navigation mirrors the actual group hierarchy instead of a
+  // flat list of slashed display names.
+  const decoratedOrgs = useMemo(() => {
+    const slugSet = new Set(orgs.map((o) => o.slug));
+    const sorted = [...orgs].sort((a, b) => a.slug.localeCompare(b.slug));
+    return sorted.map((o) => {
+      const parts = o.slug.split("/");
+      let ancestorsInList = 0;
+      for (let j = 1; j < parts.length; j++) {
+        if (slugSet.has(parts.slice(0, j).join("/"))) ancestorsInList++;
+      }
+      const depth = 1 + ancestorsInList;
+      // Strip path-prefix from display name when a parent is rendered above,
+      // so the indent does the "this is a sub-thing" signalling alone.
+      const labelSegments = o.displayName.split(/\s*\/\s*/);
+      const label =
+        ancestorsInList > 0 && labelSegments.length > 1
+          ? (labelSegments[labelSegments.length - 1] ?? o.displayName)
+          : o.displayName;
+      return { org: o, depth, label };
+    });
+  }, [orgs]);
   const listingKey = activeProvider ? keyFor(activeProvider, activeOrg) : null;
   const listing = useAppSelector((s) =>
     listingKey ? s.remoteImport.listings[listingKey] : undefined,
@@ -171,6 +212,12 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
       }));
     if (requests.length === 0) return;
 
+    if (rememberDefault && activeProvider) {
+      void dispatch(
+        saveSettings({ repoImportDefaults: { providerId: activeProvider, groupId: activeOrg } }),
+      );
+    }
+
     setCloning(true);
     try {
       const outcomes = await dispatch(cloneRemoteRepositoriesBulk(requests)).unwrap();
@@ -222,6 +269,8 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             <AsideItem
               type="button"
               active={activeProvider === id && activeOrg === null}
+              data-testid={TEST_IDS.addRepoDialog.providerItem(id)}
+              data-active={activeProvider === id && activeOrg === null ? "true" : undefined}
               onClick={() => {
                 setActiveProvider(id);
                 setActiveOrg(null);
@@ -245,15 +294,15 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
               <ChevronRight size={12} />
             </AsideItem>
             {activeProvider === id &&
-              orgs.map((org) => {
+              decoratedOrgs.map(({ org, depth, label }) => {
                 const [g1, g2] = gradientForOrg(org.id);
-                const letter = (org.displayName.trim().charAt(0) || "?").toUpperCase();
+                const letter = (label.trim().charAt(0) || "?").toUpperCase();
                 return (
                   <AsideItem
                     key={org.id}
                     type="button"
                     active={activeOrg === org.slug}
-                    indent
+                    depth={depth}
                     onClick={() => {
                       setActiveOrg(org.slug);
                       setSelected(new Set());
@@ -277,8 +326,9 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={org.displayName}
                     >
-                      {org.displayName}
+                      {label}
                     </Box>
                   </AsideItem>
                 );
@@ -334,6 +384,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
                       alreadyLocal={false}
                       onToggle={() => toggle(r.id)}
                       progress={progress[r.id]?.stage}
+                      groupPrefix={activeOrg}
                     />
                   ))}
                 </>
@@ -352,6 +403,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
                       alreadyLocal
                       onToggle={() => toggle(r.id)}
                       progress={progress[r.id]?.stage}
+                      groupPrefix={activeOrg}
                     />
                   ))}
                 </>
@@ -361,6 +413,15 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
         </RepoListScroll>
 
         <Footer>
+          <RememberToggle>
+            <GeneralSwitchInput
+              checked={rememberDefault}
+              onCheckedChange={setRememberDefault}
+              data-testid={TEST_IDS.addRepoDialog.rememberDefault}
+              slotProps={{ input: { "aria-label": t("import.remember_default") } }}
+            />
+            <Hint component="span">{t("import.remember_default")}</Hint>
+          </RememberToggle>
           <Input
             type="text"
             value={destination}

@@ -18,7 +18,9 @@ export interface GroupProps extends RowsProps {
 
 export const CardGrid = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+  // `min(280px, 100%)` lets the card shrink below 280px on tiny viewports so
+  // it doesn't push out of the page (and lets its inner action cluster wrap).
+  gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))",
   gap: 12,
   padding: 0,
 }) as typeof Box;

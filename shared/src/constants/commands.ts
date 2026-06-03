@@ -13,12 +13,18 @@ export const TauriCommand = {
   REPO_STATUS: "repo_status",
   ADD_REPO: "add_repo",
   REMOVE_REPO: "remove_repo",
+  FORGET_REPOS_UNDER_PATH: "forget_repos_under_path",
   DELETE_REPO: "delete_repo",
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
+  SET_REPO_LOGO: "set_repo_logo",
+  CLEAR_REPO_LOGO: "clear_repo_logo",
   OPEN_IN_IDE: "open_in_ide",
   DETECT_IDES: "detect_ides",
   OPEN_TERMINAL: "open_terminal",
+  SSH_UNLOCK_KEY: "ssh_unlock_key",
+  SET_REPO_SSH_KEY: "set_repo_ssh_key",
+  LIST_SSH_KEYS: "list_ssh_keys",
 
   // git operations
   OPEN_IN_EXPLORER: "open_in_explorer",
@@ -30,8 +36,25 @@ export const TauriCommand = {
   GIT_CHECKOUT_REMOTE: "git_checkout_remote",
   GIT_LIST_BRANCHES: "git_list_branches",
   GIT_BRANCH_CREATE: "git_branch_create",
+  GIT_BRANCH_DELETE: "git_branch_delete",
   GIT_MERGE: "git_merge",
   GIT_CLONE: "git_clone",
+  GIT_STAGE: "git_stage",
+  GIT_UNSTAGE: "git_unstage",
+  GIT_DISCARD: "git_discard",
+  GIT_STASH: "git_stash",
+  GIT_STASH_LIST: "git_stash_list",
+  GIT_STASH_POP: "git_stash_pop",
+  GIT_STASH_DROP: "git_stash_drop",
+  GIT_COMMIT: "git_commit",
+  GIT_HAS_PRE_COMMIT_HOOK: "git_has_pre_commit_hook",
+  GET_GIT_CONFIG: "get_git_config",
+  SET_GIT_CONFIG: "set_git_config",
+  LIST_GIT_CONFIG_LAYERS: "list_git_config_layers",
+  GET_GIT_CONFIG_WITH_ORIGINS: "get_git_config_with_origins",
+  SET_GIT_CONFIG_IN_LAYER: "set_git_config_in_layer",
+  ADD_GIT_CONFIG_INCLUDE: "add_git_config_include",
+  REMOVE_GIT_CONFIG_INCLUDE: "remove_git_config_include",
 
   // search
   FIND_ACROSS_REPOS: "find_across_repos",
@@ -50,6 +73,14 @@ export const TauriCommand = {
   CLEAR_PROVIDER_TOKEN: "clear_provider_token",
   FETCH_PULL_REQUESTS: "fetch_pull_requests",
   GET_PR_DETAIL: "get_pr_detail",
+  GET_PR_DIFF: "get_pr_diff",
+  POST_PR_COMMENT: "post_pr_comment",
+  MERGE_PULL_REQUEST: "merge_pull_request",
+  LIST_WORKFLOWS: "list_workflows",
+  LIST_WORKFLOW_RUNS: "list_workflow_runs",
+  TRIGGER_WORKFLOW: "trigger_workflow",
+  CANCEL_WORKFLOW_RUN: "cancel_workflow_run",
+  GET_PAGES_STATUS: "get_pages_status",
   LIST_PR_EVENTS: "list_pr_events",
   LIST_CHECK_RUNS: "list_check_runs",
 
@@ -73,6 +104,7 @@ export const TauriCommand = {
 
   // system
   GET_PLATFORM_INFO: "get_platform_info",
+  GET_SYSTEM_DARK_MODE: "get_system_dark_mode",
   CHECK_GIT: "check_git",
   UPDATE_TRAY_BADGE: "update_tray_badge",
 
@@ -85,6 +117,11 @@ export const TauriCommand = {
   GET_DEV_PATHS: "get_dev_paths",
   GET_BUILD_TRIPLE: "get_build_triple",
   DEV_PANIC: "dev_panic",
+  /** Sink for frontend console / window-error forwarding so an external
+   *  supervisor (e.g. Claude) can read what the WebView2 console saw
+   *  without having to keep DevTools open. Append-only file at the repo
+   *  root: `.claude-dev.log`. */
+  DEV_LOG: "dev_log",
 } as const;
 
 export type TauriCommandName = (typeof TauriCommand)[keyof typeof TauriCommand];

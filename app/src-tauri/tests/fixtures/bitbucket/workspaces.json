@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "uuid": "{11111111-2222-3333-4444-555555555555}",
+      "slug": "acme",
+      "name": "Acme Workspace",
+      "links": {
+        "avatar": { "href": "https://bitbucket.org/workspaces/acme/avatar/" }
+      }
+    }
+  ]
+}

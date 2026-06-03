@@ -49,7 +49,7 @@ test.describe("activity capture", () => {
     await page.goto(AppRoute.ACTIVITY);
     await page.waitForTimeout(2800);
     await page
-      .locator(".a-act-tl-card")
+      .getByTestId(TEST_IDS.activity.timeline.card)
       .scrollIntoViewIfNeeded()
       .catch(() => {});
     await page.waitForTimeout(400);

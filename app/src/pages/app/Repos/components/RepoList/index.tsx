@@ -1,6 +1,8 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import type { RepoSortKey } from "@recrest/shared";
+
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -18,6 +20,8 @@ export interface RepoListProps {
   onSelect?: (repo: EnrichedRepo) => void;
   grouped?: boolean;
   viewMode?: RepoListViewMode;
+  sort?: RepoSortKey;
+  onSort?: (key: RepoSortKey) => void;
   emptyTitle?: string;
   emptyDescription?: string;
 }
@@ -28,6 +32,11 @@ const TableShell = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(1),
   overflow: "hidden",
+  // Floor matching the column-min sum (220+130+110+120+140 + 48 gaps + 32
+  // padding). Below this the grid would squish unreadably; instead the table
+  // keeps its width and the surrounding `ListScroll` (overflow:auto) scrolls
+  // horizontally — e.g. when the detail pane is open or the window is narrow.
+  minWidth: 800,
   [`& > *:last-child [data-testid='${TEST_IDS.repos.row}']:last-of-type`]: {
     borderBottom: 0,
   },
@@ -49,6 +58,8 @@ export function RepoList({
   onSelect,
   grouped = true,
   viewMode = "list",
+  sort,
+  onSort,
   emptyTitle,
   emptyDescription,
 }: RepoListProps) {
@@ -83,9 +94,10 @@ export function RepoList({
       list.push(r);
       byGroupCard.set(r.group, list);
     }
+    const cardEntries = [...byGroupCard.entries()].sort(([a], [b]) => a.localeCompare(b));
     return (
       <CardGroupStack data-testid={TEST_IDS.repos.list}>
-        {[...byGroupCard.entries()].map(([name, items]) => (
+        {cardEntries.map(([name, items]) => (
           <RepoListCardGroup
             key={name}
             name={name}
@@ -105,7 +117,7 @@ export function RepoList({
   if (!grouped) {
     return (
       <TableShell data-testid={TEST_IDS.repos.list}>
-        <RepoListHead />
+        <RepoListHead sort={sort} onSort={onSort} />
         <RepoListRows
           repos={repos}
           selectedRepoId={selectedRepoId}
@@ -122,11 +134,15 @@ export function RepoList({
     list.push(r);
     byGroup.set(r.group, list);
   }
+  // Group headers sort alphabetically (case-insensitive via localeCompare).
+  // The previous Map-iteration order followed first-insertion, which surfaced
+  // groups in arbitrary order depending on which repo loaded first.
+  const groupEntries = [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <TableShell data-testid={TEST_IDS.repos.list}>
-      <RepoListHead />
-      {[...byGroup.entries()].map(([name, items]) => (
+      <RepoListHead sort={sort} onSort={onSort} />
+      {groupEntries.map(([name, items]) => (
         <RepoListGroup
           key={name}
           name={name}

@@ -1,0 +1,13 @@
+image: node:18
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Build and deploy
+          script:
+            - npm ci
+            - npm run build
+            - pipe: atlassian/aws-s3-deploy:1.1.0
+              variables:
+                AWS_DEFAULT_REGION: "eu-central-1"
+                S3_BUCKET: "my-site"

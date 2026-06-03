@@ -1,8 +1,7 @@
+import { defineConfig, devices } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { defineConfig, devices } from "@playwright/test";
 
 // Parse repo-root .env so DEV_PORT_WEB controls the same URL the app's
 // Vite dev server binds to. No new dep — the file is tiny and already on disk.
@@ -55,8 +54,9 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     // Headed by default locally so the dev can watch tests run; CI stays
-    // headless because GitHub runners have no display.
-    headless: !!process.env.CI,
+    // headless because GitHub runners have no display. Set PW_HEADLESS=1 to
+    // force headless locally too (keeps the browser window off your screen).
+    headless: !!process.env.CI || process.env.PW_HEADLESS === "1",
   },
   projects: [
     {

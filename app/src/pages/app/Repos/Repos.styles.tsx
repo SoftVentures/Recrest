@@ -83,6 +83,9 @@ export const ListScroll = styled(Box)({
   // Reserve scrollbar gutter so width is identical whether the page
   // currently overflows or not — keeps page-swap horizontally stable.
   scrollbarGutter: "stable",
+  // Breathing room below the table/cards so the last row doesn't butt against
+  // the viewport edge when scrolled to the bottom.
+  paddingBottom: 24,
 }) as typeof Box;
 
 export const SectionLabel = styled(Typography)(({ theme }) => ({

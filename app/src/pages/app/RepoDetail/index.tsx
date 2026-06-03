@@ -11,8 +11,10 @@ import { AppRoute, PrState, type PullRequest, TauriCommand } from "@recrest/shar
 import {
   ArrowDown,
   ArrowLeft,
+  ArrowUp,
   ExternalLink,
   Folder,
+  KeyRound,
   Plus,
   RefreshCw,
   Terminal as TerminalIcon,
@@ -22,18 +24,24 @@ import { toast } from "sonner";
 import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
-import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
-import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
+import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import CiCard from "@/components/organisms/repos/CiCard";
+import CommitDialog from "@/components/organisms/repos/CommitDialog";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
+import DeploymentsCard from "@/components/organisms/repos/DeploymentsCard";
+import RepoGitConfigCard from "@/components/organisms/repos/RepoGitConfigCard";
+import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
+import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
+import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import {
@@ -75,6 +83,7 @@ import {
   Root,
   SecondaryBtn,
   TitleRow,
+  WorkingCopyScroll,
 } from "@/pages/app/RepoDetail/RepoDetail.styles";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
@@ -83,6 +92,11 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function RepoDetailPage() {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t } = useTranslation(I18nNamespace.COMMON);
+  const ide = useDefaultIde();
+  const ideLabel = ide.name
+    ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
+    : tAria("actions.open_in_ide", { ns: I18nNamespace.COMMON });
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { repoId } = useParams<{ repoId: string }>();
@@ -95,9 +109,11 @@ export default function RepoDetailPage() {
 
   const { commits } = useRecentCommits({ repoId, days: 30, limit: 8 });
 
-  const [busy, setBusy] = useState<null | "pull" | "fetch">(null);
+  const [busy, setBusy] = useState<null | "pull" | "push" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [commitDialogOpen, setCommitDialogOpen] = useState(false);
+  const [sshOpen, setSshOpen] = useState(false);
 
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
@@ -154,6 +170,21 @@ export default function RepoDetailPage() {
     }
   }, [dispatch, repo]);
 
+  const doPush = useCallback(async () => {
+    if (!repo) return;
+    setBusy("push");
+    try {
+      await invoke(TauriCommand.GIT_PUSH, { repoId: repo.id });
+      toast.success("Pushed");
+      void dispatch(loadRepos());
+      dispatch(bumpRefreshNonce());
+    } catch (err) {
+      toast.error((err as { message?: string })?.message ?? "Push failed");
+    } finally {
+      setBusy(null);
+    }
+  }, [dispatch, repo]);
+
   if (!repo) {
     return (
       <MissingRoot data-testid={TEST_IDS.repoDetail.page}>
@@ -183,7 +214,7 @@ export default function RepoDetailPage() {
 
       <Content>
         <Header>
-          <RepoAvatar repo={repo} size={64} radius={14} />
+          <EditableRepoAvatar repo={repo} size={64} radius={14} />
           <HeaderBody>
             <TitleRow>
               <RepoName>{repo.name}</RepoName>
@@ -206,9 +237,12 @@ export default function RepoDetailPage() {
             </MetaRow>
           </HeaderBody>
           <HeaderActions>
-            <PrimaryBtn type="button" onClick={() => void runCmd(TauriCommand.OPEN_IN_IDE, "IDE")}>
-              <IdeIcon id="vscode" size={14} />
-              <Box component="span">Open in VS Code</Box>
+            <PrimaryBtn
+              type="button"
+              onClick={() => void runCmd(TauriCommand.OPEN_IN_IDE, ideLabel)}
+            >
+              <IdeIcon id={ide.iconId} size={14} color="currentColor" style={{ opacity: 1 }} />
+              <Box component="span">{ideLabel}</Box>
             </PrimaryBtn>
             <IconOnlyBtn
               type="button"
@@ -220,7 +254,7 @@ export default function RepoDetailPage() {
             <IconOnlyBtn
               type="button"
               aria-label={tAria("repo.open_folder")}
-              onClick={() => void runCmd(TauriCommand.OPEN_IN_EXPLORER, "Explorer")}
+              onClick={() => void revealPathInSystem(repo.path)}
             >
               <Folder size={14} />
             </IconOnlyBtn>
@@ -232,9 +266,21 @@ export default function RepoDetailPage() {
             >
               {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
             </IconOnlyBtn>
+            <IconOnlyBtn
+              type="button"
+              aria-label={tAria("repo.ssh_key")}
+              data-testid={TEST_IDS.repoDetail.ssh.trigger}
+              onClick={() => setSshOpen(true)}
+            >
+              <KeyRound size={14} />
+            </IconOnlyBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
               <ArrowDown size={13} />
               {busy === "pull" ? "Pulling…" : "Pull"}
+            </SecondaryBtn>
+            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPush()}>
+              <ArrowUp size={13} />
+              {busy === "push" ? "Pushing…" : "Push"}
             </SecondaryBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doFetch()}>
               <RefreshCw size={13} />
@@ -254,6 +300,82 @@ export default function RepoDetailPage() {
           openMrsCount={repoProviderConnected ? openMrs.length : null}
           draftMrsCount={repoProviderConnected ? draftMrs.length : null}
         />
+
+        <Grid2>
+          {repoProviderConnected && (
+            <Card>
+              <CardHead>
+                <CardTitle>Merge requests</CardTitle>
+                <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
+                  Open MRs view
+                </SecondaryBtn>
+              </CardHead>
+              {prs.length === 0 ? (
+                <EmptyState
+                  mascot="snoozing"
+                  mascotSize={88}
+                  title="No merge requests"
+                  description="This repository has no open merge requests."
+                />
+              ) : (
+                <PrScroller>
+                  {prs.map((pr) => (
+                    <PrRowSlot
+                      key={pr.number}
+                      data-testid={TEST_IDS.repoDetail.mrRow}
+                      data-mr-number={pr.number}
+                      data-mr-state={pr.state}
+                      data-mr-author={pr.author || undefined}
+                      onClick={() => setSelectedPr(pr)}
+                    >
+                      <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
+                    </PrRowSlot>
+                  ))}
+                </PrScroller>
+              )}
+            </Card>
+          )}
+
+          <Card>
+            <CardHead>
+              <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
+              {repo.status.dirty && (
+                <CardMeta>
+                  +{repo.added} −{repo.removed} · {repo.filesChanged} file
+                  {repo.filesChanged === 1 ? "" : "s"}
+                </CardMeta>
+              )}
+            </CardHead>
+            {repo.status.dirty ? (
+              <WorkingCopyScroll>
+                <WorkingCopyPanel
+                  repoId={repo.id}
+                  onCommitClick={() => setCommitDialogOpen(true)}
+                />
+              </WorkingCopyScroll>
+            ) : (
+              <CleanState>
+                <Mascot variant="celebrating" size={96} title="Nothing to commit" />
+                <CleanStateText>Nothing to commit.</CleanStateText>
+                <CleanStateSub>Working tree is clean.</CleanStateSub>
+              </CleanState>
+            )}
+          </Card>
+
+          <Card>
+            <CardHead>
+              <CardTitle>{t("settings.git.repo_card_title")}</CardTitle>
+            </CardHead>
+            <RepoGitConfigCard repoId={repo.id} />
+          </Card>
+        </Grid2>
+
+        {repoProviderConnected && (
+          <Grid2>
+            <CiCard repoId={repo.id} />
+            <DeploymentsCard repoId={repo.id} />
+          </Grid2>
+        )}
 
         <Grid2>
           <Card>
@@ -283,63 +405,6 @@ export default function RepoDetailPage() {
               <Box component="span">today</Box>
             </ActivityAxis>
           </Card>
-
-          <Card>
-            <CardHead>
-              <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
-              {repo.status.dirty && (
-                <CardMeta>
-                  +{repo.added} −{repo.removed} · {repo.filesChanged} file
-                  {repo.filesChanged === 1 ? "" : "s"}
-                </CardMeta>
-              )}
-            </CardHead>
-            {repo.status.dirty ? (
-              <ChangedFilesList
-                files={repo.status.changedFiles}
-                truncated={repo.status.changedFilesTruncated}
-              />
-            ) : (
-              <CleanState>
-                <Mascot variant="celebrating" size={96} title="Nothing to commit" />
-                <CleanStateText>Nothing to commit.</CleanStateText>
-                <CleanStateSub>Working tree is clean.</CleanStateSub>
-              </CleanState>
-            )}
-          </Card>
-        </Grid2>
-
-        <Grid2>
-          {repoProviderConnected && (
-            <Card>
-              <CardHead>
-                <CardTitle>Merge requests</CardTitle>
-                <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
-                  Open MRs view
-                </SecondaryBtn>
-              </CardHead>
-              {prs.length === 0 ? (
-                <EmptyState
-                  mascot="snoozing"
-                  mascotSize={88}
-                  title="No merge requests"
-                  description="This repository has no open merge requests."
-                />
-              ) : (
-                <PrScroller>
-                  {prs.map((pr) => (
-                    <PrRowSlot
-                      key={pr.number}
-                      data-testid={TEST_IDS.repoDetail.prRow}
-                      onClick={() => setSelectedPr(pr)}
-                    >
-                      <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
-                    </PrRowSlot>
-                  ))}
-                </PrScroller>
-              )}
-            </Card>
-          )}
 
           <Card>
             <CardHead>
@@ -378,13 +443,26 @@ export default function RepoDetailPage() {
         repoName={repo.name}
         size="lg"
         onClose={() => setSelectedPr(null)}
-        data-testid={TEST_IDS.repoDetail.prDrawer}
+        data-testid={TEST_IDS.repoDetail.mrDrawer}
       />
 
       <CreateBranchDialog
         open={branchDialogOpen}
         repoId={repo.id}
         onClose={() => setBranchDialogOpen(false)}
+      />
+
+      <CommitDialog
+        open={commitDialogOpen}
+        repoId={repo.id}
+        onClose={() => setCommitDialogOpen(false)}
+      />
+
+      <RepoSshModal
+        open={sshOpen}
+        repoId={repo.id}
+        sshKeyPath={repo.sshKeyPath}
+        onClose={() => setSshOpen(false)}
       />
     </Root>
   );

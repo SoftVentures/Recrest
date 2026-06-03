@@ -37,6 +37,7 @@ export const setPollingIntervalMinutes = createAction<number>("settings/setPolli
 export const setDesktopAutoStart = createAction<boolean>("settings/setDesktopAutoStart");
 export const setDesktopStartMinimized = createAction<boolean>("settings/setDesktopStartMinimized");
 export const setDesktopCloseToTray = createAction<boolean>("settings/setDesktopCloseToTray");
+export const setCrashReporting = createAction<boolean>("settings/setCrashReporting");
 
 export const setNotificationsEnabled = createAction<boolean>("settings/setNotificationsEnabled");
 export const setNotificationsNewPr = createAction<boolean>("settings/setNotificationsNewPr");

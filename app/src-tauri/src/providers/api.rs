@@ -71,7 +71,7 @@ pub struct FileChangeDto {
     pub diff_url: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FileChangeStatus {
     Added,
@@ -167,6 +167,142 @@ pub struct PrEventDto {
     pub url: String,
 }
 
+// ─── Plan 03/04 — PR diff, inline comments, CI workflows, Pages ─────────────
+
+/// One file's parsed diff: hunks of context/add/remove lines. Mirrored as
+/// `FileDiffDto` in `@recrest/shared`. Produced by `GitProvider::get_pr_diff`;
+/// shape is identical across providers (the per-provider raw shape — GitHub's
+/// `patch` field, GitLab's `diff` field, Bitbucket's combined-diff text — is
+/// normalised by `providers::diff_parse`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileDiffDto {
+    pub path: String,
+    pub old_path: Option<String>,
+    pub status: FileChangeStatus,
+    pub hunks: Vec<DiffHunk>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffHunk {
+    pub old_start: u32,
+    pub old_lines: u32,
+    pub new_start: u32,
+    pub new_lines: u32,
+    pub lines: Vec<DiffLine>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffLine {
+    pub kind: DiffLineKind,
+    pub content: String,
+    pub old_line_no: Option<u32>,
+    pub new_line_no: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffLineKind {
+    Context,
+    Add,
+    Remove,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentDto {
+    pub id: String,
+    pub author: String,
+    pub body: String,
+    pub path: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Where an inline review comment is anchored. `Left` = the pre-change side
+/// (line in the old file), `Right` = the post-change side (line in the new
+/// file). General PR/MR comments omit a position entirely.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentPosition {
+    pub side: CommentSide,
+    pub line: u32,
+    pub start_line: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum CommentSide {
+    Left,
+    Right,
+}
+
+/// A CI workflow definition (GitHub Actions workflow, GitLab CI config,
+/// Bitbucket Pipelines config). Used by `GitProvider::list_workflows`.
+/// `inputs_schema` describes what fields the "Run workflow" form should
+/// render — providers with no dispatch inputs return an empty vec.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowDto {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub state: String,
+    pub inputs_schema: Vec<WorkflowInputDef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowInputDef {
+    pub key: String,
+    pub label: String,
+    #[serde(rename = "type")]
+    pub input_type: WorkflowInputType,
+    pub required: bool,
+    pub default: Option<String>,
+    pub choices: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum WorkflowInputType {
+    String,
+    Number,
+    Choice,
+    Boolean,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowRunDto {
+    pub id: String,
+    pub run_number: u64,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub head_sha: String,
+    pub created_at: DateTime<Utc>,
+    pub html_url: String,
+    pub actor: Option<String>,
+}
+
+/// User-supplied workflow_dispatch input map. Untyped JSON so each provider
+/// can adapt to its API shape (GitHub takes `{ inputs: {...} }`, GitLab takes
+/// `{ variables: [{key,value}] }`, Bitbucket ignores it).
+pub type WorkflowInputs = std::collections::BTreeMap<String, serde_json::Value>;
+
+/// Pages / static-site deploy status. `None` (the provider's default impl)
+/// means Pages is unconfigured or unsupported, and the UI hides the block.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PagesStatusDto {
+    pub url: Option<String>,
+    /// `building` | `built` | `errored` | `disabled`.
+    pub status: String,
+    pub last_deployed_at: Option<DateTime<Utc>>,
+    pub custom_domain: Option<String>,
+}
+
 /// Per-repo per-local-day CI check-run rollup.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -179,6 +315,34 @@ pub struct CheckRunSummaryDto {
     pub passed: u32,
     pub failed: u32,
     pub sha_samples: Vec<String>,
+}
+
+// ─── Plan 03/07 C.7 — Provider-side PR/MR merge ──────────────────────────────
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MergeStrategy {
+    Merge,
+    Squash,
+    Rebase,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergePullRequestInput {
+    pub strategy: MergeStrategy,
+    pub commit_title: Option<String>,
+    pub commit_message: Option<String>,
+    pub delete_source_branch: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergePullRequestResult {
+    pub merged: bool,
+    pub merge_sha: Option<String>,
+    pub source_branch_deleted: bool,
+    pub message: Option<String>,
 }
 
 /// Remote URL → `(owner, repo)` extraction.

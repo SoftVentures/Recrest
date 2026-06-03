@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { type ReactNode } from "react";
 
+import { useLocation } from "react-router-dom";
+
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
@@ -49,6 +51,10 @@ interface NavSpec {
   label: string;
   count?: number;
   testId: string;
+  /** Additional pathname prefixes that count as "this nav item is active",
+   *  beyond the literal `to` route. Used so e.g. `/repo/<id>` keeps the
+   *  Repositories item highlighted. */
+  matchPrefixes?: readonly string[];
 }
 
 function Sidebar() {
@@ -56,6 +62,7 @@ function Sidebar() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.ui.sidebarCollapsed);
+  const location = useLocation();
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
   const connections = useAppSelector((s) => s.providers.connections);
@@ -111,6 +118,8 @@ function Sidebar() {
       label: t("nav.repos"),
       count: repoList.length,
       testId: navTestId(AppRoute.REPOS),
+      // Keep "Repositories" highlighted on the single-repo detail page too.
+      matchPrefixes: ["/repo/"],
     },
     ...(anyProviderConnected
       ? [
@@ -120,6 +129,8 @@ function Sidebar() {
             label: t("nav.merge_requests"),
             count: mrCount,
             testId: navTestId(AppRoute.MERGE_REQUESTS),
+            // Keep "Merge Requests" highlighted on the single-MR detail page too.
+            matchPrefixes: ["/mr/"],
           } satisfies NavSpec,
         ]
       : []),
@@ -166,7 +177,13 @@ function Sidebar() {
               end={item.to === AppRoute.DASHBOARD}
             >
               {({ isActive }) => (
-                <NavItem collapsed={collapsed} active={isActive}>
+                <NavItem
+                  collapsed={collapsed}
+                  active={
+                    isActive ||
+                    (item.matchPrefixes?.some((p) => location.pathname.startsWith(p)) ?? false)
+                  }
+                >
                   {item.icon}
                   {!collapsed && <NavLabel>{item.label}</NavLabel>}
                   {!collapsed && item.count != null && (

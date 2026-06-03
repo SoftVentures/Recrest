@@ -26,7 +26,15 @@ import type { RepoSortKey } from "@/lib/constants/sortKeys.constants";
 import type { RepoStatusChip } from "@/lib/constants/statusChips.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { lastCommitTime, statusRank } from "@/lib/utils/repoSort.utils";
+import {
+  type RepoView,
+  lastCommitTime,
+  sortKeyFromBackend,
+  sortKeyToBackend,
+  statusRank,
+  viewFromBackend,
+  viewToBackend,
+} from "@/lib/utils/repoSort.utils";
 import {
   FilterBadge,
   FilterButton,
@@ -41,12 +49,12 @@ import {
 import { DetailPane } from "@/pages/app/Repos/components/DetailPane";
 import { RepoList } from "@/pages/app/Repos/components/RepoList";
 import { ChipItem } from "@/pages/app/Repos/parts/ChipItem";
+import { saveSettings } from "@/store/actions/settings.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export interface ReposPageProps {
   dirtyOnly?: boolean;
 }
-
-type RepoView = "list" | "card";
 
 interface SortOption {
   key: RepoSortKey;
@@ -63,17 +71,53 @@ const SORT_OPTIONS: SortOption[] = [
 
 export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t: tCommon } = useTranslation(I18nNamespace.COMMON);
   const enriched = useEnrichedRepos();
+  const dispatch = useAppDispatch();
+  const backend = useAppSelector((s) => s.settings.backend);
   const { repoId } = useParams<{ repoId?: string }>();
   const [selectedId, setSelectedId] = useState<string | null>(repoId ?? null);
-  const [view, setView] = useState<RepoView>("list");
+  const [view, setView] = useState<RepoView>(() =>
+    backend ? viewFromBackend(backend.repoListViewMode) : "list",
+  );
   const [statusChips, setStatusChips] = useState<Set<RepoStatusChip>>(new Set());
-  const [sort, setSort] = useState<RepoSortKey>("default");
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
+  const [sort, setSort] = useState<RepoSortKey>(() =>
+    backend ? sortKeyFromBackend(backend.repoListSort) : "default",
+  );
 
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
 
+  const persistList = (nextView: RepoView, nextSort: RepoSortKey) => {
+    void dispatch(
+      saveSettings({
+        repoListViewMode: viewToBackend(nextView, nextSort),
+        repoListSort: sortKeyToBackend(nextSort),
+      }),
+    );
+  };
+
+  const handleView = (nextView: RepoView) => {
+    setView(nextView);
+    persistList(nextView, sort);
+  };
+
+  const handleSort = (nextSort: RepoSortKey) => {
+    setSort(nextSort);
+    persistList(view, nextSort);
+  };
+
+  // Distinct group labels present in the (already-enriched) repo list.
+  // Sorted by `localeCompare` so the menu order is stable across re-renders.
+  const groupOptions = useMemo<string[]>(() => {
+    const seen = new Set<string>();
+    for (const r of enriched) seen.add(r.group);
+    return [...seen].sort((a, b) => a.localeCompare(b));
+  }, [enriched]);
+
   const repos = useMemo<EnrichedRepo[]>(() => {
     let out = dirtyOnly ? enriched.filter((r) => r.status.dirty) : enriched;
+    if (groupFilter !== null) out = out.filter((r) => r.group === groupFilter);
     if (statusChips.size > 0) {
       out = out.filter((r) => {
         for (const chip of statusChips) {
@@ -85,13 +129,24 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
         return true;
       });
     }
-    if (sort === "name:asc") out = [...out].sort((a, b) => a.name.localeCompare(b.name));
+    // `default` = grouped view with alphabetical order inside each group.
+    // Without an explicit sort the user expects a predictable A→Z layout,
+    // not whatever insertion order Redux happens to have.
+    if (sort === "default" || sort === "name:asc")
+      out = [...out].sort((a, b) => a.name.localeCompare(b.name));
     else if (sort === "name:desc") out = [...out].sort((a, b) => b.name.localeCompare(a.name));
     else if (sort === "lastModified:desc")
       out = [...out].sort((a, b) => lastCommitTime(b) - lastCommitTime(a));
     else if (sort === "status:asc") out = [...out].sort((a, b) => statusRank(a) - statusRank(b));
+
+    // Pinned repos always bubble to the top — applied last so it overrides
+    // whichever sort key the user picked. JS's Array.sort is stable, so the
+    // alphabetical order survives within both the pinned and the unpinned
+    // subsets. The downstream group-by preserves relative order within a
+    // category, so pinned items land at the top of their own group.
+    out = [...out].sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
     return out;
-  }, [enriched, dirtyOnly, statusChips, sort]);
+  }, [enriched, dirtyOnly, groupFilter, statusChips, sort]);
 
   const grouped = sort === "default";
 
@@ -106,7 +161,8 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
     });
   };
 
-  const activeFilterCount = statusChips.size + (sort === "default" ? 0 : 1);
+  const activeFilterCount =
+    statusChips.size + (sort === "default" ? 0 : 1) + (groupFilter !== null ? 1 : 0);
 
   return (
     <PageRoot data-testid={dirtyOnly ? "changes-page" : "repos-page"}>
@@ -116,7 +172,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             value={view}
             exclusive
             density="xs"
-            onChange={(_, v: RepoView | null) => v && setView(v)}
+            onChange={(_, v: RepoView | null) => v && handleView(v)}
             aria-label={tAria("repo.view_toggle")}
           >
             <GeneralButtonGroupItem value="list" data-testid={TEST_IDS.repos.viewToggle.grouped}>
@@ -177,6 +233,28 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
               active={statusChips.has("behind")}
               onSelect={() => toggleChip("behind")}
             />
+            {groupOptions.length > 1 && (
+              <>
+                <MenuSeparator />
+                <SectionLabel>{tCommon("repos.filter.group_section")}</SectionLabel>
+                <ChipItem
+                  label={tCommon("repos.filter.group_all")}
+                  active={groupFilter === null}
+                  onSelect={() => setGroupFilter(null)}
+                  indicator="radio"
+                />
+                {groupOptions.map((g) => (
+                  <ChipItem
+                    key={g}
+                    label={g}
+                    active={groupFilter === g}
+                    onSelect={() => setGroupFilter(g)}
+                    indicator="radio"
+                    testId={TEST_IDS.repos.filterGroupOption(g)}
+                  />
+                ))}
+              </>
+            )}
             <MenuSeparator />
             <SectionLabel>Sort by</SectionLabel>
             {SORT_OPTIONS.map((opt) => (
@@ -184,7 +262,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
                 key={opt.key}
                 label={opt.label}
                 active={sort === opt.key}
-                onSelect={() => setSort(opt.key)}
+                onSelect={() => handleSort(opt.key)}
                 indicator="radio"
               />
             ))}
@@ -195,6 +273,8 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             repos={repos}
             grouped={grouped}
             viewMode={view}
+            sort={sort}
+            onSort={handleSort}
             selectedRepoId={selectedId}
             onSelect={(r) => setSelectedId((cur) => (cur === r.id ? null : r.id))}
             emptyTitle={dirtyOnly ? "No dirty repositories" : "No repositories"}

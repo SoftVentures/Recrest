@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1001,
+    "iid": 7,
+    "title": "Add fixture-driven provider tests",
+    "web_url": "https://gitlab.example/group/proj/-/merge_requests/7",
+    "state": "opened",
+    "draft": false,
+    "work_in_progress": false,
+    "source_branch": "feature/tests",
+    "target_branch": "main",
+    "author": {
+      "username": "ada",
+      "name": "Ada Lovelace",
+      "avatar_url": "https://gitlab.example/uploads/ada.png"
+    },
+    "assignees": [
+      {
+        "username": "bob",
+        "name": "Bob Builder",
+        "avatar_url": "https://gitlab.example/uploads/bob.png"
+      }
+    ],
+    "reviewers": [
+      {
+        "username": "carol",
+        "name": "Carol Reviewer",
+        "avatar_url": "https://gitlab.example/uploads/carol.png"
+      }
+    ],
+    "created_at": "2026-05-01T12:00:00Z",
+    "updated_at": "2026-05-02T08:30:00Z",
+    "head_pipeline": { "status": "success" },
+    "description": "Adds wiremock fixtures.",
+    "merge_status": "can_be_merged"
+  }
+]

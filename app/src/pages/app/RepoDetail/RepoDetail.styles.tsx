@@ -46,12 +46,16 @@ export const Content = styled(Box)(({ theme }) => ({
   flexDirection: "column",
   gap: theme.spacing(2),
   padding: theme.spacing(3),
-  flex: 1,
-  minHeight: 0,
+  // Intentionally no `flex: 1` here: the Root above is the scroll surface
+  // and we want Content's height to be driven by its children + padding.
+  // With `flex: 1`, Content gets clamped to Root's viewport height and
+  // tall children visually escape its box — leaving paddingBottom above
+  // the last visible card instead of below it.
 })) as typeof Box;
 
 export const Header = styled(Box)(({ theme }) => ({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "flex-start",
   gap: 16,
   padding: 20,
@@ -158,7 +162,13 @@ export const HeaderActions = styled(Box)({
   flexWrap: "wrap",
   alignItems: "center",
   gap: 6,
+  // Don't shrink — at narrow widths (e.g. macOS min 1100) we'd rather have
+  // the whole cluster wrap to its own row under the title than squeeze the
+  // title text. Header has `flexWrap: wrap` so this wraps cleanly.
   flexShrink: 0,
+  // When the cluster wraps to its own row, align it right to mirror the
+  // desktop inline layout.
+  marginLeft: "auto",
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
@@ -215,7 +225,14 @@ export const IconOnlyBtn = styled(SecondaryBtn)({
 
 export const Grid2 = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  // Stack to a single column once columns can no longer hold ~280px of content
+  // (narrow viewports + zoomed displays).
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  // Cards size to their own content — without this, a tall Working-tree
+  // card (many uncommitted files) stretches its short sibling (Merge
+  // requests / Activity bars) to match, leaving an empty void at the
+  // bottom of the short card. `start` keeps each card honest.
+  alignItems: "start",
   gap: 12,
 }) as typeof Box;
 
@@ -307,6 +324,15 @@ export const PrRowSlot = styled(Box)({
   cursor: "pointer",
 }) as typeof Box;
 
+export const WorkingCopyScroll = styled(Box)({
+  // Mirrors PrScroller: the Working-tree card can hold many files and would
+  // blow the page height to thousands of pixels without an internal cap.
+  maxHeight: 480,
+  overflowY: "auto",
+  // Sub-sections inside WorkingCopyPanel use `overflow: hidden`, so the
+  // scroll lives here at the panel boundary.
+}) as typeof Box;
+
 export const CleanState = styled(Box)({
   display: "flex",
   flexDirection: "column",
@@ -339,7 +365,11 @@ export const RemoteUrlText = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const PrScroller = styled(Box)({
-  maxHeight: 320,
+  // Hard cap with internal scroll. The Grid2 row no longer stretches cards
+  // to match (align-items: start), so PrScroller can't rely on a
+  // stretched parent to bound its growth — we need an explicit ceiling
+  // here, otherwise a long PR list bloats the whole page.
+  maxHeight: 480,
   overflowY: "auto",
 }) as typeof Box;
 

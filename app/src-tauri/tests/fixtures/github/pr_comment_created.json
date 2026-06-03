@@ -1,0 +1,9 @@
+{
+  "id": 998877,
+  "user": { "login": "alice", "avatar_url": "https://example.com/alice.png" },
+  "body": "looks good!",
+  "path": "src/lib.rs",
+  "line": 2,
+  "side": "RIGHT",
+  "created_at": "2025-01-03T10:11:12Z"
+}

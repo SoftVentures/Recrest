@@ -10,6 +10,19 @@ rust-version = "1.77.2"
 name = "recrest_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# The compiled binary filename drives the macOS Dock hover label for
+# unbundled `cargo run` dev binaries — macOS Dock reads `kLSDisplayNameKey`
+# from LaunchServices, which defaults to the executable filename for any
+# process without a `.app` bundle wrapper. NSProcessInfo.setProcessName
+# (called in lib.rs::run) updates internal app state but does NOT propagate
+# to that key, so it leaves the lowercase basename visible. Naming the
+# output "Recrest" makes the dev Dock show "Recrest" instead of "recrest".
+# Release `.app` builds keep CFBundleName/CFBundleDisplayName for the
+# user-facing name and aren't affected.
+[[bin]]
+name = "Recrest"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.5", features = [] }
 
@@ -46,6 +59,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 keyring = { version = "3.5", features = ["apple-native", "windows-native", "linux-native"] }
 url = "2.5"
 dirs = "5.0"
+zeroize = "1"
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
@@ -57,6 +71,11 @@ urlencoding = "2.1.3"
 base64 = "0.22.1"
 which = "8"
 deunicode = "1"
+# Plan 03/04 (C.4/C.5): YAML parsing for workflow_dispatch inputs, and a
+# unified-diff parser used by the Bitbucket provider where the API returns
+# the whole PR diff as a single text blob.
+serde_yaml = "0.9"
+unidiff = "0.3"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 # Used by `commands::repos::delete_repo` to move a repo folder into the OS
 # trash (macOS Trash, Windows Recycle Bin, freedesktop Trash on Linux). All
@@ -78,17 +97,31 @@ windows = { version = "0.58", features = ["Win32_UI_WindowsAndMessaging", "Win32
 [target.'cfg(target_os = "macos")'.dependencies]
 # Sets NSApp.applicationIconImage at runtime so Stage Manager / Mission
 # Control show Recrest's icon in dev mode (where there's no .app bundle),
-# and re-applies it live when the user toggles system Dark Mode.
+# and re-applies it live when the user toggles system Dark Mode. The live
+# update is driven by a 1.5s poller in `spawn_macos_appearance_poller` —
+# `NSDistributedNotificationCenter` and `WindowEvent::ThemeChanged` were
+# both tried and proved unreliable for system-wide appearance flips, so
+# we no longer need `block2` or the `NSDistributedNotificationCenter`/
+# `NSNotification`/`NSOperation` features on `objc2-foundation`.
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSAppearance"] }
-objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSDistributedNotificationCenter", "NSNotification"] }
-block2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSAppearance", "NSDockTile"] }
+objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSProcessInfo"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Direct notify-rust use on Linux so we can attach the Recrest icon name +
 # image-path hint that dunst/Plasma/GNOME need to display the app logo
 # on toasts. The Tauri notification plugin doesn't expose those fields.
 notify-rust = { version = "4", features = [] }
+
+[dev-dependencies]
+# Phase 3 backend test harness: throwaway git repos + mocked provider HTTP.
+# `tokio` reappears here only for the `test-util` feature which enables
+# `#[tokio::test(start_paused = true)]` — Plan 03/07 needs it so the GitLab
+# rebase-timeout regression test fast-forwards through 30 × 1s polls instead
+# of actually sleeping.
+tempfile = "3"
+tokio = { version = "1.40", features = ["test-util"] }
+wiremock = "0.6"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

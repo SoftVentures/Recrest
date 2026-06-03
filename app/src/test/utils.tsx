@@ -7,12 +7,13 @@ import { I18nextProvider } from "react-i18next";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 
-import { configureStore } from "@reduxjs/toolkit";
+import { type Store, configureStore } from "@reduxjs/toolkit";
 
-import { render } from "@testing-library/react";
+import { type RenderResult, render } from "@testing-library/react";
 
 import { type ThemeId } from "@/lib/constants/theme.constants";
 import i18n from "@/locales";
+import type { RootState } from "@/store";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
@@ -20,6 +21,34 @@ import { reposReducer } from "@/store/reducers/reposReducer";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 import { getTheme } from "@/theme";
+
+const testReducer = {
+  ui: uiReducer,
+  settings: settingsReducer,
+  providers: providersReducer,
+  repos: reposReducer,
+  prs: prsReducer,
+  remoteImport: remoteImportReducer,
+};
+
+type PreloadedSlices = { [K in keyof RootState]?: Partial<RootState[K]> };
+
+/**
+ * Build an isolated store, optionally overriding individual slice fields.
+ * Each provided slice is shallow-merged onto that slice's real initial state,
+ * so a test can set e.g. `{ settings: { backend } }` without reconstructing
+ * the whole tree.
+ */
+export function makeTestStore(preloaded?: PreloadedSlices) {
+  const base = configureStore({ reducer: testReducer });
+  if (!preloaded) return base;
+  const baseState = base.getState();
+  const merged: Record<string, unknown> = {};
+  for (const key of Object.keys(baseState) as (keyof RootState)[]) {
+    merged[key] = { ...baseState[key], ...(preloaded[key] ?? {}) };
+  }
+  return configureStore({ reducer: testReducer, preloadedState: merged as RootState });
+}
 
 /**
  * Render a component wrapped in the MUI theme + CssBaseline. Use for atom
@@ -43,20 +72,11 @@ export function renderWithTheme(ui: React.ReactElement, opts?: { themeId?: Theme
  */
 export function renderWithProviders(
   ui: React.ReactElement,
-  opts?: { themeId?: ThemeId; route?: string },
-) {
-  const store = configureStore({
-    reducer: {
-      ui: uiReducer,
-      settings: settingsReducer,
-      providers: providersReducer,
-      repos: reposReducer,
-      prs: prsReducer,
-      remoteImport: remoteImportReducer,
-    },
-  });
+  opts?: { themeId?: ThemeId; route?: string; store?: Store<RootState> },
+): RenderResult & { store: Store<RootState> } {
+  const store = opts?.store ?? makeTestStore();
   const theme = getTheme(opts?.themeId ?? "light");
-  return render(
+  const result = render(
     <ReduxProvider store={store}>
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={theme}>
@@ -71,4 +91,5 @@ export function renderWithProviders(
       </I18nextProvider>
     </ReduxProvider>,
   );
+  return { store, ...result };
 }

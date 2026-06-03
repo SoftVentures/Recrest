@@ -127,10 +127,15 @@ export const GhostBtn = styled("button")(({ theme }) => ({
 
 export const InfoStrip = styled(Box)(({ theme }) => ({
   display: "grid",
-  // Branch cell takes the lion's share; Changes (~70 px) + CI (~70 px) just
-  // enough to render without ellipsis at the 360 px drawer width.
-  gridTemplateColumns: "minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 0.9fr)",
+  // Branch needs the full drawer width — source → target chips at 360 px
+  // would otherwise both truncate. Drops to row 2 for Changes + CI.
+  gridTemplateColumns: "1fr 1fr",
   borderBottom: `1px solid ${theme.palette.divider}`,
+  "& > :first-of-type": {
+    gridColumn: "1 / -1",
+    borderRight: 0,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
 })) as typeof Box;
 
 export const InfoCell = styled(Box)(({ theme }) => ({

@@ -3,8 +3,9 @@ import { type PropsWithChildren, useEffect, useMemo } from "react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 
-import type { FontSizeId } from "@recrest/shared";
+import { type FontSizeId, TauriCommand } from "@recrest/shared";
 
+import { safeInvoke } from "@/lib/tauri";
 import { syncSystemTheme } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getTheme } from "@/theme";
@@ -61,6 +62,15 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   // mirror its current value into the store via `syncSystemTheme` (which
   // updates themeId without flipping followsSystem off — that's the whole
   // point of the dedicated action).
+  //
+  // We ALSO ask the Rust side once at mount via `GET_SYSTEM_DARK_MODE`:
+  // WKWebView on macOS has a documented quirk where the webview's effective
+  // appearance lags the system appearance for the first JS tick(s) after
+  // launch, so `matchMedia("(prefers-color-scheme: dark)")` returns `false`
+  // on cold start even when the OS is in dark mode. The OS-level read goes
+  // through NSApp.effectiveAppearance (macOS) / registry (Windows), which
+  // is always authoritative, and overrides the matchMedia value when they
+  // disagree. Linux returns `null` from the command — matchMedia wins there.
   useEffect(() => {
     if (!followsSystem) return;
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -71,8 +81,20 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
       dispatch(syncSystemTheme(mq.matches ? "dark" : "light"));
     };
     apply(); // re-assert at mount; handles stale themeId after OS change.
+
+    let cancelled = false;
+    void safeInvoke<boolean | null>(TauriCommand.GET_SYSTEM_DARK_MODE).then((osDark) => {
+      if (cancelled || osDark === null || osDark === undefined) return;
+      if (osDark !== mq.matches) {
+        dispatch(syncSystemTheme(osDark ? "dark" : "light"));
+      }
+    });
+
     mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    return () => {
+      cancelled = true;
+      mq.removeEventListener("change", apply);
+    };
   }, [followsSystem, dispatch]);
 
   const theme = useMemo(

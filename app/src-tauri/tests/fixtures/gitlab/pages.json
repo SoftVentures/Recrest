@@ -1,0 +1,5 @@
+{
+  "url": "https://acme.gitlab.io/widget",
+  "is_enabled": true,
+  "domains": [{ "domain": "docs.acme.dev" }]
+}

@@ -52,8 +52,12 @@ pub struct SettingsPatch {
     // the scan path back to "no default" by sending `null`.
     pub default_scan_path: Option<Option<String>>,
     pub terminal: Option<TerminalSettings>,
+    // Explicit-null pattern: `Some(None)` clears the shell back to auto.
+    pub shell: Option<Option<String>>,
     pub commit_message_template: Option<String>,
     pub privacy: Option<PrivacySettings>,
+    // Explicit-null pattern: `Some(None)` clears back to ssh-agent.
+    pub default_ssh_key_path: Option<Option<String>>,
     // Phase 2 fields: the renderer now sends the full appearance / accessibility
     // sub-structs (themeId, followsSystem, primaryColor, font, fontSize, etc.).
     // These used to be dropped silently because the patch struct had no slot
@@ -141,11 +145,17 @@ pub async fn update_settings(
         if let Some(value) = patch.terminal {
             settings.terminal = value;
         }
+        if let Some(value) = patch.shell {
+            settings.shell = value;
+        }
         if let Some(value) = patch.commit_message_template {
             settings.commit_message_template = value;
         }
         if let Some(value) = patch.privacy {
             settings.privacy = value;
+        }
+        if let Some(value) = patch.default_ssh_key_path {
+            settings.default_ssh_key_path = value;
         }
         if let Some(value) = patch.appearance {
             settings.appearance = value;

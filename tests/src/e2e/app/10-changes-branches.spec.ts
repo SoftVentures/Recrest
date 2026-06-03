@@ -14,12 +14,12 @@ test.describe("app / changes + branches", () => {
 
     for (const r of dirty) {
       await expect(
-        page.locator(`[data-testid="${TEST_IDS.repos.row}"][data-repo-id="${r.id}"]`),
+        page.locator(`[data-testid="${TEST_IDS.changes.row}"][data-repo-id="${r.id}"]`),
       ).toBeVisible();
     }
     for (const r of clean) {
       await expect(
-        page.locator(`[data-testid="${TEST_IDS.repos.row}"][data-repo-id="${r.id}"]`),
+        page.locator(`[data-testid="${TEST_IDS.changes.row}"][data-repo-id="${r.id}"]`),
       ).toHaveCount(0);
     }
   });

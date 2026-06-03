@@ -18,6 +18,7 @@ import {
 import {
   loadSettings,
   saveSettings,
+  setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
@@ -254,6 +255,9 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     .addCase(setDesktopCloseToTray, (state, action) => {
       state.desktop.closeToTray = action.payload;
     })
+    .addCase(setCrashReporting, (state, action) => {
+      if (state.backend) state.backend.crashReporting = action.payload;
+    })
     .addCase(setNotificationsEnabled, (state, action) => {
       state.notifications.enabled = action.payload;
     })
@@ -289,6 +293,7 @@ export const settingsReducer = createReducer(initialState, (builder) => {
 export {
   loadSettings,
   saveSettings,
+  setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,

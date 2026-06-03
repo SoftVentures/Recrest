@@ -1,6 +1,8 @@
 pub mod activity;
 pub mod clone;
 pub mod error;
+pub mod git_config;
+pub mod git_index;
 pub mod git_info;
 pub mod git_ops;
 pub mod notifications;
@@ -8,6 +10,7 @@ pub mod oauth;
 pub mod process;
 pub mod remote_import;
 pub mod search;
+pub mod ssh;
 pub mod ide;
 pub mod providers;
 pub mod repos;
@@ -18,4 +21,6 @@ pub mod tray;
 pub mod update;
 #[cfg(debug_assertions)]
 pub mod dev;
+#[cfg(debug_assertions)]
+pub mod dev_log;
 pub mod window;
