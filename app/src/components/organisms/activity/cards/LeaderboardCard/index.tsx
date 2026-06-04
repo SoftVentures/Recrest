@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
@@ -19,19 +21,22 @@ import {
 import type { AuthorBucket } from "@/lib/activityStats";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   buckets: AuthorBucket[];
+  windowDays?: number;
   loading?: boolean;
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
-function LeaderboardCard({ buckets, loading }: Props) {
+function LeaderboardCard({ buckets, windowDays = 14, loading }: Props) {
   const { t } = useTranslation();
   return (
     <GeneralCard
       title={t("activity.leaders.title")}
-      sub={t("activity.leaders.sub", { count: buckets.length })}
+      sub={t("activity.leaders.sub", { count: buckets.length, days: windowDays })}
       loading={loading}
       skeleton="rows"
       testId={TEST_IDS.activity.cards.leaderboard}
@@ -75,4 +80,5 @@ function LeaderboardCard({ buckets, loading }: Props) {
   );
 }
 
-export default LeaderboardCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout the chart rows.
+export default memo(LeaderboardCard);

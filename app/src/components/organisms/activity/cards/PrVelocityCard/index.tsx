@@ -1,37 +1,31 @@
+import { memo } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
+import { ResponsiveLine } from "@nivo/line";
+
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
 import type { VelocityDay } from "@/lib/activityAggregates";
-import { smoothSeries } from "@/lib/charts/smoothLine";
+import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { CHART_PALETTE } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   rows: VelocityDay[];
+  windowDays?: number;
   loading?: boolean;
 }
 
 const ChartWrap = styled(Box)({
   width: "100%",
-});
-
-const Svg = styled("svg")({
-  width: "100%",
   height: 140,
-});
-
-const Axis = styled("line")(({ theme }) => ({
-  stroke: theme.palette.divider,
-  strokeWidth: 1,
-}));
-
-const Series = styled("path")({
-  fill: "none",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
 });
 
 const Legend = styled(Box)(({ theme }) => ({
@@ -57,32 +51,70 @@ const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   backgroundColor: color,
 }));
 
-function PrVelocityCard({ rows, loading }: Props) {
-  const { t } = useTranslation();
+function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const chronological = [...rows].reverse();
-  const opened = chronological.map((r) => r.opened);
-  const merged = chronological.map((r) => r.merged);
-  const peak = Math.max(1, ...opened, ...merged);
-  const w = 320;
-  const h = 140;
-  const pad = 12;
-  const openedColor = theme.palette.primary.main;
+  const nivoTheme = useNivoTheme();
+  const openedColor = CHART_PALETTE[0];
   const mergedColor = theme.palette.success.main;
+
+  const size = bucketSizeForWindow(windowDays);
+  // Newest-first buckets → reverse for chronological left-to-right.
+  const buckets = bucketDays(rows, (r) => r.day, size).reverse();
+  const points = buckets.map((b) => ({
+    x: dayLabel(b.newestDay, i18n.language),
+    opened: b.rows.reduce((a, r) => a + r.opened, 0),
+    merged: b.rows.reduce((a, r) => a + r.merged, 0),
+  }));
+
+  const data = [
+    {
+      id: t("activity.cards.pr_velocity_opened"),
+      data: points.map((p) => ({ x: p.x, y: p.opened })),
+    },
+    {
+      id: t("activity.cards.pr_velocity_merged"),
+      data: points.map((p) => ({ x: p.x, y: p.merged })),
+    },
+  ];
+
+  const labels = points.map((p) => p.x);
+  const every = Math.max(1, Math.ceil(labels.length / 5));
+  const tickValues = labels.filter((_, i) => i % every === 0);
+
   return (
     <GeneralCard
       title={t("activity.cards.pr_velocity_title")}
-      sub={t("activity.cards.pr_velocity_sub")}
+      sub={t("activity.cards.pr_velocity_sub", { days: windowDays })}
       loading={loading}
       skeleton="line"
       testId={TEST_IDS.activity.cards.prVelocity}
     >
       <ChartWrap>
-        <Svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-          <Axis x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} />
-          <Series d={smoothSeries(opened, peak, w, h, pad)} stroke={openedColor} />
-          <Series d={smoothSeries(merged, peak, w, h, pad)} stroke={mergedColor} />
-        </Svg>
+        <ResponsiveLine
+          data={data}
+          theme={nivoTheme}
+          colors={[openedColor, mergedColor]}
+          margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
+          curve="monotoneX"
+          enablePoints={false}
+          enableGridX={false}
+          xScale={{ type: "point" }}
+          axisBottom={{ tickValues, tickRotation: 0 }}
+          axisLeft={{ tickValues: 4 }}
+          enableSlices="x"
+          sliceTooltip={({ slice }) => (
+            <ChartTooltip
+              title={String(slice.points[0]?.data.x ?? "")}
+              rows={slice.points.map((p) => ({
+                color: p.seriesColor,
+                label: String(p.seriesId),
+                value: String(p.data.yFormatted),
+              }))}
+            />
+          )}
+          useMesh
+        />
       </ChartWrap>
       <Legend>
         <Box component="span">
@@ -98,4 +130,5 @@ function PrVelocityCard({ rows, loading }: Props) {
   );
 }
 
-export default PrVelocityCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(PrVelocityCard);

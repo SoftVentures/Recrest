@@ -15,6 +15,8 @@ export const TauriCommand = {
   REMOVE_REPO: "remove_repo",
   FORGET_REPOS_UNDER_PATH: "forget_repos_under_path",
   DELETE_REPO: "delete_repo",
+  GET_OLDEST_COMMIT_DATE: "get_oldest_commit_date",
+  LIST_COMMITS: "list_commits",
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
   SET_REPO_LOGO: "set_repo_logo",

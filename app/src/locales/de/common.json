@@ -140,7 +140,7 @@
     },
     "activity": {
       "title": "Aktivität",
-      "meta": "letzte 14 Tage"
+      "meta": "letzte {{days}} Tage"
     },
     "settings": {
       "title": "Einstellungen"
@@ -341,8 +341,16 @@
     }
   },
   "activity": {
+    "range": {
+      "preset_7d": "7 Tage",
+      "preset_30d": "30 Tage",
+      "preset_90d": "90 Tage",
+      "preset_1y": "1 Jahr",
+      "preset_all": "Alles",
+      "truncated_banner": "Zeitraum gekürzt — Range verkleinern für vollständige Daten."
+    },
     "chart": {
-      "title": "Commits · letzte 14 Tage",
+      "title": "Commits · letzte {{days}} Tage",
       "sub": "{{total}} Commits"
     },
     "filter": {
@@ -365,7 +373,7 @@
     },
     "leaders": {
       "title": "Top-Contributors",
-      "sub": "letzte 14 Tage · {{count}} Autor:innen",
+      "sub": "letzte {{days}} Tage · {{count}} Autor:innen",
       "empty": "Keine Contributors im Zeitraum.",
       "share": "{{pct}}% Anteil"
     },
@@ -391,7 +399,7 @@
       "ci_legend_other": "{{count}} sonstige"
     },
     "cards": {
-      "chart_title": "Commit-Aktivität · 14 Tage",
+      "chart_title": "Commit-Aktivität · {{days}} Tage",
       "heatmap_title": "Wochentag × Stunde",
       "heatmap_sub": "wann das Team committed",
       "heatmap_none": "wenig",
@@ -403,25 +411,63 @@
       "churn_title": "Churn · Working Tree",
       "churn_sub": "hinzugefügte + entfernte Zeilen",
       "pr_velocity_title": "MR-Velocity",
-      "pr_velocity_sub": "geöffnet vs. gemerged · 14 Tage",
+      "pr_velocity_sub": "geöffnet vs. gemerged · {{days}} Tage",
       "pr_velocity_opened": "Geöffnet",
       "pr_velocity_merged": "Gemerged",
       "time_to_merge_title": "Merge-Dauer",
-      "time_to_merge_sub": "letzte 14 Tage",
+      "time_to_merge_sub": "letzte {{days}} Tage",
       "review_queue_title": "Review-Queue",
       "review_queue_sub": "älteste offene MRs",
       "review_queue_empty": "Keine offenen MRs warten.",
-      "ci_trend_title": "CI-Pass-Rate · 14 Tage",
+      "ci_trend_title": "CI-Pass-Rate · {{days}} Tage",
       "ci_trend_sub": "tägliche Pass-Quote",
+      "ci_trend_sub_repos_one": "über {{count}} Repo",
+      "ci_trend_sub_repos_other": "über {{count}} Repos",
+      "ci_trend_sub_runs": "{{count}} Läufe",
       "flaky_title": "Instabilste Repos",
-      "flaky_sub": "Fehlerquote · letzte 14 Tage",
+      "flaky_sub": "Fehlerquote · letzte {{days}} Tage",
       "flaky_empty": "Noch keine Check-Run-Daten.",
       "busiest_peak_title": "Aktivität & Peak",
       "busiest_label": "Aktivster Tag",
       "peak_label": "Haupt-Zeiten",
       "age_days_one": "{{count}} Tag alt",
       "age_days_other": "{{count}} Tage alt",
-      "ci_trend_sub_window": "letzte 14 Tage"
+      "ci_trend_sub_window": "letzte {{days}} Tage",
+      "stacked_axis_days_ago": "vor {{count}} T.",
+      "stacked_axis_today": "heute",
+      "commits_count_one": "{{count}} Commit",
+      "commits_count_other": "{{count}} Commits",
+      "commits_label": "Commits",
+      "heatmap_tooltip": "{{weekday}} {{hour}} — {{commits}}",
+      "clock_tooltip": "{{range}} — {{commits}}",
+      "language_tooltip": "{{language}} — {{percent}}%"
+    },
+    "tooltip": {
+      "ci_passed": "{{passed}}/{{total}} bestanden"
+    },
+    "insights": {
+      "section_title": "Insights",
+      "streak_title": "Commit-Serie",
+      "streak_sub": "Aufeinanderfolgende Tage mit Commits",
+      "streak_value_days_one": "{{count}} Tag",
+      "streak_value_days_other": "{{count}} Tage",
+      "streak_longest": "Längste: {{count}} ({{start}} – {{end}})",
+      "trend_title": "Trend",
+      "trend_sub": "Letzte {{days}} Tage vs. davor",
+      "trend_up": "Aktiver",
+      "trend_down": "Weniger aktiv",
+      "trend_flat": "Stabil",
+      "top_authors_title": "Top-Autoren",
+      "top_authors_sub": "Letzte {{days}} Tage",
+      "active_weekday_title": "Aktivster Tag",
+      "active_weekday_sub": "Über den geladenen Zeitraum",
+      "avg_per_week_title": "Commits / Woche",
+      "avg_per_week_sub": "Durchschnitt über den geladenen Zeitraum",
+      "longest_gap_title": "Längste Pause",
+      "longest_gap_sub": "Tage ohne Commit",
+      "longest_gap_value_one": "{{count}} Tag",
+      "longest_gap_value_other": "{{count}} Tage",
+      "empty": "Noch keine Daten"
     },
     "timeline": {
       "title": "Verlauf",
@@ -454,7 +500,8 @@
           "one": "{{count}} Check fehlgeschlagen",
           "other": "{{count}} Checks fehlgeschlagen"
         }
-      }
+      },
+      "show_more": "{{count}} weitere anzeigen"
     }
   },
   "settings": {

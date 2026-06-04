@@ -23,6 +23,44 @@ export function resolveRecentCommits(seed: DevSeed, args: { repoId?: string } | 
   return all;
 }
 
+/** Flatten the seed's recent-commit buckets to `[repoId, RecentCommit[]]`
+ *  pairs filtered to `since <= timestamp <= until`. Mirrors the source used by
+ *  `resolveRecentCommits` so the dev:web Activity range view stays consistent
+ *  with the dashboard recent-commit feed. */
+export function resolveCommitsInRange(
+  seed: DevSeed,
+  args: { since?: string; until?: string; maxCommitsPerRepo?: number } | undefined,
+): Array<{ repoId: string; commits: Array<{ timestamp: string }> }> {
+  const sinceMs = args?.since ? Date.parse(args.since) : Number.NEGATIVE_INFINITY;
+  const untilMs = args?.until ? Date.parse(args.until) : Number.POSITIVE_INFINITY;
+  const cap = args?.maxCommitsPerRepo;
+  const buckets = seed.recentCommits || {};
+  const out: Array<{ repoId: string; commits: Array<{ timestamp: string }> }> = [];
+  for (const repoId of Object.keys(buckets)) {
+    const inRange = (buckets[repoId] || []).filter((c) => {
+      const ts = Date.parse(c.timestamp);
+      return ts >= sinceMs && ts <= untilMs;
+    });
+    const commits = typeof cap === "number" ? inRange.slice(0, cap) : inRange;
+    if (commits.length > 0) out.push({ repoId, commits });
+  }
+  return out;
+}
+
+/** Oldest commit timestamp across every seed repo as an ISO string, or null
+ *  when the seed has no commits. Backs `get_oldest_commit_date`. */
+export function resolveOldestCommitDate(seed: DevSeed): string | null {
+  const buckets = seed.recentCommits || {};
+  let oldest: number | null = null;
+  for (const repoId of Object.keys(buckets)) {
+    for (const c of buckets[repoId] || []) {
+      const ts = Date.parse(c.timestamp);
+      if (!Number.isNaN(ts) && (oldest === null || ts < oldest)) oldest = ts;
+    }
+  }
+  return oldest === null ? null : new Date(oldest).toISOString();
+}
+
 export function resolvePrEvents(
   seed: DevSeed,
   args: { repoId?: string; days?: number } | undefined,

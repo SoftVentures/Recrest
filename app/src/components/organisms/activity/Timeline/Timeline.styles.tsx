@@ -143,3 +143,9 @@ export const Empty = styled(Box)(({ theme }) => ({
   padding: "16px 0",
   textAlign: "center",
 })) as typeof Box;
+
+export const ShowMore = styled(Box)({
+  display: "flex",
+  justifyContent: "center",
+  paddingTop: 4,
+}) as typeof Box;

@@ -37,6 +37,7 @@ import {
   setSearchOpen,
 } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectSelectedRange } from "@/store/selectors/activity.selectors";
 
 interface HeaderContext {
   title: string;
@@ -48,6 +49,11 @@ function useHeaderContext(): HeaderContext {
   const location = useLocation();
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
+  const activityRange = useAppSelector(selectSelectedRange);
+  const activityWindowDays = Math.max(
+    1,
+    Math.ceil((Date.parse(activityRange.until) - Date.parse(activityRange.since)) / 86_400_000),
+  );
   const repoList = Object.values(repos);
   const dirtyCount = repoList.filter((r) => r.status.dirty).length;
   const mrOpen = Object.values(prs)
@@ -98,7 +104,7 @@ function useHeaderContext(): HeaderContext {
   if (path.startsWith("/activity")) {
     return {
       title: t("view.activity.title"),
-      meta: t("view.activity.meta"),
+      meta: t("view.activity.meta", { days: activityWindowDays }),
     };
   }
   if (path.startsWith("/settings")) {

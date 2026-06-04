@@ -500,6 +500,79 @@ mod tests {
     use crate::git::status::{read_status, ChangedFileStatus};
     use crate::test_support::TempRepo;
 
+    /// Hermetic isolation from any ambient git identity. libgit2 merges the
+    /// user's real global/system config into every `Repository::config()`,
+    /// so on a developer machine with `user.name`/`user.email` set globally,
+    /// `repo.signature()` succeeds even after the local entries are removed —
+    /// which would mask the fallback paths these tests exercise.
+    ///
+    /// libgit2 (unlike the git CLI) ignores `GIT_CONFIG_GLOBAL` /
+    /// `GIT_CONFIG_SYSTEM`; the only seam is the process-global config search
+    /// path. We point every level at an empty temp dir for the guard's
+    /// lifetime and restore the originals on drop. Because the search path is
+    /// process-global state, callers must hold `CONFIG_SEARCH_LOCK` so the
+    /// two tests that use it never run concurrently (the crate intentionally
+    /// has no `serial_test` dependency — see `identity.rs`).
+    struct IsolatedGitConfig {
+        _empty: tempfile::TempDir,
+        saved: Vec<(git2::ConfigLevel, std::ffi::CString)>,
+        _guard: std::sync::MutexGuard<'static, ()>,
+    }
+
+    static CONFIG_SEARCH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    impl IsolatedGitConfig {
+        fn new() -> Self {
+            // Recover from a poisoned lock: a panic in an earlier guarded test
+            // must not cascade-fail the rest of the suite.
+            let guard = CONFIG_SEARCH_LOCK
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            let empty = tempfile::TempDir::new().expect("tempdir");
+            let empty_path = empty.path().to_string_lossy().replace('\\', "/");
+            // Windows resolves config from all four levels; redirect each one.
+            let levels = [
+                git2::ConfigLevel::ProgramData,
+                git2::ConfigLevel::System,
+                git2::ConfigLevel::XDG,
+                git2::ConfigLevel::Global,
+            ];
+            let mut saved = Vec::new();
+            for level in levels {
+                // SAFETY: serialized by CONFIG_SEARCH_LOCK; restored on drop.
+                unsafe {
+                    if let Ok(prev) = git2::opts::get_search_path(level) {
+                        saved.push((level, prev));
+                    }
+                    git2::opts::set_search_path(level, empty_path.as_str())
+                        .expect("override config search path");
+                }
+            }
+            Self {
+                _empty: empty,
+                saved,
+                _guard: guard,
+            }
+        }
+    }
+
+    impl Drop for IsolatedGitConfig {
+        fn drop(&mut self) {
+            for (level, path) in self.saved.drain(..) {
+                // SAFETY: still holding CONFIG_SEARCH_LOCK via `_guard`.
+                unsafe {
+                    let restored = path
+                        .to_str()
+                        .ok()
+                        .and_then(|s| git2::opts::set_search_path(level, s).ok());
+                    if restored.is_none() {
+                        let _ = git2::opts::reset_search_path(level);
+                    }
+                }
+            }
+        }
+    }
+
     #[test]
     fn stage_then_unstage_tracked_file() {
         let tr = TempRepo::init();
@@ -651,6 +724,8 @@ mod tests {
 
     #[test]
     fn commit_requires_git_config_when_signature_missing() {
+        // Hide any ambient global identity so the fallback path is reachable.
+        let _isolated = IsolatedGitConfig::new();
         let tr = TempRepo::init();
         tr.commit_file("a", "1", "init");
         // Wipe the local signature so libgit2 falls through to fallback.
@@ -672,6 +747,8 @@ mod tests {
 
     #[test]
     fn commit_falls_back_to_override_signature() {
+        // Hide any ambient global identity so the fallback path is reachable.
+        let _isolated = IsolatedGitConfig::new();
         let tr = TempRepo::init();
         tr.commit_file("a", "1", "init");
         {

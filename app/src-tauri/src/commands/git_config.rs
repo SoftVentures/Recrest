@@ -744,6 +744,13 @@ mod tests {
     use super::*;
     use crate::test_support::TempRepo;
 
+    /// Render a path for embedding in a git config file. gitconfig parses
+    /// backslashes as escape sequences, so Windows paths must be written
+    /// POSIX-style or libgit2 rejects the file with "invalid escape".
+    fn to_config_path(p: &Path) -> String {
+        p.to_string_lossy().replace('\\', "/")
+    }
+
     #[test]
     fn set_then_get_local_config_round_trips() {
         let tr = TempRepo::init();
@@ -783,10 +790,15 @@ mod tests {
             "",
         )
         .unwrap();
-        let map = get_config_blocking(GitConfigScope::Repo(tr.dir.path().to_path_buf())).unwrap();
+        // Read the local config file directly rather than the flattened
+        // repo view: on a machine with an ambient global `user.name`,
+        // `get_config_blocking` would still surface the inherited value and
+        // mask whether the local key was actually removed.
+        let local = tr.dir.path().join(".git").join("config");
+        let map = read_layer_blocking(&local).unwrap();
         assert!(
             !map.contains_key("user.name"),
-            "empty value should remove the key",
+            "empty value should remove the key from the local config",
         );
     }
 
@@ -816,12 +828,16 @@ mod tests {
         let work = tmp.path().join("gitconfig-work");
         let work_dir = tmp.path().join("work");
         std::fs::create_dir_all(&work_dir).unwrap();
+        // gitconfig treats backslashes as escape sequences, so paths written
+        // into config files (the `includeIf` gitdir pattern and the include
+        // `path`) must be POSIX-style — otherwise libgit2 rejects the file
+        // with "invalid escape" on Windows.
         std::fs::write(
             &global,
             format!(
                 "[includeIf \"gitdir:{base}/\"]\n\tpath = {work}\n",
-                base = work_dir.display(),
-                work = work.display(),
+                base = to_config_path(&work_dir),
+                work = to_config_path(&work),
             ),
         )
         .unwrap();
@@ -855,8 +871,8 @@ mod tests {
             &global,
             format!(
                 "[includeIf \"gitdir:{base}/\"]\n\tpath = {work}\n",
-                base = work_dir.display(),
-                work = work.display(),
+                base = to_config_path(&work_dir),
+                work = to_config_path(&work),
             ),
         )
         .unwrap();
@@ -914,8 +930,8 @@ mod tests {
             &global,
             format!(
                 "[user]\n\tname = Default\n\temail = default@x\n[includeIf \"gitdir:{base}/\"]\n\tpath = {work}\n",
-                base = work_dir.display(),
-                work = work.display(),
+                base = to_config_path(&work_dir),
+                work = to_config_path(&work),
             ),
         )
         .unwrap();

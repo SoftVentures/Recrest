@@ -1,6 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import { settingsBackendSync } from "@/store/backendSync";
+import { activityReducer } from "@/store/reducers/activityReducer";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
@@ -28,6 +29,7 @@ export const store = configureStore({
     repos: reposReducer,
     prs: prsReducer,
     remoteImport: remoteImportReducer,
+    activity: activityReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(settingsBackendSync),
 });

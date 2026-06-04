@@ -8,6 +8,9 @@ type Args = Record<string, unknown>;
 export interface PluginStubCtx {
   /** Allocate a new listener id and register the callback. */
   registerListener: (handler: (arg: unknown) => void) => number;
+  /** Bind an already-registered callback id (minted by the Tauri API via
+   *  `transformCallback`) to an event channel so `emit` can reach it. */
+  bindEventListener: (event: string, handlerId: number) => void;
   /** Drop a previously registered listener. */
   unregisterListener: (id: number) => void;
 }
@@ -19,14 +22,28 @@ function detectPlatform(): "macos" | "linux" | "windows" {
   return "windows";
 }
 
-export function pluginStub(cmd: string, _a: Args, ctx: PluginStubCtx): unknown | typeof UNHANDLED {
+export function pluginStub(cmd: string, a: Args, ctx: PluginStubCtx): unknown | typeof UNHANDLED {
   switch (cmd) {
-    case "plugin:event|listen":
-      // Real Tauri returns an id; with no actual subscription target we just
-      // mint a fresh id. The `unlisten` path drops it from the callback map.
+    case "plugin:event|listen": {
+      // `@tauri-apps/api/event.listen` has already minted the callback via
+      // `transformCallback` and passes its id as `handler`. Bind that id to
+      // the channel so stub handlers can `emit` to it (e.g. the
+      // `activity://commits-chunk` stream). Without the binding every event
+      // subscription is a dead drop and dev:web pages waiting on events
+      // render empty.
+      const event = typeof a["event"] === "string" ? a["event"] : "";
+      const handlerId = typeof a["handler"] === "number" ? a["handler"] : null;
+      if (event && handlerId !== null) {
+        ctx.bindEventListener(event, handlerId);
+        return handlerId;
+      }
       return ctx.registerListener(() => undefined);
-    case "plugin:event|unlisten":
+    }
+    case "plugin:event|unlisten": {
+      const id = a["eventId"];
+      if (typeof id === "number") ctx.unregisterListener(id);
       return undefined;
+    }
 
     case "plugin:window|is_maximized":
     case "plugin:window|is_minimized":

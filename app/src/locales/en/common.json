@@ -140,7 +140,7 @@
     },
     "activity": {
       "title": "Activity",
-      "meta": "last 14 days"
+      "meta": "last {{days}} days"
     },
     "settings": {
       "title": "Settings"
@@ -341,8 +341,16 @@
     }
   },
   "activity": {
+    "range": {
+      "preset_7d": "7 days",
+      "preset_30d": "30 days",
+      "preset_90d": "90 days",
+      "preset_1y": "1 year",
+      "preset_all": "All",
+      "truncated_banner": "Range trimmed — shrink the range for complete data."
+    },
     "chart": {
-      "title": "Commits · last 14 days",
+      "title": "Commits · last {{days}} days",
       "sub": "{{total}} commits"
     },
     "filter": {
@@ -365,7 +373,7 @@
     },
     "leaders": {
       "title": "Top contributors",
-      "sub": "last 14 days · {{count}} authors",
+      "sub": "last {{days}} days · {{count}} authors",
       "empty": "No contributors in range.",
       "share": "{{pct}}% share"
     },
@@ -391,7 +399,7 @@
       "ci_legend_other": "{{count}} other"
     },
     "cards": {
-      "chart_title": "Commit activity · 14 days",
+      "chart_title": "Commit activity · {{days}} days",
       "heatmap_title": "Weekday × hour heatmap",
       "heatmap_sub": "when the team commits",
       "heatmap_none": "low",
@@ -403,25 +411,63 @@
       "churn_title": "Churn · working tree",
       "churn_sub": "added + removed lines",
       "pr_velocity_title": "MR velocity",
-      "pr_velocity_sub": "opened vs merged · 14 days",
+      "pr_velocity_sub": "opened vs merged · {{days}} days",
       "pr_velocity_opened": "Opened",
       "pr_velocity_merged": "Merged",
       "time_to_merge_title": "Time to merge",
-      "time_to_merge_sub": "last 14 days",
+      "time_to_merge_sub": "last {{days}} days",
       "review_queue_title": "Review queue",
       "review_queue_sub": "oldest open MRs",
       "review_queue_empty": "No open MRs waiting.",
-      "ci_trend_title": "CI pass rate · 14 days",
+      "ci_trend_title": "CI pass rate · {{days}} days",
       "ci_trend_sub": "daily % pass",
+      "ci_trend_sub_repos_one": "across {{count}} repo",
+      "ci_trend_sub_repos_other": "across {{count}} repos",
+      "ci_trend_sub_runs": "{{count}} runs",
       "flaky_title": "Flakiest repos",
-      "flaky_sub": "failure rate · last 14 days",
+      "flaky_sub": "failure rate · last {{days}} days",
       "flaky_empty": "No check-run data yet.",
       "busiest_peak_title": "Busiest & peak",
       "busiest_label": "Busiest day",
       "peak_label": "Peak hours",
       "age_days_one": "{{count}} day old",
       "age_days_other": "{{count}} days old",
-      "ci_trend_sub_window": "last 14 days"
+      "ci_trend_sub_window": "last {{days}} days",
+      "stacked_axis_days_ago": "{{count}}d ago",
+      "stacked_axis_today": "today",
+      "commits_count_one": "{{count}} commit",
+      "commits_count_other": "{{count}} commits",
+      "commits_label": "commits",
+      "heatmap_tooltip": "{{weekday}} {{hour}} — {{commits}}",
+      "clock_tooltip": "{{range}} — {{commits}}",
+      "language_tooltip": "{{language}} — {{percent}}%"
+    },
+    "tooltip": {
+      "ci_passed": "{{passed}}/{{total}} passed"
+    },
+    "insights": {
+      "section_title": "Insights",
+      "streak_title": "Commit streak",
+      "streak_sub": "Consecutive days with commits",
+      "streak_value_days_one": "{{count}} day",
+      "streak_value_days_other": "{{count}} days",
+      "streak_longest": "Longest: {{count}} ({{start}} – {{end}})",
+      "trend_title": "Trend",
+      "trend_sub": "Last {{days}} days vs previous",
+      "trend_up": "More active",
+      "trend_down": "Less active",
+      "trend_flat": "Steady",
+      "top_authors_title": "Top authors",
+      "top_authors_sub": "Last {{days}} days",
+      "active_weekday_title": "Most active day",
+      "active_weekday_sub": "Across the loaded range",
+      "avg_per_week_title": "Commits / week",
+      "avg_per_week_sub": "Average over the loaded range",
+      "longest_gap_title": "Longest gap",
+      "longest_gap_sub": "Days without a commit",
+      "longest_gap_value_one": "{{count}} day",
+      "longest_gap_value_other": "{{count}} days",
+      "empty": "No data yet"
     },
     "timeline": {
       "title": "History",
@@ -454,7 +500,8 @@
           "one": "{{count}} check failed",
           "other": "{{count}} checks failed"
         }
-      }
+      },
+      "show_more": "Show {{count}} more"
     }
   },
   "settings": {

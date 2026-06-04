@@ -1,16 +1,20 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { keyframes, styled, useTheme } from "@mui/material/styles";
+import { styled } from "@mui/material/styles";
+
+import { ResponsivePie } from "@nivo/pie";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { LanguageSlice } from "@/lib/activityAggregates";
-import { donutArcs } from "@/lib/charts/donutArcs";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   mix: LanguageSlice[];
   loading?: boolean;
 }
@@ -22,39 +26,37 @@ const Wrap = styled(Box)({
   gap: 16,
 });
 
-const Svg = styled("svg")({
+const DonutArea = styled(Box)({
+  position: "relative",
   width: 120,
   height: 120,
   flexShrink: 0,
 });
 
-const arcFadeIn = keyframes`
-  from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
-`;
-
-const Arc = styled("path")({
-  transformOrigin: "60px 60px",
-  animation: `${arcFadeIn} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
-  'html[data-reduced-motion="true"] &': {
-    animation: "none",
-  },
+const Centre = styled(Box)({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  pointerEvents: "none",
 });
 
-const Centre = styled("text")(({ theme }) => ({
-  textAnchor: "middle",
+const CentreValue = styled(Box)(({ theme }) => ({
   fontSize: 22,
   fontWeight: 700,
-  fill: theme.palette.text.primary,
+  color: theme.palette.text.primary,
   fontVariantNumeric: "tabular-nums",
+  lineHeight: 1,
 }));
 
-const CentreSub = styled("text")(({ theme }) => ({
-  textAnchor: "middle",
+const CentreSub = styled(Box)(({ theme }) => ({
   fontSize: 9,
-  fill: theme.palette.text.information,
+  color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
+  marginTop: 4,
 }));
 
 const LegendList = styled(Box)({
@@ -91,9 +93,23 @@ const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   backgroundColor: color,
 }));
 
+// TODO(next-pass): unify with parts/ChartTooltip
+const Tooltip = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  fontSize: 12,
+  padding: "6px 10px",
+  color: theme.palette.text.primary,
+  whiteSpace: "nowrap",
+}));
+
 function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const nivoTheme = useNivoTheme();
   const TAIL_THRESHOLD = 0.01;
   const legend = useMemo(() => {
     const result: LanguageSlice[] = [];
@@ -120,7 +136,10 @@ function LanguageDonutCard({ mix, loading }: Props) {
     return result;
   }, [mix]);
   const totalCommits = Math.round(legend.reduce((a, b) => a + b.commits, 0));
-  const arcs = useMemo(() => donutArcs(legend, 48, 60, 60), [legend]);
+  const data = useMemo(
+    () => legend.map((s) => ({ id: s.language, value: s.commits, color: s.color, share: s.share })),
+    [legend],
+  );
   return (
     <GeneralCard
       title={t("activity.cards.language_title")}
@@ -130,23 +149,34 @@ function LanguageDonutCard({ mix, loading }: Props) {
       testId={TEST_IDS.activity.cards.language}
     >
       <Wrap>
-        <Svg viewBox="0 0 120 120">
-          {arcs.map((a, i) => (
-            <Arc
-              key={a.slice.language}
-              d={a.path}
-              fill={a.slice.color}
-              style={{ animationDelay: `${220 + i * 60}ms` }}
-            />
-          ))}
-          <circle cx="60" cy="60" r="34" fill={theme.palette.surface.interface.base} />
-          <Centre x="60" y="58">
-            {totalCommits}
+        <DonutArea>
+          <ResponsivePie
+            data={data}
+            theme={nivoTheme}
+            colors={{ datum: "data.color" }}
+            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            innerRadius={0.7}
+            padAngle={1.5}
+            cornerRadius={3}
+            enableArcLabels={false}
+            enableArcLinkLabels={false}
+            tooltip={({ datum }) => (
+              <Tooltip>
+                <Swatch color={datum.color} />
+                <Box component="span">
+                  {t("activity.cards.language_tooltip", {
+                    language: datum.id,
+                    percent: Math.round((datum.data.share ?? 0) * 100),
+                  })}
+                </Box>
+              </Tooltip>
+            )}
+          />
+          <Centre>
+            <CentreValue>{totalCommits}</CentreValue>
+            <CentreSub>{t("activity.cards.commits_label")}</CentreSub>
           </Centre>
-          <CentreSub x="60" y="78">
-            commits
-          </CentreSub>
-        </Svg>
+        </DonutArea>
         <LegendList component="ul" tabIndex={0} aria-label={t("activity.cards.language_title")}>
           {legend.map((s) => (
             <LegendItem key={s.language} component="li">
@@ -161,4 +191,5 @@ function LanguageDonutCard({ mix, loading }: Props) {
   );
 }
 
-export default LanguageDonutCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(LanguageDonutCard);

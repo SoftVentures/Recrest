@@ -24,6 +24,9 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
 (() => {
   const SEED = ${serialised};
   const callbacks = new Map();
+  // Channel name -> set of callback ids, so emit() delivers a payload only to
+  // listeners of that event (mirrors the dev:web stub's eventListeners map).
+  const eventListeners = new Map();
   let nextId = 1;
 
   function transformCallback(callback, once = false) {
@@ -33,6 +36,59 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       try { callback?.(arg); } catch (err) { console.warn("[tauri-stub] callback err:", err); }
     });
     return id;
+  }
+
+  function registerEventListener(event, handler) {
+    const id = transformCallback(handler);
+    let set = eventListeners.get(event);
+    if (!set) { set = new Set(); eventListeners.set(event, set); }
+    set.add(id);
+    return id;
+  }
+
+  function removeListener(id) {
+    callbacks.delete(id);
+    for (const set of eventListeners.values()) set.delete(id);
+  }
+
+  // Shape the argument like \`@tauri-apps/api/event\` (\`{ event, id, payload }\`)
+  // so handlers read \`e.payload\` exactly as against the real runtime.
+  function emit(event, payload) {
+    const set = eventListeners.get(event);
+    if (!set) return;
+    for (const id of set) {
+      const cb = callbacks.get(id);
+      if (cb) cb({ event, id, payload });
+    }
+  }
+
+  function resolveCommitsInRange(args) {
+    const sinceMs = args && args.since ? Date.parse(args.since) : -Infinity;
+    const untilMs = args && args.until ? Date.parse(args.until) : Infinity;
+    const cap = args && args.maxCommitsPerRepo;
+    const buckets = SEED.recentCommits || {};
+    const out = [];
+    for (const repoId of Object.keys(buckets)) {
+      const inRange = (buckets[repoId] || []).filter((c) => {
+        const ts = Date.parse(c.timestamp);
+        return ts >= sinceMs && ts <= untilMs;
+      });
+      const commits = typeof cap === "number" ? inRange.slice(0, cap) : inRange;
+      if (commits.length > 0) out.push({ repoId, commits });
+    }
+    return out;
+  }
+
+  function resolveOldestCommitDate() {
+    const buckets = SEED.recentCommits || {};
+    let oldest = null;
+    for (const repoId of Object.keys(buckets)) {
+      for (const c of buckets[repoId] || []) {
+        const ts = Date.parse(c.timestamp);
+        if (!Number.isNaN(ts) && (oldest === null || ts < oldest)) oldest = ts;
+      }
+    }
+    return oldest === null ? null : new Date(oldest).toISOString();
   }
 
   function resolveRecentCommits(args) {
@@ -294,6 +350,27 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return undefined;
       case "list_recent_commits":
         return resolveRecentCommits(args);
+      case "list_commits": {
+        // Range query: filter the recent-commit feed to since<=ts<=until and
+        // stream one chunk per repo over activity://commits-chunk (the only
+        // path the frontend reads commit data through). Chunks MUST fire
+        // before the summary resolves: the real backend emits while the
+        // command is still running, and the activity reducer drops chunks
+        // whose requestId no longer matches the in-flight request.
+        const requestId = (args && args.requestId) || "";
+        const grouped = resolveCommitsInRange(args);
+        const totals = {};
+        const truncated = {};
+        for (const g of grouped) { totals[g.repoId] = g.commits.length; truncated[g.repoId] = false; }
+        for (const g of grouped) {
+          emit("activity://commits-chunk", {
+            requestId, repoId: g.repoId, commits: g.commits, done: true, truncated: false,
+          });
+        }
+        return { requestId, totals, truncated };
+      }
+      case "get_oldest_commit_date":
+        return resolveOldestCommitDate();
       case "list_pr_events":
         return resolvePrEvents(args);
       case "list_check_runs":
@@ -553,12 +630,12 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
       callbacks,
       convertFileSrc: (path) => path,
-      unregisterListener: (_event, id) => { callbacks.delete(id); },
+      unregisterListener: (_event, id) => { removeListener(id); },
       plugins: {
         event: {
-          listen: (_event, _target, handler) => transformCallback(handler),
-          unlisten: (_event, id) => { callbacks.delete(id); },
-          unregisterListener: (_event, id) => { callbacks.delete(id); },
+          listen: (event, _target, handler) => registerEventListener(event, handler),
+          unlisten: (_event, id) => { removeListener(id); },
+          unregisterListener: (_event, id) => { removeListener(id); },
         },
       },
     },
@@ -570,7 +647,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
     configurable: true,
     writable: false,
     value: {
-      unregisterListener: (_event, id) => { callbacks.delete(id); },
+      unregisterListener: (_event, id) => { removeListener(id); },
     },
   });
   Object.defineProperty(window, "__TAURI_OS_PLUGIN_INTERNALS__", {

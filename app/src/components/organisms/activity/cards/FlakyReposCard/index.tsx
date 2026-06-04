@@ -9,6 +9,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   rows: FlakyRepo[];
+  windowDays?: number;
   loading?: boolean;
 }
 
@@ -62,12 +63,12 @@ const Empty = styled(Box)(({ theme }) => ({
   padding: "10px 0",
 })) as typeof Box;
 
-function FlakyReposCard({ rows, loading }: Props) {
+function FlakyReposCard({ rows, windowDays = 14, loading }: Props) {
   const { t } = useTranslation();
   return (
     <GeneralCard
       title={t("activity.cards.flaky_title")}
-      sub={t("activity.cards.flaky_sub")}
+      sub={t("activity.cards.flaky_sub", { days: windowDays })}
       loading={loading}
       skeleton="rows"
       testId={TEST_IDS.activity.cards.flakyRepos}

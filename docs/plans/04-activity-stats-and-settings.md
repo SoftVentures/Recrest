@@ -1,20 +1,29 @@
 # Plan 4 — Activity / Statistiken / Settings & Quality
 
+> **Ausführbare Unterpläne in `docs/plans/04/`** (Stand 2026-06-03):
+>
+> 1. [`04/01-activity-data-and-charts.md`](04/01-activity-data-and-charts.md) — Phase C + Nivo-Chart-Migration (alle handgerollten SVG-Charts → `@nivo/*`, MIT).
+> 2. [`04/02-settings-terminal-and-tokens.md`](04/02-settings-terminal-and-tokens.md) — Phase D.
+> 3. [`04/03-quality-and-coverage.md`](04/03-quality-and-coverage.md) — Phase E (hängt an 04/01 für `activitySlice`-Tests; 04/02 ist unabhängig parallelisierbar).
+>
+> Bei Abweichungen zwischen diesem Dokument und den Unterplänen gelten die Unterpläne.
+
 ## Kontext
 
 Konkretisierung der noch offenen Items aus `docs/plans/future.md` für Activity/Dashboard/Settings sowie der Test-Suite. Plan 1 hat die Chart-Palette zentralisiert (`app/src/lib/charts/palette.ts`), Plan 4 B.1 ist bereits in `app/src/lib/charts/smoothLine.ts` umgesetzt — beide Phase-B-Items sind **erledigt**, daher hier nicht mehr aufgeführt.
 
 **Voraussetzung:** MUI-Migration (Plan 2) ist gemerged; alle Cards/Tabs/Inputs sind MUI v9 + Emotion `styled`.
 
-**Stand nach Audit (2026-05-28):**
+**Stand nach Re-Audit (2026-06-03):**
 
 - ✅ B.1 / B.2 (gerundeter PR-Velocity-Graph + zentrale Palette).
-- ✅ Terminal/Shell-Auswahl-UI mit Dropdowns (`SystemSection`); Backend `TerminalSettings`-Struct + Spawn-Plans + Shell-Detection.
+- ✅ Terminal/Shell-Auswahl-UI mit Dropdowns (`SystemSection`); Backend `TerminalSettings`-Struct + Spawn-Plans + Shell-Detection. `TerminalSettings.profile`/`.customCommand` existieren in TS **und** Rust; `open_at` nutzt `custom_command` bereits.
 - ✅ Token-Scopes-Chips (`PROVIDER_OAUTH_SCOPES`) im `ProviderRow`.
-- ❌ Range-fähiger Activity-Datenfluss + Insights (C.1–C.3).
-- ❌ Echtes `detect_terminals`-IPC (UI nutzt heute hardcodierte Stub-Maps pro Platform); Profile-Input + Custom-Command-Field.
-- ❌ Deep-Link zur Token-Erstell-Seite je Provider.
-- ❌ Strukturierter Coverage-Floor + Vitest-Coverage-Setup.
+- ✅ **D.2 Deep-Link zur Token-Erstell-Seite** ist implementiert (`PROVIDER_CREATE_TOKEN_URLS` in `shared/src/constants/providers.ts`, `tokenCreateUrlFor()` im `ProviderRow`) — offen ist nur Test-Absicherung (→ 04/02 Task 6).
+- ❌ Range-fähiger Activity-Datenfluss + Insights (C.1–C.3); kein `activitySlice`, kein `insights.ts`, kein `DateRangePicker`.
+- ❌ Echtes `detect_terminals`-IPC (UI nutzt hardcodierte Stub-Maps); `terminal_spawn_plan` **ignoriert** das `profile`-Argument (`terminal.rs`, `_profile`).
+- ❌ Strukturierter Coverage-Floor + Vitest-Coverage-Setup; **keine** Reducer-Tests vorhanden (frühere Audit-Annahme `uiReducer.test.ts`/`reposReducer.test.ts` war falsch).
+- 🆕 Chart-Design-Overhaul: alle handgerollten SVG-Charts migrieren auf **Nivo** (MIT; Entscheidung 2026-06-03 — MUI X Charts verworfen, weil Heatmap dort Pro-only ist) → 04/01.
 
 ---
 

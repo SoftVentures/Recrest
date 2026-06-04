@@ -1,26 +1,40 @@
-import type { CSSProperties } from "react";
+import { memo } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Typography } from "@mui/material";
-import { keyframes, styled } from "@mui/material/styles";
+import { Box } from "@mui/material";
+import { styled, useTheme } from "@mui/material/styles";
+
+import { ResponsiveHeatMap } from "@nivo/heatmap";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { CHART_PALETTE, fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   matrix: HeatmapMatrix;
   loading?: boolean;
 }
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+const AXIS_HOURS = ["0", "6", "12", "18"];
+const INDIGO = CHART_PALETTE[0];
 
 function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
-  const peak = Math.max(1, ...matrix.flat());
+  const theme = useTheme();
+  const nivoTheme = useNivoTheme();
+
+  const data = matrix.map((row, weekday) => ({
+    id: WEEKDAYS[weekday]!,
+    data: row.map((count, hour) => ({ x: String(hour), y: count })),
+  }));
+
   return (
     <GeneralCard
       title={t("activity.cards.heatmap_title")}
@@ -34,91 +48,59 @@ function HeatmapCard({ matrix, loading }: Props) {
         role="img"
         aria-label={t("repo.heatmap", { ns: I18nNamespace.ARIA })}
       >
-        {matrix.map((row, dayIdx) => (
-          <Row key={dayIdx}>
-            <Label variant="caption" component="span" aria-hidden>
-              {WEEKDAYS[dayIdx]}
-            </Label>
-            {row.map((v, hourIdx) => {
-              const intensity = v === 0 ? 0 : 0.35 + 0.65 * (v / peak);
-              return (
-                <GeneralTooltip
-                  key={hourIdx}
-                  arrow
-                  placement="top"
-                  title={`${WEEKDAYS[dayIdx]} · ${String(hourIdx).padStart(2, "0")}:00 · ${v}`}
-                >
-                  <Cell
-                    role="img"
-                    intensity={intensity}
-                    style={{ "--cell-delay": dayIdx * 24 + hourIdx } as CSSProperties}
-                    data-testid={TEST_IDS.activity.heatmap.cell}
-                  />
-                </GeneralTooltip>
-              );
-            })}
-          </Row>
-        ))}
+        <ResponsiveHeatMap
+          data={data}
+          theme={nivoTheme}
+          margin={{ top: 4, right: 4, bottom: 20, left: 34 }}
+          colors={{
+            type: "quantize",
+            colors: [
+              fade(INDIGO, 0.15),
+              fade(INDIGO, 0.35),
+              fade(INDIGO, 0.55),
+              fade(INDIGO, 0.78),
+              INDIGO,
+            ],
+          }}
+          emptyColor={fade(theme.palette.divider, 0.15)}
+          enableLabels={false}
+          axisTop={null}
+          axisBottom={{
+            format: (v) => (AXIS_HOURS.includes(String(v)) ? String(v) : ""),
+          }}
+          borderRadius={2}
+          hoverTarget="cell"
+          tooltip={({ cell }) => (
+            <Tooltip>
+              {t("activity.cards.heatmap_tooltip", {
+                weekday: cell.serieId,
+                hour: `${String(cell.data.x).padStart(2, "0")}:00`,
+                commits: t("activity.cards.commits_count", {
+                  count: Number(cell.value ?? 0),
+                }),
+              })}
+            </Tooltip>
+          )}
+        />
       </Grid>
-      <Foot aria-hidden>
-        <Box component="span">00</Box>
-        <Box component="span">06</Box>
-        <Box component="span">12</Box>
-        <Box component="span">18</Box>
-        <Box component="span">23</Box>
-      </Foot>
     </GeneralCard>
   );
 }
 
-export default HeatmapCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(HeatmapCard);
 
 const Grid = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  gap: 3,
+  height: 180,
 });
 
-const Row = styled(Box)({
-  display: "grid",
-  gridTemplateColumns: "18px repeat(24, 1fr)",
-  gap: 3,
-  alignItems: "center",
-});
-
-const Label = styled(Typography)(({ theme }) => ({
-  fontSize: 9.5,
-  color: theme.palette.text.information,
-  textAlign: "right",
-  paddingRight: 2,
-})) as typeof Typography;
-
-const cellFade = keyframes`
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1); }
-`;
-
-const Cell = styled(Box, { shouldForwardProp: (p) => p !== "intensity" })<{
-  intensity: number;
-}>(({ theme, intensity }) => ({
-  height: 12,
-  borderRadius: 2,
-  backgroundColor:
-    intensity === 0
-      ? theme.palette.surface.interface.backElevation
-      : `color-mix(in srgb, ${theme.palette.primary.main} ${intensity * 100}%, ${theme.palette.surface.interface.backElevation})`,
-  animation: `${cellFade} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
-  animationDelay: "calc(var(--cell-delay, 0) * 4ms)",
-  'html[data-reduced-motion="true"] &': {
-    animation: "none",
-  },
-}));
-
-const Foot = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  fontSize: 10,
-  color: theme.palette.text.information,
-  marginTop: 4,
-  paddingLeft: 21,
+// TODO(next-pass): unify with parts/ChartTooltip
+const Tooltip = styled(Box)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  fontSize: 12,
+  padding: "6px 10px",
+  color: theme.palette.text.primary,
+  whiteSpace: "nowrap",
 }));

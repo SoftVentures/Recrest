@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+
+import { useSearchParams } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
 import { Box, MenuItem, Select, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import DateRangePicker from "@/components/atoms/DateRangePicker";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import Timeline from "@/components/organisms/activity/Timeline";
@@ -26,10 +29,16 @@ import ReviewQueueCard from "@/components/organisms/activity/cards/ReviewQueueCa
 import StackedChartCard from "@/components/organisms/activity/cards/StackedChartCard";
 import StreakCard from "@/components/organisms/activity/cards/StreakCard";
 import TimeToMergeCard from "@/components/organisms/activity/cards/TimeToMergeCard";
+import ActiveWeekdayInsightCard from "@/components/organisms/activity/cards/insights/ActiveWeekdayInsightCard";
+import AvgPerWeekInsightCard from "@/components/organisms/activity/cards/insights/AvgPerWeekInsightCard";
+import LongestGapInsightCard from "@/components/organisms/activity/cards/insights/LongestGapInsightCard";
+import StreakInsightCard from "@/components/organisms/activity/cards/insights/StreakInsightCard";
+import TopAuthorsInsightCard from "@/components/organisms/activity/cards/insights/TopAuthorsInsightCard";
+import TrendInsightCard from "@/components/organisms/activity/cards/insights/TrendInsightCard";
+import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useCheckRuns } from "@/hooks/useCheckRuns";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { usePrEvents } from "@/hooks/usePrEvents";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import {
   computeAuthorClock,
   computeChurn,
@@ -42,7 +51,6 @@ import {
   computeTimeToMerge,
 } from "@/lib/activityAggregates";
 import {
-  ACTIVITY_DAYS,
   computeActivityStats,
   computeLeaderboard,
   computeStackedChart,
@@ -57,8 +65,23 @@ import {
   pgZoom,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import {
+  ACTIVITY_URL_PARAM_SINCE,
+  ACTIVITY_URL_PARAM_UNTIL,
+} from "@/lib/constants/activity.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { useAppSelector } from "@/store/hooks";
+import {
+  computeAvgCommitsPerWeek,
+  computeLongestGap,
+  computeMostActiveDayOfWeek,
+  computeStreaks,
+  computeTopAuthorsByPeriod,
+  computeTrend,
+} from "@/lib/insights";
+import { isTauri } from "@/lib/tauri";
+import { fetchOldestCommitDate, setSelectedRange } from "@/store/actions/activity.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectOldestCommitDate, selectSelectedRange } from "@/store/selectors/activity.selectors";
 
 /* ──────────────────────────────────────────────────────────────────────────
  * ActivityPage — port of src-old `pages/ActivityPage.tsx`.
@@ -219,11 +242,68 @@ const SpanStack = styled(Span)({
 
 const HeadTitleCol = styled(Box)({ minWidth: 0 });
 
+const TruncationBanner = styled(Box)(({ theme }) => ({
+  padding: "8px 12px",
+  borderRadius: 8,
+  fontSize: 12,
+  color: theme.palette.warning.main,
+  backgroundColor: theme.palette.surface.interface.backElevation,
+  border: `1px solid ${theme.palette.divider}`,
+})) as typeof Box;
+
 export default function ActivityPage() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
-  const { commits, loading: commitsLoading } = useRecentCommits({ days: ACTIVITY_DAYS });
-  const { events: prEvents, loading: prEventsLoading } = usePrEvents({ days: ACTIVITY_DAYS });
+  const range = useAppSelector(selectSelectedRange);
+  const oldest = useAppSelector(selectOldestCommitDate);
+
+  useEffect(() => {
+    if (isTauri()) void dispatch(fetchOldestCommitDate());
+  }, [dispatch]);
+
+  // Number of whole days the selected range spans; every windowed aggregation
+  // is bucketed against this instead of the old fixed 14-day window.
+  const windowDays = useMemo(
+    () => Math.max(1, Math.ceil((Date.parse(range.until) - Date.parse(range.since)) / 86_400_000)),
+    [range],
+  );
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Mount-only hydration: URL → store, only when both params parse cleanly AND
+  // differ from the store's current range. Dispatching a value-equal range
+  // would still swap the `range` reference and make `useActivityCommits` fire
+  // a second identical `list_commits`. URL params win on mount; the store→URL
+  // effect below then re-normalises the params to the store values.
+  useEffect(() => {
+    const since = searchParams.get(ACTIVITY_URL_PARAM_SINCE);
+    const until = searchParams.get(ACTIVITY_URL_PARAM_UNTIL);
+    if (
+      since &&
+      until &&
+      (since !== range.since || until !== range.until) &&
+      !Number.isNaN(Date.parse(since)) &&
+      !Number.isNaN(Date.parse(until))
+    ) {
+      dispatch(setSelectedRange({ since, until }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only hydration; reading `range` for the comparison is intentional
+  }, []);
+  // store → URL (replace, don't push — range tweaks shouldn't spam history).
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set(ACTIVITY_URL_PARAM_SINCE, range.since);
+        next.set(ACTIVITY_URL_PARAM_UNTIL, range.until);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [range, setSearchParams]);
+
+  const { commits, loading: commitsLoading, truncated } = useActivityCommits();
+  const { events: prEvents, loading: prEventsLoading } = usePrEvents({ days: windowDays });
   const { summaries: checkRuns, loading: checksLoading } = useCheckRuns({ commits });
   const prsByRepo = useAppSelector((s) => s.prs.items);
   const prsLoading = useAppSelector((s) => s.prs.loading);
@@ -275,6 +355,16 @@ export default function ActivityPage() {
     return p ? { [selectedRepo]: p } : {};
   }, [prsByRepo, selectedRepo]);
 
+  // Defer the heavy chart inputs so a range-preset click paints the picker
+  // state immediately and the ~20 chart/insight recomputes catch up in a
+  // non-blocking transition render. windowDays is deferred alongside so each
+  // chart always sees a coherent (commits, windowDays) pair — mixing a fresh
+  // window with stale commits would mislabel the bucket axes for one frame.
+  const deferredCommits = useDeferredValue(filteredCommits);
+  const deferredPrEvents = useDeferredValue(filteredPrEvents);
+  const deferredCheckRuns = useDeferredValue(filteredCheckRuns);
+  const deferredWindowDays = useDeferredValue(windowDays);
+
   const authorOptions = useMemo(() => {
     const buckets = computeLeaderboard(
       selectedRepo === "all" ? commits : commits.filter((c) => c.repoId === selectedRepo),
@@ -286,53 +376,71 @@ export default function ActivityPage() {
   }, [commits, selectedRepo, today]);
 
   const stats = useMemo(
-    () => computeActivityStats(filteredCommits, today, allRepoIds),
-    [filteredCommits, today, allRepoIds],
+    () => computeActivityStats(deferredCommits, today, allRepoIds, deferredWindowDays),
+    [deferredCommits, today, allRepoIds, deferredWindowDays],
   );
   const stacked = useMemo(
-    () => computeStackedChart(filteredCommits, today),
-    [filteredCommits, today],
+    () => computeStackedChart(deferredCommits, today, deferredWindowDays),
+    [deferredCommits, today, deferredWindowDays],
   );
   const leaderboard = useMemo(
-    () => computeLeaderboard(filteredCommits, today, 5, {}),
-    [filteredCommits, today],
+    () => computeLeaderboard(deferredCommits, today, 5, {}, deferredWindowDays),
+    [deferredCommits, today, deferredWindowDays],
   );
-  const heatmap = useMemo(() => computeHeatmap(filteredCommits, today), [filteredCommits, today]);
-  const clock = useMemo(() => computeAuthorClock(filteredCommits), [filteredCommits]);
+  const heatmap = useMemo(
+    () => computeHeatmap(deferredCommits, today, deferredWindowDays),
+    [deferredCommits, today, deferredWindowDays],
+  );
+  const clock = useMemo(() => computeAuthorClock(deferredCommits), [deferredCommits]);
   const languageMix = useMemo(
-    () => computeLanguageMix(filteredCommits, reposById),
-    [filteredCommits, reposById],
+    () => computeLanguageMix(deferredCommits, reposById),
+    [deferredCommits, reposById],
   );
   const churn = useMemo(() => computeChurn(repos), [repos]);
   const velocity = useMemo(
-    () => computePrVelocity(filteredPrEvents, today),
-    [filteredPrEvents, today],
+    () => computePrVelocity(deferredPrEvents, today, deferredWindowDays),
+    [deferredPrEvents, today, deferredWindowDays],
   );
-  const ttm = useMemo(() => computeTimeToMerge(filteredPrEvents), [filteredPrEvents]);
+  const ttm = useMemo(() => computeTimeToMerge(deferredPrEvents), [deferredPrEvents]);
   const reviewQueue = useMemo(
     () => computeReviewQueue(filteredPrsByRepo, reposById),
     [filteredPrsByRepo, reposById],
   );
   const passRate = useMemo(
-    () => computeCiPassRate(filteredCheckRuns, today),
-    [filteredCheckRuns, today],
+    () => computeCiPassRate(deferredCheckRuns, today, deferredWindowDays),
+    [deferredCheckRuns, today, deferredWindowDays],
   );
   const flaky = useMemo(
-    () => computeFlakyRepos(filteredCheckRuns, reposById),
-    [filteredCheckRuns, reposById],
+    () => computeFlakyRepos(deferredCheckRuns, reposById),
+    [deferredCheckRuns, reposById],
+  );
+
+  const insights = useMemo(
+    () => ({
+      streaks: computeStreaks(deferredCommits, today),
+      trend: computeTrend(deferredCommits, 30, today),
+      topAuthors: computeTopAuthorsByPeriod(deferredCommits, 30, 3, today),
+      weekday: computeMostActiveDayOfWeek(deferredCommits),
+      avgPerWeek: computeAvgCommitsPerWeek(deferredCommits),
+      gap: computeLongestGap(deferredCommits),
+    }),
+    [deferredCommits, today],
   );
 
   // Sparkline for the CommitsHero — daily commit counts, today at index 0.
+  // CommitsHero only renders the first 7 entries, so cap the buffer length to
+  // avoid building a multi-year array for wide ranges (e.g. the "1y" preset).
   const sparkline = useMemo(() => {
-    const arr = Array.from({ length: ACTIVITY_DAYS }, () => 0);
-    for (const c of filteredCommits) {
+    const len = Math.min(deferredWindowDays, 90);
+    const arr = Array.from({ length: len }, () => 0);
+    for (const c of deferredCommits) {
       const d = Math.floor(
         (today.getTime() - new Date(c.timestamp).setHours(0, 0, 0, 0)) / 86_400_000,
       );
-      if (d >= 0 && d < ACTIVITY_DAYS) arr[d] = (arr[d] ?? 0) + 1;
+      if (d >= 0 && d < len) arr[d] = (arr[d] ?? 0) + 1;
     }
     return arr;
-  }, [filteredCommits, today]);
+  }, [deferredCommits, today, deferredWindowDays]);
 
   const topAuthors = useMemo(
     () =>
@@ -350,13 +458,18 @@ export default function ActivityPage() {
       <Page>
         <PageHead>
           <HeadTitleCol>
-            <PageTitle component="h2">{t("activity.chart.title")}</PageTitle>
+            <PageTitle component="h2">{t("activity.chart.title", { days: windowDays })}</PageTitle>
             <PageSub>
               {t("activity.chart.sub", { total })}
               {selectedRepo !== "all" && ` · ${repoNameById[selectedRepo] ?? ""}`}
             </PageSub>
           </HeadTitleCol>
           <FilterRow>
+            <DateRangePicker
+              value={range}
+              onChange={(r) => dispatch(setSelectedRange(r))}
+              oldestDate={oldest}
+            />
             <FilterSelect
               value={selectedRepo}
               size="small"
@@ -402,16 +515,52 @@ export default function ActivityPage() {
           </FilterRow>
         </PageHead>
 
+        {truncated && (
+          <TruncationBanner data-testid={TEST_IDS.activity.truncatedBanner}>
+            {t("activity.range.truncated_banner")}
+          </TruncationBanner>
+        )}
+
         <Hero>
           <CommitsHero commits={stats.commits} sparkline={sparkline} />
           <AuthorsHero authors={stats.authors} topAuthors={topAuthors} />
           <OpenPrsHero prsByRepo={filteredPrsByRepo} />
-          <CiHealthHero summaries={filteredCheckRuns} />
+          <CiHealthHero summaries={deferredCheckRuns} />
         </Hero>
 
         <Grid>
+          <Span cols={4}>
+            <StreakInsightCard streaks={insights.streaks} loading={commitsBusy} />
+          </Span>
+          <Span cols={4}>
+            <TrendInsightCard trend={insights.trend} periodDays={30} loading={commitsBusy} />
+          </Span>
+          <Span cols={4}>
+            <TopAuthorsInsightCard
+              authors={insights.topAuthors}
+              periodDays={30}
+              loading={commitsBusy}
+            />
+          </Span>
+          <Span cols={4}>
+            <ActiveWeekdayInsightCard weekday={insights.weekday} loading={commitsBusy} />
+          </Span>
+          <Span cols={4}>
+            <AvgPerWeekInsightCard avg={insights.avgPerWeek} loading={commitsBusy} />
+          </Span>
+          <Span cols={4}>
+            <LongestGapInsightCard gap={insights.gap} loading={commitsBusy} />
+          </Span>
+        </Grid>
+
+        <Grid>
           <Span cols={8}>
-            <StackedChartCard stacked={stacked} total={total} loading={commitsBusy} />
+            <StackedChartCard
+              stacked={stacked}
+              total={total}
+              windowDays={deferredWindowDays}
+              loading={commitsBusy}
+            />
           </Span>
           <Span cols={4}>
             <LanguageDonutCard mix={languageMix} loading={commitsBusy} />
@@ -428,24 +577,37 @@ export default function ActivityPage() {
           </Span>
 
           <Span cols={6}>
-            <PrVelocityCard rows={velocity} loading={prEventsBusy} />
+            <PrVelocityCard
+              rows={velocity}
+              windowDays={deferredWindowDays}
+              loading={prEventsBusy}
+            />
           </Span>
           <Span cols={3}>
-            <TimeToMergeCard buckets={ttm} loading={prEventsBusy} />
+            <TimeToMergeCard buckets={ttm} windowDays={deferredWindowDays} loading={prEventsBusy} />
           </Span>
           <Span cols={3}>
             <ReviewQueueCard entries={reviewQueue} loading={prsBusy} />
           </Span>
 
           <Span cols={8}>
-            <CiPassRateCard rows={passRate} summaries={filteredCheckRuns} loading={checksBusy} />
+            <CiPassRateCard
+              rows={passRate}
+              summaries={deferredCheckRuns}
+              windowDays={deferredWindowDays}
+              loading={checksBusy}
+            />
           </Span>
           <Span cols={4}>
-            <FlakyReposCard rows={flaky} loading={checksBusy} />
+            <FlakyReposCard rows={flaky} windowDays={deferredWindowDays} loading={checksBusy} />
           </Span>
 
           <Span cols={7}>
-            <LeaderboardCard buckets={leaderboard} loading={commitsBusy} />
+            <LeaderboardCard
+              buckets={leaderboard}
+              windowDays={deferredWindowDays}
+              loading={commitsBusy}
+            />
           </Span>
           <SpanStack cols={5}>
             <StreakCard streak={stats.currentStreak} longest={stats.longestStreak} />
@@ -455,9 +617,9 @@ export default function ActivityPage() {
         </Grid>
 
         <Timeline
-          commits={filteredCommits}
-          prEvents={filteredPrEvents}
-          checkRuns={filteredCheckRuns}
+          commits={deferredCommits}
+          prEvents={deferredPrEvents}
+          checkRuns={deferredCheckRuns}
           today={today}
           reposById={reposById}
         />

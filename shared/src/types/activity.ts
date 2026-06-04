@@ -1,4 +1,28 @@
-import type { RepositoryId } from "./repo.js";
+import type { RecentCommit, RepositoryId } from "./repo.js";
+
+/** ISO-8601 UTC strings, `since <= until`. */
+export interface ActivityRange {
+  since: string;
+  until: string;
+}
+
+/** One streamed batch from `list_commits`. `done` marks the final chunk for
+ *  a repo within the request; `truncated` means the per-repo cap was hit. */
+export interface CommitsChunkPayload {
+  requestId: string;
+  repoId: string;
+  commits: RecentCommit[];
+  done: boolean;
+  truncated: boolean;
+}
+
+/** One-shot return value of `list_commits` — totals per repo after the
+ *  stream completed. Commit data itself only travels via chunk events. */
+export interface ListCommitsSummary {
+  requestId: string;
+  totals: Record<string, number>;
+  truncated: Record<string, boolean>;
+}
 
 /** Kind of PR lifecycle event observed in the 14-day window. */
 export const PrEventKind = {

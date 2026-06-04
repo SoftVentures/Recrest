@@ -21,11 +21,15 @@ export function startOfLocalDay(date: Date): Date {
   return new Date(msStartOfLocalDay(date));
 }
 
-/** Days ago (0..ACTIVITY_DAYS-1), or -1 outside the window. */
-export function daysAgo(isoTimestamp: string, today: Date): number {
+/** Days ago (0..windowDays-1), or -1 outside the window. */
+export function daysAgo(
+  isoTimestamp: string,
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): number {
   const commitDay = msStartOfLocalDay(new Date(isoTimestamp));
   const days = Math.floor((today.getTime() - commitDay) / 86_400_000);
-  if (days < 0 || days >= ACTIVITY_DAYS) return -1;
+  if (days < 0 || days >= windowDays) return -1;
   return days;
 }
 
@@ -53,27 +57,35 @@ export const colorForRepo = colorForRepoImpl;
 export const buildRepoColorMap = buildRepoColorMapImpl;
 
 /** Consecutive-days-with-≥1-commit streak ending at `today`. */
-export function currentStreak(commits: readonly RecentCommit[], today: Date): number {
+export function currentStreak(
+  commits: readonly RecentCommit[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): number {
   const days = new Set<number>();
   for (const c of commits) {
-    const d = daysAgo(c.timestamp, today);
+    const d = daysAgo(c.timestamp, today, windowDays);
     if (d >= 0) days.add(d);
   }
   let n = 0;
-  while (days.has(n) && n < ACTIVITY_DAYS) n += 1;
+  while (days.has(n) && n < windowDays) n += 1;
   return n;
 }
 
-/** Longest streak anywhere in the 14-day window. */
-export function longestStreak(commits: readonly RecentCommit[], today: Date): number {
+/** Longest streak anywhere in the window. */
+export function longestStreak(
+  commits: readonly RecentCommit[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): number {
   const days = new Set<number>();
   for (const c of commits) {
-    const d = daysAgo(c.timestamp, today);
+    const d = daysAgo(c.timestamp, today, windowDays);
     if (d >= 0) days.add(d);
   }
   let best = 0;
   let cur = 0;
-  for (let i = 0; i < ACTIVITY_DAYS; i++) {
+  for (let i = 0; i < windowDays; i++) {
     if (days.has(i)) {
       cur += 1;
       if (cur > best) best = cur;
@@ -118,16 +130,17 @@ export function computeActivityStats(
   commits: readonly RecentCommit[],
   today: Date,
   allRepoIds: readonly string[],
+  windowDays: number = ACTIVITY_DAYS,
 ): ActivityStats {
-  const commitsByDay = Array.from({ length: ACTIVITY_DAYS }, () => 0);
-  const authorsByDay: Array<Set<string>> = Array.from({ length: ACTIVITY_DAYS }, () => new Set());
-  const reposByDay: Array<Set<string>> = Array.from({ length: ACTIVITY_DAYS }, () => new Set());
+  const commitsByDay = Array.from({ length: windowDays }, () => 0);
+  const authorsByDay: Array<Set<string>> = Array.from({ length: windowDays }, () => new Set());
+  const reposByDay: Array<Set<string>> = Array.from({ length: windowDays }, () => new Set());
   const byWeekday = new Map<number, number>();
   const byHour = Array.from({ length: 24 }, () => 0);
   const seenRepos = new Set<string>();
 
   for (const c of commits) {
-    const d = daysAgo(c.timestamp, today);
+    const d = daysAgo(c.timestamp, today, windowDays);
     if (d < 0) continue;
     commitsByDay[d] = (commitsByDay[d] ?? 0) + 1;
     authorsByDay[d]?.add(c.author);
@@ -146,7 +159,7 @@ export function computeActivityStats(
   const authorsLast = new Set<string>();
   const reposThis = new Set<string>();
   const reposLast = new Set<string>();
-  for (let i = 0; i < ACTIVITY_DAYS; i++) {
+  for (let i = 0; i < windowDays; i++) {
     const bucketA = i < WEEK ? authorsThis : authorsLast;
     const bucketR = i < WEEK ? reposThis : reposLast;
     for (const a of authorsByDay[i] ?? []) bucketA.add(a);
@@ -188,8 +201,8 @@ export function computeActivityStats(
       previous: reposLast.size,
       delta: reposThis.size - reposLast.size,
     },
-    currentStreak: currentStreak(commits, today),
-    longestStreak: longestStreak(commits, today),
+    currentStreak: currentStreak(commits, today, windowDays),
+    longestStreak: longestStreak(commits, today, windowDays),
     busiestDay,
     peakHour,
     quietestRepos,
@@ -206,7 +219,7 @@ export interface AuthorBucket {
   sparkline: number[];
 }
 
-/** Top-N authors by commit count, with a per-author 14-day sparkline.
+/** Top-N authors by commit count, with a per-author windowDays-length sparkline.
  *
  * Plan 1 §A.4: aggregation key is `signatureKey(name, email)` so Unicode
  * variants of the same person collapse into one bucket
@@ -221,6 +234,7 @@ export function computeLeaderboard(
   today: Date,
   limit = 5,
   authorAliases: Readonly<Record<string, string>> = {},
+  windowDays: number = ACTIVITY_DAYS,
 ): AuthorBucket[] {
   // Union-Find over name-key / email-local-key fragments so identities with the
   // same name but different emails (or same email but different name spellings)
@@ -272,7 +286,7 @@ export function computeLeaderboard(
   const fragments: Frag[] = new Array(commits.length);
   for (let i = 0; i < commits.length; i += 1) {
     const c = commits[i]!;
-    const d = daysAgo(c.timestamp, today);
+    const d = daysAgo(c.timestamp, today, windowDays);
     if (d < 0) {
       fragments[i] = { nameTok: "", emailTok: "", rawKey: "" };
       continue;
@@ -294,7 +308,7 @@ export function computeLeaderboard(
   >();
   for (let i = 0; i < commits.length; i += 1) {
     const c = commits[i]!;
-    const d = daysAgo(c.timestamp, today);
+    const d = daysAgo(c.timestamp, today, windowDays);
     if (d < 0) continue;
     const frag = fragments[i]!;
     const key = frag.nameTok ? find(frag.nameTok) : frag.emailTok ? find(frag.emailTok) : "anon";
@@ -303,7 +317,7 @@ export function computeLeaderboard(
       bucket = {
         email: null,
         count: 0,
-        spark: Array.from({ length: ACTIVITY_DAYS }, () => 0),
+        spark: Array.from({ length: windowDays }, () => 0),
         nameCounts: new Map(),
       };
       byKey.set(key, bucket);
@@ -345,15 +359,19 @@ export interface StackedDay {
   segments: Array<{ repoId: string; repoName: string; count: number; color: string }>;
 }
 
-export function computeStackedChart(commits: readonly RecentCommit[], today: Date): StackedDay[] {
-  const days: StackedDay[] = Array.from({ length: ACTIVITY_DAYS }, (_, i) => ({
+export function computeStackedChart(
+  commits: readonly RecentCommit[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): StackedDay[] {
+  const days: StackedDay[] = Array.from({ length: windowDays }, (_, i) => ({
     day: i,
     total: 0,
     segments: [],
   }));
   const perDayRepo = new Map<number, Map<string, { name: string; count: number }>>();
   for (const c of commits) {
-    const d = daysAgo(c.timestamp, today);
+    const d = daysAgo(c.timestamp, today, windowDays);
     if (d < 0) continue;
     let m = perDayRepo.get(d);
     if (!m) {

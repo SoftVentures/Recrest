@@ -253,12 +253,14 @@ export const TEST_IDS = {
 
   activity: {
     page: "activity-page",
+    truncatedBanner: "activity-truncated-banner",
     repoFilter: "activity-repo-filter",
     authorFilter: "activity-author-filter",
     timeline: {
       empty: "activity-timeline-empty",
       day: "activity-timeline-day",
       card: "activity-timeline-card",
+      showMore: "activity-timeline-show-more",
     },
     heatmap: {
       root: "activity-heatmap",
@@ -269,6 +271,11 @@ export const TEST_IDS = {
       chart: "activity-stacked-chart",
       col: "activity-stacked-col",
       card: "activity-stacked-card",
+    },
+    chartTooltip: "activity-chart-tooltip",
+    rangePicker: {
+      root: "activity-range-picker",
+      preset: (p: string) => `activity-range-preset-${p}` as const,
     },
     cards: {
       reviewQueue: "activity-review-queue-card",
@@ -284,6 +291,14 @@ export const TEST_IDS = {
       language: "activity-language-card",
       prVelocity: "activity-velocity-card",
       quietestRepos: "activity-quietest-card",
+      insights: {
+        streak: "activity-insight-streak",
+        trend: "activity-insight-trend",
+        topAuthors: "activity-insight-top-authors",
+        activeWeekday: "activity-insight-active-weekday",
+        avgPerWeek: "activity-insight-avg-per-week",
+        longestGap: "activity-insight-longest-gap",
+      },
     },
   },
 

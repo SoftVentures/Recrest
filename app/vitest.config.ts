@@ -1,6 +1,5 @@
-import { fileURLToPath } from "node:url";
-
 import react from "@vitejs/plugin-react-swc";
+import { fileURLToPath } from "node:url";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 
@@ -29,6 +28,7 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify("1970-01-01T00:00:00.000Z"),
   },
   test: {
+    env: { TZ: "Europe/Berlin" },
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],

@@ -1,7 +1,11 @@
 // Dev:web stub handlers for repo CRUD + recent commits / PR events / CI runs
 // + IDE/terminal/explorer launchers + SSH-key + logo affordances.
+import { ACTIVITY_COMMITS_CHUNK_EVENT, TauriCommand } from "@recrest/shared";
+
 import {
   resolveCheckRuns,
+  resolveCommitsInRange,
+  resolveOldestCommitDate,
   resolvePrEvents,
   resolveRecentCommits,
 } from "@/lib/tauri/devStub.derived";
@@ -10,7 +14,18 @@ import type { DevStubState } from "@/lib/tauri/devStub.state";
 
 type Args = Record<string, unknown>;
 
-export function reposStub(cmd: string, a: Args, state: DevStubState): unknown | typeof UNHANDLED {
+/** Optional context the dispatcher passes so this handler can deliver the
+ *  `activity://commits-chunk` stream the real backend emits. */
+export interface ReposStubContext {
+  emit: (event: string, payload: unknown) => void;
+}
+
+export function reposStub(
+  cmd: string,
+  a: Args,
+  state: DevStubState,
+  ctx?: ReposStubContext,
+): unknown | typeof UNHANDLED {
   const seed = state.seed;
 
   switch (cmd) {
@@ -66,6 +81,43 @@ export function reposStub(cmd: string, a: Args, state: DevStubState): unknown | 
 
     case "list_recent_commits":
       return resolveRecentCommits(seed, a as { repoId?: string });
+
+    case TauriCommand.LIST_COMMITS: {
+      // Range query: filter the same seed feed `list_recent_commits` uses to
+      // `since <= ts <= until`, then stream one chunk per repo over the
+      // `activity://commits-chunk` event (the only path the frontend consumes
+      // commit data through). The chunks MUST fire before the summary
+      // resolves: the real backend emits while the command is still running,
+      // and the activity reducer drops chunks whose requestId no longer
+      // matches the in-flight request (fulfilled clears it). A deferred
+      // setTimeout emit would arrive after fulfilled and be dropped as stale.
+      const requestId = String(a.requestId ?? "");
+      const grouped = resolveCommitsInRange(
+        seed,
+        a as { since?: string; until?: string; maxCommitsPerRepo?: number },
+      );
+      const totals: Record<string, number> = {};
+      const truncated: Record<string, boolean> = {};
+      for (const { repoId, commits } of grouped) {
+        totals[repoId] = commits.length;
+        truncated[repoId] = false;
+      }
+      if (ctx) {
+        for (const { repoId, commits } of grouped) {
+          ctx.emit(ACTIVITY_COMMITS_CHUNK_EVENT, {
+            requestId,
+            repoId,
+            commits,
+            done: true,
+            truncated: false,
+          });
+        }
+      }
+      return { requestId, totals, truncated };
+    }
+
+    case TauriCommand.GET_OLDEST_COMMIT_DATE:
+      return resolveOldestCommitDate(seed);
 
     case "list_pr_events":
       return resolvePrEvents(seed, a as { repoId?: string; days?: number });
