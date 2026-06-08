@@ -98,6 +98,42 @@ describe("activityReducer", () => {
     expect(state.commitsByRepo["repo-1"]?.commits.map((c) => c.sha)).toEqual(["a", "b", "c"]);
   });
 
+  it("dedupes across a range-widening request via the persistent seen index", () => {
+    let state: ActivityState = activityReducer(initialActivityState, pending("req-1"));
+    state = activityReducer(
+      state,
+      commitsChunkReceived(
+        chunk({
+          requestId: "req-1",
+          commits: [commit({ sha: "a" }), commit({ sha: "b" })],
+          done: true,
+        }),
+      ),
+    );
+    state = activityReducer(
+      state,
+      fetchCommitsRange.fulfilled(
+        { requestId: "req-1", totals: { "repo-1": 2 }, truncated: { "repo-1": false } },
+        "internal-id",
+        { range: RANGE, requestId: "req-1" },
+      ),
+    );
+    // Widen the range: the backend re-walks the overlap and re-streams "b".
+    const wider: ActivityRange = { since: "2025-12-01T00:00:00.000Z", until: RANGE.until };
+    state = activityReducer(state, pending("req-2", wider));
+    state = activityReducer(
+      state,
+      commitsChunkReceived(
+        chunk({
+          requestId: "req-2",
+          commits: [commit({ sha: "b" }), commit({ sha: "c" })],
+          done: true,
+        }),
+      ),
+    );
+    expect(state.commitsByRepo["repo-1"]?.commits.map((c) => c.sha)).toEqual(["a", "b", "c"]);
+  });
+
   it("sets repo.truncated when a chunk is truncated", () => {
     const afterPending = activityReducer(initialActivityState, pending("req-1"));
     const next = activityReducer(

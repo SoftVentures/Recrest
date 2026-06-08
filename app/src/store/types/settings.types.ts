@@ -1,4 +1,13 @@
-import type { AppSettings, AutoUpdateMode, FontId, FontSizeId } from "@recrest/shared";
+import type {
+  AppSettings,
+  AutoUpdateMode,
+  CustomFont,
+  FontSelection,
+  FontSizeId,
+  LigatureMode,
+  ShellDetection,
+  TerminalDetection,
+} from "@recrest/shared";
 
 import type { PrimaryColorScheme, ThemeId } from "@/lib/constants/theme.constants";
 
@@ -35,7 +44,11 @@ export interface SettingsState {
    *  so the existing settings persist layer (with `dyslexiaFont` baked in)
    *  still parses. New code should read/write `font` instead. */
   dyslexiaFont: boolean;
-  font: FontId;
+  font: FontSelection;
+  /** Monospace font for code surfaces (snippets, diffs, …); separate from `font`. */
+  codeFont: FontSelection;
+  /** Ligature rendering mode for code surfaces; separate from `codeFont`. */
+  codeLigatures: LigatureMode;
   fontSize: FontSizeId;
   /** Accessibility — reinforce borders + dim text for better legibility. */
   highContrast: boolean;
@@ -50,6 +63,14 @@ export interface SettingsState {
   notifications: NotificationPrefs;
   updates: UpdatePrefs;
   backend: AppSettings | null;
+  /** OS-probe results; `null` until `loadDetectedTerminals` resolved.
+   *  Outside Tauri this stays `null` and the UI falls back to stub maps. */
+  detectedTerminals: TerminalDetection[] | null;
+  detectedShells: ShellDetection[] | null;
+  /** Detected IDE ids (`detect_ides` probe); `null` until resolved. */
+  detectedIdes: string[] | null;
+  /** User-uploaded custom fonts (`list_custom_fonts`); empty until loaded. */
+  customFonts: CustomFont[];
   loading: boolean;
   error: string | null;
 }

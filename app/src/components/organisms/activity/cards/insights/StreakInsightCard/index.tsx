@@ -8,6 +8,7 @@ import { styled } from "@mui/material/styles";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { Streaks } from "@/lib/insights";
+import { formatDateRange } from "@/lib/utils/dateFormat.utils";
 
 interface Props {
   streaks: Streaks;
@@ -50,8 +51,7 @@ function StreakInsightCard({ streaks, loading }: Props) {
         {streaks.longest > 0 && range
           ? t("activity.insights.streak_longest", {
               count: streaks.longest,
-              start: range.start,
-              end: range.end,
+              range: formatDateRange(range.start, range.end),
             })
           : t("activity.insights.empty")}
       </Caption>

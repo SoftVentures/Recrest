@@ -28,6 +28,7 @@ describe("FindAcrossReposDialog", () => {
       repoId: "r1",
       repoName: "demo",
       path: "src/foo.ts",
+      absolutePath: "/repos/demo/src/foo.ts",
       line: 7,
       column: 1,
       snippet: "hello world",
@@ -40,9 +41,9 @@ describe("FindAcrossReposDialog", () => {
     await act(async () => {
       fireEvent.change(input, { target: { value: "hello" } });
     });
-    await waitFor(() => expect(search).toHaveBeenCalledWith("hello"), { timeout: 1000 });
+    await waitFor(() => expect(search).toHaveBeenCalledWith("hello", undefined), { timeout: 2000 });
     await waitFor(() => expect(getByTestId(TEST_IDS.findAcrossDialog.row("0"))).toBeTruthy(), {
-      timeout: 1000,
+      timeout: 2000,
     });
   });
 });

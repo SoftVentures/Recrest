@@ -5,6 +5,10 @@ export interface RepoCommits {
   commits: RecentCommit[];
   status: "idle" | "loading" | "error";
   truncated: boolean;
+  /** SHA membership index kept in lockstep with `commits` so chunk dedup is
+   *  O(chunk) instead of rebuilding a Set over the whole list every chunk
+   *  (the streaming hot path). Reset whenever `commits` is cleared. */
+  seen: Record<string, true>;
 }
 
 export interface ActivityState {

@@ -12,6 +12,7 @@ import { Bug, FileText, Github as GithubIcon, Scale } from "lucide-react";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { formatBuildTime, gitDescription } from "@/lib/utils/about.utils";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import LinkItem from "@/pages/app/Settings/components/AboutTab/parts/LinkItem";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
@@ -39,9 +40,7 @@ const FactVal = styled(Box, { shouldForwardProp: (p) => p !== "mono" })<{ mono?:
   ({ theme, mono }) => ({
     fontSize: 12,
     color: theme.palette.text.information,
-    fontFamily: mono
-      ? 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace'
-      : "inherit",
+    fontFamily: mono ? MONO_STACK : "inherit",
     display: "inline-flex",
     alignItems: "center",
     gap: 6,

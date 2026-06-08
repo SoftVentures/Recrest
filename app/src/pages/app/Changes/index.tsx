@@ -30,6 +30,8 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 const PageRoot = styled(Box)({
   display: "flex",
@@ -113,7 +115,7 @@ const RepoName = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const RepoPath = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.information,
   whiteSpace: "nowrap",
@@ -145,12 +147,12 @@ const DiffMeta = styled(Box)({
 }) as typeof Box;
 
 const Added = styled(Box)(({ theme }) => ({
-  color: theme.palette.success.dark,
+  color: toneText(theme, StatusTone.SUCCESS),
   fontWeight: 600,
 })) as typeof Box;
 
 const Removed = styled(Box)(({ theme }) => ({
-  color: theme.palette.error.dark,
+  color: toneText(theme, StatusTone.ERROR),
   fontWeight: 600,
 })) as typeof Box;
 

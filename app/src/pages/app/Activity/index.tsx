@@ -8,8 +8,12 @@ import { Box, MenuItem, Select, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import DateRangePicker from "@/components/atoms/DateRangePicker";
+import LazyMount from "@/components/atoms/LazyMount";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
+import GeneralCircularLoader, {
+  CircularLoaderSize,
+} from "@/components/atoms/loaders/GeneralCircularLoader";
 import Timeline from "@/components/organisms/activity/Timeline";
 import AuthorClockCard from "@/components/organisms/activity/cards/AuthorClockCard";
 import AuthorsHero from "@/components/organisms/activity/cards/AuthorsHero";
@@ -139,11 +143,14 @@ const PageSub = styled(Typography)(({ theme }) => ({
 
 const FilterRow = styled(Box)({
   display: "flex",
+  alignItems: "center",
   gap: 6,
 }) as typeof Box;
 
 const FilterSelect = styled(Select)(({ theme }) => ({
-  height: 28,
+  // Match the DateRangePicker's GeneralButtonGroup (density "sm" = 32px) so the
+  // header controls line up on one baseline.
+  height: 32,
   width: 200,
   fontSize: 12,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -303,8 +310,16 @@ export default function ActivityPage() {
   }, [range, setSearchParams]);
 
   const { commits, loading: commitsLoading, truncated } = useActivityCommits();
+  // All-repos commit stream, deferred so the chunk-driven consumers below (CI
+  // check-run fan-out + the author dropdown) don't refire on every 1,000-commit
+  // chunk during a large fetch. Kept separate from the per-filter
+  // `deferredCommits` so CI detection still spans every repo, not just the
+  // currently filtered one.
+  const deferredAllCommits = useDeferredValue(commits);
   const { events: prEvents, loading: prEventsLoading } = usePrEvents({ days: windowDays });
-  const { summaries: checkRuns, loading: checksLoading } = useCheckRuns({ commits });
+  const { summaries: checkRuns, loading: checksLoading } = useCheckRuns({
+    commits: deferredAllCommits,
+  });
   const prsByRepo = useAppSelector((s) => s.prs.items);
   const prsLoading = useAppSelector((s) => s.prs.loading);
 
@@ -365,15 +380,28 @@ export default function ActivityPage() {
   const deferredCheckRuns = useDeferredValue(filteredCheckRuns);
   const deferredWindowDays = useDeferredValue(windowDays);
 
+  // Keep the header spinner up until the *charts* settle, not just until the
+  // fetch resolves: a cached range clears `activeRequestId` in a sub-frame, so
+  // `commitsLoading` alone would never visibly fire on a range switch. A live
+  // deferred transition (the deferred window still trailing the real one) means
+  // the ~20 chart aggregations are mid-recompute — that's what the user waits on.
+  const rangeBusy = commitsLoading || deferredWindowDays !== windowDays;
+
   const authorOptions = useMemo(() => {
     const buckets = computeLeaderboard(
-      selectedRepo === "all" ? commits : commits.filter((c) => c.repoId === selectedRepo),
+      selectedRepo === "all"
+        ? deferredAllCommits
+        : deferredAllCommits.filter((c) => c.repoId === selectedRepo),
       today,
       Number.POSITIVE_INFINITY,
       {},
+      // Bucket across the whole selected range, not the default 14-day window —
+      // otherwise authors (incl. bots like Renovate/Dependabot) who only
+      // committed earlier in a wider range are silently missing from the filter.
+      deferredWindowDays,
     );
     return buckets.map((b) => ({ key: b.author, name: b.author, email: b.email }));
-  }, [commits, selectedRepo, today]);
+  }, [deferredAllCommits, selectedRepo, today, deferredWindowDays]);
 
   const stats = useMemo(
     () => computeActivityStats(deferredCommits, today, allRepoIds, deferredWindowDays),
@@ -465,6 +493,12 @@ export default function ActivityPage() {
             </PageSub>
           </HeadTitleCol>
           <FilterRow>
+            {rangeBusy && (
+              <GeneralCircularLoader
+                size={CircularLoaderSize.SM}
+                aria-label={t("activity.loading", { defaultValue: "Loading activity…" })}
+              />
+            )}
             <DateRangePicker
               value={range}
               onChange={(r) => dispatch(setSelectedRange(r))}
@@ -577,52 +611,72 @@ export default function ActivityPage() {
           </Span>
 
           <Span cols={6}>
-            <PrVelocityCard
-              rows={velocity}
-              windowDays={deferredWindowDays}
-              loading={prEventsBusy}
-            />
+            <LazyMount minHeight={200}>
+              <PrVelocityCard
+                rows={velocity}
+                windowDays={deferredWindowDays}
+                loading={prEventsBusy}
+              />
+            </LazyMount>
           </Span>
           <Span cols={3}>
-            <TimeToMergeCard buckets={ttm} windowDays={deferredWindowDays} loading={prEventsBusy} />
+            <LazyMount minHeight={200}>
+              <TimeToMergeCard
+                buckets={ttm}
+                windowDays={deferredWindowDays}
+                loading={prEventsBusy}
+              />
+            </LazyMount>
           </Span>
           <Span cols={3}>
-            <ReviewQueueCard entries={reviewQueue} loading={prsBusy} />
+            <LazyMount minHeight={200}>
+              <ReviewQueueCard entries={reviewQueue} loading={prsBusy} />
+            </LazyMount>
           </Span>
 
           <Span cols={8}>
-            <CiPassRateCard
-              rows={passRate}
-              summaries={deferredCheckRuns}
-              windowDays={deferredWindowDays}
-              loading={checksBusy}
-            />
+            <LazyMount minHeight={260}>
+              <CiPassRateCard
+                rows={passRate}
+                summaries={deferredCheckRuns}
+                windowDays={deferredWindowDays}
+                loading={checksBusy}
+              />
+            </LazyMount>
           </Span>
           <Span cols={4}>
-            <FlakyReposCard rows={flaky} windowDays={deferredWindowDays} loading={checksBusy} />
+            <LazyMount minHeight={260}>
+              <FlakyReposCard rows={flaky} windowDays={deferredWindowDays} loading={checksBusy} />
+            </LazyMount>
           </Span>
 
           <Span cols={7}>
-            <LeaderboardCard
-              buckets={leaderboard}
-              windowDays={deferredWindowDays}
-              loading={commitsBusy}
-            />
+            <LazyMount minHeight={260}>
+              <LeaderboardCard
+                buckets={leaderboard}
+                windowDays={deferredWindowDays}
+                loading={commitsBusy}
+              />
+            </LazyMount>
           </Span>
           <SpanStack cols={5}>
-            <StreakCard streak={stats.currentStreak} longest={stats.longestStreak} />
-            <BusiestPeakCard stats={stats} />
-            <QuietestReposCard quietestRepoIds={stats.quietestRepos} reposById={reposById} />
+            <LazyMount minHeight={260}>
+              <StreakCard streak={stats.currentStreak} longest={stats.longestStreak} />
+              <BusiestPeakCard stats={stats} />
+              <QuietestReposCard quietestRepoIds={stats.quietestRepos} reposById={reposById} />
+            </LazyMount>
           </SpanStack>
         </Grid>
 
-        <Timeline
-          commits={deferredCommits}
-          prEvents={deferredPrEvents}
-          checkRuns={deferredCheckRuns}
-          today={today}
-          reposById={reposById}
-        />
+        <LazyMount minHeight={400}>
+          <Timeline
+            commits={deferredCommits}
+            prEvents={deferredPrEvents}
+            checkRuns={deferredCheckRuns}
+            today={today}
+            reposById={reposById}
+          />
+        </LazyMount>
       </Page>
     </Root>
   );

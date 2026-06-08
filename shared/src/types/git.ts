@@ -156,7 +156,10 @@ export interface DiscardResult {
 export interface SearchHit {
   repoId: string;
   repoName: string;
+  /** Path relative to the repo root, for display (e.g. `src/foo.ts`). */
   path: string;
+  /** Absolute path on disk, for opening the file in the IDE. */
+  absolutePath: string;
   line: number;
   column: number;
   snippet: string;

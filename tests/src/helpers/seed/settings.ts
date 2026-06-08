@@ -36,6 +36,8 @@ export const SEED_SETTINGS: AppSettings = {
     followsSystem: true,
     primaryColor: "default",
     font: "inter",
+    codeFont: "jetbrains-mono",
+    codeLigatures: "standard",
     fontSize: "md",
   },
   accessibility: {

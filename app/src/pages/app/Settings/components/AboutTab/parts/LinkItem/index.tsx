@@ -5,6 +5,8 @@ import { styled } from "@mui/material/styles";
 
 import { ExternalLink } from "lucide-react";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -32,7 +34,7 @@ const Url = styled(Box)(({ theme }) => ({
   marginTop: 2,
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",

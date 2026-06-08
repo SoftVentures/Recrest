@@ -8,6 +8,18 @@ const selectCommitsByRepo = (s: RootState) => s.activity.commitsByRepo;
 export const selectSelectedRange = (s: RootState) => s.activity.selectedRange;
 export const selectOldestCommitDate = (s: RootState) => s.activity.oldestCommitDate;
 
+// Commits are immutable once stored, so their parsed epoch ms never changes.
+// Caching by reference keeps `Date.parse` out of the per-chunk recompute hot
+// path (this selector re-runs on every streamed chunk).
+const parsedTsCache = new WeakMap<RecentCommit, number>();
+function commitMs(c: RecentCommit): number {
+  const cached = parsedTsCache.get(c);
+  if (cached !== undefined) return cached;
+  const t = Date.parse(c.timestamp);
+  parsedTsCache.set(c, t);
+  return t;
+}
+
 /** All loaded commits inside the selected range, newest first. */
 export const selectCommitsInRange = createSelector(
   [selectCommitsByRepo, selectSelectedRange],
@@ -20,7 +32,7 @@ export const selectCommitsInRange = createSelector(
     const decorated: { commit: RecentCommit; t: number }[] = [];
     for (const repo of Object.values(byRepo)) {
       for (const c of repo.commits) {
-        const t = Date.parse(c.timestamp);
+        const t = commitMs(c);
         if (t >= sinceMs && t <= untilMs) decorated.push({ commit: c, t });
       }
     }

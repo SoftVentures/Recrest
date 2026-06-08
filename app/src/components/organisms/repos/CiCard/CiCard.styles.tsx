@@ -1,7 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+
+const MONO = MONO_STACK;
 
 export const Head = styled(Box)({
   display: "flex",
@@ -68,6 +70,7 @@ export const RunMeta = styled(Typography)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
 })) as typeof Typography;
 
 export const Empty = styled(Typography)(({ theme }) => ({

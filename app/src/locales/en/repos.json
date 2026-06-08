@@ -76,6 +76,10 @@
     "placeholder": "Search file contents…",
     "no_results": "No matches",
     "hint": "Searches all tracked repositories. Type at least two characters.",
+    "all_repos": "All repositories",
+    "searching": "Searching…",
+    "count_one": "{{count}} result",
+    "count_other": "{{count}} results",
     "result_aria": "{{repo}} — {{path}}:{{line}}"
   },
   "stats": {

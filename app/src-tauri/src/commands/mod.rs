@@ -1,6 +1,7 @@
 pub mod activity;
 pub mod clone;
 pub mod error;
+pub mod fonts;
 pub mod git_config;
 pub mod git_index;
 pub mod git_info;

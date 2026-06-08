@@ -3,13 +3,14 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { styled, useTheme } from "@mui/material/styles";
 
 import { ResponsiveBar } from "@nivo/bar";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
-import { CHART_PALETTE, fade } from "@/lib/charts/palette";
+import { fade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
@@ -20,7 +21,6 @@ export interface Props {
 }
 
 const AXIS_HOURS = ["0", "6", "12", "18"];
-const INDIGO = CHART_PALETTE[0];
 
 const Wrap = styled(Box)({
   display: "flex",
@@ -60,9 +60,22 @@ const Foot = styled(Box)(({ theme }) => ({
 /** 24-column histogram — one bar per hour, height scaled by commit count. */
 function AuthorClockCard({ hours, loading }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const { show, move, hide, portal } = useChartTooltip();
+  // Single-metric chart → follow the user's primary color, not a fixed accent.
+  const accent = theme.palette.primary.main;
 
   const data = hours.map((count, h) => ({ hour: String(h), count }));
+
+  const renderTip = (h: number, count: number) => (
+    <Tooltip>
+      {t("activity.cards.clock_tooltip", {
+        range: `${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00`,
+        commits: t("activity.cards.commits_count", { count }),
+      })}
+    </Tooltip>
+  );
 
   const peak = Math.max(1, ...hours);
   const total = hours.reduce((a, b) => a + b, 0);
@@ -81,14 +94,16 @@ function AuthorClockCard({ hours, loading }: Props) {
       testId={TEST_IDS.activity.cards.authorClock}
     >
       <Wrap>
-        <Chart>
+        {/* @nivo/bar fires only onMouseEnter — feed the wrapper's mousemove to
+            keep the portalled tooltip glued to the cursor inside the bar. */}
+        <Chart onMouseMove={(e) => move(e.clientX, e.clientY)}>
           <ResponsiveBar
             data={data}
             keys={["count"]}
             indexBy="hour"
             theme={nivoTheme}
-            colors={(bar) => fade(INDIGO, 0.25 + 0.75 * (Number(bar.data.count) / peak))}
-            margin={{ top: 4, right: 4, bottom: 18, left: 4 }}
+            colors={(bar) => fade(accent, 0.25 + 0.75 * (Number(bar.data.count) / peak))}
+            margin={{ top: 4, right: 4, bottom: 26, left: 4 }}
             padding={0.25}
             borderRadius={2}
             enableLabel={false}
@@ -97,21 +112,14 @@ function AuthorClockCard({ hours, loading }: Props) {
               format: (v) => (AXIS_HOURS.includes(String(v)) ? String(v) : ""),
             }}
             enableGridY={false}
-            tooltip={({ data }) => {
-              const h = Number(data.hour);
-              return (
-                <Tooltip>
-                  {t("activity.cards.clock_tooltip", {
-                    range: `${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00`,
-                    commits: t("activity.cards.commits_count", {
-                      count: Number(data.count),
-                    }),
-                  })}
-                </Tooltip>
-              );
-            }}
+            tooltip={() => <></>}
+            onMouseEnter={(d, e) =>
+              show(e.clientX, e.clientY, renderTip(Number(d.data.hour), Number(d.data.count)))
+            }
+            onMouseLeave={hide}
           />
         </Chart>
+        {portal}
         <Foot>
           <Box component="strong">{peakLabel}</Box>
           <Box component="span">{t("activity.cards.commits_count", { count: total })}</Box>

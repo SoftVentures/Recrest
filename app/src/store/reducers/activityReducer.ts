@@ -30,6 +30,7 @@ const emptyRepo = (): RepoCommits => ({
   commits: [],
   status: "loading",
   truncated: false,
+  seen: {},
 });
 
 export const activityReducer = createReducer(initialActivityState, (builder) => {
@@ -57,6 +58,7 @@ export const activityReducer = createReducer(initialActivityState, (builder) => 
         if (repo.rangeLoaded && !rangesOverlap(repo.rangeLoaded, requested)) {
           repo.rangeLoaded = null;
           repo.commits = [];
+          repo.seen = {};
           repo.status = "loading";
           repo.truncated = false;
         }
@@ -86,9 +88,15 @@ export const activityReducer = createReducer(initialActivityState, (builder) => 
       const { requestId, repoId, commits, truncated, done } = action.payload;
       if (requestId !== state.activeRequestId) return; // stale stream
       const repo = state.commitsByRepo[repoId] ?? emptyRepo();
-      const seen = new Set(repo.commits.map((c) => c.sha));
+      // O(chunk) dedup against the persistent index — within one request the
+      // revwalk never repeats a sha, so this only fires for the overlap of a
+      // range-widening refetch. Rebuilding a Set per chunk was O(n²) over a
+      // full "all"-preset stream.
       for (const c of commits) {
-        if (!seen.has(c.sha)) repo.commits.push(c);
+        if (!repo.seen[c.sha]) {
+          repo.seen[c.sha] = true;
+          repo.commits.push(c);
+        }
       }
       if (truncated) repo.truncated = true;
       // Final chunk for this repo: mark it idle now, before the thunk fulfills.

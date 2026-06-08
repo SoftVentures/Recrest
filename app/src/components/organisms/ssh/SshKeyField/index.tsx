@@ -12,6 +12,7 @@ import SshKeyGuideModal from "@/components/organisms/ssh/SshKeyGuideModal";
 import { useSshKeys } from "@/hooks/useSshKeys";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { pickFile } from "@/lib/utils/pickFolder.utils";
 
 const Wrap = styled(Box)({
@@ -63,7 +64,7 @@ const OptionBody = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 const OptionName = styled(Typography)({
   fontSize: 12.5,
   fontWeight: 600,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
 }) as typeof Typography;
 
 const OptionSub = styled(Typography)(({ theme }) => ({

@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const Root = styled(Box)({
   display: "flex",
   flexDirection: "column",
@@ -26,7 +28,7 @@ export const CustomRow = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const CustomCellKey = styled(Typography)(({ theme }) => ({
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   fontSize: 13,
   fontWeight: 500,
   color: theme.palette.text.primary,
@@ -34,7 +36,7 @@ export const CustomCellKey = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const CustomCellValue = styled(Typography)(({ theme }) => ({
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   fontSize: 12,
   color: theme.palette.text.information,
   wordBreak: "break-all",

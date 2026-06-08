@@ -11,6 +11,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 const KEYGEN_CMD = 'ssh-keygen -t ed25519 -C "you@example.com"';
 
@@ -59,7 +60,7 @@ const Cmd = styled(Box)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
   overflowX: "auto",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",

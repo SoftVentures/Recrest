@@ -26,6 +26,8 @@ import {
   type ProviderId,
 } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { setProviderToken } from "@/store/actions/providers.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
@@ -117,7 +119,7 @@ const TokenInput = styled("input")(({ theme }) => ({
   borderRadius: 8,
   background: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
   outline: "none",
   "&:focus": { borderColor: theme.palette.border.hover },
@@ -126,7 +128,7 @@ const TokenInput = styled("input")(({ theme }) => ({
 
 const ErrorText = styled(Typography)(({ theme }) => ({
   fontSize: 11.5,
-  color: theme.palette.error.main,
+  color: toneText(theme, StatusTone.ERROR),
 })) as typeof Typography;
 
 const ConnectedBadge = styled(Box)(({ theme }) => ({
@@ -135,7 +137,7 @@ const ConnectedBadge = styled(Box)(({ theme }) => ({
   gap: 6,
   fontSize: 12,
   fontWeight: 600,
-  color: theme.palette.success.dark,
+  color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Box;
 
 function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {

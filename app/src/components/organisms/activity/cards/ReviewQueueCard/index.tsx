@@ -8,6 +8,7 @@ import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { ReviewQueueEntry } from "@/lib/activityAggregates";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { openExternal } from "@/lib/tauri";
+import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
 
 interface Props {
   entries: ReviewQueueEntry[];
@@ -75,10 +76,12 @@ const Age = styled("span", { shouldForwardProp: (p) => p !== "old" })<{ old?: bo
     fontVariantNumeric: "tabular-nums",
     padding: "1px 6px",
     borderRadius: 100,
-    backgroundColor: old
-      ? `color-mix(in srgb, ${theme.palette.warning.main} 18%, transparent)`
-      : theme.palette.surface.interface.backElevation,
-    color: old ? theme.palette.warning.dark : theme.palette.text.secondary,
+    ...(old
+      ? toneChip(theme, StatusTone.WARNING)
+      : {
+          backgroundColor: theme.palette.surface.interface.backElevation,
+          color: theme.palette.text.secondary,
+        }),
     flexShrink: 0,
   }),
 );

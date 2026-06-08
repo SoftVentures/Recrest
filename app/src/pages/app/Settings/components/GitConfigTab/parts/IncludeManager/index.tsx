@@ -22,6 +22,7 @@ import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { revealPathInSystem } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import {
   addGitConfigInclude,
@@ -83,7 +84,7 @@ const ConditionChip = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
   maxWidth: "100%",
   overflow: "hidden",
@@ -99,7 +100,7 @@ const PathText = styled(Typography, {
 })<PathProps>(({ theme, $clickable }) => ({
   fontSize: 12,
   color: theme.palette.text.primary,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   cursor: $clickable ? "pointer" : "default",
   textDecoration: $clickable ? "underline dotted transparent" : "none",
   transition: "color 120ms ease",

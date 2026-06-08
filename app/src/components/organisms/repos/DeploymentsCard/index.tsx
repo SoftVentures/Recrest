@@ -15,6 +15,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 interface Props {
   repoId: string;
@@ -117,7 +118,7 @@ const StatusBadge = styled(Typography)(({ theme }) => ({
   letterSpacing: "0.04em",
   padding: "2px 7px",
   borderRadius: 100,
-  color: theme.palette.success.dark,
+  color: toneText(theme, StatusTone.SUCCESS),
   backgroundColor: theme.palette.surface.interface.backElevation,
 })) as typeof Typography;
 

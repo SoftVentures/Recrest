@@ -78,6 +78,24 @@ describe("DateRangePicker", () => {
     );
   });
 
+  it("keeps the 30d preset marked when oldestDate falls inside the window", () => {
+    const onChange = vi.fn();
+    // Young repo: the oldest commit is 10 days ago, well inside the 30d window.
+    // The 30d preset must stay highlighted instead of jumping to "all".
+    const oldest = new Date(Date.now() - 10 * DAY_MS).toISOString();
+    const { getByTestId } = renderWithProviders(
+      <DateRangePicker value={rangeOfDays(30)} onChange={onChange} oldestDate={oldest} />,
+    );
+    expect(getByTestId(TEST_IDS.activity.rangePicker.preset("30d"))).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(getByTestId(TEST_IDS.activity.rangePicker.preset("all"))).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
   it("marks no preset for a custom 45-day range", () => {
     const onChange = vi.fn();
     const { getByTestId } = renderWithProviders(

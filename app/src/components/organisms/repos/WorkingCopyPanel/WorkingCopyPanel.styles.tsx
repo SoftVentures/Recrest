@@ -1,11 +1,14 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
 export const Root = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
 }) as typeof Box;
 
@@ -98,7 +101,7 @@ export const AlsoUnstagedTag = styled(Box)(({ theme }) => ({
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
-  color: theme.palette.warning.main,
+  color: toneText(theme, StatusTone.WARNING),
   backgroundColor: `color-mix(in srgb, ${theme.palette.warning.main} 14%, transparent)`,
   flexShrink: 0,
 })) as typeof Box;
@@ -110,15 +113,15 @@ export const KindBadge = styled("span", {
   const infoColor = theme.palette.text.information ?? theme.palette.text.secondary;
   const palette: Record<string, { color: string; bg: string }> = {
     added: {
-      color: theme.palette.success.dark,
+      color: toneText(theme, StatusTone.SUCCESS),
       bg: `color-mix(in srgb, ${theme.palette.success.main} 14%, transparent)`,
     },
     modified: {
-      color: theme.palette.primary.dark,
+      color: toneText(theme, StatusTone.PRIMARY),
       bg: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
     },
     deleted: {
-      color: theme.palette.error.dark,
+      color: toneText(theme, StatusTone.ERROR),
       bg: `color-mix(in srgb, ${theme.palette.error.main} 14%, transparent)`,
     },
     renamed: { color: infoColor, bg: theme.palette.surface.interface.backElevation },
@@ -191,7 +194,7 @@ export const StashMessage = styled(Box)({
 }) as typeof Box;
 
 export const StashIndex = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 10,
   color: theme.palette.text.information,
   flexShrink: 0,

@@ -976,6 +976,34 @@ pub async fn open_in_ide(
     Ok(())
 }
 
+/// Opens a single file at `line`/`column` in the user's IDE — drives the
+/// cross-repo search's "jump to match" row click. `path` is absolute (the
+/// search emits `absolutePath`); the IDE selection falls back to the configured
+/// `default_ide`, then to the first IDE detected on the machine.
+#[tauri::command]
+pub async fn open_file_in_ide(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    line: Option<u32>,
+    column: Option<u32>,
+    ide: Option<String>,
+) -> Result<(), CommandError> {
+    let default_ide = {
+        let config = state.config.lock().await;
+        config.settings().default_ide.clone()
+    };
+    let selected = ide.or(default_ide);
+    crate::commands::ide::open_file(
+        &app,
+        std::path::Path::new(&path),
+        line.unwrap_or(1).max(1),
+        column.unwrap_or(1).max(1),
+        selected.as_deref(),
+    )?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn open_terminal(
     state: State<'_, AppState>,

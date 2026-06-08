@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const List = styled(Box)({
   listStyle: "none",
   margin: 0,
@@ -18,7 +20,7 @@ export const Row = styled(Box)({
 }) as typeof Box;
 
 export const Rank = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.information,
   textAlign: "right",
@@ -71,16 +73,18 @@ export const BarFill = styled(Box, { shouldForwardProp: (p) => p !== "width" })<
 );
 
 export const Spark = styled(Box)({
-  display: "grid",
-  gridTemplateColumns: "repeat(14, 1fr)",
+  display: "flex",
   gap: 2,
   height: 18,
-  alignItems: "end",
+  alignItems: "flex-end",
   marginTop: 2,
+  overflow: "hidden",
 }) as typeof Box;
 
 export const SparkBar = styled(Box, { shouldForwardProp: (p) => p !== "h" })<{ h: number }>(
   ({ theme, h }) => ({
+    flex: 1,
+    minWidth: 0,
     backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 45%, transparent)`,
     borderRadius: 8,
     minHeight: 2,

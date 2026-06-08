@@ -3,6 +3,8 @@ import { styled } from "@mui/material/styles";
 
 import { RefreshCw } from "lucide-react";
 
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
 export const ProvidersGrid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "280px 1fr",
@@ -54,7 +56,7 @@ export const AsideItem = styled("button", {
     background: active
       ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
       : "transparent",
-    color: active ? theme.palette.primary.dark : theme.palette.text.primary,
+    color: active ? toneText(theme, StatusTone.PRIMARY) : theme.palette.text.primary,
     fontFamily: "inherit",
     fontSize: 12.5,
     fontWeight: active ? 600 : 500,

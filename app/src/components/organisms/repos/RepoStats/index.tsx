@@ -7,6 +7,7 @@ import KpiCard from "@/components/molecules/cards/KpiCard";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 export interface RepoStatsProps {
   repo: EnrichedRepo;
@@ -35,11 +36,11 @@ const Diff = styled(Box)({
 }) as typeof Box;
 
 const Added = styled(Box)(({ theme }) => ({
-  color: theme.palette.success.dark,
+  color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Box;
 
 const Removed = styled(Box)(({ theme }) => ({
-  color: theme.palette.error.dark,
+  color: toneText(theme, StatusTone.ERROR),
 })) as typeof Box;
 
 /**

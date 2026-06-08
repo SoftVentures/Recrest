@@ -9,6 +9,7 @@ import { ResponsiveBar } from "@nivo/bar";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { ChartArea } from "@/components/organisms/activity/cards/StackedChartCard/StackedChartCard.styles";
 import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { StackedDay } from "@/lib/activityStats";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
@@ -27,6 +28,7 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const { show, move, hide, portal } = useChartTooltip();
 
   const size = bucketSizeForWindow(windowDays);
   const repoNames = Array.from(new Set(stacked.flatMap((d) => d.segments.map((s) => s.repoName))));
@@ -55,6 +57,22 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
   const every = Math.max(1, Math.ceil(labels.length / 5));
   const tickValues = labels.filter((_, i) => i % every === 0);
 
+  // Full-day breakdown (every repo with commits, not just the hovered segment).
+  const renderTip = (indexValue: string | number, rowData: Record<string, string | number>) => (
+    <ChartTooltip
+      title={String(indexValue)}
+      rows={repoNames
+        .map((name) => ({ name, count: Number(rowData[name] ?? 0) }))
+        .filter((r) => r.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .map((r) => ({
+          color: colorByRepo.get(r.name) ?? theme.palette.primary.main,
+          label: r.name,
+          value: t("activity.cards.commits_count", { count: r.count }),
+        }))}
+    />
+  );
+
   return (
     <GeneralCard
       title={t("activity.cards.chart_title", { days: windowDays })}
@@ -63,7 +81,12 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
       skeleton="bars"
       testId={TEST_IDS.activity.stacked.card}
     >
-      <ChartArea data-testid={TEST_IDS.activity.stacked.chart}>
+      {/* @nivo/bar fires only onMouseEnter — wrapper mousemove keeps the
+          portalled tooltip tracking the cursor across the bar. */}
+      <ChartArea
+        data-testid={TEST_IDS.activity.stacked.chart}
+        onMouseMove={(e) => move(e.clientX, e.clientY)}
+      >
         <ResponsiveBar
           data={data}
           keys={repoNames}
@@ -76,20 +99,12 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
           enableLabel={false}
           axisBottom={{ tickValues, tickRotation: 0 }}
           axisLeft={{ tickValues: 4 }}
-          tooltip={({ id, value, indexValue, color }) => (
-            <ChartTooltip
-              title={String(indexValue)}
-              rows={[
-                {
-                  color,
-                  label: String(id),
-                  value: t("activity.cards.commits_count", { count: Number(value) }),
-                },
-              ]}
-            />
-          )}
+          tooltip={() => <></>}
+          onMouseEnter={(d, e) => show(e.clientX, e.clientY, renderTip(d.indexValue, d.data))}
+          onMouseLeave={hide}
         />
       </ChartArea>
+      {portal}
     </GeneralCard>
   );
 }

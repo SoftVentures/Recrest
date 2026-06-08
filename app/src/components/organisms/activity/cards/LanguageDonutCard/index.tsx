@@ -8,6 +8,7 @@ import { styled } from "@mui/material/styles";
 import { ResponsivePie } from "@nivo/pie";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { LanguageSlice } from "@/lib/activityAggregates";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -66,8 +67,6 @@ const LegendList = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 4,
-  maxHeight: 180,
-  overflowY: "auto",
 }) as typeof Box;
 
 const LegendItem = styled(Box)(({ theme }) => ({
@@ -110,7 +109,10 @@ const Tooltip = styled(Box)(({ theme }) => ({
 function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
   const nivoTheme = useNivoTheme();
-  const TAIL_THRESHOLD = 0.01;
+  const { show, hide, portal } = useChartTooltip();
+  // Anything under 3% is noise in the donut — fold it into a single "Other"
+  // slice. The accumulated share keeps the wheel summing to 100%.
+  const TAIL_THRESHOLD = 0.03;
   const legend = useMemo(() => {
     const result: LanguageSlice[] = [];
     let otherCommits = 0;
@@ -160,17 +162,23 @@ function LanguageDonutCard({ mix, loading }: Props) {
             cornerRadius={3}
             enableArcLabels={false}
             enableArcLinkLabels={false}
-            tooltip={({ datum }) => (
-              <Tooltip>
-                <Swatch color={datum.color} />
-                <Box component="span">
-                  {t("activity.cards.language_tooltip", {
-                    language: datum.id,
-                    percent: Math.round((datum.data.share ?? 0) * 100),
-                  })}
-                </Box>
-              </Tooltip>
-            )}
+            tooltip={() => <></>}
+            onMouseMove={(datum, e) =>
+              show(
+                e.clientX,
+                e.clientY,
+                <Tooltip>
+                  <Swatch color={datum.color} />
+                  <Box component="span">
+                    {t("activity.cards.language_tooltip", {
+                      language: datum.id,
+                      percent: Math.round((datum.data.share ?? 0) * 100),
+                    })}
+                  </Box>
+                </Tooltip>,
+              )
+            }
+            onMouseLeave={hide}
           />
           <Centre>
             <CentreValue>{totalCommits}</CentreValue>
@@ -186,6 +194,7 @@ function LanguageDonutCard({ mix, loading }: Props) {
             </LegendItem>
           ))}
         </LegendList>
+        {portal}
       </Wrap>
     </GeneralCard>
   );

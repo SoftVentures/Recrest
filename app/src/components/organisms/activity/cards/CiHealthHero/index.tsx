@@ -14,11 +14,11 @@ import {
   LegendItem,
   Ring,
   RingLabel,
-  RingSub,
   RingValue,
   Root,
 } from "@/components/organisms/activity/cards/CiHealthHero/CiHealthHero.styles";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 interface Props {
   summaries: readonly CheckRunSummary[];
@@ -38,13 +38,13 @@ function CiHealthHero({ summaries }: Props) {
   }
   const other = Math.max(0, total - passed - failing);
   const pct = total === 0 ? 1 : passed / total;
-  // src-old palette: green ≥95%, amber 80-95%, red <80%.
-  const headlineColor =
-    pct >= 0.95
-      ? theme.palette.success.main
-      : pct >= 0.8
-        ? theme.palette.warning.main
-        : theme.palette.error.main;
+  // src-old palette: green ≥95%, amber 80-95%, red <80%. Resolve via toneText
+  // so the centred number stays readable on the dark theme (the raw `.main`
+  // green/red is too dark to read inside the ring).
+  const headlineColor = toneText(
+    theme,
+    pct >= 0.95 ? StatusTone.SUCCESS : pct >= 0.8 ? StatusTone.WARNING : StatusTone.ERROR,
+  );
 
   const gaugeData =
     total === 0
@@ -75,7 +75,6 @@ function CiHealthHero({ summaries }: Props) {
             <RingValue style={{ color: headlineColor }}>
               {total === 0 ? "—" : `${Math.round(pct * 100)}%`}
             </RingValue>
-            <RingSub>{total === 0 ? t("activity.hero.ci_none") : `${passed}/${total}`}</RingSub>
           </RingLabel>
         </Ring>
         {total > 0 && (

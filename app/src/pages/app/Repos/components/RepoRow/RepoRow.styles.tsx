@@ -7,6 +7,7 @@ import {
   prefersReducedMotionGuard,
   staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 export const Row = styled(Box)(({ theme }) => ({
   display: "grid",
@@ -67,7 +68,7 @@ export const Name = styled(Box)(({ theme }) => ({
 export const Path = styled(Box)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",

@@ -405,8 +405,35 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return SEED.repos[0] ?? null;
 
       // --- search
-      case "find_across_repos":
-        return { matches: [], truncated: false };
+      case "find_across_repos": {
+        const q = String(args?.query ?? "").trim();
+        const repoId = args?.repoId as string | undefined;
+        const repo = SEED.repos[0];
+        if (q.length < 2 || !repo) return [];
+        if (repoId && repoId !== repo.id) return [];
+        return [
+          {
+            repoId: repo.id,
+            repoName: repo.name,
+            path: "src/index.ts",
+            absolutePath: repo.path + "/src/index.ts",
+            line: 10,
+            column: 3,
+            snippet: 'import { ' + q + ' } from "./lib";',
+          },
+          {
+            repoId: repo.id,
+            repoName: repo.name,
+            path: "README.md",
+            absolutePath: repo.path + "/README.md",
+            line: 1,
+            column: 1,
+            snippet: "# " + q,
+          },
+        ];
+      }
+      case "open_file_in_ide":
+        return undefined;
 
       // --- remote import
       case "list_remote_repositories":
@@ -435,6 +462,13 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         if (!base) return null;
         return { ...base, body: "", mergeable: true, reviewers: [], files: [], timeline: [] };
       }
+
+      // --- custom fonts (Tauri-only filesystem upload; empty under the stub)
+      case "list_custom_fonts":
+        return [];
+      case "upload_font":
+      case "delete_custom_font":
+        return undefined;
 
       // --- notifications / oauth / settings / window / system
       case "notify":

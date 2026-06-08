@@ -39,6 +39,35 @@ export function formatDateShort(iso: string): string {
   });
 }
 
+/** Date-only keys ("2026-05-28") parse as UTC midnight via `new Date`, which
+ *  can render as the previous day in a timezone behind UTC. Insight day-buckets
+ *  are computed in local time, so read bare dates as LOCAL midnight; full ISO
+ *  timestamps are passed through unchanged. */
+function parseFlexible(iso: string): Date {
+  return new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00` : iso);
+}
+
+/** Localized date range — e.g. "May 28 – Jun 8, 2026" (en) /
+ *  "28. Mai – 8. Juni 2026" (de). The shared year is collapsed onto the end
+ *  date; a same-day range renders as a single date. Date-only inputs are read
+ *  as local midnight (see `parseFlexible`). Falls back to the raw
+ *  "start – end" string if either bound is unparseable. */
+export function formatDateRange(startIso: string, endIso: string): string {
+  const start = parseFlexible(startIso);
+  const end = parseFlexible(endIso);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return `${startIso} – ${endIso}`;
+  }
+  const locale = currentLocale();
+  const full: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+  if (start.getTime() === end.getTime()) return start.toLocaleDateString(locale, full);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const startOpts: Intl.DateTimeFormatOptions = sameYear
+    ? { month: "short", day: "numeric" }
+    : full;
+  return `${start.toLocaleDateString(locale, startOpts)} – ${end.toLocaleDateString(locale, full)}`;
+}
+
 /** Short-form date + time — e.g. "May 26, 2026 14:32" (en) /
  *  "26. Mai 2026, 14:32" (de). Use in dense rows like timeline entries
  *  where we want to surface the hour, not just the calendar day. */

@@ -16,6 +16,7 @@ import OnboardingWizard from "@/components/organisms/onboarding/OnboardingWizard
 import FindAcrossReposDialog from "@/components/organisms/repos/FindAcrossReposDialog";
 import Titlebar from "@/components/organisms/titlebars/Titlebar";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+import { useCustomFonts } from "@/hooks/useCustomFonts";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
 import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
@@ -104,6 +105,7 @@ const ContentScroll = styled(Box)({
 
 export function AppLayout() {
   useAppBootstrap();
+  useCustomFonts();
   useThemeAttribute();
   useFaviconSync();
   useLocaleSync();

@@ -30,16 +30,19 @@ export interface DateRangePickerProps {
 }
 
 /**
- * Derive which segment is highlighted from the current range. The window
- * width maps to a preset whose `days` matches within ±1 (clocks/DST drift).
- * `all` wins when the range starts at/before the oldest commit. A custom
- * URL-injected range matches nothing, so no segment is highlighted.
+ * Derive which segment is highlighted from the current range. A preset whose
+ * `days` matches the window width within ±1 (clocks/DST drift) wins first, so
+ * a young repo whose oldest commit happens to sit inside the 30d window still
+ * highlights "30d" rather than jumping to "all". `all` is the fallback only
+ * for a wider-than-any-preset range that reaches back to the oldest commit. A
+ * custom URL-injected range matches nothing, so no segment is highlighted.
  */
 function selectedKey(value: ActivityRange, oldestDate: string | null): string | null {
-  if (oldestDate && value.since <= oldestDate) return ALL_KEY;
   const windowDays = Math.round((Date.parse(value.until) - Date.parse(value.since)) / DAY_MS);
   const match = PRESETS.find((preset) => Math.abs(preset.days - windowDays) <= 1);
-  return match ? match.key : null;
+  if (match) return match.key;
+  if (oldestDate && value.since <= oldestDate) return ALL_KEY;
+  return null;
 }
 
 function DateRangePicker({ value, onChange, oldestDate }: DateRangePickerProps) {

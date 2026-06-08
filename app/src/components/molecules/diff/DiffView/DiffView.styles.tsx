@@ -1,7 +1,10 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
+const MONO = MONO_STACK;
 
 export const Root = styled(Box)({
   display: "flex",
@@ -39,6 +42,7 @@ export const FileHeader = styled("button")(({ theme }) => ({
 
 export const FilePath = styled(Typography)({
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 12,
   fontWeight: 600,
   flex: 1,
@@ -60,21 +64,23 @@ export const StatusTag = styled("span", { shouldForwardProp: (p) => p !== "tone"
   borderRadius: 100,
   color:
     tone === "add"
-      ? theme.palette.success.dark
+      ? toneText(theme, StatusTone.SUCCESS)
       : tone === "remove"
-        ? theme.palette.error.dark
+        ? toneText(theme, StatusTone.ERROR)
         : theme.palette.text.information,
   backgroundColor: theme.palette.surface.interface.backElevation,
 }));
 
 export const RenamedFrom = styled(Typography)(({ theme }) => ({
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 10.5,
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const HunkHeader = styled(Box)(({ theme }) => ({
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 11,
   color: theme.palette.text.information,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -95,6 +101,7 @@ export const Line = styled("div", { shouldForwardProp: (p) => p !== "kind" })<{
   gridTemplateColumns: "44px 44px 1fr auto",
   alignItems: "stretch",
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 12,
   lineHeight: "18px",
   position: "relative",

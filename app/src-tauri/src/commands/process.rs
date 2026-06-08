@@ -28,27 +28,3 @@ pub fn configure(cmd: &mut Command) -> &mut Command {
     let _ = cmd;
     cmd
 }
-
-#[cfg(target_os = "windows")]
-pub mod tokio {
-    //! Mirror helper for `tokio::process::Command`. Tokio exposes its own
-    //! inherent `creation_flags` on Windows that forwards to `CommandExt`.
-
-    use ::tokio::process::Command as TokioCommand;
-
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-
-    pub fn configure(cmd: &mut TokioCommand) -> &mut TokioCommand {
-        cmd.creation_flags(CREATE_NO_WINDOW);
-        cmd
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-pub mod tokio {
-    use ::tokio::process::Command as TokioCommand;
-
-    pub fn configure(cmd: &mut TokioCommand) -> &mut TokioCommand {
-        cmd
-    }
-}

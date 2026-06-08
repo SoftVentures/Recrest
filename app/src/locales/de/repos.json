@@ -76,6 +76,10 @@
     "placeholder": "Dateiinhalte durchsuchen…",
     "no_results": "Keine Treffer",
     "hint": "Durchsucht alle erfassten Repositories. Mindestens zwei Zeichen.",
+    "all_repos": "Alle Repositories",
+    "searching": "Suche läuft…",
+    "count_one": "{{count}} Treffer",
+    "count_other": "{{count}} Treffer",
     "result_aria": "{{repo}} — {{path}}:{{line}}"
   },
   "stats": {

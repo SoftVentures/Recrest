@@ -12,6 +12,7 @@ import { Ban, BellRing, DownloadCloud } from "lucide-react";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setUpdateMode } from "@/store/actions/settings.actions";
@@ -24,7 +25,7 @@ const UPDATE_MODES: { value: AutoUpdateMode; label: string; icon: typeof Downloa
 ];
 
 const VersionText = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
   color: theme.palette.text.information,
 })) as typeof Typography;

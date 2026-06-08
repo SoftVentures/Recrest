@@ -326,7 +326,12 @@ export const TEST_IDS = {
       accentSwatches: "settings-accent-swatches",
       accentChip: <T extends string>(id: T) => `accent-chip-${id}` as const,
       fontSelect: "settings-font-select",
+      codeFontSelect: "settings-code-font-select",
+      codeLigaturesSelect: "settings-code-ligatures-select",
       fontSizeSelect: "settings-font-size-select",
+      customFontUpload: "settings-custom-font-upload",
+      customFontDelete: <T extends string>(id: T) => `settings-custom-font-delete-${id}` as const,
+      customFontChip: <T extends string>(id: T) => `settings-custom-font-chip-${id}` as const,
       a11yHighContrast: "settings-a11y-high-contrast",
       a11yReducedMotion: "settings-a11y-reduced-motion",
       a11yUnderlineLinks: "settings-a11y-underline-links",
@@ -334,6 +339,8 @@ export const TEST_IDS = {
       defaultIdeSelect: "settings-default-ide-select",
       defaultTerminalSelect: "settings-default-terminal-select",
       defaultShellSelect: "settings-default-shell-select",
+      terminalProfileInput: "settings-terminal-profile-input",
+      terminalCustomCommandInput: "settings-terminal-custom-command-input",
       desktopAutoStart: "settings-desktop-auto-start",
       desktopStartMinimized: "settings-desktop-start-minimized",
       desktopCloseToTray: "settings-desktop-close-to-tray",
@@ -346,6 +353,11 @@ export const TEST_IDS = {
       },
       updateModeSelect: "settings-update-mode-select",
       updateCheckNow: "settings-update-check-now",
+    },
+
+    accounts: {
+      connectButton: "settings-accounts-connect",
+      tokenCreateLink: "settings-accounts-token-create-link",
     },
 
     integrations: {
@@ -517,7 +529,9 @@ export const TEST_IDS = {
     root: "find-across-dialog",
     input: "find-across-input",
     clear: "find-across-clear",
+    repoFilter: "find-across-repo-filter",
     list: "find-across-list",
+    group: <T extends string>(id: T) => `find-across-group-${id}` as const,
     row: <T extends string>(id: T) => `find-across-row-${id}` as const,
     empty: "find-across-empty",
   },

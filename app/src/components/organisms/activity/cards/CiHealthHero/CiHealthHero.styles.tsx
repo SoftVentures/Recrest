@@ -47,14 +47,6 @@ export const RingValue = styled(Box)({
   lineHeight: 1,
 }) as typeof Box;
 
-export const RingSub = styled(Box)(({ theme }) => ({
-  fontSize: 9,
-  color: theme.palette.text.information,
-  marginTop: 2,
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 1,
-})) as typeof Box;
-
 export const HeadRow = styled(Box)({
   display: "flex",
   alignItems: "center",

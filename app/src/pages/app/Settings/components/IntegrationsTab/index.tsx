@@ -14,6 +14,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { forgetReposUnderPath, scanForRepos, setScanPaths } from "@/store/actions/repos.actions";
 import { saveSettings } from "@/store/actions/settings.actions";
@@ -55,7 +56,7 @@ const TextInput = styled("input")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
   fontSize: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
   "&:focus": { borderColor: theme.palette.border.hover },
@@ -113,7 +114,7 @@ const PathRow = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   color: theme.palette.text.primary,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
 })) as typeof Box;
 

@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const Root = styled(Box)({
   height: "100%",
   minHeight: 0,
@@ -106,7 +108,7 @@ export const LangDot = styled(Box)(({ theme }) => ({
 
 export const PathText = styled(Typography)(({ theme }) => ({
   marginTop: 4,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.information,
 })) as typeof Typography;
@@ -127,10 +129,7 @@ export const Chip = styled("span", {
   display: "inline-flex",
   alignItems: "center",
   gap: 4,
-  fontFamily:
-    tone === "branch"
-      ? 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace'
-      : "inherit",
+  fontFamily: tone === "branch" ? MONO_STACK : "inherit",
   fontSize: tone === "branch" ? 11.5 : 11,
   padding: "2px 8px",
   borderRadius: 8,
@@ -359,7 +358,7 @@ export const MissingRoot = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const RemoteUrlText = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.secondary,
 })) as typeof Box;
@@ -374,5 +373,5 @@ export const PrScroller = styled(Box)({
 }) as typeof Box;
 
 export const CommitSha = styled(Box)({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
 }) as typeof Box;

@@ -48,8 +48,24 @@ pub struct AppearanceSettings {
     pub primary_color: String,
     /// Renderer font slot — "inter" | "opendyslexic" | future additions.
     pub font: String,
+    /// Monospace font for code surfaces, separate from the UI `font`. New in the
+    /// code-font split, so `#[serde(default)]` keeps pre-split settings loading.
+    #[serde(default = "default_code_font")]
+    pub code_font: String,
+    /// Ligature mode for code surfaces — "off" | "standard" | "stylistic".
+    /// Separate from `code_font`; `#[serde(default)]` keeps older files loading.
+    #[serde(default = "default_code_ligatures")]
+    pub code_ligatures: String,
     /// Renderer font size token — "sm" | "md" | "lg".
     pub font_size: String,
+}
+
+fn default_code_font() -> String {
+    "jetbrains-mono".into()
+}
+
+fn default_code_ligatures() -> String {
+    "standard".into()
 }
 
 impl Default for AppearanceSettings {
@@ -59,6 +75,8 @@ impl Default for AppearanceSettings {
             follows_system: true,
             primary_color: "default".into(),
             font: "inter".into(),
+            code_font: default_code_font(),
+            code_ligatures: default_code_ligatures(),
             font_size: "md".into(),
         }
     }

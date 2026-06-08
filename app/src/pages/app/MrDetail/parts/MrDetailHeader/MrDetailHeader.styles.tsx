@@ -1,7 +1,10 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
+const MONO = MONO_STACK;
 
 export const Header = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -57,6 +60,7 @@ export const Subtitle = styled(Box)(({ theme }) => ({
   alignItems: "center",
   gap: 8,
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 11.5,
   color: theme.palette.text.information,
 })) as typeof Box;
@@ -99,19 +103,20 @@ export const Chip = styled("span", {
   alignItems: "center",
   gap: 4,
   fontFamily: tone === "branch" ? MONO : "inherit",
+  fontFeatureSettings: tone === "branch" ? CODE_LIGATURES : undefined,
   fontSize: tone === "branch" ? 11.5 : 11,
   padding: "2px 8px",
   borderRadius: 8,
   fontWeight: 500,
   color:
     tone === "add"
-      ? theme.palette.success.dark
+      ? toneText(theme, StatusTone.SUCCESS)
       : tone === "remove"
-        ? theme.palette.error.dark
+        ? toneText(theme, StatusTone.ERROR)
         : tone === "warn"
-          ? theme.palette.warning.dark
+          ? toneText(theme, StatusTone.WARNING)
           : tone === "ok"
-            ? theme.palette.success.dark
+            ? toneText(theme, StatusTone.SUCCESS)
             : theme.palette.text.primary,
   backgroundColor:
     tone === "add" || tone === "ok"
@@ -134,6 +139,7 @@ export const TargetChipBtn = styled("button")(({ theme }) => ({
   alignItems: "center",
   gap: 4,
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 11.5,
   padding: "2px 8px",
   borderRadius: 8,

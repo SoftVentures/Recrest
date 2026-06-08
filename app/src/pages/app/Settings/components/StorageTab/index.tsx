@@ -12,6 +12,7 @@ import GeneralIconButton, {
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setCrashReporting } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -23,7 +24,7 @@ const FactRow = styled(Box)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.primary,
   padding: "10px 16px",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   "& strong": {
     fontWeight: 600,
     fontFamily: "inherit",

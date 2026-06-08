@@ -5,6 +5,7 @@ import type { CheckRunSummary, PrEvent, RecentCommit } from "@recrest/shared";
 
 import { FeedEventKind } from "@/lib/constants/feedEventKinds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 export type FeedEvent =
   | {
@@ -58,13 +59,13 @@ export const FeedIcon = styled("span", { shouldForwardProp: (p) => p !== "tone" 
     tone === "commit"
       ? theme.palette.text.information
       : tone === "opened"
-        ? theme.palette.primary.main
+        ? toneText(theme, StatusTone.PRIMARY)
         : tone === "merged"
-          ? theme.palette.success.main
+          ? toneText(theme, StatusTone.SUCCESS)
           : tone === "check-ok"
-            ? theme.palette.success.main
+            ? toneText(theme, StatusTone.SUCCESS)
             : tone === "check-fail"
-              ? theme.palette.error.main
+              ? toneText(theme, StatusTone.ERROR)
               : theme.palette.text.information,
   backgroundColor:
     tone === "commit"

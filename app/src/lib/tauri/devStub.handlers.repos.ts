@@ -187,8 +187,32 @@ export function reposStub(
         ],
       };
 
-    case "find_across_repos":
-      return { matches: [], truncated: false };
+    case "find_across_repos": {
+      // The real backend walks the repos in-process via the `ignore` crate
+      // and returns `SearchHit[]`. Pure-web dev has no filesystem, so
+      // synthesize a few plausible hits across the first seeded repos to
+      // render the dialog end-to-end.
+      const query = String(a.query ?? "").trim();
+      if (query.length < 2) return [];
+      const repoId = a.repoId as string | undefined;
+      const sampleFiles = ["src/index.ts", "src/app/main.tsx", "README.md", "lib/format.ts"];
+      // Honour the repo filter: scope to one repo, else demo the first three.
+      const pool = repoId ? seed.repos.filter((r) => r.id === repoId) : seed.repos.slice(0, 3);
+      return pool.flatMap((r, ri) =>
+        sampleFiles.slice(0, 2 + (ri % 2)).map((rel, fi) => ({
+          repoId: r.id,
+          repoName: r.name,
+          path: rel,
+          absolutePath: `${r.path}/${rel}`,
+          line: 12 + fi * 7 + ri,
+          column: 5,
+          snippet: `  const result = ${query}(value, options); // ${rel}`,
+        })),
+      );
+    }
+
+    case "open_file_in_ide":
+      return undefined;
 
     default:
       return UNHANDLED;

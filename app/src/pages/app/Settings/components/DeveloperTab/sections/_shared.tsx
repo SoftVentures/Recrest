@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 export const ButtonRow = styled(Box)({
   display: "inline-flex",
@@ -19,7 +20,7 @@ export const TextInput = styled("input")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
   fontSize: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
   "&:focus": { borderColor: theme.palette.border.hover },
@@ -55,7 +56,7 @@ export const FactKey = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const FactVal = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
   color: theme.palette.text.information,
   display: "inline-flex",

@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const FIELD_ROW_MIN_HEIGHT = 60;
 export const FIELD_INPUT_WIDTH = 280;
 export const FIELD_LAYER_WIDTH = 180;
@@ -85,7 +87,7 @@ export const LayerChip = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 12,
   color: theme.palette.text.information,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -108,7 +110,7 @@ export const SourceBadge = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
 })) as typeof Box;
 
@@ -133,7 +135,7 @@ export const ReadOnlyChip = styled(Box)(({ theme }) => ({
 export const ValueText = styled(Typography)(({ theme }) => ({
   fontSize: 13,
   color: theme.palette.text.primary,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   wordBreak: "break-all",
   width: FIELD_INPUT_WIDTH,
   maxWidth: "100%",

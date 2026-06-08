@@ -1,7 +1,9 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+
+const MONO = MONO_STACK;
 
 export const Root = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -90,6 +92,7 @@ export const Surface = styled(Box)(({ theme }) => ({
     },
     "& code": {
       fontFamily: MONO,
+      fontFeatureSettings: CODE_LIGATURES,
       fontSize: 12,
       padding: "1px 5px",
       borderRadius: 4,

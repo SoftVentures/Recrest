@@ -12,6 +12,7 @@ import {
   Provider,
   type ProviderId,
 } from "@/lib/constants/providers.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { openExternal } from "@/lib/tauri";
 import {
   ActionGroup,
@@ -199,7 +200,11 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
                   {t("settings.providers.connect_browser")}
                 </Btn>
               )}
-              <Btn type="button" onClick={() => setTokenExpanded(true)}>
+              <Btn
+                type="button"
+                onClick={() => setTokenExpanded(true)}
+                data-testid={TEST_IDS.settings.accounts.connectButton}
+              >
                 <LinkIcon size={11} />
                 {t("settings.providers.connect_with", { name: providerName })}
               </Btn>
@@ -267,6 +272,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               type="button"
               onClick={() => void openExternal(tokenCreateUrlFor(providerId, connection?.baseUrl))}
               aria-label={t("settings.providers.token_create_link_aria", { name: providerName })}
+              data-testid={TEST_IDS.settings.accounts.tokenCreateLink}
             >
               <ExternalLink size={11} />
               {t("settings.providers.token_create_link", { name: providerName })}

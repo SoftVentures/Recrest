@@ -32,6 +32,7 @@ import {
 } from "@/lib/animations/pageAnimations";
 import { SETTINGS_TAB_QUERY_PARAM, SettingsTab } from "@/lib/constants/settings.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { AboutSection } from "@/pages/app/Settings/components/AboutTab";
 import { AccountsSection } from "@/pages/app/Settings/components/AccountsTab";
 import {
@@ -137,7 +138,7 @@ const FooterDot = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const FooterVersion = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 10.5,
   color: theme.palette.text.information,
 })) as typeof Typography;

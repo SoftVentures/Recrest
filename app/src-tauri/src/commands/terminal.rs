@@ -149,12 +149,16 @@ impl TerminalSpawn {
 /// The id strings mirror `shared/src/constants/terminal.ts` `TERMINAL_IDS`.
 pub fn terminal_spawn_plan(
     id: &str,
-    _profile: Option<&str>,
+    profile: Option<&str>,
     path: &Path,
 ) -> Result<TerminalSpawn, CommandError> {
     let p = path
         .to_str()
         .ok_or_else(|| CommandError::bad_request("path is not valid UTF-8"))?;
+    // Whitespace-only profiles come from a cleared-but-saved input field.
+    // The profile-capable arms below must stay in sync with
+    // `PROFILE_CAPABLE_TERMINAL_IDS` in `shared/src/constants/terminal.ts`.
+    let profile = profile.map(str::trim).filter(|s| !s.is_empty());
 
     let plan = match id {
         // macOS
@@ -188,7 +192,18 @@ pub fn terminal_spawn_plan(
             cwd: None,
         },
         // Windows
-        "windows-terminal" => TerminalSpawn::flagged("wt.exe", "-d", p),
+        "windows-terminal" => {
+            let mut args: Vec<String> = Vec::new();
+            if let Some(pr) = profile {
+                args.extend(["-p".into(), pr.into()]);
+            }
+            args.extend(["-d".into(), p.into()]);
+            TerminalSpawn {
+                program: "wt.exe".into(),
+                args,
+                cwd: None,
+            }
+        }
         "powershell" => TerminalSpawn {
             program: "pwsh".into(),
             args: vec![
@@ -205,9 +220,29 @@ pub fn terminal_spawn_plan(
         },
         // Linux
         "gnome-terminal" => {
-            TerminalSpawn::eq_flag("gnome-terminal", format!("--working-directory={p}"))
+            let mut args: Vec<String> = Vec::new();
+            if let Some(pr) = profile {
+                args.push(format!("--window-with-profile={pr}"));
+            }
+            args.push(format!("--working-directory={p}"));
+            TerminalSpawn {
+                program: "gnome-terminal".into(),
+                args,
+                cwd: None,
+            }
         }
-        "konsole" => TerminalSpawn::flagged("konsole", "--workdir", p),
+        "konsole" => {
+            let mut args: Vec<String> = Vec::new();
+            if let Some(pr) = profile {
+                args.extend(["--profile".into(), pr.into()]);
+            }
+            args.extend(["--workdir".into(), p.into()]);
+            TerminalSpawn {
+                program: "konsole".into(),
+                args,
+                cwd: None,
+            }
+        }
         "tilix" => TerminalSpawn::eq_flag("tilix", format!("--working-directory={p}")),
         "xterm" => TerminalSpawn {
             program: "xterm".into(),
@@ -223,12 +258,232 @@ pub fn terminal_spawn_plan(
     Ok(plan)
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalDetectionDto {
+    pub id: String,
+    pub available: bool,
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellDetectionDto {
+    pub id: String,
+    pub available: bool,
+}
+
+/// All terminal ids the spawn planner understands, per current OS. Mirrors
+/// the `platforms` filter in `shared/src/constants/terminal.ts`.
+fn detectable_terminal_ids() -> &'static [&'static str] {
+    #[cfg(target_os = "macos")]
+    {
+        &[
+            "apple-terminal",
+            "iterm2",
+            "warp",
+            "wezterm",
+            "kitty",
+            "alacritty",
+            "ghostty",
+            "hyper",
+        ]
+    }
+    #[cfg(target_os = "windows")]
+    {
+        &["windows-terminal", "powershell", "cmd", "wezterm", "alacritty", "hyper"]
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        &[
+            "kitty",
+            "alacritty",
+            "wezterm",
+            "ghostty",
+            "gnome-terminal",
+            "konsole",
+            "tilix",
+            "xterm",
+            "hyper",
+        ]
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos", unix)))]
+    {
+        &[]
+    }
+}
+
+/// Shell ids + the binary `which`/`where` should resolve, per current OS.
+/// Mirrors `SHELL_DEFINITIONS` in `shared/src/constants/terminal.ts`.
+fn detectable_shells() -> &'static [(&'static str, &'static str)] {
+    #[cfg(target_os = "macos")]
+    {
+        &[
+            ("zsh", "zsh"),
+            ("bash", "bash"),
+            ("fish", "fish"),
+            ("nu", "nu"),
+            ("elvish", "elvish"),
+            ("tcsh", "tcsh"),
+            ("ksh", "ksh"),
+            ("powershell-core", "pwsh"),
+        ]
+    }
+    #[cfg(target_os = "windows")]
+    {
+        &[
+            ("powershell-core", "pwsh"),
+            ("windows-powershell", "powershell.exe"),
+            ("cmd", "cmd.exe"),
+            ("git-bash", "bash.exe"),
+            ("wsl", "wsl.exe"),
+            ("nu", "nu"),
+            ("bash", "bash"),
+        ]
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        &[
+            ("zsh", "zsh"),
+            ("bash", "bash"),
+            ("fish", "fish"),
+            ("nu", "nu"),
+            ("elvish", "elvish"),
+            ("tcsh", "tcsh"),
+            ("ksh", "ksh"),
+            ("powershell-core", "pwsh"),
+        ]
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos", unix)))]
+    {
+        &[]
+    }
+}
+
+/// Testable core: probes each candidate via the program its spawn plan would
+/// invoke (`open`-wrapped macOS apps probe the app bundle instead).
+pub fn detect_terminals_with(
+    candidates: &[&str],
+    probe: impl Fn(&str) -> bool,
+) -> Vec<TerminalDetectionDto> {
+    candidates
+        .iter()
+        .map(|id| {
+            let available = match terminal_spawn_plan(id, None, Path::new("/")) {
+                Ok(plan) if plan.program == "open" => probe_macos_app(id),
+                Ok(plan) => probe(&plan.program),
+                Err(_) => false,
+            };
+            TerminalDetectionDto {
+                id: (*id).to_string(),
+                available,
+                version: None,
+            }
+        })
+        .collect()
+}
+
+/// Testable core for shells: probes each candidate by its resolver binary.
+pub fn detect_shells_with(
+    candidates: &[(&str, &str)],
+    probe: impl Fn(&str) -> bool,
+) -> Vec<ShellDetectionDto> {
+    candidates
+        .iter()
+        .map(|(id, bin)| ShellDetectionDto {
+            id: (*id).to_string(),
+            available: probe(bin),
+        })
+        .collect()
+}
+
+/// `open -a <App>`-based ids can't be probed via PATH — check the bundle dirs.
+fn probe_macos_app(id: &str) -> bool {
+    let apps: &[&str] = match id {
+        "apple-terminal" => &[
+            "/System/Applications/Utilities/Terminal.app",
+            "/Applications/Utilities/Terminal.app",
+        ],
+        "iterm2" => &["/Applications/iTerm.app"],
+        "warp" => &["/Applications/Warp.app"],
+        _ => return false,
+    };
+    apps.iter().any(|p| Path::new(p).exists())
+}
+
+/// IPC: probe every terminal the spawn planner understands on this OS.
+/// Commit data: none — purely a `{ id, available }` availability map.
+#[tauri::command]
+pub fn detect_terminals() -> Vec<TerminalDetectionDto> {
+    detect_terminals_with(detectable_terminal_ids(), binary_on_path)
+}
+
+/// IPC: probe every shell binary the OS knows about.
+#[tauri::command]
+pub fn detect_shells() -> Vec<ShellDetectionDto> {
+    detect_shells_with(detectable_shells(), binary_on_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn plan(id: &str) -> TerminalSpawn {
         terminal_spawn_plan(id, None, Path::new("/work/my repo")).expect("plan")
+    }
+
+    fn plan_with_profile(id: &str, profile: &str) -> TerminalSpawn {
+        terminal_spawn_plan(id, Some(profile), Path::new("/work/my repo")).expect("plan")
+    }
+
+    #[test]
+    fn wt_inserts_profile_flag_before_directory() {
+        let p = plan_with_profile("windows-terminal", "Ubuntu");
+        assert_eq!(p.program, "wt.exe");
+        assert_eq!(
+            p.args,
+            vec![
+                "-p".to_string(),
+                "Ubuntu".to_string(),
+                "-d".to_string(),
+                "/work/my repo".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn gnome_terminal_uses_window_with_profile() {
+        let p = plan_with_profile("gnome-terminal", "Dev");
+        assert!(p.args.contains(&"--window-with-profile=Dev".to_string()));
+        assert!(p.args.contains(&"--working-directory=/work/my repo".to_string()));
+    }
+
+    #[test]
+    fn konsole_appends_profile_flag() {
+        let p = plan_with_profile("konsole", "Dev");
+        assert_eq!(
+            p.args,
+            vec![
+                "--profile".to_string(),
+                "Dev".to_string(),
+                "--workdir".to_string(),
+                "/work/my repo".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn profile_is_ignored_for_incapable_terminals() {
+        let with = plan_with_profile("kitty", "Dev");
+        let without = plan("kitty");
+        assert_eq!(with, without);
+    }
+
+    #[test]
+    fn empty_profile_is_treated_as_none() {
+        let with = plan_with_profile("windows-terminal", "  ");
+        let without = plan("windows-terminal");
+        assert_eq!(with, without);
     }
 
     #[test]
@@ -309,5 +564,36 @@ mod tests {
     fn auto_chain_none_when_nothing_found() {
         let probe = |_: &str| false;
         assert!(auto_detect_terminal_with(&["alacritty", "kitty"], probe).is_none());
+    }
+
+    #[test]
+    fn detect_none_installed() {
+        let probe = |_: &str| false;
+        let out = detect_terminals_with(&["kitty", "alacritty"], probe);
+        assert!(out.iter().all(|d| !d.available));
+        assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn detect_one_installed() {
+        let probe = |bin: &str| bin == "kitty";
+        let out = detect_terminals_with(&["kitty", "alacritty"], probe);
+        assert!(out.iter().find(|d| d.id == "kitty").unwrap().available);
+        assert!(!out.iter().find(|d| d.id == "alacritty").unwrap().available);
+    }
+
+    #[test]
+    fn detect_all_installed() {
+        let probe = |_: &str| true;
+        let out = detect_terminals_with(&["kitty", "alacritty", "wezterm"], probe);
+        assert!(out.iter().all(|d| d.available));
+    }
+
+    #[test]
+    fn detect_shells_maps_id_to_binary_probe() {
+        let probe = |bin: &str| bin == "zsh";
+        let out = detect_shells_with(&[("zsh", "zsh"), ("bash", "bash")], probe);
+        assert!(out.iter().find(|d| d.id == "zsh").unwrap().available);
+        assert!(!out.iter().find(|d| d.id == "bash").unwrap().available);
     }
 }

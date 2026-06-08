@@ -2,8 +2,10 @@ import { createReducer } from "@reduxjs/toolkit";
 
 import {
   type AppSettings,
+  DEFAULT_CODE_FONT,
   DEFAULT_FONT,
   DEFAULT_FONT_SIZE,
+  DEFAULT_LIGATURE_MODE,
   POLLING_INTERVAL_MAX_MS,
   POLLING_INTERVAL_MIN_MS,
 } from "@recrest/shared";
@@ -16,8 +18,15 @@ import {
   type ThemeId,
 } from "@/lib/constants/theme.constants";
 import {
+  deleteCustomFont,
+  loadCustomFonts,
+  loadDetectedIdes,
+  loadDetectedShells,
+  loadDetectedTerminals,
   loadSettings,
   saveSettings,
+  setCodeFont,
+  setCodeLigatures,
   setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
@@ -39,6 +48,7 @@ import {
   setUnderlineLinks,
   setUpdateMode,
   syncSystemTheme,
+  uploadCustomFont,
 } from "@/store/actions/settings.actions";
 import type { SettingsState } from "@/store/types/settings.types";
 
@@ -112,6 +122,8 @@ const initialState: SettingsState = {
   primaryColor: DEFAULT_PRIMARY_COLOR,
   dyslexiaFont: false,
   font: DEFAULT_FONT,
+  codeFont: DEFAULT_CODE_FONT,
+  codeLigatures: DEFAULT_LIGATURE_MODE,
   fontSize: DEFAULT_FONT_SIZE,
   highContrast: false,
   reducedMotion: false,
@@ -133,6 +145,10 @@ const initialState: SettingsState = {
     mode: "manual",
   },
   backend: null,
+  detectedTerminals: null,
+  detectedShells: null,
+  detectedIdes: null,
+  customFonts: [],
   loading: false,
   error: null,
 };
@@ -155,6 +171,9 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
     state.followsSystem = appearance.followsSystem;
     state.primaryColor = appearance.primaryColor;
     state.font = appearance.font;
+    // Old settings.json predating the code-font split won't carry `codeFont`.
+    state.codeFont = appearance.codeFont ?? DEFAULT_CODE_FONT;
+    state.codeLigatures = appearance.codeLigatures ?? DEFAULT_LIGATURE_MODE;
     state.fontSize = appearance.fontSize;
   } else {
     // Legacy fallback: old settings.json without `appearance` — derive from
@@ -228,6 +247,12 @@ export const settingsReducer = createReducer(initialState, (builder) => {
       state.font = action.payload;
       state.dyslexiaFont = action.payload === "opendyslexic";
     })
+    .addCase(setCodeFont, (state, action) => {
+      state.codeFont = action.payload;
+    })
+    .addCase(setCodeLigatures, (state, action) => {
+      state.codeLigatures = action.payload;
+    })
     .addCase(setFontSize, (state, action) => {
       state.fontSize = action.payload;
     })
@@ -287,6 +312,31 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     })
     .addCase(saveSettings.fulfilled, (state, action) => {
       applyBackend(state, action.payload);
+    })
+    // Detection degrades silently to the stub maps on failure (no rejected
+    // case + no error banner) — a missing probe must never block Settings.
+    .addCase(loadDetectedTerminals.fulfilled, (state, action) => {
+      state.detectedTerminals = action.payload;
+    })
+    .addCase(loadDetectedShells.fulfilled, (state, action) => {
+      state.detectedShells = action.payload;
+    })
+    .addCase(loadDetectedIdes.fulfilled, (state, action) => {
+      state.detectedIdes = action.payload;
+    })
+    .addCase(loadCustomFonts.fulfilled, (state, action) => {
+      state.customFonts = action.payload;
+    })
+    .addCase(uploadCustomFont.fulfilled, (state, action) => {
+      // Replace any same-family entry (re-upload) then append, keeping the
+      // list sorted by family for a stable picker order.
+      const next = state.customFonts.filter((f) => f.id !== action.payload.id);
+      next.push(action.payload);
+      next.sort((a, b) => a.family.toLowerCase().localeCompare(b.family.toLowerCase()));
+      state.customFonts = next;
+    })
+    .addCase(deleteCustomFont.fulfilled, (state, action) => {
+      state.customFonts = state.customFonts.filter((f) => f.id !== action.payload);
     });
 });
 
@@ -297,6 +347,7 @@ export {
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
+  setCodeFont,
   setDyslexiaFont,
   setFollowsSystem,
   setFont,

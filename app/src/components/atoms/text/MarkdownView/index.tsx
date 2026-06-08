@@ -9,7 +9,9 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { type Options as SanitizeOptions, defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+
+const MONO = MONO_STACK;
 
 interface MarkdownViewProps {
   /** Provider-supplied markdown. May contain raw HTML (`<details>`, etc.) —
@@ -95,6 +97,7 @@ const Root = styled(Box)(({ theme }) => ({
 
   "& code": {
     fontFamily: MONO,
+    fontFeatureSettings: CODE_LIGATURES,
     fontSize: 12,
     padding: "1px 5px",
     borderRadius: 4,

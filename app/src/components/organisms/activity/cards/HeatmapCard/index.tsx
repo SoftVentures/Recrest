@@ -8,9 +8,10 @@ import { styled, useTheme } from "@mui/material/styles";
 import { ResponsiveHeatMap } from "@nivo/heatmap";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
-import { CHART_PALETTE, fade } from "@/lib/charts/palette";
+import { fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
@@ -23,12 +24,24 @@ export interface Props {
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
 const AXIS_HOURS = ["0", "6", "12", "18"];
-const INDIGO = CHART_PALETTE[0];
 
 function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const { show, hide, portal } = useChartTooltip();
+  // Single-metric chart → follow the user's primary color, not a fixed accent.
+  const accent = theme.palette.primary.main;
+
+  const renderTip = (weekday: string, hour: string, count: number) => (
+    <Tooltip>
+      {t("activity.cards.heatmap_tooltip", {
+        weekday,
+        hour: `${hour.padStart(2, "0")}:00`,
+        commits: t("activity.cards.commits_count", { count }),
+      })}
+    </Tooltip>
+  );
 
   const data = matrix.map((row, weekday) => ({
     id: WEEKDAYS[weekday]!,
@@ -52,17 +65,29 @@ function HeatmapCard({ matrix, loading }: Props) {
           data={data}
           theme={nivoTheme}
           margin={{ top: 4, right: 4, bottom: 20, left: 34 }}
+          forceSquare
+          xInnerPadding={0.18}
+          yInnerPadding={0.18}
           colors={{
             type: "quantize",
+            // Empty + lowest-activity cells read as a clean neutral grey; only
+            // real activity tints orange, ramping to the solid accent at the
+            // busy end. No faint orange wash across every cell.
+            //
+            // Every entry is run through `fade()` so the whole scale is `rgba()`
+            // — react-spring interpolates the cell fill on range switch and
+            // throws "arity of each output value must be equal" when a hex
+            // (`#262935`, one extracted number) animates into an `rgba()` (four).
+            // Keeping a single format keeps the arity uniform.
             colors: [
-              fade(INDIGO, 0.15),
-              fade(INDIGO, 0.35),
-              fade(INDIGO, 0.55),
-              fade(INDIGO, 0.78),
-              INDIGO,
+              fade(theme.palette.surface.interface.backElevation, 1),
+              fade(accent, 0.45),
+              fade(accent, 0.65),
+              fade(accent, 0.85),
+              fade(accent, 1),
             ],
           }}
-          emptyColor={fade(theme.palette.divider, 0.15)}
+          emptyColor={fade(theme.palette.surface.interface.backElevation, 1)}
           enableLabels={false}
           axisTop={null}
           axisBottom={{
@@ -70,18 +95,17 @@ function HeatmapCard({ matrix, loading }: Props) {
           }}
           borderRadius={2}
           hoverTarget="cell"
-          tooltip={({ cell }) => (
-            <Tooltip>
-              {t("activity.cards.heatmap_tooltip", {
-                weekday: cell.serieId,
-                hour: `${String(cell.data.x).padStart(2, "0")}:00`,
-                commits: t("activity.cards.commits_count", {
-                  count: Number(cell.value ?? 0),
-                }),
-              })}
-            </Tooltip>
-          )}
+          tooltip={() => <></>}
+          onMouseMove={(cell, e) =>
+            show(
+              e.clientX,
+              e.clientY,
+              renderTip(String(cell.serieId), String(cell.data.x), Number(cell.value ?? 0)),
+            )
+          }
+          onMouseLeave={hide}
         />
+        {portal}
       </Grid>
     </GeneralCard>
   );

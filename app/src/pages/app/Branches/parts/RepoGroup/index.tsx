@@ -17,6 +17,7 @@ import {
 } from "@/lib/animations/pageAnimations";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import BranchRowItem from "@/pages/app/Branches/parts/BranchRowItem";
 import { type BranchesByRepo, SpinIcon } from "@/pages/app/Branches/parts/_shared";
 
@@ -158,7 +159,7 @@ const GroupName = styled(Typography)(({ theme }) => ({
 const GroupRemote = styled(Typography)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   flex: 1,
   overflow: "hidden",
   textOverflow: "ellipsis",

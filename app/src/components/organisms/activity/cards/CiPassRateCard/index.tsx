@@ -22,6 +22,7 @@ import {
   RepoRuns,
 } from "@/components/organisms/activity/cards/CiPassRateCard/CiPassRateCard.styles";
 import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import {
   type CiRepoBreakdown,
   type PassRateDay,
@@ -30,6 +31,14 @@ import {
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+
+// nivo's line point carries the original datum on `.data`. Typed here so the
+// `onMouseMove` handler references a named shape instead of an inline
+// double-cast — a nivo version bump that changes the point shape then surfaces
+// as a single type error here rather than silently spreading.
+interface CiLinePoint {
+  data: { x?: unknown; passed?: number; total?: number };
+}
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -44,6 +53,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const { show, hide, portal } = useChartTooltip();
   const greenColor = theme.palette.success.main;
 
   const size = bucketSizeForWindow(windowDays);
@@ -66,6 +76,15 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
   const labels = points.map((p) => p.x);
   const every = Math.max(1, Math.ceil(labels.length / 5));
   const tickValues = labels.filter((_, i) => i % every === 0);
+
+  // Pass rates cluster near the top (80–100%), so a fixed 0–100% axis flattens
+  // the trend into a line glued to the ceiling. Zoom the y-domain to just below
+  // the lowest point (rounded down to 5%, with 5% headroom) so the variation
+  // fills the chart. A real dip toward 0% widens the domain back out.
+  const ys = points.map((p) => p.y);
+  const dataMin = ys.length > 0 ? Math.min(...ys) : 1;
+  const yMin = Math.max(0, Math.min(0.9, Math.floor(dataMin * 20) / 20 - 0.05));
+  const yTicks = [yMin, (yMin + 1) / 2, 1];
 
   const totalPassed = rows.reduce((a, r) => a + r.passed, 0);
   const totalRuns = rows.reduce((a, r) => a + r.total, 0);
@@ -110,26 +129,29 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
           data={data}
           theme={nivoTheme}
           colors={[greenColor]}
-          margin={{ top: 8, right: 8, bottom: 24, left: 36 }}
+          margin={{ top: 8, right: 8, bottom: 24, left: 44 }}
           xScale={{ type: "point" }}
-          yScale={{ type: "linear", min: 0, max: 1 }}
+          yScale={{ type: "linear", min: yMin, max: 1 }}
           curve="monotoneX"
           enablePoints={false}
           enableGridX={false}
           enableArea
+          areaBaselineValue={yMin}
           areaOpacity={0.12}
           axisBottom={{ tickValues, tickRotation: 0 }}
-          axisLeft={{ tickValues: [0, 0.5, 1], format: ">-.0%" }}
-          enableSlices="x"
-          sliceTooltip={({ slice }) => {
-            const point = slice.points[0];
-            const datum = point?.data as { passed?: number; total?: number } | undefined;
-            const passed = datum?.passed ?? 0;
-            const total = datum?.total ?? 0;
+          axisLeft={{ tickValues: yTicks, format: ">-.0%" }}
+          useMesh
+          tooltip={() => <></>}
+          onMouseMove={(point, e) => {
+            const datum = (point as unknown as CiLinePoint).data;
+            const passed = datum.passed ?? 0;
+            const total = datum.total ?? 0;
             const pct = Math.round((total === 0 ? 1 : passed / total) * 100);
-            return (
+            show(
+              e.clientX,
+              e.clientY,
               <ChartTooltip
-                title={String(point?.data.x ?? "")}
+                title={String(datum.x ?? "")}
                 rows={[
                   {
                     color: greenColor,
@@ -137,12 +159,13 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
                     value: t("activity.tooltip.ci_passed", { passed, total }),
                   },
                 ]}
-              />
+              />,
             );
           }}
-          useMesh
+          onMouseLeave={hide}
         />
       </ChartWrap>
+      {portal}
 
       {breakdown.length > 0 && (
         <Breakdown>

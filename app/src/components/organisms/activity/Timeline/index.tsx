@@ -12,6 +12,9 @@ import {
 } from "@recrest/shared";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralButtonGroup, {
+  GeneralButtonGroupItem,
+} from "@/components/atoms/buttons/GeneralButtonGroup";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import {
   Chip,
@@ -21,9 +24,7 @@ import {
   DayTitle,
   Empty,
   Feed,
-  Pill,
   PillCount,
-  Pills,
   ShowMore,
   Wrap,
 } from "@/components/organisms/activity/Timeline/Timeline.styles";
@@ -208,29 +209,30 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
   const sub = t("activity.timeline.sub", { count: totals.all, days: groups.length });
 
   const filterChips = (
-    <Pills
+    <GeneralButtonGroup
       value={filter}
       exclusive
+      density="sm"
       onChange={(_, next: FilterKind | null) => next && setFilter(next)}
       aria-label={t("activity.timeline_filter", { ns: I18nNamespace.ARIA })}
     >
-      <Pill value={FeedFilterKind.ALL}>
+      <GeneralButtonGroupItem value={FeedFilterKind.ALL}>
         <Box component="span">{t("activity.timeline.filter_all")}</Box>
         <PillCount component="span">{totals.all}</PillCount>
-      </Pill>
-      <Pill value={FeedFilterKind.COMMITS}>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.COMMITS}>
         <Box component="span">{t("activity.timeline.filter_commits")}</Box>
         <PillCount component="span">{totals.commits}</PillCount>
-      </Pill>
-      <Pill value={FeedFilterKind.PRS}>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.PRS}>
         <Box component="span">{t("activity.timeline.filter_prs")}</Box>
         <PillCount component="span">{totals.prs}</PillCount>
-      </Pill>
-      <Pill value={FeedFilterKind.CHECKS}>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.CHECKS}>
         <Box component="span">{t("activity.timeline.filter_checks")}</Box>
         <PillCount component="span">{totals.checks}</PillCount>
-      </Pill>
-    </Pills>
+      </GeneralButtonGroupItem>
+    </GeneralButtonGroup>
   );
 
   return (

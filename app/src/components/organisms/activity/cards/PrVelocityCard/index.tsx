@@ -5,14 +5,14 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
-import { ResponsiveLine } from "@nivo/line";
+import { ResponsiveBar } from "@nivo/bar";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { VelocityDay } from "@/lib/activityAggregates";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
-import { CHART_PALETTE } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
@@ -55,67 +55,72 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
-  const openedColor = CHART_PALETTE[0];
+  const { show, move, hide, portal } = useChartTooltip();
+  const openedColor = theme.palette.primary.main;
   const mergedColor = theme.palette.success.main;
+  const openedLabel = t("activity.cards.pr_velocity_opened");
+  const mergedLabel = t("activity.cards.pr_velocity_merged");
 
   const size = bucketSizeForWindow(windowDays);
   // Newest-first buckets → reverse for chronological left-to-right.
   const buckets = bucketDays(rows, (r) => r.day, size).reverse();
-  const points = buckets.map((b) => ({
+  const data = buckets.map((b) => ({
     x: dayLabel(b.newestDay, i18n.language),
-    opened: b.rows.reduce((a, r) => a + r.opened, 0),
-    merged: b.rows.reduce((a, r) => a + r.merged, 0),
+    [openedLabel]: b.rows.reduce((a, r) => a + r.opened, 0),
+    [mergedLabel]: b.rows.reduce((a, r) => a + r.merged, 0),
   }));
 
-  const data = [
-    {
-      id: t("activity.cards.pr_velocity_opened"),
-      data: points.map((p) => ({ x: p.x, y: p.opened })),
-    },
-    {
-      id: t("activity.cards.pr_velocity_merged"),
-      data: points.map((p) => ({ x: p.x, y: p.merged })),
-    },
-  ];
-
-  const labels = points.map((p) => p.x);
+  const labels = data.map((d) => String(d.x));
   const every = Math.max(1, Math.ceil(labels.length / 5));
   const tickValues = labels.filter((_, i) => i % every === 0);
+  const colorByKey: Record<string, string> = {
+    [openedLabel]: openedColor,
+    [mergedLabel]: mergedColor,
+  };
+
+  const renderTip = (indexValue: string | number, row: Record<string, string | number>) => (
+    <ChartTooltip
+      title={String(indexValue)}
+      rows={[openedLabel, mergedLabel].map((key) => ({
+        color: colorByKey[key],
+        label: key,
+        value: String(Number(row[key] ?? 0)),
+      }))}
+    />
+  );
 
   return (
     <GeneralCard
       title={t("activity.cards.pr_velocity_title")}
       sub={t("activity.cards.pr_velocity_sub", { days: windowDays })}
       loading={loading}
-      skeleton="line"
+      skeleton="bars"
       testId={TEST_IDS.activity.cards.prVelocity}
     >
-      <ChartWrap>
-        <ResponsiveLine
+      {/* @nivo/bar fires only onMouseEnter — wrapper mousemove keeps the
+          portalled tooltip tracking the cursor across the bar. */}
+      <ChartWrap onMouseMove={(e) => move(e.clientX, e.clientY)}>
+        <ResponsiveBar
           data={data}
+          keys={[openedLabel, mergedLabel]}
+          indexBy="x"
+          groupMode="grouped"
           theme={nivoTheme}
-          colors={[openedColor, mergedColor]}
+          colors={(bar) => colorByKey[String(bar.id)] ?? theme.palette.primary.main}
           margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
-          curve="monotoneX"
-          enablePoints={false}
+          padding={0.3}
+          innerPadding={2}
+          borderRadius={2}
+          enableLabel={false}
           enableGridX={false}
-          xScale={{ type: "point" }}
           axisBottom={{ tickValues, tickRotation: 0 }}
           axisLeft={{ tickValues: 4 }}
-          enableSlices="x"
-          sliceTooltip={({ slice }) => (
-            <ChartTooltip
-              title={String(slice.points[0]?.data.x ?? "")}
-              rows={slice.points.map((p) => ({
-                color: p.seriesColor,
-                label: String(p.seriesId),
-                value: String(p.data.yFormatted),
-              }))}
-            />
-          )}
-          useMesh
+          tooltip={() => <></>}
+          onMouseEnter={(d, e) => show(e.clientX, e.clientY, renderTip(d.indexValue, d.data))}
+          onMouseLeave={hide}
         />
       </ChartWrap>
+      {portal}
       <Legend>
         <Box component="span">
           <LegendDot color={openedColor} />

@@ -1183,14 +1183,16 @@ git commit -m "refactor: parameterize activity aggregations over window length"
 
 ---
 
-### Task 9: `DateRangePicker`-Atom mit Presets
+### Task 9: `DateRangePicker`-Atom (preset-only)
 
 **Files:**
 
 - Create: `app/src/components/atoms/DateRangePicker/index.tsx`
 - Modify: `app/src/lib/constants/testIds.constants.ts` — `activity.rangePicker`-Block
-- Modify: `app/src/i18n/locales/en/common.json` + `app/src/i18n/locales/de/common.json`
+- Modify: `app/src/locales/en/common.json` + `app/src/locales/de/common.json`
 - Test: `app/src/components/atoms/DateRangePicker/DateRangePicker.test.tsx`
+
+> **Entscheidung:** Der Picker ist **preset-only** (7d/30d/90d/1y/All) — **keine** manuellen `since`/`until`-Datumsfelder. Ein freier Zeitraum kommt ausschließlich über die URL-Parameter (Task 10). Aufbau über `GeneralButtonGroup` (exclusive); das aktive Segment wird aus der Range abgeleitet.
 
 - [ ] **Step 1: Test-IDs + i18n-Keys**
 
@@ -1200,8 +1202,6 @@ git commit -m "refactor: parameterize activity aggregations over window length"
 rangePicker: {
   root: "activity-range-picker",
   preset: (p: string) => `activity-range-preset-${p}`,
-  sinceInput: "activity-range-since",
-  untilInput: "activity-range-until",
 },
 ```
 
@@ -1215,14 +1215,12 @@ rangePicker: {
     "preset_90d": "90d",
     "preset_1y": "1y",
     "preset_all": "All",
-    "since": "From",
-    "until": "Until",
     "truncated_banner": "Range trimmed — shrink the range for complete data."
   }
 }
 ```
 
-`de`-Pendant: `"preset_all": "Alles"`, `"since": "Von"`, `"until": "Bis"`, `"truncated_banner": "Zeitraum gekürzt — Range verkleinern für vollständige Daten."` (übrige Presets identisch).
+`de`-Pendant: `"preset_all": "Alles"`, `"truncated_banner": "Zeitraum gekürzt — Range verkleinern für vollständige Daten."` (übrige Presets identisch).
 
 - [ ] **Step 2: Failing Component-Test (nur `data-testid`-Selektion!)**
 
@@ -1261,13 +1259,12 @@ describe("DateRangePicker", () => {
     expect(onChange.mock.calls[0]![0].since).toBe("2024-01-15T00:00:00.000Z");
   });
 
-  it("applies manual date input changes", () => {
-    const onChange = vi.fn();
-    render(<DateRangePicker value={range} onChange={onChange} oldestDate={null} />);
-    fireEvent.change(screen.getByTestId(TEST_IDS.activity.rangePicker.sinceInput), {
-      target: { value: "2026-04-01" },
-    });
-    expect(onChange).toHaveBeenCalled();
+  it("marks the matching preset for an exactly-30-day range", () => {
+    render(<DateRangePicker value={range} onChange={vi.fn()} oldestDate={null} />);
+    expect(screen.getByTestId(TEST_IDS.activity.rangePicker.preset("30d"))).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 });
 ```
@@ -1279,129 +1276,108 @@ Expected: FAIL
 
 - [ ] **Step 4: Implementierung**
 
-Aufbau (alles `styled()`, kein `sx`; Buttons über `GeneralButton`/`GeneralButtonGroup` aus `atoms/buttons/`; native `<input type="date">` analog zum `NumberInput`-Pattern in `SystemSection` mit `eslint-disable`-Begründung):
+Preset-only über `GeneralButtonGroup` (kein `sx`, keine Datums-Inputs). Das aktive Segment wird aus der Range abgeleitet — Preset-Match zuerst, `all` nur als Fallback, wenn die Range bis zum ältesten Commit zurückreicht:
 
 ```tsx
 // app/src/components/atoms/DateRangePicker/index.tsx
-import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
 import type { ActivityRange } from "@recrest/shared";
 
-import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralButtonGroup, {
+  GeneralButtonGroupItem,
+} from "@/components/atoms/buttons/GeneralButtonGroup";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 const DAY_MS = 86_400_000;
+const ALL_KEY = "all";
+
 const PRESETS = [
   { key: "7d", days: 7 },
   { key: "30d", days: 30 },
   { key: "90d", days: 90 },
   { key: "1y", days: 365 },
-] as const;
+];
 
-interface Props {
+export interface DateRangePickerProps {
   value: ActivityRange;
   onChange: (next: ActivityRange) => void;
   /** Oldest commit timestamp across repos; `null` disables the `all` preset. */
   oldestDate: string | null;
 }
 
-const Root = styled(Box)({
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  flexWrap: "wrap",
-});
-
-// eslint-disable-next-line no-restricted-syntax -- native date input required for the OS date popover
-const DateInput = styled("input")(({ theme }) => ({
-  height: 28,
-  padding: "0 8px",
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.primary,
-  fontSize: 12,
-  fontFamily: "inherit",
-  outline: "none",
-  "&:focus": { borderColor: theme.palette.border.hover },
-}));
-
-function isoAtMidnight(dateInputValue: string): string {
-  return new Date(`${dateInputValue}T00:00:00`).toISOString();
+/** Preset-match wins first so a young repo whose oldest commit sits inside the
+ *  window still highlights its preset rather than jumping to "all". */
+function selectedKey(value: ActivityRange, oldestDate: string | null): string | null {
+  const windowDays = Math.round((Date.parse(value.until) - Date.parse(value.since)) / DAY_MS);
+  const match = PRESETS.find((p) => Math.abs(p.days - windowDays) <= 1);
+  if (match) return match.key;
+  if (oldestDate && value.since <= oldestDate) return ALL_KEY;
+  return null;
 }
 
-function toDateInputValue(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-CA"); // YYYY-MM-DD in local tz
-}
-
-function DateRangePicker({ value, onChange, oldestDate }: Props) {
+function DateRangePicker({ value, onChange, oldestDate }: DateRangePickerProps) {
   const { t } = useTranslation();
-  const applyPreset = (days: number) => {
-    const until = new Date();
+  const selected = selectedKey(value, oldestDate);
+
+  const handleChange = (_: unknown, key: string | null) => {
+    if (!key) return; // clicking the active segment must not clear the range
+    if (key === ALL_KEY) {
+      if (!oldestDate) return;
+      onChange({ since: oldestDate, until: new Date().toISOString() });
+      return;
+    }
+    const preset = PRESETS.find((p) => p.key === key);
+    if (!preset) return;
+    const now = Date.now();
     onChange({
-      since: new Date(until.getTime() - days * DAY_MS).toISOString(),
-      until: until.toISOString(),
+      since: new Date(now - preset.days * DAY_MS).toISOString(),
+      until: new Date(now).toISOString(),
     });
   };
+
   return (
-    <Root data-testid={TEST_IDS.activity.rangePicker.root}>
-      {PRESETS.map((p) => (
-        <GeneralButton
-          key={p.key}
-          size="xs"
-          variant="subtle"
-          onClick={() => applyPreset(p.days)}
-          data-testid={TEST_IDS.activity.rangePicker.preset(p.key)}
+    <GeneralButtonGroup
+      exclusive
+      value={selected}
+      shape="square"
+      density="sm"
+      onChange={handleChange}
+      data-testid={TEST_IDS.activity.rangePicker.root}
+    >
+      {PRESETS.map((preset) => (
+        <GeneralButtonGroupItem
+          key={preset.key}
+          value={preset.key}
+          data-testid={TEST_IDS.activity.rangePicker.preset(preset.key)}
         >
-          {t(`activity.range.preset_${p.key}`)}
-        </GeneralButton>
+          {t(`activity.range.preset_${preset.key}`)}
+        </GeneralButtonGroupItem>
       ))}
-      <GeneralButton
-        size="xs"
-        variant="subtle"
+      <GeneralButtonGroupItem
+        value={ALL_KEY}
         disabled={!oldestDate}
-        onClick={() =>
-          oldestDate && onChange({ since: oldestDate, until: new Date().toISOString() })
-        }
-        data-testid={TEST_IDS.activity.rangePicker.preset("all")}
+        data-testid={TEST_IDS.activity.rangePicker.preset(ALL_KEY)}
       >
         {t("activity.range.preset_all")}
-      </GeneralButton>
-      <DateInput
-        type="date"
-        value={toDateInputValue(value.since)}
-        aria-label={t("activity.range.since")}
-        onChange={(e) => onChange({ ...value, since: isoAtMidnight(e.target.value) })}
-        data-testid={TEST_IDS.activity.rangePicker.sinceInput}
-      />
-      <DateInput
-        type="date"
-        value={toDateInputValue(value.until)}
-        aria-label={t("activity.range.until")}
-        onChange={(e) => onChange({ ...value, until: isoAtMidnight(e.target.value) })}
-        data-testid={TEST_IDS.activity.rangePicker.untilInput}
-      />
-    </Root>
+      </GeneralButtonGroupItem>
+    </GeneralButtonGroup>
   );
 }
 
 export default DateRangePicker;
 ```
 
-`GeneralButton`-Props vorher gegen die echte Komponente prüfen (`app/src/components/atoms/buttons/GeneralButton/index.tsx`) und Größen-/Variant-Namen exakt übernehmen.
-
 - [ ] **Step 5: Run — PASS**
 
 Run: `yarn workspace @recrest/app test src/components/atoms/DateRangePicker`
-Expected: PASS (4 tests)
+Expected: PASS
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/src/components/atoms/DateRangePicker app/src/lib/constants/testIds.constants.ts app/src/i18n/locales
-git commit -m "feat: add date range picker atom with presets"
+git add app/src/components/atoms/DateRangePicker app/src/lib/constants/testIds.constants.ts app/src/locales
+git commit -m "feat: add preset-only date range picker atom"
 ```
 
 ---
@@ -1836,7 +1812,7 @@ git commit -m "feat: add insights aggregation module with local-tz day buckets"
 - Create: `.../insights/LongestGapInsightCard/index.tsx`
 - Modify: `app/src/pages/app/Activity/index.tsx` — neuer Block "Insights" (Grid 3×2, je `cols={4}`)
 - Modify: `app/src/lib/constants/testIds.constants.ts` — `activity.cards.insights.*`
-- Modify: `app/src/i18n/locales/{en,de}/common.json` — Titel/Sub/Werte-Keys
+- Modify: `app/src/locales/{en,de}/common.json` — Titel/Sub/Werte-Keys
 - Test: je Card ein kompakter Component-Test (`*.test.tsx`, nur `data-testid`)
 
 **Pattern pro Card** (alle sechs identisch aufgebaut; `GeneralCard`-Chrome wie bei `StreakCard`/`BusiestPeakCard` — vorher eine davon lesen und Props exakt übernehmen). Beispiel `TrendInsightCard`:

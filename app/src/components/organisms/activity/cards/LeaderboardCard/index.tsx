@@ -46,7 +46,11 @@ function LeaderboardCard({ buckets, windowDays = 14, loading }: Props) {
       ) : (
         <List component="ol">
           {buckets.map((b, idx) => {
-            const peakSpark = Math.max(1, ...b.sparkline);
+            // Cap to the most recent 14 days — `sparkline` is windowDays long,
+            // so a 1-year range would otherwise render 365 bars and overflow
+            // the row. Newest-first slice, reversed below to read left→right.
+            const spark = b.sparkline.slice(0, 14);
+            const peakSpark = Math.max(1, ...spark);
             return (
               <Row key={b.author + (b.email ?? "")} component="li">
                 <Rank component="span" variant="caption">
@@ -66,7 +70,7 @@ function LeaderboardCard({ buckets, windowDays = 14, loading }: Props) {
                     <BarFill width={b.share * 100} />
                   </Bar>
                   <Spark>
-                    {[...b.sparkline].reverse().map((v, i) => (
+                    {[...spark].reverse().map((v, i) => (
                       <SparkBar key={i} h={v / peakSpark} />
                     ))}
                   </Spark>

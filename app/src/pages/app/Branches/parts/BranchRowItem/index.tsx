@@ -15,6 +15,8 @@ import {
 } from "@/lib/animations/pageAnimations";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 export interface BranchRowItemProps {
   repo: EnrichedRepo;
@@ -198,7 +200,7 @@ const NameCell = styled(Box)(({ theme }) => ({
   alignItems: "center",
   gap: 8,
   minWidth: 0,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12.5,
   color: theme.palette.text.primary,
   "& > svg": {
@@ -297,8 +299,8 @@ const Trk = styled("span", {
   fontWeight: tone === "even" ? 400 : 600,
   color:
     tone === "ahead"
-      ? theme.palette.success.dark
+      ? toneText(theme, StatusTone.SUCCESS)
       : tone === "behind"
-        ? theme.palette.warning.dark
+        ? toneText(theme, StatusTone.WARNING)
         : theme.palette.text.information,
 }));

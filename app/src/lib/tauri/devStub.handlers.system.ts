@@ -58,6 +58,14 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
       return seed.settings;
     }
 
+    // Custom fonts are Tauri-only (filesystem-backed); the upload button is
+    // disabled outside Tauri, so the list is always empty here.
+    case "list_custom_fonts":
+      return [];
+    case "upload_font":
+    case "delete_custom_font":
+      return undefined;
+
     case "save_window_state":
       return undefined;
     case "load_window_state":
@@ -75,6 +83,12 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
         debugAssertions: true,
       };
     }
+
+    // OS probes degrade to the renderer's stub maps on an empty result, so
+    // returning [] outside Tauri is the correct no-detection signal.
+    case "detect_terminals":
+    case "detect_shells":
+      return [];
 
     case "check_git":
       return { installed: true, version: "2.44.0" };

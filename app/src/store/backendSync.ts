@@ -6,6 +6,8 @@ import type { ThemeId } from "@/lib/constants/theme.constants";
 import { isTauri } from "@/lib/tauri";
 import {
   saveSettings,
+  setCodeFont,
+  setCodeLigatures,
   setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
@@ -144,6 +146,10 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
         }),
       }),
     );
+  } else if (setCodeFont.match(a)) {
+    dispatch(saveSettings({ appearance: appearancePatch(state, { codeFont: a.payload }) }));
+  } else if (setCodeLigatures.match(a)) {
+    dispatch(saveSettings({ appearance: appearancePatch(state, { codeLigatures: a.payload }) }));
   } else if (setFontSize.match(a)) {
     dispatch(saveSettings({ appearance: appearancePatch(state, { fontSize: a.payload }) }));
   } else if (setDyslexiaFont.match(a)) {
@@ -247,6 +253,8 @@ type StoreState = {
     followsSystem: boolean;
     primaryColor: string;
     font: string;
+    codeFont: string;
+    codeLigatures: AppSettings["appearance"]["codeLigatures"];
     fontSize: string;
     dyslexiaFont: boolean;
     highContrast: boolean;
@@ -277,6 +285,8 @@ function appearancePatch(
     followsSystem: s.followsSystem,
     primaryColor: s.primaryColor as AppSettings["appearance"]["primaryColor"],
     font: s.font as AppSettings["appearance"]["font"],
+    codeFont: s.codeFont as AppSettings["appearance"]["codeFont"],
+    codeLigatures: s.codeLigatures,
     fontSize: s.fontSize as AppSettings["appearance"]["fontSize"],
     ...patch,
   };
