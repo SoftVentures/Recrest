@@ -19,10 +19,9 @@ import { TEST_IDS } from "../../helpers/test-ids";
  * explicitly filtered out by both hooks (see `useDrawerSwipe.ts` lines 37-40),
  * so `page.mouse.move` would do nothing.
  *
- * Restricted to `app-desktop` because the MR list is hidden behind a filter
- * drawer on `app-mobile` (mirrors the skip in `11-merge-requests.spec.ts`),
- * and because Chromium's desktop runtime exposes a constructable
- * `TouchEvent` regardless of `hasTouch`.
+ * Restricted to `app-desktop` because Chromium's desktop runtime exposes a
+ * constructable `TouchEvent` regardless of `hasTouch`, so the touch-gesture
+ * code path is exercised reliably there.
  */
 
 async function dispatchSwipe(

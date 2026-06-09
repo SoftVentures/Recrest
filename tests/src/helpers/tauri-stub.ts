@@ -545,12 +545,6 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         } catch (e) { void e; }
         return SEED.settings;
       }
-      case "save_window_state":
-        return undefined;
-      case "load_window_state":
-        return null;
-      case "validate_window_position":
-        return true;
       case "get_platform_info":
         return { platform: "windows", osVersion: "10.0.22000", arch: "x86_64", tauriVersion: "2.0.0" };
       case "check_git":

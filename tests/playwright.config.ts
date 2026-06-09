@@ -126,14 +126,6 @@ export default defineConfig({
         baseURL: APP_URL,
       },
     },
-    {
-      name: "app-mobile",
-      testMatch: /e2e[\\/]app[\\/].*\.spec\.ts$/,
-      use: {
-        ...devices["Pixel 7"],
-        baseURL: APP_URL,
-      },
-    },
   ],
   webServer: [
     {

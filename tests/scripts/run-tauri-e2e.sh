@@ -36,6 +36,11 @@ step() { printf '\033[1;34m[run-tauri-e2e]\033[0m %s\n' "$*"; }
 
 if [ "${RECREST_E2E_NATIVE:-0}" = "1" ]; then
   step "native-mode (no Docker) — assumes Linux + webkit2gtk-driver + tauri-driver on PATH"
+  # entrypoint.sh defaults REPO_ROOT to `/workspace` (the Docker bind-mount
+  # path). On a bare host (GitHub Actions runner) that dir doesn't exist and
+  # can't be created at the filesystem root — export the real repo root so the
+  # log/build paths resolve under the checkout instead of `/workspace`.
+  export REPO_ROOT
   exec bash "${REPO_ROOT}/tests/docker/entrypoint.sh" "$@"
 fi
 
