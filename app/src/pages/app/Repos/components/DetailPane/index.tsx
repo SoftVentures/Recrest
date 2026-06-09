@@ -35,8 +35,8 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -96,8 +96,11 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     : tAria("actions.open_in_ide", { ns: I18nNamespace.COMMON });
   const navigate = useNavigate();
   const prs = useAppSelector((s) => s.prs.items[repo.id] ?? []);
-  const { commits } = useRecentCommits({ repoId: repo.id, days: 30, limit: 4 });
-  const repoCommits = commits;
+  const { commits: rangeCommits } = useActivityCommits();
+  const repoCommits = useMemo(
+    () => rangeCommits.filter((c) => c.repoId === repo.id).slice(0, 4),
+    [rangeCommits, repo.id],
+  );
   const openPrs = useMemo(() => prs.filter((p) => p.state === PrState.OPEN), [prs]);
   const brand = brandFromUrl(repo.remoteUrl);
 

@@ -12,6 +12,7 @@ import GeneralIconButton, {
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setCrashReporting } from "@/store/actions/settings.actions";
@@ -73,6 +74,8 @@ export function StorageSection() {
         <GeneralSwitchInput
           checked={crashReporting}
           onCheckedChange={(v) => dispatch(setCrashReporting(v))}
+          aria-label={t("settings.storage.crash_reporting")}
+          data-testid={TEST_IDS.settings.storage.crashReporting}
         />
       </SettingsRow>
 

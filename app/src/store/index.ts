@@ -1,7 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 
+import {
+  activityRangePersistMiddleware,
+  loadPersistedRange,
+} from "@/store/activityRangePersistence";
 import { settingsBackendSync } from "@/store/backendSync";
-import { activityReducer } from "@/store/reducers/activityReducer";
+import { activityReducer, initialActivityState } from "@/store/reducers/activityReducer";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
@@ -18,10 +22,16 @@ import type { RootState } from "@/store/rootState";
  * mount and both `settingsReducer` + `uiReducer` listen to the
  * `loadSettings.fulfilled` / `saveSettings.fulfilled` action to hydrate
  * theme, sidebar, pinned repos, accessibility flags, etc. from the backend
- * payload. The only renderer-side persistence that survives is i18next's
- * own locale detector (intentional — it predates Redux in the boot order
- * and is needed before the store is constructed).
+ * payload. The renderer-side persistence that survives is intentional and
+ * narrow: i18next's own locale detector (predates Redux in the boot order),
+ * and the global activity time-range (`activity.selectedRange`) — both are
+ * pure renderer UI preferences that must be available *synchronously* at store
+ * construction, before the async backend `loadSettings` resolves, to avoid a
+ * flash of the default value. The range is hydrated from `localStorage` here
+ * and mirrored back by `activityRangePersistMiddleware`.
  */
+const persistedRange = loadPersistedRange();
+
 export const store = configureStore({
   reducer: {
     ui: uiReducer,
@@ -32,7 +42,11 @@ export const store = configureStore({
     remoteImport: remoteImportReducer,
     activity: activityReducer,
   },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(settingsBackendSync),
+  preloadedState: persistedRange
+    ? { activity: { ...initialActivityState, selectedRange: persistedRange } }
+    : undefined,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(settingsBackendSync, activityRangePersistMiddleware),
 });
 
 export type { RootState };

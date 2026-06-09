@@ -46,6 +46,8 @@ export const TEST_IDS = {
     navSettings: "nav-settings",
     nav: navTestId,
     navCount: navCountTestId,
+    rangeSelect: "sidebar-range-select",
+    rangeOption: (key: string) => `sidebar-range-option-${key}` as const,
   },
 
   titlebar: {
@@ -55,6 +57,11 @@ export const TEST_IDS = {
     min: "titlebar-min",
     max: "titlebar-max",
     close: "titlebar-close",
+    menu: "titlebar-menu",
+    menuAddRepo: "titlebar-menu-add-repo",
+    menuSearch: "titlebar-menu-search",
+    menuSettings: "titlebar-menu-settings",
+    menuAbout: "titlebar-menu-about",
   },
 
   searchOverlay: {
@@ -68,6 +75,7 @@ export const TEST_IDS = {
   // --- Pages
   dashboard: {
     page: "dashboard-page",
+    activityAxis: "dash-activity-axis",
     qa: {
       clone: "dash-qa-clone",
       workspace: "dash-qa-workspace",
@@ -98,11 +106,6 @@ export const TEST_IDS = {
     cardName: "repo-card-name",
     contextMenu: "repo-context-menu",
     detailPane: "detail-pane",
-    addScope: {
-      root: "repo-add-scope",
-      local: "repo-add-scope-local",
-      global: "repo-add-scope-global",
-    },
   },
 
   contextMenu: {
@@ -275,9 +278,10 @@ export const TEST_IDS = {
       card: "activity-stacked-card",
     },
     chartTooltip: "activity-chart-tooltip",
-    rangePicker: {
-      root: "activity-range-picker",
-      preset: (p: string) => `activity-range-preset-${p}` as const,
+    sourceToggle: {
+      root: "activity-source-toggle",
+      all: "activity-source-all",
+      remote: "activity-source-remote",
     },
     cards: {
       reviewQueue: "activity-review-queue-card",
@@ -359,6 +363,16 @@ export const TEST_IDS = {
       },
       updateModeSelect: "settings-update-mode-select",
       updateCheckNow: "settings-update-check-now",
+    },
+
+    shortcuts: {
+      navigation: "settings-shortcuts-navigation",
+      git: "settings-shortcuts-git",
+      editor: "settings-shortcuts-editor",
+    },
+
+    storage: {
+      crashReporting: "settings-storage-crash-reporting",
     },
 
     accounts: {

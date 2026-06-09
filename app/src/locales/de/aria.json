@@ -21,11 +21,6 @@
     "refresh": "Aktualisieren",
     "add_repo": "Repository hinzufügen"
   },
-  "scope": {
-    "group": "Bereich hinzufügen",
-    "local": "Lokal",
-    "global": "Global"
-  },
   "settings": {
     "more_info": "Weitere Informationen",
     "send_test_notification": "Testbenachrichtigung senden",
@@ -57,7 +52,9 @@
     "search": "Branches nach Namen filtern"
   },
   "activity": {
-    "timeline_filter": "Event-Typ"
+    "timeline_filter": "Event-Typ",
+    "source": "Aktivitätsquelle",
+    "range": "Zeitraum"
   },
   "dashboard": {
     "main": "Dashboard-Inhalt"

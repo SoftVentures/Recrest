@@ -7,10 +7,10 @@ import { useTranslation } from "react-i18next";
 import { Box, MenuItem, Select, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import DateRangePicker from "@/components/atoms/DateRangePicker";
 import LazyMount from "@/components/atoms/LazyMount";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
+import ActivitySourceToggle from "@/components/atoms/buttons/ActivitySourceToggle";
 import GeneralCircularLoader, {
   CircularLoaderSize,
 } from "@/components/atoms/loaders/GeneralCircularLoader";
@@ -43,6 +43,7 @@ import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useCheckRuns } from "@/hooks/useCheckRuns";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { usePrEvents } from "@/hooks/usePrEvents";
+import { windowDaysOf } from "@/lib/activity/rangeBuckets";
 import {
   computeAuthorClock,
   computeChurn,
@@ -72,6 +73,7 @@ import {
 import {
   ACTIVITY_URL_PARAM_SINCE,
   ACTIVITY_URL_PARAM_UNTIL,
+  ActivitySource,
 } from "@/lib/constants/activity.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import {
@@ -82,10 +84,9 @@ import {
   computeTopAuthorsByPeriod,
   computeTrend,
 } from "@/lib/insights";
-import { isTauri } from "@/lib/tauri";
-import { fetchOldestCommitDate, setSelectedRange } from "@/store/actions/activity.actions";
+import { setSelectedRange } from "@/store/actions/activity.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectOldestCommitDate, selectSelectedRange } from "@/store/selectors/activity.selectors";
+import { selectSelectedRange } from "@/store/selectors/activity.selectors";
 
 /* ──────────────────────────────────────────────────────────────────────────
  * ActivityPage — port of src-old `pages/ActivityPage.tsx`.
@@ -148,8 +149,8 @@ const FilterRow = styled(Box)({
 }) as typeof Box;
 
 const FilterSelect = styled(Select)(({ theme }) => ({
-  // Match the DateRangePicker's GeneralButtonGroup (density "sm" = 32px) so the
-  // header controls line up on one baseline.
+  // Match the ActivitySourceToggle's GeneralButtonGroup (density "sm" = 32px) so
+  // the header controls line up on one baseline.
   height: 32,
   width: 200,
   fontSize: 12,
@@ -262,19 +263,12 @@ export default function ActivityPage() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
+  const connections = useAppSelector((s) => s.providers.connections);
   const range = useAppSelector(selectSelectedRange);
-  const oldest = useAppSelector(selectOldestCommitDate);
-
-  useEffect(() => {
-    if (isTauri()) void dispatch(fetchOldestCommitDate());
-  }, [dispatch]);
 
   // Number of whole days the selected range spans; every windowed aggregation
   // is bucketed against this instead of the old fixed 14-day window.
-  const windowDays = useMemo(
-    () => Math.max(1, Math.ceil((Date.parse(range.until) - Date.parse(range.since)) / 86_400_000)),
-    [range],
-  );
+  const windowDays = useMemo(() => windowDaysOf(range), [range]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   // Mount-only hydration: URL → store, only when both params parse cleanly AND
@@ -330,45 +324,84 @@ export default function ActivityPage() {
 
   const [selectedRepo, setSelectedRepo] = useState<string>("all");
   const [selectedAuthor, setSelectedAuthor] = useState<string>("all");
+  const [source, setSource] = useState<ActivitySource>(ActivitySource.ALL);
+
+  // "Remote" scopes every aggregation to repos backed by a connected provider;
+  // "all" keeps every scanned repo. `scopedRepoIds` stays null in "all" mode so
+  // the per-item membership checks below short-circuit.
+  const remoteRepoIds = useMemo(
+    () =>
+      new Set(
+        repos.filter((r) => r.providerId && connections[r.providerId]?.connected).map((r) => r.id),
+      ),
+    [repos, connections],
+  );
+  const scopedRepoIds = source === ActivitySource.REMOTE ? remoteRepoIds : null;
+  const scopedRepos = useMemo(
+    () => (scopedRepoIds ? repos.filter((r) => scopedRepoIds.has(r.id)) : repos),
+    [repos, scopedRepoIds],
+  );
+
+  // A repo picked before switching to "remote" may not be in the remote set;
+  // drop the stale selection so the page doesn't silently render nothing.
+  useEffect(() => {
+    if (selectedRepo !== "all" && scopedRepoIds && !scopedRepoIds.has(selectedRepo)) {
+      setSelectedRepo("all");
+    }
+  }, [scopedRepoIds, selectedRepo]);
 
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const reposById = useMemo(() => {
-    const m = new Map<string, (typeof repos)[number]>();
-    for (const r of repos) m.set(r.id, r);
+    const m = new Map<string, (typeof scopedRepos)[number]>();
+    for (const r of scopedRepos) m.set(r.id, r);
     return m;
-  }, [repos]);
+  }, [scopedRepos]);
   const repoNameById = useMemo(() => {
     const m: Record<string, string> = {};
-    for (const r of repos) m[r.id] = r.name;
+    for (const r of scopedRepos) m[r.id] = r.name;
     return m;
-  }, [repos]);
-  const allRepoIds = useMemo(() => repos.map((r) => r.id), [repos]);
+  }, [scopedRepos]);
+  const allRepoIds = useMemo(() => scopedRepos.map((r) => r.id), [scopedRepos]);
 
   const filteredCommits = useMemo(
     () =>
       commits.filter((c) => {
+        if (scopedRepoIds && !scopedRepoIds.has(c.repoId)) return false;
         if (selectedRepo !== "all" && c.repoId !== selectedRepo) return false;
         if (selectedAuthor !== "all" && c.author !== selectedAuthor) return false;
         return true;
       }),
-    [commits, selectedRepo, selectedAuthor],
+    [commits, selectedRepo, selectedAuthor, scopedRepoIds],
   );
 
   const filteredPrEvents = useMemo(
-    () => (selectedRepo === "all" ? prEvents : prEvents.filter((e) => e.repoId === selectedRepo)),
-    [prEvents, selectedRepo],
+    () =>
+      prEvents.filter((e) => {
+        if (scopedRepoIds && !scopedRepoIds.has(e.repoId)) return false;
+        if (selectedRepo !== "all" && e.repoId !== selectedRepo) return false;
+        return true;
+      }),
+    [prEvents, selectedRepo, scopedRepoIds],
   );
 
   const filteredCheckRuns = useMemo(
-    () => (selectedRepo === "all" ? checkRuns : checkRuns.filter((s) => s.repoId === selectedRepo)),
-    [checkRuns, selectedRepo],
+    () =>
+      checkRuns.filter((s) => {
+        if (scopedRepoIds && !scopedRepoIds.has(s.repoId)) return false;
+        if (selectedRepo !== "all" && s.repoId !== selectedRepo) return false;
+        return true;
+      }),
+    [checkRuns, selectedRepo, scopedRepoIds],
   );
 
   const filteredPrsByRepo = useMemo(() => {
-    if (selectedRepo === "all") return prsByRepo;
-    const p = prsByRepo[selectedRepo];
-    return p ? { [selectedRepo]: p } : {};
-  }, [prsByRepo, selectedRepo]);
+    const entries = Object.entries(prsByRepo).filter(([repoId]) => {
+      if (scopedRepoIds && !scopedRepoIds.has(repoId)) return false;
+      if (selectedRepo !== "all" && repoId !== selectedRepo) return false;
+      return true;
+    });
+    return Object.fromEntries(entries);
+  }, [prsByRepo, selectedRepo, scopedRepoIds]);
 
   // Defer the heavy chart inputs so a range-preset click paints the picker
   // state immediately and the ~20 chart/insight recomputes catch up in a
@@ -388,10 +421,11 @@ export default function ActivityPage() {
   const rangeBusy = commitsLoading || deferredWindowDays !== windowDays;
 
   const authorOptions = useMemo(() => {
+    const scoped = scopedRepoIds
+      ? deferredAllCommits.filter((c) => scopedRepoIds.has(c.repoId))
+      : deferredAllCommits;
     const buckets = computeLeaderboard(
-      selectedRepo === "all"
-        ? deferredAllCommits
-        : deferredAllCommits.filter((c) => c.repoId === selectedRepo),
+      selectedRepo === "all" ? scoped : scoped.filter((c) => c.repoId === selectedRepo),
       today,
       Number.POSITIVE_INFINITY,
       {},
@@ -401,7 +435,7 @@ export default function ActivityPage() {
       deferredWindowDays,
     );
     return buckets.map((b) => ({ key: b.author, name: b.author, email: b.email }));
-  }, [deferredAllCommits, selectedRepo, today, deferredWindowDays]);
+  }, [deferredAllCommits, selectedRepo, today, deferredWindowDays, scopedRepoIds]);
 
   const stats = useMemo(
     () => computeActivityStats(deferredCommits, today, allRepoIds, deferredWindowDays),
@@ -424,7 +458,7 @@ export default function ActivityPage() {
     () => computeLanguageMix(deferredCommits, reposById),
     [deferredCommits, reposById],
   );
-  const churn = useMemo(() => computeChurn(repos), [repos]);
+  const churn = useMemo(() => computeChurn(scopedRepos), [scopedRepos]);
   const velocity = useMemo(
     () => computePrVelocity(deferredPrEvents, today, deferredWindowDays),
     [deferredPrEvents, today, deferredWindowDays],
@@ -499,11 +533,7 @@ export default function ActivityPage() {
                 aria-label={t("activity.loading", { defaultValue: "Loading activity…" })}
               />
             )}
-            <DateRangePicker
-              value={range}
-              onChange={(r) => dispatch(setSelectedRange(r))}
-              oldestDate={oldest}
-            />
+            <ActivitySourceToggle value={source} onChange={setSource} />
             <FilterSelect
               value={selectedRepo}
               size="small"
@@ -516,7 +546,7 @@ export default function ActivityPage() {
                   <Box component="span">{t("activity.filter.all_repos")}</Box>
                 </SelectOption>
               </MenuItem>
-              {repos.map((r) => (
+              {scopedRepos.map((r) => (
                 <MenuItem key={r.id} value={r.id}>
                   <SelectOption>
                     <RepoAvatar repo={r} size={16} radius={4} />

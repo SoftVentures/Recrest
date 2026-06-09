@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { type ReactNode } from "react";
 
 import { useLocation } from "react-router-dom";
@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useAnimate } from "motion/react";
 
-import ScopeButtonGroup, { RepoAddScope } from "@/components/atoms/buttons/ScopeButtonGroup";
+import RangeSelect from "@/components/atoms/RangeSelect";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import {
   Aside,
@@ -37,13 +37,16 @@ import {
   NavDotCount,
   NavItem,
   NavLabel,
-  ScopeRow,
+  RangeRow,
   StyledNavLink,
 } from "@/components/organisms/layout/Sidebar/Sidebar.styles";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS, navCountTestId, navTestId } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
+import { fetchOldestCommitDate, setSelectedRange } from "@/store/actions/activity.actions";
 import { toggleSidebar } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectOldestCommitDate, selectSelectedRange } from "@/store/selectors/activity.selectors";
 
 interface NavSpec {
   to: AppRoutePath;
@@ -66,7 +69,15 @@ function Sidebar() {
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
   const connections = useAppSelector((s) => s.providers.connections);
-  const [addScope, setAddScope] = useState<RepoAddScope>(RepoAddScope.LOCAL);
+  const range = useAppSelector(selectSelectedRange);
+  const oldest = useAppSelector(selectOldestCommitDate);
+
+  // The range dropdown lives in the always-mounted sidebar, so the oldest-commit
+  // date (needed to enable the "All" preset) is fetched here once at app start
+  // rather than only when the Activity page mounts.
+  useEffect(() => {
+    if (isTauri()) void dispatch(fetchOldestCommitDate());
+  }, [dispatch]);
 
   // framer-motion drives width via `useAnimate` on the ref directly. Setting
   // `style={{ width }}` in JSX would race against motion — every re-render
@@ -230,13 +241,14 @@ function Sidebar() {
       </GeneralTooltip>
 
       <Footer collapsed={collapsed}>
-        <ScopeRow collapsed={collapsed}>
-          <ScopeButtonGroup
-            value={addScope}
-            onChange={setAddScope}
+        <RangeRow collapsed={collapsed}>
+          <RangeSelect
+            value={range}
+            onChange={(r) => dispatch(setSelectedRange(r))}
+            oldestDate={oldest}
             variant={collapsed ? "collapsed" : "expanded"}
           />
-        </ScopeRow>
+        </RangeRow>
         {(() => {
           const settingsLabel = t("nav.settings");
           const settingsLink = (

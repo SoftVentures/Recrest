@@ -11,10 +11,11 @@ import type { ActivityState, RepoCommits } from "@/store/types/activity.types";
 
 const DAY_MS = 86_400_000;
 
-/** Default window: last 30 days (Plan 04/01 §C.1 "default lazy"). */
+/** Default window: last 14 days. This is the app-wide default time range —
+ *  every page reads `selectedRange`, so the default lands everywhere. */
 function defaultRange() {
   const until = new Date();
-  const since = new Date(until.getTime() - 30 * DAY_MS);
+  const since = new Date(until.getTime() - 14 * DAY_MS);
   return { since: since.toISOString(), until: until.toISOString() };
 }
 

@@ -207,7 +207,7 @@ export const Footer = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<Collaps
   }),
 );
 
-export const ScopeRow = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<CollapsibleProps>(
+export const RangeRow = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<CollapsibleProps>(
   ({ collapsed }) => ({
     display: "flex",
     justifyContent: "center",

@@ -1,25 +1,43 @@
 import { type PointerEvent, useRef, useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box, Typography } from "@mui/material";
 import { keyframes, styled } from "@mui/material/styles";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import type { BucketUnit } from "@/lib/activity/rangeBuckets";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 export interface ActivityChartProps {
   agg: number[];
   maxDay: number;
   title: string;
   meta: string;
+  /** Granularity of each bar so labels read "yesterday" vs "last week" vs
+   *  "last month" — the bars are bucketed adaptively by the selected range. */
+  unit: BucketUnit;
 }
+
+/** Short axis suffix per bucket unit. */
+const UNIT_SHORT: Record<BucketUnit, string> = { day: "d", week: "w", month: "mo" };
 
 /**
  * Pointer position drives which column is "active" — the hover region extends
  * above the bar's visible footprint into empty card padding, which feels
  * larger than per-bar :hover would.
  */
-export function ActivityChart({ agg, maxDay, title, meta }: ActivityChartProps) {
+export function ActivityChart({ agg, maxDay, title, meta, unit }: ActivityChartProps) {
+  const { t } = useTranslation();
   const chartRef = useRef<HTMLDivElement | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  // Label a bar by how many buckets back it sits, in the bucket's own unit.
+  const spanLabel = (ago: number): string => {
+    if (ago === 0) return t(`dash.activity.span.${unit}.now`);
+    if (ago === 1) return t(`dash.activity.span.${unit}.prev`);
+    return t(`dash.activity.span.${unit}.ago`, { count: ago });
+  };
 
   const handleMove = (e: PointerEvent<HTMLDivElement>) => {
     const chart = chartRef.current;
@@ -43,9 +61,8 @@ export function ActivityChart({ agg, maxDay, title, meta }: ActivityChartProps) 
       </CardHead>
       <Chart ref={chartRef} columns={agg.length}>
         {agg.map((v, i) => {
-          const daysAgo = agg.length - 1 - i;
-          const dayLabel =
-            daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
+          const ago = agg.length - 1 - i;
+          const dayLabel = spanLabel(ago);
           const isActive = hovered === i;
           return (
             <GeneralTooltip
@@ -68,10 +85,13 @@ export function ActivityChart({ agg, maxDay, title, meta }: ActivityChartProps) 
           );
         })}
       </Chart>
-      <ChartAxis>
-        <Box component="span">{agg.length}d ago</Box>
-        <Box component="span">{Math.round(agg.length / 2)}d</Box>
-        <Box component="span">today</Box>
+      <ChartAxis data-testid={TEST_IDS.dashboard.activityAxis}>
+        <Box component="span">{spanLabel(agg.length - 1)}</Box>
+        <Box component="span">
+          {Math.round(agg.length / 2)}
+          {UNIT_SHORT[unit]}
+        </Box>
+        <Box component="span">{spanLabel(0)}</Box>
       </ChartAxis>
     </CardActivity>
   );
@@ -119,7 +139,7 @@ const Chart = styled(Box, {
   display: "grid",
   gridTemplateColumns: `repeat(${columns}, 1fr)`,
   gap: 6,
-  height: 96,
+  height: 200,
   alignItems: "end",
   padding: "4px 0 0",
 }));
@@ -141,7 +161,8 @@ const Bar = styled(Box, {
 })<{ heightPct: number; index: number; active: boolean }>(
   ({ theme, heightPct, index, active }) => ({
     width: "100%",
-    minHeight: 4,
+    // Floor so a bucket with a few commits still reads as a real bar, not "0".
+    minHeight: heightPct > 0 ? 7 : 0,
     height: active ? "100%" : `${heightPct}%`,
     backgroundColor: active
       ? theme.palette.primary.main

@@ -11,10 +11,12 @@ import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 export interface RepoStatsProps {
   repo: EnrichedRepo;
-  /** Sum of all 14-day-bucket commits. */
+  /** Sum of all commit buckets in the selected range. */
   totalCommits: number;
-  /** Tallest 14-day bucket (for the "peak" sub-line). */
+  /** Tallest bucket in the selected range (for the "peak" sub-line). */
   maxBucket: number;
+  /** Days the selected global range spans — labels the commits KPI. */
+  windowDays: number;
   /** Open MRs (excluding drafts), or null when no provider is connected. */
   openMrsCount: number | null;
   /** Draft MRs (subset of open), or null when no provider is connected. */
@@ -49,7 +51,14 @@ const Removed = styled(Box)(({ theme }) => ({
  * `openMrsCount === null` branch keeps the slot informative when no provider
  * is connected by showing the last-commit author instead.
  */
-function RepoStats({ repo, totalCommits, maxBucket, openMrsCount, draftMrsCount }: RepoStatsProps) {
+function RepoStats({
+  repo,
+  totalCommits,
+  maxBucket,
+  windowDays,
+  openMrsCount,
+  draftMrsCount,
+}: RepoStatsProps) {
   const { t } = useTranslation(I18nNamespace.REPOS);
   const providerConnected = openMrsCount !== null && draftMrsCount !== null;
 
@@ -76,7 +85,7 @@ function RepoStats({ repo, totalCommits, maxBucket, openMrsCount, draftMrsCount 
       />
       <KpiCard
         size="md"
-        label={t("stats.commits_14d")}
+        label={t("stats.commits_14d", { days: windowDays })}
         value={totalCommits}
         sub={t("stats.commits_14d_sub", { count: maxBucket })}
         data-testid={TEST_IDS.repoStats.commits14d}

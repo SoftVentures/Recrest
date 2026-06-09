@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // repeated syncs don't re-decode the same family. Each test re-imports the
 // module fresh (via `vi.resetModules` + dynamic import) so that cache starts
 // empty and cases stay independent.
-type SyncFn = (typeof import("./customFonts.utils"))["syncCustomFontFaces"];
+type SyncFn = (typeof import("@/lib/utils/customFonts.utils"))["syncCustomFontFaces"];
 
 class FakeFontFace {
   family: string;
@@ -38,7 +38,7 @@ function installFontApi(): void {
 
 async function loadSync(): Promise<SyncFn> {
   vi.resetModules();
-  const mod = await import("./customFonts.utils");
+  const mod = await import("@/lib/utils/customFonts.utils");
   return mod.syncCustomFontFaces;
 }
 

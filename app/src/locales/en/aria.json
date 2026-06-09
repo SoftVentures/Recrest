@@ -21,11 +21,6 @@
     "refresh": "Refresh",
     "add_repo": "Add repository"
   },
-  "scope": {
-    "group": "Add scope",
-    "local": "Local",
-    "global": "Global"
-  },
   "settings": {
     "more_info": "More info",
     "send_test_notification": "Send test notification",
@@ -56,7 +51,9 @@
     "search": "Filter branches by name"
   },
   "activity": {
-    "timeline_filter": "Event type"
+    "timeline_filter": "Event type",
+    "source": "Activity source",
+    "range": "Time range"
   },
   "dashboard": {
     "main": "Dashboard content"

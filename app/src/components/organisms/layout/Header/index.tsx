@@ -27,6 +27,7 @@ import {
   TopBar,
 } from "@/components/organisms/layout/Header/Header.styles";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
+import { windowDaysOf } from "@/lib/activity/rangeBuckets";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
@@ -50,10 +51,7 @@ function useHeaderContext(): HeaderContext {
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
   const activityRange = useAppSelector(selectSelectedRange);
-  const activityWindowDays = Math.max(
-    1,
-    Math.ceil((Date.parse(activityRange.until) - Date.parse(activityRange.since)) / 86_400_000),
-  );
+  const activityWindowDays = windowDaysOf(activityRange);
   const repoList = Object.values(repos);
   const dirtyCount = repoList.filter((r) => r.status.dirty).length;
   const mrOpen = Object.values(prs)

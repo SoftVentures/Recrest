@@ -57,13 +57,12 @@ export default defineConfig({
         "src/assets/**",
         "src/**/index.ts",
       ],
-      // Plan 04/03 target is 60 lines / 50 branches. Branches already clear
-      // that; lines sit at ~53.6%, so we gate at `current − 2` (51) to block
-      // regression without painting CI red, and ratchet up toward 60 as the
-      // untested settings tabs / ThemeWrapper get covered. Tracked in
-      // docs/plans/future.md.
+      // Plan 04/03 target — met: the settings tabs, ThemeWrapper, backendSync
+      // and the activity/range layer are now covered, so lines clear 60% and
+      // branches clear 50%. Keep ratcheting these up as coverage grows; never
+      // lower them.
       thresholds: {
-        lines: 51,
+        lines: 60,
         branches: 50,
       },
     },

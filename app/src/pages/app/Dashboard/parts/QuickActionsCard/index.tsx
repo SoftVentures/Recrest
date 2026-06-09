@@ -23,8 +23,8 @@ import { toast } from "sonner";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { useAppDispatch } from "@/store/hooks";
@@ -46,7 +46,7 @@ function QuickActionsCard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
-  const { commits: recentCommits } = useRecentCommits({ days: 14 });
+  const { commits: recentCommits } = useActivityCommits();
 
   const [fetching, setFetching] = useState(false);
 

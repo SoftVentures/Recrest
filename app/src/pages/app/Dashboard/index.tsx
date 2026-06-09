@@ -20,8 +20,8 @@ import EmptyState from "@/components/molecules/feedback/EmptyState";
 import ClickableRow from "@/components/molecules/rows/ClickableRow";
 import HeatmapCard from "@/components/organisms/activity/cards/HeatmapCard";
 import LanguageDonutCard from "@/components/organisms/activity/cards/LanguageDonutCard";
+import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { computeHeatmap, computeLanguageMix } from "@/lib/activityAggregates";
 import {
   PAGE_DUR_MD,
@@ -161,18 +161,20 @@ function DashboardPage() {
   const totalAhead = repos.reduce((s, r) => s + r.status.ahead, 0);
   const totalBehind = repos.reduce((s, r) => s + r.status.behind, 0);
 
-  const agg = useMemo(() => {
-    const out = Array<number>(14).fill(0);
-    for (const r of repos) r.activity.forEach((v, i) => (out[i] = (out[i] ?? 0) + v));
-    return out;
-  }, [repos]);
+  // Everything here follows the global selected range (sidebar dropdown) — no
+  // fixed 14-day window. `aggregate` is the all-repos activity series bucketed
+  // adaptively (day/week/month) for the window; `recentCommits` is the same
+  // range stream the Activity page uses, so the heatmap/languages/recent-list
+  // all move with the range too.
+  const {
+    commits: recentCommits,
+    loading: commitsLoading,
+    aggregate: agg,
+    unit: activityUnit,
+    windowDays: activityWindowDays,
+  } = useRangeActivity();
   const totalCommits = agg.reduce((s, v) => s + v, 0);
   const maxDay = Math.max(...agg, 1);
-
-  // Keep the limit at the default (500) instead of clamping to 6 — the
-  // weekday × hour heatmap needs the full 14-day window to fill its 7×24
-  // matrix, even though the Recent-commits list only shows the first 6.
-  const { commits: recentCommits, loading: commitsLoading } = useRecentCommits({ days: 14 });
   const recent = useMemo(() => {
     const byRepo = new Map(repos.map((r) => [r.id, r] as const));
     return recentCommits.slice(0, 6).map((c) => ({ ...c, repo: byRepo.get(c.repoId) }));
@@ -181,8 +183,8 @@ function DashboardPage() {
 
   const heatmapToday = useMemo(() => new Date(), []);
   const heatmap = useMemo(
-    () => computeHeatmap(recentCommits, heatmapToday),
-    [recentCommits, heatmapToday],
+    () => computeHeatmap(recentCommits, heatmapToday, activityWindowDays),
+    [recentCommits, heatmapToday, activityWindowDays],
   );
 
   const reposById = useMemo(() => {
@@ -212,7 +214,7 @@ function DashboardPage() {
           <KpiSkeleton />
         </Kpis>
         <Grid>
-          <FullSpanCard title={t("dash.activity.title")}>
+          <FullSpanCard title={t("dash.activity.title", { days: activityWindowDays })}>
             <ActivityBarsSkeleton />
           </FullSpanCard>
           <CardBlockSkeleton rows={3} />
@@ -286,7 +288,7 @@ function DashboardPage() {
           onClick={() => navigate(AppRoute.BRANCHES)}
         />
         <KpiCard
-          label={t("dash.kpi.commits")}
+          label={t("dash.kpi.commits", { days: activityWindowDays })}
           value={totalCommits}
           sub={t("dash.kpi.commits_sub", { count: maxDay })}
           onClick={() => navigate(AppRoute.ACTIVITY)}
@@ -297,7 +299,8 @@ function DashboardPage() {
         <ActivityChart
           agg={agg}
           maxDay={maxDay}
-          title={t("dash.activity.title")}
+          unit={activityUnit}
+          title={t("dash.activity.title", { days: activityWindowDays })}
           meta={t("dash.activity.meta", { total: totalCommits, repos: repos.length })}
         />
 

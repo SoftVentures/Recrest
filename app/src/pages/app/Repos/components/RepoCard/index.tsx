@@ -14,6 +14,7 @@ import { useContextMenu } from "@/hooks/useContextMenu";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { useRepoActivitySeries } from "@/pages/app/Repos/RepoActivityContext";
 import { RepoActions } from "@/pages/app/Repos/components/RepoActions";
 import {
   Actions,
@@ -42,6 +43,7 @@ export interface RepoCardProps {
 export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
+  const activity = useRepoActivitySeries(repo.id, repo.activity);
   const ctx = useContextMenu();
 
   const stop = (e: MouseEvent) => e.stopPropagation();
@@ -105,7 +107,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
           )}
         </StatusGroup>
         <GeneralSparkline
-          data={repo.activity}
+          data={activity}
           accentColor={dirty ? theme.palette.primary.main : undefined}
           width={88}
           height={18}

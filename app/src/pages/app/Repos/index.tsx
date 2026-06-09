@@ -20,6 +20,7 @@ import {
 import GeneralButtonGroup, {
   GeneralButtonGroupItem,
 } from "@/components/atoms/buttons/GeneralButtonGroup";
+import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import type { RepoSortKey } from "@/lib/constants/sortKeys.constants";
@@ -35,6 +36,7 @@ import {
   viewFromBackend,
   viewToBackend,
 } from "@/lib/utils/repoSort.utils";
+import { RepoActivitySeriesProvider } from "@/pages/app/Repos/RepoActivityContext";
 import {
   FilterBadge,
   FilterButton,
@@ -73,6 +75,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const { t: tCommon } = useTranslation(I18nNamespace.COMMON);
   const enriched = useEnrichedRepos();
+  const { byRepo: activityByRepo } = useRangeActivity();
   const dispatch = useAppDispatch();
   const backend = useAppSelector((s) => s.settings.backend);
   const { repoId } = useParams<{ repoId?: string }>();
@@ -269,21 +272,23 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
           </FilterMenu>
         </ToolbarRow>
         <ListScroll>
-          <RepoList
-            repos={repos}
-            grouped={grouped}
-            viewMode={view}
-            sort={sort}
-            onSort={handleSort}
-            selectedRepoId={selectedId}
-            onSelect={(r) => setSelectedId((cur) => (cur === r.id ? null : r.id))}
-            emptyTitle={dirtyOnly ? "No dirty repositories" : "No repositories"}
-            emptyDescription={
-              dirtyOnly
-                ? "Working copies match HEAD — there's nothing to commit."
-                : "Add a repo from the header to get started."
-            }
-          />
+          <RepoActivitySeriesProvider value={activityByRepo}>
+            <RepoList
+              repos={repos}
+              grouped={grouped}
+              viewMode={view}
+              sort={sort}
+              onSort={handleSort}
+              selectedRepoId={selectedId}
+              onSelect={(r) => setSelectedId((cur) => (cur === r.id ? null : r.id))}
+              emptyTitle={dirtyOnly ? "No dirty repositories" : "No repositories"}
+              emptyDescription={
+                dirtyOnly
+                  ? "Working copies match HEAD — there's nothing to commit."
+                  : "Add a repo from the header to get started."
+              }
+            />
+          </RepoActivitySeriesProvider>
         </ListScroll>
       </MainColumn>
       {selected && <DetailPane repo={selected} onClose={() => setSelectedId(null)} />}

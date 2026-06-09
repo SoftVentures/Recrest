@@ -36,9 +36,9 @@ import RepoGitConfigCard from "@/components/organisms/repos/RepoGitConfigCard";
 import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
 import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
+import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
@@ -117,7 +117,15 @@ export default function RepoDetailPage() {
   const connections = useAppSelector((s) => s.providers.connections);
   const repoProviderConnected = !!repo?.providerId && !!connections[repo.providerId]?.connected;
 
-  const { commits } = useRecentCommits({ repoId, days: 30, limit: 8 });
+  const { commits: rangeCommits, byRepo, windowDays } = useRangeActivity();
+  const commits = useMemo(
+    () => rangeCommits.filter((c) => c.repoId === repoId).slice(0, 8),
+    [rangeCommits, repoId],
+  );
+  const activitySeries = useMemo(
+    () => (repoId ? (byRepo.get(repoId) ?? []) : []),
+    [byRepo, repoId],
+  );
 
   const [busy, setBusy] = useState<null | "pull" | "push" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
@@ -207,8 +215,8 @@ export default function RepoDetailPage() {
     );
   }
 
-  const totalCommits = repo.activity.reduce((a, b) => a + b, 0);
-  const maxBucket = Math.max(1, ...repo.activity);
+  const totalCommits = activitySeries.reduce((a, b) => a + b, 0);
+  const maxBucket = Math.max(1, ...activitySeries);
   const openMrs = prs.filter((p) => p.state === PrState.OPEN);
   const draftMrs = openMrs.filter((p) => p.draft);
   const brand = brandFromUrl(repo.remoteUrl);
@@ -284,20 +292,26 @@ export default function RepoDetailPage() {
   const activityCard = (
     <Card>
       <CardHead>
-        <CardTitle>Activity — 14 days</CardTitle>
+        <CardTitle>
+          {t("detail.activity_title", { ns: I18nNamespace.REPOS, days: windowDays })}
+        </CardTitle>
         <CardMeta>
-          {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
+          {t("detail.activity_meta", {
+            ns: I18nNamespace.REPOS,
+            count: totalCommits,
+            peak: maxBucket,
+          })}
         </CardMeta>
       </CardHead>
       <ActivityBars>
-        {repo.activity.map((v, i) => {
+        {activitySeries.map((v, i) => {
           const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
           return (
             <ActivityBar
               key={i}
               heightPct={heightPct}
               hot={v >= maxBucket * 0.66}
-              aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
+              aria-label={tAria("repo.heatmap_commits", { count: v })}
               data-testid={TEST_IDS.repoDetail.sparkCell}
               data-index={i}
             />
@@ -305,8 +319,10 @@ export default function RepoDetailPage() {
         })}
       </ActivityBars>
       <ActivityAxis>
-        <Box component="span">14d ago</Box>
-        <Box component="span">today</Box>
+        <Box component="span">
+          {t("detail.activity_axis_start", { ns: I18nNamespace.REPOS, days: windowDays })}
+        </Box>
+        <Box component="span">{t("detail.activity_axis_end", { ns: I18nNamespace.REPOS })}</Box>
       </ActivityAxis>
     </Card>
   );
@@ -314,8 +330,8 @@ export default function RepoDetailPage() {
   const recentCommitsCard = (
     <Card>
       <CardHead>
-        <CardTitle>Recent commits</CardTitle>
-        <CardMeta>last 30 days</CardMeta>
+        <CardTitle>{t("detail.recent_title", { ns: I18nNamespace.REPOS })}</CardTitle>
+        <CardMeta>{t("detail.recent_sub", { ns: I18nNamespace.REPOS, days: windowDays })}</CardMeta>
       </CardHead>
       {commits.length === 0 ? (
         <EmptyState
@@ -458,6 +474,7 @@ export default function RepoDetailPage() {
           repo={repo}
           totalCommits={totalCommits}
           maxBucket={maxBucket}
+          windowDays={windowDays}
           openMrsCount={repoProviderConnected ? openMrs.length : null}
           draftMrsCount={repoProviderConnected ? draftMrs.length : null}
         />

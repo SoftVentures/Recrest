@@ -66,13 +66,6 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
     case "delete_custom_font":
       return undefined;
 
-    case "save_window_state":
-      return undefined;
-    case "load_window_state":
-      return null;
-    case "validate_window_position":
-      return true;
-
     case "get_platform_info": {
       const os = detectPlatform();
       return {

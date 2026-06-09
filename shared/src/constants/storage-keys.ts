@@ -24,6 +24,12 @@ export const StorageKey = {
   /** dev:web only: serialized AppSettings overlay so reloads persist user
    *  changes against the seed. Real Tauri uses `settings.json` on disk. */
   DEV_SETTINGS: `${STORAGE_PREFIX}dev-settings`,
+  /** The global activity time-range selection (sidebar dropdown). Renderer-only
+   *  UI preference, persisted here (not the backend) so it's available
+   *  synchronously at store creation — no flash of the default window before an
+   *  async backend load. Stored as `{ key, since, until }`; fixed presets are
+   *  recomputed relative to "now" on load, so "30d" stays "last 30 days". */
+  ACTIVITY_RANGE: `${STORAGE_PREFIX}activity-range`,
 } as const;
 
 /** Prefix for per-confirmation skip flags. Full key:

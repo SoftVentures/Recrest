@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 
 import Kbd, { KbdSize } from "@/components/atoms/inputs/Kbd";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 const Keys = styled(Box)({
@@ -44,7 +45,10 @@ export function ShortcutsSection() {
 
   return (
     <>
-      <SettingsSection title={t("settings.shortcuts.navigation")}>
+      <SettingsSection
+        title={t("settings.shortcuts.navigation")}
+        testId={TEST_IDS.settings.shortcuts.navigation}
+      >
         {navigation.map((r) => (
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
@@ -58,7 +62,7 @@ export function ShortcutsSection() {
         ))}
       </SettingsSection>
 
-      <SettingsSection title={t("settings.shortcuts.git")}>
+      <SettingsSection title={t("settings.shortcuts.git")} testId={TEST_IDS.settings.shortcuts.git}>
         {gitOps.map((r) => (
           <SettingsRow key={r.label} label={r.label}>
             <Keys>
@@ -72,7 +76,10 @@ export function ShortcutsSection() {
         ))}
       </SettingsSection>
 
-      <SettingsSection title={t("settings.shortcuts.editor")}>
+      <SettingsSection
+        title={t("settings.shortcuts.editor")}
+        testId={TEST_IDS.settings.shortcuts.editor}
+      >
         {editorOps.map((r) => (
           <SettingsRow key={r.label} label={r.label}>
             <Keys>

@@ -488,6 +488,20 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
+        // Remember the window's size, position (→ which monitor), maximized
+        // and fullscreen state across restarts and re-apply on launch. We omit
+        // VISIBLE/DECORATIONS from the persisted flags so the "close to tray"
+        // feature can't make the app start up hidden.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED
+                        | tauri_plugin_window_state::StateFlags::FULLSCREEN,
+                )
+                .build(),
+        )
         .setup(|app| {
             // Logging is handled by `tracing_subscriber` above; we don't register
             // `tauri_plugin_log` because its `env_logger` sink would clash with
@@ -1005,9 +1019,6 @@ pub fn run() {
         commands::fonts::list_custom_fonts,
         commands::fonts::upload_font,
         commands::fonts::delete_custom_font,
-        commands::window::save_window_state,
-        commands::window::load_window_state,
-        commands::window::validate_window_position,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::system::get_system_dark_mode,
@@ -1100,9 +1111,6 @@ pub fn run() {
         commands::fonts::list_custom_fonts,
         commands::fonts::upload_font,
         commands::fonts::delete_custom_font,
-        commands::window::save_window_state,
-        commands::window::load_window_state,
-        commands::window::validate_window_position,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::system::get_system_dark_mode,
