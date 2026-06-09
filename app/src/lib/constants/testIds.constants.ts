@@ -229,6 +229,8 @@ export const TEST_IDS = {
       composerInput: "mr-diff-composer-input",
       composerSubmit: "mr-diff-composer-submit",
       composerCancel: "mr-diff-composer-cancel",
+      postedComment: "mr-diff-posted-comment",
+      rangeBadge: "mr-diff-range-badge",
     },
   },
 
@@ -326,8 +328,12 @@ export const TEST_IDS = {
       accentSwatches: "settings-accent-swatches",
       accentChip: <T extends string>(id: T) => `accent-chip-${id}` as const,
       fontSelect: "settings-font-select",
+      fontOption: <T extends string>(id: T) => `settings-font-option-${id}` as const,
       codeFontSelect: "settings-code-font-select",
+      codeFontOption: <T extends string>(id: T) => `settings-code-font-option-${id}` as const,
       codeLigaturesSelect: "settings-code-ligatures-select",
+      codeLigaturesOption: <T extends string>(mode: T) =>
+        `settings-code-ligatures-option-${mode}` as const,
       fontSizeSelect: "settings-font-size-select",
       customFontUpload: "settings-custom-font-upload",
       customFontDelete: <T extends string>(id: T) => `settings-custom-font-delete-${id}` as const,

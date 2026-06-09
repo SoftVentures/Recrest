@@ -192,10 +192,7 @@ pub async fn update_settings(
 /// install has nothing to delete and we still want the renderer half of
 /// the reset to run.
 #[tauri::command]
-pub async fn factory_reset(
-    app: AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), CommandError> {
+pub async fn factory_reset(app: AppHandle, state: State<'_, AppState>) -> Result<(), CommandError> {
     let store = TokenStore::new();
     // I9: query the live `ProviderRegistry` for its id list so plugin-
     // installed providers also get wiped. Fall back to the hardcoded set
@@ -204,7 +201,10 @@ pub async fn factory_reset(
     // tokens than skip them entirely).
     let registry_ids = state.providers.known_ids();
     let provider_ids: Vec<String> = if registry_ids.is_empty() {
-        FALLBACK_PROVIDER_IDS.iter().map(|s| s.to_string()).collect()
+        FALLBACK_PROVIDER_IDS
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
     } else {
         registry_ids
     };

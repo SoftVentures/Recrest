@@ -215,20 +215,71 @@ pub enum DiffLineKind {
 pub struct CommentDto {
     pub id: String,
     pub author: String,
+    /// Provider avatar URL of the author, when the API returned one.
+    pub author_avatar_url: Option<String>,
     pub body: String,
     pub path: Option<String>,
+    /// Anchor (end) side, or `None` for a general (non-inline) comment. Stamped
+    /// by `commands::providers::post_pr_comment` from the request position so
+    /// the frontend can render the comment next to its line.
+    pub side: Option<CommentSide>,
+    /// Anchor (end) line number on `side`; `None` for general comments.
+    pub line: Option<u32>,
+    /// First line of the range, on `start_side`; `None` for single-line/general.
+    pub start_line: Option<u32>,
+    /// Side of the range's first line (may differ from `side`); `None` if none.
+    pub start_side: Option<CommentSide>,
     pub created_at: DateTime<Utc>,
 }
 
-/// Where an inline review comment is anchored. `Left` = the pre-change side
-/// (line in the old file), `Right` = the post-change side (line in the new
-/// file). General PR/MR comments omit a position entirely.
+/// One boundary of a comment range. Carries its own `side` (so a range can run
+/// from a deleted LEFT line to an added RIGHT line) plus both line numbers —
+/// pure add/remove lines still carry the running counterpart of the absent side
+/// (resolved by the frontend from the hunk) because GitLab's `line_code` needs
+/// the full pair.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentAnchor {
+    pub side: CommentSide,
+    pub old_line_no: Option<u32>,
+    pub new_line_no: Option<u32>,
+}
+
+impl CommentAnchor {
+    /// The line number on this boundary's own side.
+    pub fn line(&self) -> Option<u32> {
+        match self.side {
+            CommentSide::Right => self.new_line_no,
+            CommentSide::Left => self.old_line_no,
+        }
+    }
+}
+
+/// Where an inline review comment is anchored. `start` is the first line of a
+/// multi-line range (`None` = single line, anchored at `end`); start and end
+/// may sit on different sides. General PR/MR comments omit a position entirely.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommentPosition {
-    pub side: CommentSide,
-    pub line: u32,
-    pub start_line: Option<u32>,
+    pub start: Option<CommentAnchor>,
+    pub end: CommentAnchor,
+}
+
+impl CommentPosition {
+    /// The anchor (last) line number, on the end boundary's side.
+    pub fn anchor_line(&self) -> Option<u32> {
+        self.end.line()
+    }
+
+    /// The first line number of the range, on the start boundary's side.
+    pub fn start_line(&self) -> Option<u32> {
+        self.start.as_ref().and_then(|a| a.line())
+    }
+
+    /// The comment's primary side — that of the end (anchor) boundary.
+    pub fn side(&self) -> CommentSide {
+        self.end.side
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

@@ -53,8 +53,13 @@ function comment(id: string): Comment {
   return {
     id,
     author: "alice",
+    authorAvatarUrl: null,
     body: "looks good",
     path: null,
+    side: null,
+    line: null,
+    startLine: null,
+    startSide: null,
     createdAt: "2026-01-03T00:00:00.000Z",
   };
 }

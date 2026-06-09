@@ -43,8 +43,21 @@ export function useDrawerSwipe({
   useEffect(() => {
     const node = ref.current;
     if (!enabled || !node) return;
+    // We attach use-gesture's listeners by hand and drop the `touchAction` it
+    // would normally hand back via the spread props. Without setting it the
+    // browser keeps `touch-action: auto`, and use-gesture warns *with the DOM
+    // node as a console argument* — the dev-log forwarder then serialises that
+    // node's React fibers into a multi-megabyte dump and janks the main thread.
+    // `pan-y` is the right value for an x-axis drag (lets the page scroll
+    // vertically while we capture horizontal swipes).
+    const previousTouchAction = node.style.touchAction;
+    node.style.touchAction = "pan-y";
     const props = bind() as Record<string, EventListenerOrEventListenerObject>;
-    const subscriptions: Array<() => void> = [];
+    const subscriptions: Array<() => void> = [
+      () => {
+        node.style.touchAction = previousTouchAction;
+      },
+    ];
     for (const [key, handler] of Object.entries(props)) {
       if (!key.startsWith("on") || typeof handler !== "function") continue;
       const evt = key.slice(2).toLowerCase();

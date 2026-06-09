@@ -76,6 +76,11 @@ deunicode = "1"
 # the whole PR diff as a single text blob.
 serde_yaml = "0.9"
 unidiff = "0.3"
+# GitLab multi-line MR discussions anchor each range boundary with a
+# `line_code` of the form `<SHA1(file_path)>_<old>_<new>` — a plain SHA1 of the
+# file path, not a git blob OID, so `git2`'s hashing can't produce it. Pure
+# Rust (RustCrypto), no native linking, no second libgit2.
+sha1 = "0.10"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 # Used by `commands::repos::delete_repo` to move a repo folder into the OS
 # trash (macOS Trash, Windows Recycle Bin, freedesktop Trash on Linux). All

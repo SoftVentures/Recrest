@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import type { RepoStatusEventPayload, Repository } from "@recrest/shared";
 import { REPO_STATUS_EVENT } from "@recrest/shared";
@@ -46,5 +46,8 @@ export function useRepos(): Repository[] {
     };
   }, [dispatch]);
 
-  return Object.values(items);
+  // Memoise so consumers get a stable array reference between renders — a raw
+  // `Object.values(items)` returns a new array every render, which defeats
+  // memoisation/effect-dependency checks downstream.
+  return useMemo(() => Object.values(items), [items]);
 }

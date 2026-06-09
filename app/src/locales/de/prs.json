@@ -21,6 +21,8 @@
     "empty": "Keine Änderungen vorhanden.",
     "binary": "Binärdatei — kein Inline-Diff.",
     "add_comment": "Diese Zeile kommentieren",
+    "comment_hint": "Diese Zeile kommentieren — zum Markieren eines Bereichs nach unten ziehen",
+    "range_label": "Z{{start}}–{{end}}",
     "comment_placeholder": "Kommentar hinterlassen…",
     "comment_submit": "Kommentieren",
     "comment_cancel": "Abbrechen",

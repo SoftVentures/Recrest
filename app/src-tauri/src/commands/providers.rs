@@ -180,9 +180,28 @@ pub async fn post_pr_comment(
         .providers
         .get(&provider_id)
         .ok_or_else(|| CommandError::not_found(format!("provider {provider_id} not found")))?;
-    provider
-        .post_pr_comment(&remote_url, pr_number, &body, path.as_deref(), position)
-        .await
+    let mut comment = provider
+        .post_pr_comment(
+            &remote_url,
+            pr_number,
+            &body,
+            path.as_deref(),
+            position.clone(),
+        )
+        .await?;
+    // Providers return only what their API echoes back, which usually drops the
+    // line anchor. Stamp it from the request so the frontend can render the
+    // comment next to its line/range without a second round-trip.
+    if let Some(pos) = position {
+        comment.side = Some(pos.side());
+        comment.line = pos.anchor_line();
+        // Only surface a range when the start boundary differs from the end.
+        let is_range = pos.start_line() != pos.anchor_line()
+            || pos.start.map(|s| s.side) != Some(pos.end.side);
+        comment.start_line = if is_range { pos.start_line() } else { None };
+        comment.start_side = if is_range { pos.start.map(|s| s.side) } else { None };
+    }
+    Ok(comment)
 }
 
 // ─── Plan 03/07 C.7 — Provider-side PR/MR merge ─────────────────────────────

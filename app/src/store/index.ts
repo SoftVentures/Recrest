@@ -8,6 +8,7 @@ import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
 import { reposReducer } from "@/store/reducers/reposReducer";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
+import type { RootState } from "@/store/rootState";
 
 /**
  * Phase 2: Redux is the only renderer-side source of truth for app state.
@@ -34,5 +35,13 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(settingsBackendSync),
 });
 
-export type RootState = ReturnType<typeof store.getState>;
+export type { RootState };
 export type AppDispatch = typeof store.dispatch;
+
+// Compile-time guarantee that the hand-written `RootState` (store/rootState.ts)
+// stays in lockstep with the real store shape. Passing the real state to a
+// `RootState`-typed parameter fails to type-check if the reducer map above
+// adds, removes, or retypes a slice without `store/rootState.ts` following —
+// `tsc` then errors right here instead of letting the two drift apart.
+function assertRootStateShape(_state: RootState): void {}
+assertRootStateShape(store.getState());

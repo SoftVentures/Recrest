@@ -3,12 +3,14 @@ use std::sync::RwLock;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use sha1::{Digest, Sha1};
 
 use super::api::{
-    CiStatus, CommentDto, CommentPosition, CommentSide, FileChangeDto, FileChangeStatus,
-    FileDiffDto, MergePullRequestInput, MergePullRequestResult, MergeStrategy, OrganizationDto,
-    PagesStatusDto, PrState, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto,
-    ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto, WorkflowInputs, WorkflowRunDto,
+    CiStatus, CommentAnchor, CommentDto, CommentPosition, CommentSide, FileChangeDto,
+    FileChangeStatus, FileDiffDto, MergePullRequestInput, MergePullRequestResult, MergeStrategy,
+    OrganizationDto, PagesStatusDto, PrState, PullRequestDetailDto, PullRequestDto,
+    RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto, WorkflowInputs,
+    WorkflowRunDto,
 };
 use super::diff_parse::parse_hunks;
 use super::r#trait::GitProvider;
@@ -445,10 +447,50 @@ impl GitProvider for GitlabProvider {
                 "head_sha": refs.head_sha,
                 "position_type": "text",
                 "new_path": path,
+                "old_path": path,
             });
-            match pos.side {
-                CommentSide::Right => position_payload["new_line"] = pos.line.into(),
-                CommentSide::Left => position_payload["old_line"] = pos.line.into(),
+            // Single anchor line: GitLab takes the new-side number when the end
+            // boundary is on the RIGHT, the old-side number on the LEFT.
+            match pos.end.side {
+                CommentSide::Right => {
+                    if let Some(n) = pos.end.new_line_no {
+                        position_payload["new_line"] = n.into();
+                    }
+                }
+                CommentSide::Left => {
+                    if let Some(n) = pos.end.old_line_no {
+                        position_payload["old_line"] = n.into();
+                    }
+                }
+            }
+            // Multi-line range: GitLab anchors each boundary with a `line_code`
+            // of `<SHA1(file_path)>_<old>_<new>` plus a per-boundary `type`
+            // (`new`/`old`), so a range can run from an old (deleted) line to a
+            // new (added) one. Sent only when start and end actually differ.
+            if let Some(start) = pos.start {
+                let differs = start.side != pos.end.side || pos.start_line() != pos.anchor_line();
+                if differs {
+                    let sha = format!("{:x}", Sha1::digest(path.as_bytes()));
+                    let boundary = |a: &CommentAnchor| {
+                        serde_json::json!({
+                            "line_code": format!(
+                                "{sha}_{}_{}",
+                                a.old_line_no.unwrap_or(0),
+                                a.new_line_no.unwrap_or(0)
+                            ),
+                            "type": match a.side {
+                                CommentSide::Right => "new",
+                                CommentSide::Left => "old",
+                            },
+                            "old_line": a.old_line_no,
+                            "new_line": a.new_line_no,
+                        })
+                    };
+                    position_payload["line_range"] = serde_json::json!({
+                        "start": boundary(&start),
+                        "end": boundary(&pos.end),
+                    });
+                }
             }
             let payload = serde_json::json!({
                 "body": body,
@@ -469,11 +511,10 @@ impl GitProvider for GitlabProvider {
             }
             let disc: GlDiscussion = res.json().await?;
             // A new discussion has exactly one note — return that.
-            let note = disc
-                .notes
-                .into_iter()
-                .next()
-                .ok_or_else(|| CommandError::internal("gitlab: discussion returned no notes"))?;
+            let note =
+                disc.notes.into_iter().next().ok_or_else(|| {
+                    CommandError::internal("gitlab: discussion returned no notes")
+                })?;
             return Ok(CommentDto {
                 id: note.id.to_string(),
                 author: note
@@ -481,8 +522,13 @@ impl GitProvider for GitlabProvider {
                     .as_ref()
                     .map(|a| a.username.clone())
                     .unwrap_or_default(),
+                author_avatar_url: note.author.as_ref().and_then(|a| a.avatar_url.clone()),
                 body: note.body,
                 path: Some(path.to_string()),
+                side: None,
+                line: None,
+                start_line: None,
+                start_side: None,
                 created_at: note.created_at,
             });
         }
@@ -511,8 +557,13 @@ impl GitProvider for GitlabProvider {
                 .as_ref()
                 .map(|a| a.username.clone())
                 .unwrap_or_default(),
+            author_avatar_url: note.author.as_ref().and_then(|a| a.avatar_url.clone()),
             body: note.body,
             path: None,
+            side: None,
+            line: None,
+            start_line: None,
+            start_side: None,
             created_at: note.created_at,
         })
     }
@@ -549,8 +600,9 @@ impl GitProvider for GitlabProvider {
         let encoded = urlencoding::encode(&project_path);
         let base = self.api_base();
         let per_page = limit.clamp(1, 100);
-        let url =
-            format!("{base}/projects/{encoded}/pipelines?per_page={per_page}&order_by=id&sort=desc");
+        let url = format!(
+            "{base}/projects/{encoded}/pipelines?per_page={per_page}&order_by=id&sort=desc"
+        );
         let pipelines: Vec<GlPipelineRun> = gl_json(&self.http, &token, &url).await?;
         Ok(pipelines.into_iter().map(map_pipeline_run).collect())
     }
@@ -789,9 +841,8 @@ impl GitProvider for GitlabProvider {
         if merge_succeeded && input.delete_source_branch {
             if let Some(branch) = merged.source_branch.as_deref().filter(|s| !s.is_empty()) {
                 let branch_enc = urlencoding::encode(branch);
-                let check_url = format!(
-                    "{base}/projects/{encoded}/repository/branches/{branch_enc}"
-                );
+                let check_url =
+                    format!("{base}/projects/{encoded}/repository/branches/{branch_enc}");
                 let check = self
                     .http
                     .get(&check_url)
@@ -1282,9 +1333,7 @@ mod tests {
         let server = MockServer::start().await;
         let body = include_str!("../../tests/fixtures/gitlab/mr_diffs.json");
         Mock::given(method("GET"))
-            .and(path_regex(
-                r".*/projects/[^/]+/merge_requests/\d+/diffs$",
-            ))
+            .and(path_regex(r".*/projects/[^/]+/merge_requests/\d+/diffs$"))
             .respond_with(ResponseTemplate::new(200).set_body_string(body))
             .mount(&server)
             .await;
@@ -1331,9 +1380,12 @@ mod tests {
                 "looks good!",
                 Some("src/lib.rs"),
                 Some(CommentPosition {
-                    side: CommentSide::Right,
-                    line: 2,
-                    start_line: None,
+                    start: None,
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    },
                 }),
             )
             .await
@@ -1342,6 +1394,56 @@ mod tests {
         assert_eq!(comment.id, "4242");
         assert_eq!(comment.author, "alice");
         assert_eq!(comment.path.as_deref(), Some("src/lib.rs"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_post_pr_comment_range_sends_line_range() {
+        use wiremock::matchers::body_string_contains;
+
+        let server = MockServer::start().await;
+        let detail = include_str!("../../tests/fixtures/gitlab/mr_detail_for_diff.json");
+        let created = include_str!("../../tests/fixtures/gitlab/mr_discussion_created.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/projects/[^/]+/merge_requests/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(detail))
+            .mount(&server)
+            .await;
+        // A multi-line range must carry `line_range` with a `line_code` for
+        // each boundary — the discussion POST is only matched when it does.
+        Mock::given(method("POST"))
+            .and(path_regex(
+                r".*/projects/[^/]+/merge_requests/\d+/discussions$",
+            ))
+            .and(body_string_contains("\"line_range\""))
+            .and(body_string_contains("\"line_code\""))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://gitlab.com/acme/widget",
+                12,
+                "spans three lines",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    start: Some(CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: Some(2),
+                        new_line_no: Some(2),
+                    }),
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: Some(4),
+                        new_line_no: Some(4),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "4242");
     }
 
     #[tokio::test]

@@ -25,28 +25,68 @@ type ConsoleLevel = "log" | "info" | "warn" | "error" | "debug";
 
 let installed = false;
 
+// Hard ceiling on a single serialised log line. A DOM node or React fiber that
+// slips through would otherwise link to the whole tree and produce a
+// multi-megabyte line — serialising it blocks the main thread (this is exactly
+// how a stray `@use-gesture` warning that logs its drag target once grew
+// `.claude-dev.log` to 1.5 GB and made the app lag).
+const MAX_LOG_LINE = 8_000;
+
+function isDomNode(v: object): boolean {
+  return typeof Node !== "undefined" && v instanceof Node;
+}
+
+/** Tag objects we must never recurse into (returning a string stops
+ *  JSON.stringify from descending). React elements/fibers and DOM nodes carry
+ *  references to the entire render tree. */
+function nonRecursableTag(v: object): string | null {
+  if (isDomNode(v)) return `[${(v as { nodeName?: string }).nodeName ?? "Node"}]`;
+  if ("$$typeof" in v) return "[ReactElement]";
+  if (
+    "stateNode" in v &&
+    ("return" in v || "child" in v || "memoizedProps" in v || "_debugHookTypes" in v)
+  ) {
+    return "[ReactFiber]";
+  }
+  return null;
+}
+
 /** Best-effort JSON serialisation that survives circular refs, functions,
- *  Error objects, and DOM nodes — enough to capture *intent* for log lines. */
-function safeStringify(value: unknown): string {
+ *  Error objects, and DOM nodes — enough to capture *intent* for log lines.
+ *  Never serialises DOM nodes / React elements / fibers (they reach the whole
+ *  tree) and caps the result length so one log line can't blow up.
+ *  Exported for unit testing the no-explode guarantees. */
+export function safeStringify(value: unknown): string {
   if (typeof value === "string") return value;
   if (value instanceof Error) {
     return `${value.name}: ${value.message}\n${value.stack ?? ""}`.trim();
   }
+  if (value && typeof value === "object") {
+    const tag = nonRecursableTag(value);
+    if (tag) return tag;
+  }
   const seen = new WeakSet<object>();
+  let serialised: string;
   try {
-    return JSON.stringify(
-      value,
-      (_key, v: unknown) => {
-        if (typeof v === "bigint") return v.toString();
-        if (typeof v === "function") return `[Function ${v.name || "anonymous"}]`;
-        if (v && typeof v === "object") {
-          if (seen.has(v as object)) return "[Circular]";
-          seen.add(v as object);
-        }
-        return v;
-      },
-      2,
-    );
+    serialised =
+      JSON.stringify(
+        value,
+        (key, v: unknown) => {
+          // React hangs `__reactFiber$…` / `__reactProps$…` expandos off DOM
+          // nodes; following them serialises the entire fiber tree.
+          if (key.startsWith("__react") || key.startsWith("_react")) return undefined;
+          if (typeof v === "bigint") return v.toString();
+          if (typeof v === "function") return `[Function ${v.name || "anonymous"}]`;
+          if (v && typeof v === "object") {
+            const tag = nonRecursableTag(v);
+            if (tag) return tag;
+            if (seen.has(v as object)) return "[Circular]";
+            seen.add(v as object);
+          }
+          return v;
+        },
+        2,
+      ) ?? String(value);
   } catch {
     try {
       return String(value);
@@ -54,6 +94,9 @@ function safeStringify(value: unknown): string {
       return "[unserialisable]";
     }
   }
+  return serialised.length > MAX_LOG_LINE
+    ? `${serialised.slice(0, MAX_LOG_LINE)}… [truncated ${serialised.length - MAX_LOG_LINE} chars]`
+    : serialised;
 }
 
 function joinArgs(args: unknown[]): string {

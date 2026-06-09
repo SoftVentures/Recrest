@@ -20,7 +20,8 @@ impl TempRepo {
         {
             let mut cfg = repo.config().expect("config");
             cfg.set_str("user.name", "Test User").expect("set name");
-            cfg.set_str("user.email", "test@example.invalid").expect("set email");
+            cfg.set_str("user.email", "test@example.invalid")
+                .expect("set email");
         }
         Self { dir, repo }
     }

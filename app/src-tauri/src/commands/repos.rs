@@ -1030,10 +1030,7 @@ mod range_tests {
     /// Commits `entries.len()` empty-tree commits onto HEAD, one per entry,
     /// at the given UTC timestamp. Entries are committed oldest-first so the
     /// resulting revwalk TIME order matches chronological reality.
-    fn commit_at_times(
-        repo: &git2::Repository,
-        timestamps: &[chrono::DateTime<Utc>],
-    ) {
+    fn commit_at_times(repo: &git2::Repository, timestamps: &[chrono::DateTime<Utc>]) {
         let mut parent: Option<git2::Oid> = None;
         let tree_id = {
             let mut index = repo.index().expect("index");

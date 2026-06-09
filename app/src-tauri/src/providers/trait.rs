@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 
 use super::api::{
-    CheckRunSummaryDto, CommentDto, CommentPosition, FileDiffDto, OrganizationDto,
-    PagesStatusDto, PrEventDto, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto,
-    WorkflowDto, WorkflowInputs, WorkflowRunDto,
+    CheckRunSummaryDto, CommentDto, CommentPosition, FileDiffDto, OrganizationDto, PagesStatusDto,
+    PrEventDto, PullRequestDetailDto, PullRequestDto, RemoteRepositoryDto, WorkflowDto,
+    WorkflowInputs, WorkflowRunDto,
 };
 use crate::commands::error::CommandError;
 
@@ -33,7 +33,10 @@ pub trait GitProvider: Send + Sync {
         None
     }
 
-    async fn list_pull_requests(&self, remote_url: &str) -> Result<Vec<PullRequestDto>, CommandError>;
+    async fn list_pull_requests(
+        &self,
+        remote_url: &str,
+    ) -> Result<Vec<PullRequestDto>, CommandError>;
 
     /// PR/MR life-cycle events (opened / merged / closed) within the last
     /// `days` days. Default impl returns an empty list so providers that
@@ -127,11 +130,7 @@ pub trait GitProvider: Send + Sync {
     /// Exchanges the `code` returned from the OAuth callback for an access
     /// token and persists it in the keychain. Providers should verify the
     /// state on the caller side before invoking this.
-    async fn exchange_code(
-        &self,
-        _code: &str,
-        _redirect_uri: &str,
-    ) -> Result<(), CommandError> {
+    async fn exchange_code(&self, _code: &str, _redirect_uri: &str) -> Result<(), CommandError> {
         Err(CommandError::bad_request(format!(
             "{}: OAuth is not configured",
             self.id()
@@ -172,10 +171,7 @@ pub trait GitProvider: Send + Sync {
 
     // ─── Plan 03/04 C.4: CI workflows / pipelines ───────────────────────────
 
-    async fn list_workflows(
-        &self,
-        _remote_url: &str,
-    ) -> Result<Vec<WorkflowDto>, CommandError> {
+    async fn list_workflows(&self, _remote_url: &str) -> Result<Vec<WorkflowDto>, CommandError> {
         Err(CommandError::bad_request(format!(
             "{}: list_workflows is not implemented",
             self.id()

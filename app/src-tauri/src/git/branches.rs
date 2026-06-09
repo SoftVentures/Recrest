@@ -41,10 +41,13 @@ pub struct BranchCommit {
 pub fn list_branches(path: &Path) -> Result<Vec<BranchInfo>, git2::Error> {
     let repo = Repository::open(path)?;
 
-    let head_name: Option<String> = repo
-        .head()
-        .ok()
-        .and_then(|h| if h.is_branch() { h.shorthand().map(|s| s.to_string()) } else { None });
+    let head_name: Option<String> = repo.head().ok().and_then(|h| {
+        if h.is_branch() {
+            h.shorthand().map(|s| s.to_string())
+        } else {
+            None
+        }
+    });
 
     let mut covered_remote_refs: Vec<String> = Vec::new();
     let mut out: Vec<BranchInfo> = Vec::new();

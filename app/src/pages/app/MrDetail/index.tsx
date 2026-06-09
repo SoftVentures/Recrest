@@ -240,6 +240,10 @@ export default function MrDetailPage() {
     setAddingReviewer(false);
   };
 
+  // Dedupe by login so the same person never renders twice (which also
+  // produces a duplicate-key warning): a locally-added reviewer may already be
+  // in the provider list, and provider data can carry repeats.
+  const seenReviewers = new Set<string>();
   const allReviewers = [
     ...(detail?.reviewers ?? []),
     ...localReviewers.map((login) => ({
@@ -248,7 +252,11 @@ export default function MrDetailPage() {
       avatarUrl: null,
       state: "pending" as const,
     })),
-  ];
+  ].filter((r) => {
+    if (seenReviewers.has(r.login)) return false;
+    seenReviewers.add(r.login);
+    return true;
+  });
 
   return (
     <Root data-testid={TEST_IDS.mr.detailPage}>

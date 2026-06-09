@@ -269,7 +269,9 @@ mod tests {
         let (lhs, rhs) = key.split_once('|').expect("pipe-separated");
         assert_eq!(rhs, "t");
         assert!(!lhs.is_empty(), "got empty CJK key: {key}");
-        let (romanised, hash) = lhs.rsplit_once('~').expect("CJK key carries a ~hash suffix");
+        let (romanised, hash) = lhs
+            .rsplit_once('~')
+            .expect("CJK key carries a ~hash suffix");
         assert!(!romanised.is_empty(), "empty romanised half: {key}");
         assert_eq!(hash.len(), 8, "tiebreak suffix is 8 hex chars: {hash}");
         assert!(

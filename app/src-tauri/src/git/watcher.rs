@@ -112,7 +112,9 @@ async fn handle_events(
     drop(map);
 
     for (id, path) in touched {
-        let Ok(status) = status::read_status(&path) else { continue };
+        let Ok(status) = status::read_status(&path) else {
+            continue;
+        };
         let _ = app.emit(
             REPO_STATUS_EVENT,
             serde_json::json!({ "repoId": id, "status": status }),

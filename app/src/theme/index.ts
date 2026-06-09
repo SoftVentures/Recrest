@@ -35,7 +35,7 @@ export interface AccessibilityOptions {
  * stack. Each entry falls back to system defaults so a missing webfont
  * still yields a legible UI rather than the browser's serif default.
  */
-function fontFamilyForId(id: FontSelection): string {
+export function fontFamilyForId(id: FontSelection): string {
   if (id.startsWith(CUSTOM_FONT_PREFIX)) {
     const family = id.slice(CUSTOM_FONT_PREFIX.length);
     return `"${family}", "Helvetica Neue", system-ui, sans-serif`;

@@ -268,7 +268,9 @@ pub async fn create_and_open_workspace(
             .collect()
     };
     if paths.is_empty() {
-        return Err(CommandError::not_found("no registered repos matched the given ids"));
+        return Err(CommandError::not_found(
+            "no registered repos matched the given ids",
+        ));
     }
 
     let folders: Vec<serde_json::Value> = paths

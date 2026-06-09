@@ -136,9 +136,7 @@ pub(crate) fn pick_platform_asset(json: &serde_json::Value, os: &str) -> Option<
         for a in assets {
             if let Some(name) = a["name"].as_str() {
                 if name.ends_with(needle) {
-                    return a["browser_download_url"]
-                        .as_str()
-                        .map(|s| s.to_string());
+                    return a["browser_download_url"].as_str().map(|s| s.to_string());
                 }
             }
         }
@@ -231,7 +229,10 @@ mod tests {
     #[test]
     fn pick_platform_asset_linux_prefers_appimage() {
         let got = pick_platform_asset(&synthetic_release(), "linux");
-        assert_eq!(got.as_deref(), Some("https://example.test/Recrest.AppImage"));
+        assert_eq!(
+            got.as_deref(),
+            Some("https://example.test/Recrest.AppImage")
+        );
     }
 
     #[test]

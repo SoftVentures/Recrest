@@ -274,7 +274,7 @@ export function AppearanceSection() {
         >
           <FontGroupLabel>Sans</FontGroupLabel>
           {SANS_FONT_IDS.map((f) => (
-            <MenuItem key={f} value={f}>
+            <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.fontOption(f)}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
                 {fontLabel(f)}
               </Box>
@@ -282,7 +282,7 @@ export function AppearanceSection() {
           ))}
           <FontGroupLabel withDivider>Monospace</FontGroupLabel>
           {MONO_FONT_IDS.map((f) => (
-            <MenuItem key={f} value={f}>
+            <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.fontOption(f)}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
                 {fontLabel(f)}
               </Box>
@@ -292,7 +292,11 @@ export function AppearanceSection() {
           {customFonts.map((cf) => {
             const value = `${CUSTOM_FONT_PREFIX}${cf.family}`;
             return (
-              <MenuItem key={value} value={value}>
+              <MenuItem
+                key={value}
+                value={value}
+                data-testid={TEST_IDS.settings.general.fontOption(value)}
+              >
                 <Box component="span" style={{ fontFamily: fontCssFamily(value) }}>
                   {cf.family}
                 </Box>
@@ -324,7 +328,7 @@ export function AppearanceSection() {
           )}
         >
           {MONO_FONT_IDS.map((f) => (
-            <MenuItem key={f} value={f}>
+            <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.codeFontOption(f)}>
               <Box
                 component="span"
                 style={{
@@ -340,7 +344,11 @@ export function AppearanceSection() {
           {customFonts.map((cf) => {
             const value = `${CUSTOM_FONT_PREFIX}${cf.family}`;
             return (
-              <MenuItem key={value} value={value}>
+              <MenuItem
+                key={value}
+                value={value}
+                data-testid={TEST_IDS.settings.general.codeFontOption(value)}
+              >
                 <Box
                   component="span"
                   style={{
@@ -384,7 +392,11 @@ export function AppearanceSection() {
           }}
         >
           {LIGATURE_MODE_IDS.map((mode) => (
-            <MenuItem key={mode} value={mode}>
+            <MenuItem
+              key={mode}
+              value={mode}
+              data-testid={TEST_IDS.settings.general.codeLigaturesOption(mode)}
+            >
               <Box
                 component="span"
                 style={{

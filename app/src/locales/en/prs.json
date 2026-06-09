@@ -20,6 +20,8 @@
     "empty": "No changes to show.",
     "binary": "Binary file — no inline diff.",
     "add_comment": "Comment on this line",
+    "comment_hint": "Comment on this line — drag down to select a range",
+    "range_label": "L{{start}}–{{end}}",
     "comment_placeholder": "Leave a comment…",
     "comment_submit": "Comment",
     "comment_cancel": "Cancel",

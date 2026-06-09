@@ -75,7 +75,11 @@ fn tray_icon_bytes() -> &'static [u8] {
 
 #[cfg(windows)]
 fn tray_icon_bytes(dark: bool) -> &'static [u8] {
-    if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT }
+    if dark {
+        TRAY_ICON_DARK
+    } else {
+        TRAY_ICON_LIGHT
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -197,25 +201,23 @@ fn spawn_macos_appearance_poller(app: AppHandle) {
     // Use a plain std::thread instead of tokio::spawn to rule out any
     // async-runtime interaction. The thread sleeps + hops to the main thread
     // via `app.run_on_main_thread` once per tick.
-    std::thread::spawn(move || {
-        loop {
-            std::thread::sleep(Duration::from_millis(1500));
-            let last = Arc::clone(&last);
-            let result = app.run_on_main_thread(move || {
-                let dark = macos_system_dark().unwrap_or(false);
-                let mut guard = match last.lock() {
-                    Ok(g) => g,
-                    Err(poisoned) => poisoned.into_inner(),
-                };
-                if dark != *guard {
-                    *guard = dark;
-                    tracing::info!("[macos] appearance changed: dark={dark}");
-                    set_macos_app_icon();
-                }
-            });
-            if let Err(e) = result {
-                tracing::warn!("[macos] run_on_main_thread failed: {e:?}");
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(1500));
+        let last = Arc::clone(&last);
+        let result = app.run_on_main_thread(move || {
+            let dark = macos_system_dark().unwrap_or(false);
+            let mut guard = match last.lock() {
+                Ok(g) => g,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+            if dark != *guard {
+                *guard = dark;
+                tracing::info!("[macos] appearance changed: dark={dark}");
+                set_macos_app_icon();
             }
+        });
+        if let Err(e) = result {
+            tracing::warn!("[macos] run_on_main_thread failed: {e:?}");
         }
     });
 }
@@ -506,8 +508,8 @@ pub fn run() {
                 // Plan-8 E2E harness: `RECREST_TEST_PROFILE` redirects the
                 // dev-tokens file into a tmpdir so test PATs never land in
                 // the user's real app-data dir.
-                let token_dir = identity::test_profile_root()
-                    .or_else(|| handle.path().app_data_dir().ok());
+                let token_dir =
+                    identity::test_profile_root().or_else(|| handle.path().app_data_dir().ok());
                 if let Some(dir) = token_dir {
                     let _ = std::fs::create_dir_all(&dir);
                     auth::token::init_file_backend_path(dir.join("dev-tokens.json"));
@@ -783,8 +785,9 @@ pub fn run() {
             let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes())
                 .expect("tray icon bytes must decode");
             #[cfg(windows)]
-            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes(windows_uses_dark_mode()))
-                .expect("tray icon bytes must decode");
+            let tray_image =
+                tauri::image::Image::from_bytes(tray_icon_bytes(windows_uses_dark_mode()))
+                    .expect("tray icon bytes must decode");
 
             let tray_builder = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
                 .icon(tray_image)

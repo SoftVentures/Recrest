@@ -90,6 +90,5 @@
 ### Qualität / Infrastruktur
 
 - Wir müssen die Test suite erhöhen um alle solche dinge direkt auszubessern
-- Coverage-Gate schrittweise auf das Plan-04/03-Ziel **60 % Lines / 50 % Branches** anheben. Ist-Stand (2026-06-09): **53,6 % Lines / 75,35 % Branches** — Branches sind erreicht, Lines sind der Engpass. Gate steht aktuell auf `lines: 51` / `branches: 50` (`app/vitest.config.ts`). Größte ungetestete Brocken: Settings-Tabs (`ShortcutsTab`, `StorageTab`, `NotificationsSection`, `UpdatesSection` bei 0 %), `theme/ThemeWrapper.tsx`, `store/backendSync.ts`. Wenn diese abgedeckt sind, `lines` auf 60 ziehen.
-- 3 offene App-E2E-Specs aus Plan 04/03 schreiben: `onboarding`, `repo-add`, `settings-token` (Tauri-Stub-Branches teils nötig). `pr-drawer` ist bereits durch `17-repo-detail-mr-drawer.spec.ts` abgedeckt.
+- Coverage-Gate schrittweise auf das Plan-04/03-Ziel **60 % Lines / 50 % Branches** anheben. Ist-Stand (2026-06-09): **55,2 % Lines / 76,15 % Branches** — Branches sind erreicht, Lines sind der Engpass. Gate steht aktuell auf `lines: 51` / `branches: 50` (`app/vitest.config.ts`). Größte ungetestete Brocken: Settings-Tabs (`ShortcutsTab`, `StorageTab`, `NotificationsSection`, `UpdatesSection` bei 0 %), `theme/ThemeWrapper.tsx`, `store/backendSync.ts`. Wenn diese abgedeckt sind, `lines` auf 60 ziehen.
 - Vorbestehende E2E-Failures aus Commit 592bbc6 triagieren: `14-visual.spec.ts` (Screenshot-Baselines veraltet, brauchen reviewten `update-snapshots`-Lauf), `13-a11y` Dashboard, `15-updater-banner`, `99-activity-capture`.

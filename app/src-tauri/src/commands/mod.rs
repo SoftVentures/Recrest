@@ -1,27 +1,27 @@
 pub mod activity;
 pub mod clone;
+#[cfg(debug_assertions)]
+pub mod dev;
+#[cfg(debug_assertions)]
+pub mod dev_log;
 pub mod error;
 pub mod fonts;
 pub mod git_config;
 pub mod git_index;
 pub mod git_info;
 pub mod git_ops;
+pub mod ide;
 pub mod notifications;
 pub mod oauth;
 pub mod process;
-pub mod remote_import;
-pub mod search;
-pub mod ssh;
-pub mod ide;
 pub mod providers;
+pub mod remote_import;
 pub mod repos;
+pub mod search;
 pub mod settings;
+pub mod ssh;
 pub mod system;
 pub mod terminal;
 pub mod tray;
 pub mod update;
-#[cfg(debug_assertions)]
-pub mod dev;
-#[cfg(debug_assertions)]
-pub mod dev_log;
 pub mod window;

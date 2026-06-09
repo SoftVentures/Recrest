@@ -1,4 +1,4 @@
-import { type FileDiff } from "@recrest/shared";
+import { type Comment, type FileDiff } from "@recrest/shared";
 
 import { fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -67,15 +67,18 @@ describe("DiffView", () => {
     expect(queryByTestId(TEST_IDS.mr.diff.commentBtn)).toBeNull();
   });
 
-  it("opens the composer and submits an inline comment with the right position", async () => {
+  it("press-release on one line submits a single-line comment with both line numbers resolved", async () => {
     const onComment = vi.fn().mockResolvedValue(undefined);
     const { getAllByTestId, getByTestId } = renderWithProviders(
       <DiffView files={FILES} onComment={onComment} />,
     );
 
-    // Click the comment affordance on the added line (the 3rd row → RIGHT/new=2).
+    // Press the affordance on the added line (the 3rd row → RIGHT/new=2) and
+    // release without dragging. The absent old side resolves to the running old
+    // position (3) from the hunk.
     const buttons = getAllByTestId(TEST_IDS.mr.diff.commentBtn);
-    fireEvent.click(buttons[2]!);
+    fireEvent.mouseDown(buttons[2]!);
+    fireEvent.mouseUp(document);
 
     const input = getByTestId(TEST_IDS.mr.diff.composerInput);
     fireEvent.change(input, { target: { value: "nice" } });
@@ -84,8 +87,106 @@ describe("DiffView", () => {
     await waitFor(() => expect(onComment).toHaveBeenCalledTimes(1));
     const [path, position, body] = onComment.mock.calls[0]!;
     expect(path).toBe("src/lib.rs");
-    expect(position).toEqual({ side: "RIGHT", line: 2, startLine: null });
+    expect(position).toEqual({
+      start: null,
+      end: { side: "RIGHT", oldLineNo: 3, newLineNo: 2 },
+    });
     expect(body).toBe("nice");
+  });
+
+  it("dragging from one line to another submits a multi-line range position", async () => {
+    const onComment = vi.fn().mockResolvedValue(undefined);
+    const { getAllByTestId, getByTestId } = renderWithProviders(
+      <DiffView files={FILES} onComment={onComment} />,
+    );
+
+    const buttons = getAllByTestId(TEST_IDS.mr.diff.commentBtn);
+    const lines = getAllByTestId(TEST_IDS.mr.diff.line);
+    // Press on the added line (RIGHT/new=2), then sweep onto the last context
+    // line (RIGHT/new=4). The drag extends via a window mousemove + hit-test
+    // (browsers capture mouse events to the press target, so per-line
+    // mouseenter never fires). jsdom has no layout, so stub elementFromPoint
+    // to return the line under the "cursor".
+    const original = document.elementFromPoint;
+    document.elementFromPoint = (() => lines[3]!) as typeof document.elementFromPoint;
+    fireEvent.mouseDown(buttons[2]!);
+    fireEvent.mouseMove(window, { clientX: 10, clientY: 60 });
+    fireEvent.mouseUp(document);
+    document.elementFromPoint = original;
+
+    const input = getByTestId(TEST_IDS.mr.diff.composerInput);
+    fireEvent.change(input, { target: { value: "range note" } });
+    fireEvent.click(getByTestId(TEST_IDS.mr.diff.composerSubmit));
+
+    await waitFor(() => expect(onComment).toHaveBeenCalledTimes(1));
+    const [, position] = onComment.mock.calls[0]!;
+    expect(position).toEqual({
+      start: { side: "RIGHT", oldLineNo: 3, newLineNo: 2 },
+      end: { side: "RIGHT", oldLineNo: 3, newLineNo: 4 },
+    });
+  });
+
+  it("dragging from a removed line to an added line keeps each boundary's side", async () => {
+    const onComment = vi.fn().mockResolvedValue(undefined);
+    const { getAllByTestId, getByTestId } = renderWithProviders(
+      <DiffView files={FILES} onComment={onComment} />,
+    );
+
+    const buttons = getAllByTestId(TEST_IDS.mr.diff.commentBtn);
+    const lines = getAllByTestId(TEST_IDS.mr.diff.line);
+    // Press on the removed line (LEFT/old=2), sweep onto the added line
+    // (RIGHT/new=2). The range must cross sides: start LEFT, end RIGHT.
+    const original = document.elementFromPoint;
+    document.elementFromPoint = (() => lines[2]!) as typeof document.elementFromPoint;
+    fireEvent.mouseDown(buttons[1]!);
+    fireEvent.mouseMove(window, { clientX: 10, clientY: 40 });
+    fireEvent.mouseUp(document);
+    document.elementFromPoint = original;
+
+    const input = getByTestId(TEST_IDS.mr.diff.composerInput);
+    fireEvent.change(input, { target: { value: "deletion to addition" } });
+    fireEvent.click(getByTestId(TEST_IDS.mr.diff.composerSubmit));
+
+    await waitFor(() => expect(onComment).toHaveBeenCalledTimes(1));
+    const [, position] = onComment.mock.calls[0]!;
+    expect(position).toEqual({
+      start: { side: "LEFT", oldLineNo: 2, newLineNo: 2 },
+      end: { side: "RIGHT", oldLineNo: 3, newLineNo: 2 },
+    });
+  });
+
+  it("renders a line-anchored comment and a range badge next to its line", () => {
+    const comments: Comment[] = [
+      {
+        id: "c1",
+        author: "alice",
+        authorAvatarUrl: null,
+        body: "single",
+        path: "src/lib.rs",
+        side: "RIGHT",
+        line: 2,
+        startLine: null,
+        startSide: null,
+        createdAt: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: "c2",
+        author: "bob",
+        authorAvatarUrl: null,
+        body: "spans",
+        path: "src/lib.rs",
+        side: "RIGHT",
+        line: 4,
+        startLine: 2,
+        startSide: "RIGHT",
+        createdAt: "2026-01-01T00:00:00Z",
+      },
+    ];
+    const { getAllByTestId, getByTestId } = renderWithProviders(
+      <DiffView files={FILES} comments={comments} />,
+    );
+    expect(getAllByTestId(TEST_IDS.mr.diff.postedComment)).toHaveLength(2);
+    expect(getByTestId(TEST_IDS.mr.diff.rangeBadge).textContent).toContain("L2–4");
   });
 
   it("renders an empty state when there are no files", () => {

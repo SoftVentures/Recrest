@@ -291,7 +291,14 @@ fn detectable_terminal_ids() -> &'static [&'static str] {
     }
     #[cfg(target_os = "windows")]
     {
-        &["windows-terminal", "powershell", "cmd", "wezterm", "alacritty", "hyper"]
+        &[
+            "windows-terminal",
+            "powershell",
+            "cmd",
+            "wezterm",
+            "alacritty",
+            "hyper",
+        ]
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
@@ -455,7 +462,9 @@ mod tests {
     fn gnome_terminal_uses_window_with_profile() {
         let p = plan_with_profile("gnome-terminal", "Dev");
         assert!(p.args.contains(&"--window-with-profile=Dev".to_string()));
-        assert!(p.args.contains(&"--working-directory=/work/my repo".to_string()));
+        assert!(p
+            .args
+            .contains(&"--working-directory=/work/my repo".to_string()));
     }
 
     #[test]
@@ -540,10 +549,7 @@ mod tests {
     fn windows_terminal_uses_dash_d() {
         let p = plan("windows-terminal");
         assert_eq!(p.program, "wt.exe");
-        assert_eq!(
-            p.args,
-            vec!["-d".to_string(), "/work/my repo".to_string()]
-        );
+        assert_eq!(p.args, vec!["-d".to_string(), "/work/my repo".to_string()]);
     }
 
     #[test]

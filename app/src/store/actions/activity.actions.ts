@@ -9,7 +9,7 @@ import {
 
 import { planFetchWindow } from "@/lib/activity/fetchPlan";
 import { invoke } from "@/lib/tauri";
-import type { RootState } from "@/store";
+import type { RootState } from "@/store/rootState";
 
 export const setSelectedRange = createAction<ActivityRange>("activity/setSelectedRange");
 export const commitsChunkReceived = createAction<CommitsChunkPayload>(

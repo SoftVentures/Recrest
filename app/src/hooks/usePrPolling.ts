@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchPullRequests } from "@/store/reducers/prsReducer";
@@ -16,16 +16,39 @@ export function usePrPolling(): void {
   const repos = useAppSelector((s) => s.repos.items);
   const connections = useAppSelector((s) => s.providers.connections);
 
+  // Read the live maps from refs inside `tick` so the effect doesn't have to
+  // list `repos`/`connections` as dependencies. Those objects get a fresh
+  // reference on every repo://status watcher event (and on each bootstrap
+  // thunk landing); depending on them re-ran this effect — and thus fired
+  // `tick()` (a full fetch of every repo's PRs) — on every such change,
+  // storming the IPC layer and flooding the dev console.
+  const reposRef = useRef(repos);
+  reposRef.current = repos;
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+
+  // Re-poll only when the *set* of connected repos actually changes (e.g. a
+  // repo is added or a provider connects), not on every reference churn.
+  const connectedKey = useMemo(
+    () =>
+      Object.values(repos)
+        .filter((r) => r.providerId && connections[r.providerId]?.connected)
+        .map((r) => r.id)
+        .sort()
+        .join(","),
+    [repos, connections],
+  );
+
   useEffect(() => {
     const tick = () => {
-      for (const repo of Object.values(repos)) {
+      for (const repo of Object.values(reposRef.current)) {
         if (!repo.providerId) continue;
-        if (!connections[repo.providerId]?.connected) continue;
+        if (!connectionsRef.current[repo.providerId]?.connected) continue;
         void dispatch(fetchPullRequests(repo.id));
       }
     };
     tick();
     const handle = window.setInterval(tick, DEFAULT_POLL_MS);
     return () => window.clearInterval(handle);
-  }, [dispatch, repos, connections]);
+  }, [dispatch, connectedKey]);
 }

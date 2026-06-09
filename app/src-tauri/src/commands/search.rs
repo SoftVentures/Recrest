@@ -119,12 +119,16 @@ fn search_all(
                 continue;
             }
             let path = dent.path();
-            let Ok(bytes) = std::fs::read(path) else { continue };
+            let Ok(bytes) = std::fs::read(path) else {
+                continue;
+            };
             // Cheap binary sniff: a NUL byte in the head means "not text".
             if bytes.iter().take(8192).any(|&b| b == 0) {
                 continue;
             }
-            let Ok(text) = std::str::from_utf8(&bytes) else { continue };
+            let Ok(text) = std::str::from_utf8(&bytes) else {
+                continue;
+            };
 
             let rel = path
                 .strip_prefix(root)
@@ -143,7 +147,9 @@ fn search_all(
                 } else {
                     Cow::Owned(line.to_lowercase())
                 };
-                let Some(byte_col) = hay.find(&needle) else { continue };
+                let Some(byte_col) = hay.find(&needle) else {
+                    continue;
+                };
                 // 1-based char column (approximate when lowercasing shifts widths).
                 let column = hay[..byte_col].chars().count() as u64 + 1;
                 let snippet: String = line.chars().take(MAX_SNIPPET_CHARS).collect();
@@ -193,7 +199,11 @@ mod tests {
     #[test]
     fn finds_match_with_relative_and_absolute_paths() {
         let dir = tempfile::tempdir().unwrap();
-        write(dir.path(), "src/foo.rs", "fn main() {\n    let examples = 1;\n}\n");
+        write(
+            dir.path(),
+            "src/foo.rs",
+            "fn main() {\n    let examples = 1;\n}\n",
+        );
         write(dir.path(), "README.md", "nothing here\n");
 
         let hits = search_all(&repo(dir.path()), "examples", 500, deadline());
@@ -212,9 +222,15 @@ mod tests {
         write(dir.path(), "a.txt", "The Examples Are Here\n");
 
         // lowercase query → case-insensitive → matches "Examples".
-        assert_eq!(search_all(&repo(dir.path()), "examples", 500, deadline()).len(), 1);
+        assert_eq!(
+            search_all(&repo(dir.path()), "examples", 500, deadline()).len(),
+            1
+        );
         // uppercase in query → case-sensitive → "EXAMPLES" is absent.
-        assert_eq!(search_all(&repo(dir.path()), "EXAMPLES", 500, deadline()).len(), 0);
+        assert_eq!(
+            search_all(&repo(dir.path()), "EXAMPLES", 500, deadline()).len(),
+            0
+        );
     }
 
     #[test]

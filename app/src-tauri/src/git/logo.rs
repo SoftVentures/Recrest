@@ -100,7 +100,9 @@ fn best_match(repo_path: &Path, names: &[&str]) -> Option<PathBuf> {
         } else {
             repo_path.join(dir)
         };
-        let Ok(entries) = std::fs::read_dir(&base) else { continue };
+        let Ok(entries) = std::fs::read_dir(&base) else {
+            continue;
+        };
 
         for entry in entries.flatten() {
             let Ok(ft) = entry.file_type() else { continue };
@@ -108,8 +110,12 @@ fn best_match(repo_path: &Path, names: &[&str]) -> Option<PathBuf> {
                 continue;
             }
             let file_name = entry.file_name();
-            let Some(fname) = file_name.to_str() else { continue };
-            let Some((stem, ext)) = split_stem_ext(fname) else { continue };
+            let Some(fname) = file_name.to_str() else {
+                continue;
+            };
+            let Some((stem, ext)) = split_stem_ext(fname) else {
+                continue;
+            };
 
             let Some(name_idx) = names.iter().position(|n| n.eq_ignore_ascii_case(&stem)) else {
                 continue;

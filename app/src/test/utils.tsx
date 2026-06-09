@@ -49,7 +49,7 @@ export function makeTestStore(preloaded?: PreloadedSlices) {
   for (const key of Object.keys(baseState) as (keyof RootState)[]) {
     merged[key] = { ...baseState[key], ...(preloaded[key] ?? {}) };
   }
-  return configureStore({ reducer: testReducer, preloadedState: merged as RootState });
+  return configureStore({ reducer: testReducer, preloadedState: merged as unknown as RootState });
 }
 
 /**

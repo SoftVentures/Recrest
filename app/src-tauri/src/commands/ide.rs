@@ -40,7 +40,9 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
             PathBuf::from(vscode_bundle),
             PathBuf::from(vscode_insiders_bundle),
             PathBuf::from(cursor_bundle),
-            dirs::home_dir().map(|h| h.join(".local/bin")).unwrap_or_default(),
+            dirs::home_dir()
+                .map(|h| h.join(".local/bin"))
+                .unwrap_or_default(),
         ]
     }
     #[cfg(target_os = "linux")]
@@ -50,7 +52,9 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
             PathBuf::from("/usr/local/bin"),
             PathBuf::from("/usr/bin"),
             PathBuf::from("/snap/bin"),
-            dirs::home_dir().map(|h| h.join(".local/bin")).unwrap_or_default(),
+            dirs::home_dir()
+                .map(|h| h.join(".local/bin"))
+                .unwrap_or_default(),
         ]
     }
     #[cfg(windows)]
@@ -62,7 +66,12 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
         let mut paths = vec![];
         if let Some(local) = dirs::data_local_dir() {
             paths.push(local.join("Programs").join("Microsoft VS Code").join("bin"));
-            paths.push(local.join("Programs").join("Microsoft VS Code Insiders").join("bin"));
+            paths.push(
+                local
+                    .join("Programs")
+                    .join("Microsoft VS Code Insiders")
+                    .join("bin"),
+            );
             paths.push(local.join("Programs").join("cursor").join("bin"));
             paths.push(local.join("Programs").join("cursor"));
             paths.push(local.join("JetBrains").join("Toolbox").join("scripts"));
@@ -138,9 +147,8 @@ pub fn open_repo(_app: &AppHandle, path: &Path, ide: Option<&str>) -> Result<(),
         }
     };
 
-    spawn_detached(&binary, path).map_err(|e| {
-        CommandError::internal(format!("failed to spawn {}: {e}", bin_name))
-    })?;
+    spawn_detached(&binary, path)
+        .map_err(|e| CommandError::internal(format!("failed to spawn {}: {e}", bin_name)))?;
     Ok(())
 }
 

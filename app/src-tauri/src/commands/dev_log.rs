@@ -51,9 +51,7 @@ fn append_line(line: &str) {
 /// which build (dev vs prod identity) wrote the surrounding lines.
 pub fn log_session_start(identifier: &str) {
     let ts = Utc::now().to_rfc3339();
-    append_line(&format!(
-        "\n=== session start {ts} :: {identifier} ==="
-    ));
+    append_line(&format!("\n=== session start {ts} :: {identifier} ==="));
 }
 
 #[tauri::command]

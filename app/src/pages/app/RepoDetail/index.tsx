@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -51,8 +51,10 @@ import {
   BackBar,
   BackButton,
   Card,
+  CardGrid,
   CardHead,
   CardMeta,
+  CardSlot,
   CardTitle,
   Chip,
   CleanState,
@@ -65,7 +67,6 @@ import {
   CommitSha,
   CommitsList,
   Content,
-  Grid2,
   Header,
   HeaderActions,
   HeaderBody,
@@ -89,6 +90,15 @@ import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
 import { bumpRefreshNonce } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+
+// Shared spring for the card grid: cells animate to their new size/slot when
+// the grid reflows (window resize) or the card set changes (provider connects).
+const CARD_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 420,
+  damping: 36,
+  mass: 0.7,
+};
 
 export default function RepoDetailPage() {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
@@ -203,6 +213,157 @@ export default function RepoDetailPage() {
   const draftMrs = openMrs.filter((p) => p.draft);
   const brand = brandFromUrl(repo.remoteUrl);
 
+  const workingTreeCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
+        {repo.status.dirty && (
+          <CardMeta>
+            +{repo.added} −{repo.removed} · {repo.filesChanged} file
+            {repo.filesChanged === 1 ? "" : "s"}
+          </CardMeta>
+        )}
+      </CardHead>
+      {repo.status.dirty ? (
+        <WorkingCopyScroll>
+          <WorkingCopyPanel repoId={repo.id} onCommitClick={() => setCommitDialogOpen(true)} />
+        </WorkingCopyScroll>
+      ) : (
+        <CleanState>
+          <Mascot variant="celebrating" size={96} title="Nothing to commit" />
+          <CleanStateText>Nothing to commit.</CleanStateText>
+          <CleanStateSub>Working tree is clean.</CleanStateSub>
+        </CleanState>
+      )}
+    </Card>
+  );
+
+  const mergeRequestsCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>Merge requests</CardTitle>
+        <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
+          Open MRs view
+        </SecondaryBtn>
+      </CardHead>
+      {prs.length === 0 ? (
+        <EmptyState
+          mascot="snoozing"
+          mascotSize={88}
+          title="No merge requests"
+          description="This repository has no open merge requests."
+        />
+      ) : (
+        <PrScroller>
+          {prs.map((pr) => (
+            <PrRowSlot
+              key={pr.number}
+              data-testid={TEST_IDS.repoDetail.mrRow}
+              data-mr-number={pr.number}
+              data-mr-state={pr.state}
+              data-mr-author={pr.author || undefined}
+              onClick={() => setSelectedPr(pr)}
+            >
+              <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
+            </PrRowSlot>
+          ))}
+        </PrScroller>
+      )}
+    </Card>
+  );
+
+  const gitConfigCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>{t("settings.git.repo_card_title")}</CardTitle>
+      </CardHead>
+      <RepoGitConfigCard repoId={repo.id} />
+    </Card>
+  );
+
+  const activityCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>Activity — 14 days</CardTitle>
+        <CardMeta>
+          {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
+        </CardMeta>
+      </CardHead>
+      <ActivityBars>
+        {repo.activity.map((v, i) => {
+          const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
+          return (
+            <ActivityBar
+              key={i}
+              heightPct={heightPct}
+              hot={v >= maxBucket * 0.66}
+              aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
+              data-testid={TEST_IDS.repoDetail.sparkCell}
+              data-index={i}
+            />
+          );
+        })}
+      </ActivityBars>
+      <ActivityAxis>
+        <Box component="span">14d ago</Box>
+        <Box component="span">today</Box>
+      </ActivityAxis>
+    </Card>
+  );
+
+  const recentCommitsCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>Recent commits</CardTitle>
+        <CardMeta>last 30 days</CardMeta>
+      </CardHead>
+      {commits.length === 0 ? (
+        <EmptyState
+          mascot="snoozing"
+          mascotSize={88}
+          title="No recent commits"
+          description="Nothing landed in this window."
+        />
+      ) : (
+        <CommitsList>
+          {commits.map((c) => (
+            <CommitRow key={c.sha}>
+              <AuthorAvatar name={c.author} email={c.authorEmail ?? undefined} size={20} />
+              <CommitMain>
+                <CommitMessage>{c.summary}</CommitMessage>
+                <CommitMeta>
+                  {c.author} · <CommitSha component="span">{c.sha.slice(0, 7)}</CommitSha>
+                </CommitMeta>
+              </CommitMain>
+            </CommitRow>
+          ))}
+        </CommitsList>
+      )}
+    </Card>
+  );
+
+  // Order cards so similar-height siblings pair up in the two-up grid (the grid
+  // stretches each row to equal height). When a provider is connected we have 7
+  // cards: tall pair (working + MRs), medium pair (CI + git config), short pair
+  // (deployments + activity), and the tall commits list takes a full-width row
+  // on its own. Without a provider only the 4 always-present cards remain.
+  const cardSlots: { key: string; node: ReactNode }[] = repoProviderConnected
+    ? [
+        { key: "working", node: workingTreeCard },
+        { key: "mr", node: mergeRequestsCard },
+        { key: "ci", node: <CiCard repoId={repo.id} /> },
+        { key: "gitConfig", node: gitConfigCard },
+        { key: "deployments", node: <DeploymentsCard repoId={repo.id} /> },
+        { key: "activity", node: activityCard },
+        { key: "commits", node: recentCommitsCard },
+      ]
+    : [
+        { key: "working", node: workingTreeCard },
+        { key: "commits", node: recentCommitsCard },
+        { key: "gitConfig", node: gitConfigCard },
+        { key: "activity", node: activityCard },
+      ];
+
   return (
     <Root data-testid={TEST_IDS.repoDetail.page}>
       <BackBar>
@@ -301,140 +462,18 @@ export default function RepoDetailPage() {
           draftMrsCount={repoProviderConnected ? draftMrs.length : null}
         />
 
-        <Grid2>
-          {repoProviderConnected && (
-            <Card>
-              <CardHead>
-                <CardTitle>Merge requests</CardTitle>
-                <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
-                  Open MRs view
-                </SecondaryBtn>
-              </CardHead>
-              {prs.length === 0 ? (
-                <EmptyState
-                  mascot="snoozing"
-                  mascotSize={88}
-                  title="No merge requests"
-                  description="This repository has no open merge requests."
-                />
-              ) : (
-                <PrScroller>
-                  {prs.map((pr) => (
-                    <PrRowSlot
-                      key={pr.number}
-                      data-testid={TEST_IDS.repoDetail.mrRow}
-                      data-mr-number={pr.number}
-                      data-mr-state={pr.state}
-                      data-mr-author={pr.author || undefined}
-                      onClick={() => setSelectedPr(pr)}
-                    >
-                      <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
-                    </PrRowSlot>
-                  ))}
-                </PrScroller>
-              )}
-            </Card>
-          )}
-
-          <Card>
-            <CardHead>
-              <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
-              {repo.status.dirty && (
-                <CardMeta>
-                  +{repo.added} −{repo.removed} · {repo.filesChanged} file
-                  {repo.filesChanged === 1 ? "" : "s"}
-                </CardMeta>
-              )}
-            </CardHead>
-            {repo.status.dirty ? (
-              <WorkingCopyScroll>
-                <WorkingCopyPanel
-                  repoId={repo.id}
-                  onCommitClick={() => setCommitDialogOpen(true)}
-                />
-              </WorkingCopyScroll>
-            ) : (
-              <CleanState>
-                <Mascot variant="celebrating" size={96} title="Nothing to commit" />
-                <CleanStateText>Nothing to commit.</CleanStateText>
-                <CleanStateSub>Working tree is clean.</CleanStateSub>
-              </CleanState>
-            )}
-          </Card>
-
-          <Card>
-            <CardHead>
-              <CardTitle>{t("settings.git.repo_card_title")}</CardTitle>
-            </CardHead>
-            <RepoGitConfigCard repoId={repo.id} />
-          </Card>
-        </Grid2>
-
-        {repoProviderConnected && (
-          <Grid2>
-            <CiCard repoId={repo.id} />
-            <DeploymentsCard repoId={repo.id} />
-          </Grid2>
-        )}
-
-        <Grid2>
-          <Card>
-            <CardHead>
-              <CardTitle>Activity — 14 days</CardTitle>
-              <CardMeta>
-                {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
-              </CardMeta>
-            </CardHead>
-            <ActivityBars>
-              {repo.activity.map((v, i) => {
-                const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
-                return (
-                  <ActivityBar
-                    key={i}
-                    heightPct={heightPct}
-                    hot={v >= maxBucket * 0.66}
-                    aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
-                    data-testid={TEST_IDS.repoDetail.sparkCell}
-                    data-index={i}
-                  />
-                );
-              })}
-            </ActivityBars>
-            <ActivityAxis>
-              <Box component="span">14d ago</Box>
-              <Box component="span">today</Box>
-            </ActivityAxis>
-          </Card>
-
-          <Card>
-            <CardHead>
-              <CardTitle>Recent commits</CardTitle>
-              <CardMeta>last 30 days</CardMeta>
-            </CardHead>
-            {commits.length === 0 ? (
-              <EmptyState
-                mascot="snoozing"
-                mascotSize={88}
-                title="No recent commits"
-                description="Nothing landed in this window."
-              />
-            ) : (
-              <CommitsList>
-                {commits.map((c) => (
-                  <CommitRow key={c.sha}>
-                    <AuthorAvatar name={c.author} email={c.authorEmail ?? undefined} size={20} />
-                    <CommitMain>
-                      <CommitMessage>{c.summary}</CommitMessage>
-                      <CommitMeta>
-                        {c.author} · <CommitSha component="span">{c.sha.slice(0, 7)}</CommitSha>
-                      </CommitMeta>
-                    </CommitMain>
-                  </CommitRow>
-                ))}
-              </CommitsList>
-            )}
-          </Card>
-        </Grid2>
+        <CardGrid>
+          {cardSlots.map((slot, i) => (
+            <CardSlot
+              key={slot.key}
+              full={i === cardSlots.length - 1 && cardSlots.length % 2 === 1}
+              layout
+              transition={CARD_TRANSITION}
+            >
+              {slot.node}
+            </CardSlot>
+          ))}
+        </CardGrid>
       </Content>
 
       <MrDetailDrawer

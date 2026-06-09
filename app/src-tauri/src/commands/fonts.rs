@@ -131,10 +131,7 @@ pub async fn list_custom_fonts(app: AppHandle) -> Result<Vec<CustomFont>, Comman
 /// `source_path` comes from the native file picker (the user explicitly chose
 /// it), mirroring `set_repo_logo`'s upload flow.
 #[tauri::command]
-pub async fn upload_font(
-    app: AppHandle,
-    source_path: String,
-) -> Result<CustomFont, CommandError> {
+pub async fn upload_font(app: AppHandle, source_path: String) -> Result<CustomFont, CommandError> {
     let source = PathBuf::from(&source_path);
     let source_canon = std::fs::canonicalize(&source)
         .map_err(|e| CommandError::not_found(format!("font file not found: {e}")))?;
@@ -209,7 +206,9 @@ pub async fn delete_custom_font(app: AppHandle, id: String) -> Result<(), Comman
         }
     }
     if !removed {
-        return Err(CommandError::not_found(format!("font `{family}` not found")));
+        return Err(CommandError::not_found(format!(
+            "font `{family}` not found"
+        )));
     }
     Ok(())
 }

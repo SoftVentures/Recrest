@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { THEMES } from "@/lib/constants/theme.constants";
-import { getTheme } from "@/theme";
+import { fontCssFamily } from "@/lib/utils/appearance.utils";
+import { fontFamilyForId, getTheme } from "@/theme";
 
 describe("getTheme", () => {
   it.each(THEMES.map((t) => [t.id, t.label] as const))("builds a complete palette for %s", (id) => {
@@ -54,4 +55,71 @@ describe("getTheme", () => {
     const t = getTheme("not-a-theme" as never);
     expect(t.palette.mode).toBe("light");
   });
+});
+
+describe("fontFamilyForId", () => {
+  it("maps known sans FontIds to their curated stack", () => {
+    expect(fontFamilyForId("inter")).toBe('Inter, "Helvetica Neue", system-ui, sans-serif');
+    expect(fontFamilyForId("manrope")).toBe("Manrope, system-ui, sans-serif");
+    expect(fontFamilyForId("plex")).toBe('"IBM Plex Sans", system-ui, sans-serif');
+    expect(fontFamilyForId("geist")).toBe("Geist, system-ui, sans-serif");
+    expect(fontFamilyForId("system")).toBe('-apple-system, "Segoe UI", system-ui, sans-serif');
+    expect(fontFamilyForId("opendyslexic")).toBe("OpenDyslexic, Inter, system-ui, sans-serif");
+  });
+
+  it("maps known mono FontIds to their curated stack", () => {
+    expect(fontFamilyForId("jetbrains-mono")).toBe(
+      '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+    );
+    expect(fontFamilyForId("fira-code")).toBe(
+      '"Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace',
+    );
+    expect(fontFamilyForId("geist-mono")).toBe(
+      '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+    );
+    expect(fontFamilyForId("plex-mono")).toBe(
+      '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+    );
+    expect(fontFamilyForId("sf-mono")).toBe(
+      'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace',
+    );
+  });
+
+  it("resolves a custom font to the uploaded family plus a sans fallback", () => {
+    expect(fontFamilyForId("custom:My Brand Font")).toBe(
+      '"My Brand Font", "Helvetica Neue", system-ui, sans-serif',
+    );
+  });
+
+  it("falls back to Inter for unknown or empty selections", () => {
+    const fallback = 'Inter, "Helvetica Neue", system-ui, sans-serif';
+    expect(fontFamilyForId("not-a-real-font")).toBe(fallback);
+    expect(fontFamilyForId("")).toBe(fallback);
+  });
+});
+
+describe("font resolver parity (fontFamilyForId vs fontCssFamily)", () => {
+  // The two resolvers are intentionally duplicated (theme/index owns the MUI
+  // typography stack; appearance.utils owns the CSS-var driven surfaces). Most
+  // built-in ids resolve identically; this guards against silent drift on the
+  // ids that are meant to agree. `inter`, `system`, `opendyslexic`, and the
+  // custom prefix diverge on purpose (theme/index pins a "Helvetica Neue" /
+  // Inter tier the CSS-var stack omits), so they are excluded from the parity set.
+  const PARITY_IDS = [
+    "manrope",
+    "plex",
+    "geist",
+    "jetbrains-mono",
+    "fira-code",
+    "geist-mono",
+    "plex-mono",
+    "sf-mono",
+  ] as const;
+
+  it.each(PARITY_IDS.map((id) => [id] as const))(
+    "resolves '%s' to the same stack in both resolvers",
+    (id) => {
+      expect(fontFamilyForId(id)).toBe(fontCssFamily(id));
+    },
+  );
 });
