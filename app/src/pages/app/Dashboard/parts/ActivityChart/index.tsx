@@ -1,4 +1,4 @@
-import { type CSSProperties, type PointerEvent, useRef, useState } from "react";
+import { type PointerEvent, useRef, useState } from "react";
 
 import { Box, Typography } from "@mui/material";
 import { keyframes, styled } from "@mui/material/styles";
@@ -41,9 +41,9 @@ export function ActivityChart({ agg, maxDay, title, meta }: ActivityChartProps) 
           {meta}
         </CardMeta>
       </CardHead>
-      <Chart ref={chartRef}>
+      <Chart ref={chartRef} columns={agg.length}>
         {agg.map((v, i) => {
-          const daysAgo = 13 - i;
+          const daysAgo = agg.length - 1 - i;
           const dayLabel =
             daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
           const isActive = hovered === i;
@@ -62,23 +62,15 @@ export function ActivityChart({ agg, maxDay, title, meta }: ActivityChartProps) 
               placement="top"
             >
               <BarColumn>
-                <Bar
-                  data-active={isActive ? "true" : undefined}
-                  style={
-                    {
-                      height: `${(v / maxDay) * 100}%`,
-                      "--bar-index": i,
-                    } as CSSProperties
-                  }
-                />
+                <Bar active={isActive} heightPct={(v / maxDay) * 100} index={i} />
               </BarColumn>
             </GeneralTooltip>
           );
         })}
       </Chart>
       <ChartAxis>
-        <Box component="span">14d ago</Box>
-        <Box component="span">7d</Box>
+        <Box component="span">{agg.length}d ago</Box>
+        <Box component="span">{Math.round(agg.length / 2)}d</Box>
         <Box component="span">today</Box>
       </ChartAxis>
     </CardActivity>
@@ -121,14 +113,16 @@ const CardMeta = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
-const Chart = styled(Box)({
+const Chart = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "columns",
+})<{ columns: number }>(({ columns }) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(14, 1fr)",
+  gridTemplateColumns: `repeat(${columns}, 1fr)`,
   gap: 6,
   height: 96,
   alignItems: "end",
   padding: "4px 0 0",
-}) as typeof Box;
+}));
 
 const BarColumn = styled(Box)({
   height: "100%",
@@ -142,30 +136,37 @@ const barGrow = keyframes`
   to   { transform: scaleY(1); }
 `;
 
-const Bar = styled(Box)(({ theme }) => ({
-  width: "100%",
-  minHeight: 4,
-  backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 18%, transparent)`,
-  backgroundImage: `radial-gradient(circle, color-mix(in srgb, ${theme.palette.primary.main} 55%, transparent) 0.6px, transparent 1px)`,
-  backgroundSize: "7px 7px",
-  border: `1px solid color-mix(in srgb, ${theme.palette.primary.main} 65%, transparent)`,
-  borderBottom: 0,
-  borderRadius: "8px 8px 0 0",
-  transformOrigin: "bottom",
-  animation: `${barGrow} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
-  animationDelay: "calc(var(--bar-index, 0) * 28ms)",
-  transition:
-    "background-color 0.12s ease, border-color 0.12s ease, height 0.16s cubic-bezier(0.22, 1, 0.36, 1)",
-  "&[data-active='true']": {
-    backgroundColor: theme.palette.primary.main,
-    backgroundImage: "none",
-    borderColor: theme.palette.primary.main,
-    height: "100% !important",
-  },
-  'html[data-reduced-motion="true"] &': {
-    animation: "none",
-  },
-})) as typeof Box;
+const Bar = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "heightPct" && prop !== "index" && prop !== "active",
+})<{ heightPct: number; index: number; active: boolean }>(
+  ({ theme, heightPct, index, active }) => ({
+    width: "100%",
+    minHeight: 4,
+    height: active ? "100%" : `${heightPct}%`,
+    backgroundColor: active
+      ? theme.palette.primary.main
+      : `color-mix(in srgb, ${theme.palette.primary.main} 18%, transparent)`,
+    backgroundImage: active
+      ? "none"
+      : `radial-gradient(circle, color-mix(in srgb, ${theme.palette.primary.main} 55%, transparent) 0.6px, transparent 1px)`,
+    backgroundSize: "7px 7px",
+    border: `1px solid ${
+      active
+        ? theme.palette.primary.main
+        : `color-mix(in srgb, ${theme.palette.primary.main} 65%, transparent)`
+    }`,
+    borderBottom: 0,
+    borderRadius: "8px 8px 0 0",
+    transformOrigin: "bottom",
+    animation: `${barGrow} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+    animationDelay: `${index * 28}ms`,
+    transition:
+      "background-color 0.12s ease, border-color 0.12s ease, height 0.16s cubic-bezier(0.22, 1, 0.36, 1)",
+    'html[data-reduced-motion="true"] &': {
+      animation: "none",
+    },
+  }),
+);
 
 const ChartAxis = styled(Box)(({ theme }) => ({
   display: "flex",

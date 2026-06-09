@@ -26,6 +26,7 @@
     "format:check": "yarn workspace @recrest/shared format:check && yarn workspace @recrest/app format:check && yarn workspace @recrest/tests format:check && yarn workspace @recrest/landingpage format:check",
     "lint": "yarn workspace @recrest/shared lint && yarn workspace @recrest/app lint && yarn workspace @recrest/tests lint && yarn workspace @recrest/landingpage lint",
     "test": "yarn workspace @recrest/shared test && yarn workspace @recrest/app test && yarn workspace @recrest/landingpage test",
+    "test:coverage": "yarn workspace @recrest/shared test && yarn workspace @recrest/app test:coverage && yarn workspace @recrest/landingpage test",
     "test:ts": "yarn workspace @recrest/shared test:ts && yarn workspace @recrest/app test:ts && yarn workspace @recrest/tests test:ts && yarn workspace @recrest/landingpage test:ts",
     "test:e2e": "yarn workspace @recrest/tests test:e2e",
     "test:e2e:tauri": "bash tests/scripts/run-tauri-e2e.sh",

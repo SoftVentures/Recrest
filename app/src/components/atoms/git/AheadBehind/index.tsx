@@ -26,25 +26,30 @@ const FORWARD = (p: PropertyKey) => p !== "size" && p !== "variant";
 const Root = styled(Box, { shouldForwardProp: FORWARD })<RootProps>(({ theme, size, variant }) => ({
   display: "inline-flex",
   alignItems: variant === "separated" ? "baseline" : "center",
-  gap: variant === "separated" ? 4 : size === "md" ? 10 : 5,
-  fontSize: size === "md" ? 13 : 11,
-  fontWeight: variant === "separated" ? 600 : size === "md" ? 700 : 400,
-  color: theme.palette.text.information,
+  // `separated` is the Dashboard KPI hero value: the numbers carry the weight
+  // and colour of a real KPI figure (so the card matches its siblings), with
+  // the ↑/↓ glyphs + slash as smaller, muted affordances scaled via `em`.
+  gap: variant === "separated" ? 6 : size === "md" ? 10 : 5,
+  fontSize: variant === "separated" ? 32 : size === "md" ? 13 : 11,
+  fontWeight: variant === "separated" ? 700 : size === "md" ? 700 : 400,
+  letterSpacing: variant === "separated" ? "-0.02em" : undefined,
+  color: variant === "separated" ? theme.palette.text.primary : theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
   lineHeight: variant === "separated" ? 1 : undefined,
   flexShrink: 0,
 }));
 
 const Arrow = styled(Box)(({ theme }) => ({
-  fontSize: 22,
+  fontSize: "0.6em",
   fontWeight: 600,
   color: theme.palette.text.information,
 })) as typeof Box;
 
 const Sep = styled(Box)(({ theme }) => ({
+  fontSize: "0.6em",
   fontWeight: 400,
   color: theme.palette.text.informationLight,
-  margin: "0 6px",
+  margin: "0 2px",
 })) as typeof Box;
 
 /**

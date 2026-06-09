@@ -31,8 +31,41 @@ export default defineConfig({
     env: { TZ: "Europe/Berlin" },
     environment: "jsdom",
     globals: true,
+    // V8 coverage instrumentation roughly doubles per-test wall time under
+    // `test:coverage` (now the CI gate); a few heavier component specs brush
+    // past the 5s default and flake. 15s absorbs the overhead without masking
+    // a genuinely hung test.
+    testTimeout: 15_000,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["src-old/**", "node_modules", "dist"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.{ts,tsx}"],
+      // Keep the denominator honest: tests, stories, generated assets,
+      // pure style/type modules and entrypoints have nothing to assert.
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/**/*.stories.{ts,tsx}",
+        "src/**/*.styles.{ts,tsx}",
+        "src/**/*.d.ts",
+        "src/test/**",
+        "src/main.tsx",
+        "src/vite-env.d.ts",
+        "src/assets/**",
+        "src/**/index.ts",
+      ],
+      // Plan 04/03 target is 60 lines / 50 branches. Branches already clear
+      // that; lines sit at ~53.6%, so we gate at `current − 2` (51) to block
+      // regression without painting CI red, and ratchet up toward 60 as the
+      // untested settings tabs / ThemeWrapper get covered. Tracked in
+      // docs/plans/future.md.
+      thresholds: {
+        lines: 51,
+        branches: 50,
+      },
+    },
   },
 });

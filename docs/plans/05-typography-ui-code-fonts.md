@@ -7,13 +7,14 @@
    monospace surfaces. UI font picker keeps **all** fonts (sans + mono); a new
    **Code font** picker (mono ids) drives `codeFont`.
 2. **Code ligatures.** Code surfaces render with `font-feature-settings: "liga" 1,
-   "calt" 1` so `=>`, `!=`, `>=`, `->`, `===` etc. ligate. JetBrains Mono + Fira
+"calt" 1` so `=>`, `!=`, `>=`, `->`, `===` etc. ligate. JetBrains Mono + Fira
    Code (both already bundled via `@fontsource`) support this.
 3. **Custom TTF upload.** User can upload a `.ttf/.otf/.woff2`; it is stored, an
    `@font-face` is registered at runtime, and it becomes selectable in **both** the
    UI and Code pickers.
 
 Decisions (confirmed with user):
+
 - Custom font usable for **UI + Code**.
 - UI font picker keeps **all** fonts; Code picker is **added** alongside.
 - `codeFont` default: `jetbrains-mono`. Ligatures: **always on** for code surfaces.
@@ -32,26 +33,31 @@ Decisions (confirmed with user):
 ## Phase 1 — Separate code font + ligatures
 
 ### Shared
+
 - `ui.ts`: add `DEFAULT_CODE_FONT: FontId = "jetbrains-mono"`.
 - `types/settings.ts`: add `codeFont: FontId` to `AppSettings`.
 
 ### Rust (`config/settings.rs`)
+
 - Add `code_font: String` (serde camelCase → `codeFont`) with `#[serde(default = "default_code_font")]`
   returning `"jetbrains-mono"`, mirroring how `font` is defined/migrated so existing
   `settings.json` files keep loading.
 
 ### Frontend — apply the code font as a CSS variable
+
 - New `--recrest-font-mono` custom property set on `:root`/`<html>` from
   `fontFamilyForId(codeFont)` (wherever the UI font is applied — `ThemeWrapper`).
 - Central mono style helper (new, in `appearance.utils.ts`):
+
   ```ts
   export const MONO_STACK =
-    'var(--recrest-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)';
+    "var(--recrest-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
   export const monoFont = {
     fontFamily: MONO_STACK,
     fontFeatureSettings: '"liga" 1, "calt" 1',
   } as const;
   ```
+
 - **Sweep**: replace the ~30 hardcoded `fontFamily: 'ui-monospace, …'` occurrences with
   `...monoFont` (or `fontFamily: MONO_STACK`). Files (from grep on `ui-monospace`):
   MarkdownView, RichTextEditor, DiffView, GitConfigStyles, MergeMrModal, LeaderboardCard,
@@ -62,18 +68,21 @@ Decisions (confirmed with user):
   AboutTab (+ LinkItem). `appearance.utils.fontCssFamily` stays the source for the var.
 
 ### Settings UI (`AppearanceSection`)
+
 - Add a **Code font** select bound to `codeFont` (options = `MONO_FONT_IDS` + custom).
 - UI font select unchanged (all fonts).
 
 ## Phase 2 — Custom TTF upload
 
 ### Rust (`commands/fonts.rs`, new)
+
 - `upload_font(name, bytes) -> CustomFont` — validate extension (ttf/otf/woff2) + size cap,
   write to `<app_data>/fonts/<sanitized>.<ext>`, return `{ id, family, fileName }`.
 - `list_custom_fonts() -> Vec<CustomFont>`; `delete_custom_font(id)`.
 - Register in both `generate_handler!` blocks; mirror DTO in shared.
 
 ### Frontend
+
 - Upload via the dialog plugin (file picker) → read bytes → `upload_font`.
 - Register `@font-face` at runtime: read the stored file (asset protocol / base64) and
   inject a `<style>` / `FontFace` so the family is usable.
@@ -82,6 +91,7 @@ Decisions (confirmed with user):
 - `delete` affordance per custom font in Settings.
 
 ### Web (dev:web) fallback
+
 - No FS: custom upload is Tauri-only; the picker hides the upload button (or no-ops)
   outside Tauri. Bundled fonts still work everywhere.
 
@@ -115,6 +125,7 @@ custom fonts appear in a "Custom" optgroup in **both** the UI and Code pickers.
 Web/dev:web + Playwright stubs return an empty list (upload is Tauri-only).
 
 ## Verification
+
 - `cargo check` / settings round-trip test (old json without `codeFont` loads).
 - `yarn test:ts`, `yarn lint`, targeted vitest (AppearanceSection, theme).
 - Live (:3000): code surfaces show ligatures; switching Code font re-renders snippets/diff;

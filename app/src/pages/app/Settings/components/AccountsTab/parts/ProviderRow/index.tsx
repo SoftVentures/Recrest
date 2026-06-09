@@ -167,13 +167,16 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
   };
 
   return (
-    <Card>
+    <Card data-testid={TEST_IDS.settings.accounts.providerRow(providerId)}>
       <TopRow>
         {PROVIDER_BRANDS[providerId]}
         <BrandName component="span" variant="caption">
           {providerName}
         </BrandName>
-        <StatusPill tone={connected ? "connected" : "disconnected"}>
+        <StatusPill
+          tone={connected ? "connected" : "disconnected"}
+          data-testid={TEST_IDS.settings.accounts.statusPill(providerId)}
+        >
           {connected
             ? t("settings.providers.status_connected")
             : t("settings.providers.status_disconnected")}
@@ -293,6 +296,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
                 placeholder={t("settings.providers.bitbucket_username_placeholder")}
                 autoComplete="username"
                 autoFocus
+                data-testid={TEST_IDS.settings.accounts.usernameInput}
               />
               <FormHint component="p" variant="body2">
                 {t("settings.providers.bitbucket_username_hint")}
@@ -312,11 +316,13 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               }}
               placeholder={t("settings.providers.token_placeholder")}
               autoFocus={!requiresUsername}
+              data-testid={TEST_IDS.settings.accounts.tokenInput}
             />
             <Btn
               type="button"
               disabled={submitting || !token.trim() || (requiresUsername && !username.trim())}
               onClick={() => void onSaveToken()}
+              data-testid={TEST_IDS.settings.accounts.tokenSave}
             >
               {t("settings.providers.save")}
             </Btn>

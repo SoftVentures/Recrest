@@ -126,7 +126,16 @@ jobs:
           node-version-file: .nvmrc
           cache: yarn
       - uses: ./.github/actions/install-deps
-      - run: yarn test
+      # Runs the app suite with V8 coverage; the thresholds in
+      # app/vitest.config.ts (lines/branches) fail this job on regression.
+      - run: yarn test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-coverage
+          path: app/coverage
+          retention-days: 7
 
   e2e:
     name: Playwright E2E (optional)

@@ -333,7 +333,10 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "set_git_config":
         return { scope: args && args.repoId == null ? "global" : "repo", entries: {} };
       case "get_pr_diff":
-        return { files: [], truncated: false };
+        // loadPrDiff resolves this value AS the FileDiff[] diff array directly.
+        // Returning the Rust PrDiff wrapper object made the diff a non-array,
+        // which threw "diff is not iterable" in the MR detail panel.
+        return [];
       case "post_pr_comment":
         return undefined;
       case "list_workflows":
@@ -407,7 +410,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       // --- search
       case "find_across_repos": {
         const q = String(args?.query ?? "").trim();
-        const repoId = args?.repoId as string | undefined;
+        const repoId = args?.repoId;
         const repo = SEED.repos[0];
         if (q.length < 2 || !repo) return [];
         if (repoId && repoId !== repo.id) return [];
@@ -450,8 +453,43 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       // --- providers
       case "list_providers":
         return Object.values(SEED.providers || {});
-      case "set_provider_token":
-      case "set_provider_base_url":
+      case "set_provider_token": {
+        // The real command verifies the token and returns the refreshed
+        // ProviderConnection (connected=true). setProviderToken.fulfilled
+        // writes action.payload straight into state.connections, so returning
+        // undefined would corrupt the slice. Mutate SEED so a follow-up
+        // list_providers (ProviderRow re-fetches after save) stays consistent.
+        const id = args && args.providerId;
+        const prev = (SEED.providers && SEED.providers[id]) || {
+          providerId: id,
+          displayName: id,
+          supportsOauth: false,
+          baseUrl: null,
+        };
+        const next = {
+          ...prev,
+          providerId: id,
+          connected: true,
+          username: (args && args.username) || prev.username || (id + "-user"),
+        };
+        if (!SEED.providers) SEED.providers = {};
+        SEED.providers[id] = next;
+        return next;
+      }
+      case "set_provider_base_url": {
+        const id = args && args.providerId;
+        const prev = (SEED.providers && SEED.providers[id]) || {
+          providerId: id,
+          displayName: id,
+          connected: false,
+          username: null,
+          supportsOauth: false,
+        };
+        const next = { ...prev, providerId: id, baseUrl: (args && args.baseUrl) ?? null };
+        if (!SEED.providers) SEED.providers = {};
+        SEED.providers[id] = next;
+        return next;
+      }
       case "clear_provider_token":
         return undefined;
       case "fetch_pull_requests":
@@ -655,6 +693,16 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
     }
   }
 
+  // Tag ourselves as a dev/browser stub so the app hides its native titlebar
+  // chrome (usePlatform reads \`isTauri() && !('__RECREST_DEV_STUB__' in window)\`
+  // to decide whether to paint the Win11/mac/GNOME caption controls). Without
+  // this the app believes it is the real Tauri shell and renders the titlebar,
+  // which shifts every visual-regression baseline and the updater-banner layout.
+  Object.defineProperty(window, "__RECREST_DEV_STUB__", {
+    configurable: true,
+    writable: false,
+    value: true,
+  });
   Object.defineProperty(window, "__TAURI_INTERNALS__", {
     configurable: true,
     writable: false,

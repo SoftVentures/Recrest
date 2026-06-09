@@ -358,6 +358,11 @@ export const TEST_IDS = {
     accounts: {
       connectButton: "settings-accounts-connect",
       tokenCreateLink: "settings-accounts-token-create-link",
+      providerRow: <T extends string>(id: T) => `settings-accounts-provider-${id}` as const,
+      statusPill: <T extends string>(id: T) => `settings-accounts-status-${id}` as const,
+      tokenInput: "settings-accounts-token-input",
+      usernameInput: "settings-accounts-username-input",
+      tokenSave: "settings-accounts-token-save",
     },
 
     integrations: {
