@@ -13,7 +13,9 @@ Everything is driven from the root via yarn workspaces. Never `cd` into a sub-pa
 - `yarn dev` — builds `@recrest/shared`, then launches the full Tauri desktop shell (requires Rust toolchain). Vite binds port **1420** in this mode.
 - `yarn dev:web` — same but runs only the Vite dev server on `http://localhost:3000`. Use this when you don't have Rust installed, are iterating on pure UI, or want to run in parallel with `yarn dev` (ports don't clash). Tauri IPC calls no-op gracefully via `isTauri()` in `app/src/lib/tauri/index.ts`.
 - `yarn build` — production Tauri build.
-- `yarn test:ts` — typecheck all three workspaces (`tsc --noEmit` in shared/tests, `tsc -b` in app). This is the fast feedback loop.
+- `yarn dev:landingpage` / `yarn build:landingpage` / `yarn preview:landingpage` — marketing site (`landingpage/`), dev on port **4321**, preview on **4322**, GitHub Pages base `/Recrest/`.
+- `yarn build:demo` — builds the app as the public live demo (`vite build --mode demo`, seeded IPC stub kept in the bundle) into `landingpage/dist/demo/`. Must run **after** `build:landingpage` (which empties `dist/`).
+- `yarn test:ts` — typecheck all workspaces (`tsc --noEmit` in shared/tests, `tsc -b` in app/landingpage). This is the fast feedback loop.
 - `yarn typecheck` — alias for the same thing.
 - `yarn lint` — ESLint across all workspaces.
 - `yarn test` — vitest unit/component tests (shared + app only).
@@ -26,11 +28,12 @@ Port selection depends on mode: Tauri binds **1420** (hard-coded in `tauri.conf.
 
 ## Architecture
 
-### Three-workspace monorepo
+### Four-workspace monorepo
 
 - `shared/` (`@recrest/shared`) — constants, types, pure utils. Compiled to `dist/` and consumed as a normal npm dep. `postinstall` and `predev` build it automatically; `app/tsconfig.app.json` has it as a TS project reference so composite builds work.
 - `app/` (`@recrest/app`) — React 19 + Vite + MUI v9 + Emotion frontend, and the Rust Tauri backend in `app/src-tauri/`.
 - `tests/` (`@recrest/tests`) — Playwright E2E.
+- `landingpage/` (`@recrest/landingpage`) — marketing site (plain React + SCSS, **no MUI** by design), deployed to GitHub Pages via `.github/workflows/deploy-landingpage.yml`.
 
 Do **not** add path aliases pointing `@recrest/shared` at the source files. `shared/` has `composite: true` and emits to `dist/`; the rest of the repo resolves it via `node_modules` (yarn symlink → shared's `package.json` main/types). Source imports would break `tsc -b`. For Vitest we instead use explicit `resolve.alias` in `app/vitest.config.ts`, because `vite-tsconfig-paths` would pick up the Solution `tsconfig.json` (which holds only references) and miss the app's real paths.
 
@@ -64,6 +67,15 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 ### Device-aware layout
 
 `hooks/useDevice.ts` wraps `device-type-detection` via `useSyncExternalStore`. `AppShell`'s `useResponsiveSidebar` auto-collapses the sidebar on mobile/tablet viewports and restores the user's persisted preference on wider widths.
+
+### Landingpage live demo
+
+The landingpage hero embeds the **real web app** as an interactive, seeded live demo (plan: `docs/plans/06-landingpage-live-demo.md`) — there is no hand-built UI mock to keep in sync anymore.
+
+- `yarn build:demo` builds the app with `vite build --mode demo --base /Recrest/demo/`; `MODE === "demo"` keeps the dev IPC stub + seed in the bundle. **Regular builds tree-shake all of it** — the gate in `app/src/main.tsx` must keep the literal `import.meta.env.MODE === "demo"` / `import.meta.env.DEV` expressions (never refactor them into runtime variables or helpers, that defeats Rollup DCE; `app/dist` must contain no `devStub` chunk).
+- `landingpage/src/components/HeroDemo.tsx` renders the demo in an iframe at a fixed 1280×800 virtual desktop, CSS-scaled to the frame (`useDemoScale`), behind a click-to-interact overlay. The OS-specific titlebar chrome is drawn by the landingpage; the app hides its own via `__RECREST_DEV_STUB__`.
+- Theme/locale follow the landingpage toggles: initial values via `?theme=`/`?lng=` query params (consumed by `app/src/lib/demo/demoBridge.ts`), live switches via `postMessage`. The message/param contract lives in `shared/src/constants/demo.ts` — change both sides together.
+- The deploy workflow triggers on `app/**` and `shared/**` too, so the demo redeploys with every app change and cannot go stale. Demo sub-route hard refreshes 404 on Pages (no SPA fallback) — accepted, documented in the plan.
 
 ## Conventions
 

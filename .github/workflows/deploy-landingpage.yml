@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "landingpage/**"
+      - "app/**"
+      - "shared/**"
       - "package.json"
       - ".github/workflows/deploy-landingpage.yml"
   workflow_dispatch:
@@ -41,6 +43,8 @@ jobs:
           VITE_IMPRINT_EMAIL: ${{ secrets.VITE_IMPRINT_EMAIL }}
           VITE_IMPRINT_PHONE: ${{ secrets.VITE_IMPRINT_PHONE }}
           VITE_IMPRINT_RESPONSIBLE_PERSON: ${{ secrets.VITE_IMPRINT_RESPONSIBLE_PERSON }}
+      - name: Build live demo (web app, seeded)
+        run: yarn build:demo
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

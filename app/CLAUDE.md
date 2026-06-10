@@ -13,6 +13,7 @@ From the repo root via `yarn workspace @recrest/app <script>`:
 - `dev` — Vite only. Tauri IPC no-ops via `isTauri()`. Use this for pure UI work. Port follows `TAURI_ENV_PLATFORM`: **3000** outside Tauri (matches the root `yarn dev:web` flow and Playwright's base URL), **1420** when invoked via `tauri:dev`. `strictPort: true` on both — no silent fallback.
 - `tauri:dev` — full desktop shell on port **1420**. Requires Rust toolchain.
 - `build` — `tsc -b && vite build` (production bundle).
+- `build:demo` — public live-demo build for the landingpage (`--mode demo --base /Recrest/demo/ --outDir ../landingpage/dist/demo`). Keeps the dev stub/seed in the bundle; see "Demo build" below.
 - `tauri:build` — wraps the desktop installer. **Will fail until `src-tauri/icons/` contains PNGs** — that's a known scope gap.
 - `test` — vitest (jsdom).
 - `test:ts` — `tsc -b` across both sub-projects (the fast feedback loop).
@@ -20,6 +21,10 @@ From the repo root via `yarn workspace @recrest/app <script>`:
 - `lint`, `format`, `format:check`.
 
 Run a single vitest file from the repo root: `yarn workspace @recrest/app test src/store/slices/uiSlice.test.ts`.
+
+## Demo build (`--mode demo`)
+
+The marketing landingpage embeds this app as a seeded live demo (plan 06). `app/src/main.tsx` gates the dev Tauri stub on `(import.meta.env.DEV || import.meta.env.MODE === "demo")` — **keep those expressions literal**; wrapping them in runtime variables or helper functions defeats Vite's static replacement and would ship the stub/seed to desktop users (verify: `app/dist/assets` must contain no `devStub` chunk). The demo additionally reads `?theme=`/`?lng=` boot params and listens for landingpage `postMessage`s via `src/lib/demo/demoBridge.ts` (contract constants in `@recrest/shared`), and pre-sets `StorageKey.ONBOARDING_DISMISSED` so visitors land on the dashboard, not the wizard.
 
 ## TypeScript setup (non-obvious)
 

@@ -18,6 +18,7 @@
     "dev:landingpage": "yarn workspace @recrest/landingpage dev",
     "build": "yarn workspace @recrest/shared build && yarn workspace @recrest/app tauri:build",
     "build:landingpage": "yarn workspace @recrest/landingpage build",
+    "build:demo": "yarn workspace @recrest/shared build && yarn workspace @recrest/app build:demo",
     "preview:landingpage": "yarn workspace @recrest/landingpage preview",
     "preinstall": "node scripts/check-node.cjs",
     "predev": "node scripts/check-node.cjs && yarn workspace @recrest/shared build",

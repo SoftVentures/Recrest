@@ -22,7 +22,7 @@ The root `postinstall` and `predev` hooks already run `build`, so after `yarn in
 ## Module layout
 
 - `src/index.ts` — barrel export. **Every public symbol must be re-exported here**, otherwise consumers can't reach it without reaching into internal paths.
-- `src/constants/` — app, git, providers, polling, ide, ui. Magic values live here, not in components.
+- `src/constants/` — app, git, providers, polling, ide, ui, demo (landingpage↔live-demo postMessage/query contract). Magic values live here, not in components.
 - `src/types/` — repo, provider, pr, settings, ide. These types must mirror Rust DTOs (serde `rename_all = "camelCase"`) on the Tauri side.
 - `src/utils/` — pure functions only (formatting, URL matching). Each util has a `*.test.ts` sibling.
 

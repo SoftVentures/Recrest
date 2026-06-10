@@ -10,7 +10,7 @@
   },
   "hero": {
     "eyebrow": "v{{version}} — Git-Aktionen + volle GitLab- & Bitbucket-Unterstützung",
-    "titleLine1": "Alle deine lokalen Git-Repos.",
+    "titleLine1": "Alle deine lokalen Git‑Repos.",
     "titleLine2": "In einem ruhigen, nativen Dashboard.",
     "sub": "Recrest ist eine native Desktop-App, die deine <1>lokalen Git-Repositories</1>, deren Working-Tree-Status, Merge Requests und CI-Checks von <3>GitHub</3>, <5>GitLab</5> und <7>Bitbucket</7> an einem ruhigen Ort zusammenführt.",
     "downloadFallback": "Neuestes Release laden",
@@ -38,6 +38,10 @@
     "mainHeader": "Alle Repositories",
     "mainHeaderSub": "{{count}} Projekte",
     "demo": {
+      "title": "Recrest Live-Demo",
+      "cta": "Live-Demo ausprobieren",
+      "hint": "Beispieldaten — kein Backend, nichts verlässt deinen Browser.",
+      "openExternal": "Demo öffnen",
       "searchPlaceholder": "Repos suchen…",
       "lastCommit": "Letzter Commit",
       "openIn": "Öffnen in",

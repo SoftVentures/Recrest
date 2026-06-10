@@ -6,6 +6,8 @@ import { Provider as ReduxProvider } from "react-redux";
 
 import { I18nextProvider } from "react-i18next";
 
+import { StorageKey } from "@recrest/shared";
+
 import App from "@/App";
 import i18n from "@/locales";
 import { store } from "@/store";
@@ -45,6 +47,12 @@ import "@fontsource/space-grotesk/700.css";
  * app can run end-to-end in a plain browser. The import is dynamic so Vite
  * tree-shakes the seed/stub plumbing out of production bundles.
  *
+ * The public live demo (`vite build --mode demo`, embedded on the
+ * landingpage) reuses exactly the same stub: `MODE === "demo"` is replaced
+ * statically at build time, so regular production builds still drop all of
+ * this, while the demo build keeps it and additionally syncs theme/locale
+ * with the embedding landingpage via the demo bridge.
+ *
  * **Must complete before render** — otherwise the first round of `useEffect`
  * thunks (`loadRepos`, `loadSettings`, …) fire while `__TAURI_INTERNALS__`
  * is still undefined and the app paints empty. The check on
@@ -52,9 +60,22 @@ import "@fontsource/space-grotesk/700.css";
  * (installed via `addInitScript` before the page loads) are never overridden.
  */
 async function bootstrap(): Promise<void> {
-  if (import.meta.env.DEV && !("__TAURI_INTERNALS__" in window)) {
+  const isDemoBuild = import.meta.env.MODE === "demo";
+  if ((import.meta.env.DEV || isDemoBuild) && !("__TAURI_INTERNALS__" in window)) {
     const { installDevTauriStub } = await import("@/lib/tauri/devStub");
-    installDevTauriStub();
+    if (isDemoBuild) {
+      const { installDemoBridge, readDemoParams } = await import("@/lib/demo/demoBridge");
+      const params = readDemoParams();
+      installDevTauriStub(params.themeId ? { themeId: params.themeId } : undefined);
+      if (params.locale) await i18n.changeLanguage(params.locale);
+      installDemoBridge(store, (lng) => i18n.changeLanguage(lng));
+      // Every landingpage visitor is a fresh origin profile, so without this
+      // flag the first-run wizard would cover the seeded dashboard — the demo
+      // should showcase the product, not the setup flow.
+      localStorage.setItem(StorageKey.ONBOARDING_DISMISSED, "true");
+    } else {
+      installDevTauriStub();
+    }
     // Seed the repos.groups slice — there is no IPC for listing groups, so
     // the stub owns this hand-off (mirrors src-old behaviour).
     const { DEFAULT_SEED } = await import("@/lib/dev/seed");
