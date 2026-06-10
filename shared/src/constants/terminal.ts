@@ -31,6 +31,15 @@ export const TERMINAL_IDS = [
 ] as const;
 export type TerminalId = (typeof TERMINAL_IDS)[number];
 
+/** Terminals whose CLI accepts a named profile (Plan 04/02 §D.1). The Rust
+ *  spawn planner and the Settings UI both key off this list — keep the flag
+ *  mapping in `app/src-tauri/src/commands/terminal.rs` in sync. */
+export const PROFILE_CAPABLE_TERMINAL_IDS = [
+  "windows-terminal", // wt.exe -p <profile>
+  "gnome-terminal", // --window-with-profile=<profile>
+  "konsole", // --profile <profile>
+] as const satisfies readonly TerminalId[];
+
 export interface TerminalDefinition {
   id: TerminalId;
   name: string;

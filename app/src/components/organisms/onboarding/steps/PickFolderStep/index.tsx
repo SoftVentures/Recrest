@@ -23,6 +23,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { setScanPaths } from "@/store/actions/repos.actions";
 import { saveSettings } from "@/store/actions/settings.actions";
@@ -71,7 +72,7 @@ const PathText = styled(Box)(({ theme }) => ({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   color: theme.palette.text.secondary,
 })) as typeof Box;
 

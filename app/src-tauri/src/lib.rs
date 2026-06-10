@@ -24,7 +24,6 @@ use tauri::{
 // `show_menu_on_left_click(true)`), so it never reads click events.
 #[cfg(not(target_os = "macos"))]
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
-use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use tracing_subscriber::EnvFilter;
 use zeroize::Zeroizing;
@@ -75,7 +74,11 @@ fn tray_icon_bytes() -> &'static [u8] {
 
 #[cfg(windows)]
 fn tray_icon_bytes(dark: bool) -> &'static [u8] {
-    if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT }
+    if dark {
+        TRAY_ICON_DARK
+    } else {
+        TRAY_ICON_LIGHT
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -197,25 +200,23 @@ fn spawn_macos_appearance_poller(app: AppHandle) {
     // Use a plain std::thread instead of tokio::spawn to rule out any
     // async-runtime interaction. The thread sleeps + hops to the main thread
     // via `app.run_on_main_thread` once per tick.
-    std::thread::spawn(move || {
-        loop {
-            std::thread::sleep(Duration::from_millis(1500));
-            let last = Arc::clone(&last);
-            let result = app.run_on_main_thread(move || {
-                let dark = macos_system_dark().unwrap_or(false);
-                let mut guard = match last.lock() {
-                    Ok(g) => g,
-                    Err(poisoned) => poisoned.into_inner(),
-                };
-                if dark != *guard {
-                    *guard = dark;
-                    tracing::info!("[macos] appearance changed: dark={dark}");
-                    set_macos_app_icon();
-                }
-            });
-            if let Err(e) = result {
-                tracing::warn!("[macos] run_on_main_thread failed: {e:?}");
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(1500));
+        let last = Arc::clone(&last);
+        let result = app.run_on_main_thread(move || {
+            let dark = macos_system_dark().unwrap_or(false);
+            let mut guard = match last.lock() {
+                Ok(g) => g,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+            if dark != *guard {
+                *guard = dark;
+                tracing::info!("[macos] appearance changed: dark={dark}");
+                set_macos_app_icon();
             }
+        });
+        if let Err(e) = result {
+            tracing::warn!("[macos] run_on_main_thread failed: {e:?}");
         }
     });
 }
@@ -486,6 +487,20 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
+        // Remember the window's size, position (→ which monitor), maximized
+        // and fullscreen state across restarts and re-apply on launch. We omit
+        // VISIBLE/DECORATIONS from the persisted flags so the "close to tray"
+        // feature can't make the app start up hidden.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED
+                        | tauri_plugin_window_state::StateFlags::FULLSCREEN,
+                )
+                .build(),
+        )
         .setup(|app| {
             // Logging is handled by `tracing_subscriber` above; we don't register
             // `tauri_plugin_log` because its `env_logger` sink would clash with
@@ -506,8 +521,8 @@ pub fn run() {
                 // Plan-8 E2E harness: `RECREST_TEST_PROFILE` redirects the
                 // dev-tokens file into a tmpdir so test PATs never land in
                 // the user's real app-data dir.
-                let token_dir = identity::test_profile_root()
-                    .or_else(|| handle.path().app_data_dir().ok());
+                let token_dir =
+                    identity::test_profile_root().or_else(|| handle.path().app_data_dir().ok());
                 if let Some(dir) = token_dir {
                     let _ = std::fs::create_dir_all(&dir);
                     auth::token::init_file_backend_path(dir.join("dev-tokens.json"));
@@ -783,8 +798,9 @@ pub fn run() {
             let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes())
                 .expect("tray icon bytes must decode");
             #[cfg(windows)]
-            let tray_image = tauri::image::Image::from_bytes(tray_icon_bytes(windows_uses_dark_mode()))
-                .expect("tray icon bytes must decode");
+            let tray_image =
+                tauri::image::Image::from_bytes(tray_icon_bytes(windows_uses_dark_mode()))
+                    .expect("tray icon bytes must decode");
 
             let tray_builder = TrayIconBuilder::with_id(commands::tray::TRAY_ID)
                 .icon(tray_image)
@@ -870,29 +886,21 @@ pub fn run() {
             // macOS dock-icon updates instead.
 
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Persist window geometry before hiding, so it survives a force-quit.
-                // Values are stored in LOGICAL pixels so the TS side (which
-                // applies state via `LogicalSize`) sees a consistent space —
-                // mixing physical/logical caused startup-time size jitter on
-                // HiDPI displays.
-                if let (Ok(position), Ok(size), Ok(scale)) = (
-                    window.outer_position(),
-                    window.outer_size(),
-                    window.scale_factor(),
-                ) {
-                    let state = commands::window::WindowState {
-                        width: size.width as f64 / scale,
-                        height: size.height as f64 / scale,
-                        x: position.x as f64 / scale,
-                        y: position.y as f64 / scale,
-                        is_maximized: window.is_maximized().unwrap_or(false),
-                    };
-                    if let Ok(store) = window.app_handle().store(commands::window::STORE_FILENAME) {
-                        if let Ok(value) = serde_json::to_value(&state) {
-                            store.set(commands::window::STORE_KEY, value);
-                            let _ = store.save();
-                        }
-                    }
+                // Persist window geometry before a possible hide-to-tray below.
+                // `tauri-plugin-window-state` otherwise only saves on a real
+                // close, so saving explicitly here means the last on-screen
+                // size/position/maximized/fullscreen survives a later force-quit
+                // while the app sits in the tray. VISIBLE is deliberately
+                // excluded so we never persist the hidden state and restore the
+                // window invisible on next launch.
+                {
+                    use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+                    let _ = window.app_handle().save_window_state(
+                        StateFlags::SIZE
+                            | StateFlags::POSITION
+                            | StateFlags::MAXIMIZED
+                            | StateFlags::FULLSCREEN,
+                    );
                 }
 
                 let app_handle = window.app_handle();
@@ -929,11 +937,16 @@ pub fn run() {
         commands::repos::forget_repos_under_path,
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
+        commands::repos::list_commits,
+        commands::repos::get_oldest_commit_date,
         commands::repos::load_logo_bytes,
         commands::repos::set_repo_logo,
         commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
+        commands::repos::open_file_in_ide,
         commands::ide::detect_ides,
+        commands::terminal::detect_terminals,
+        commands::terminal::detect_shells,
         commands::repos::open_terminal,
         commands::ssh::ssh_unlock_key,
         commands::ssh::set_repo_ssh_key,
@@ -994,9 +1007,9 @@ pub fn run() {
         commands::settings::get_settings,
         commands::settings::update_settings,
         commands::settings::factory_reset,
-        commands::window::save_window_state,
-        commands::window::load_window_state,
-        commands::window::validate_window_position,
+        commands::fonts::list_custom_fonts,
+        commands::fonts::upload_font,
+        commands::fonts::delete_custom_font,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::system::get_system_dark_mode,
@@ -1016,11 +1029,16 @@ pub fn run() {
         commands::repos::forget_repos_under_path,
         commands::repos::delete_repo,
         commands::repos::list_recent_commits,
+        commands::repos::list_commits,
+        commands::repos::get_oldest_commit_date,
         commands::repos::load_logo_bytes,
         commands::repos::set_repo_logo,
         commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
+        commands::repos::open_file_in_ide,
         commands::ide::detect_ides,
+        commands::terminal::detect_terminals,
+        commands::terminal::detect_shells,
         commands::repos::open_terminal,
         commands::ssh::ssh_unlock_key,
         commands::ssh::set_repo_ssh_key,
@@ -1081,9 +1099,9 @@ pub fn run() {
         commands::settings::get_settings,
         commands::settings::update_settings,
         commands::settings::factory_reset,
-        commands::window::save_window_state,
-        commands::window::load_window_state,
-        commands::window::validate_window_position,
+        commands::fonts::list_custom_fonts,
+        commands::fonts::upload_font,
+        commands::fonts::delete_custom_font,
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::system::get_system_dark_mode,

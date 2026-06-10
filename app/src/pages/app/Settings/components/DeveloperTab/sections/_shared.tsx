@@ -1,7 +1,11 @@
+import { useTranslation } from "react-i18next";
+
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 export const ButtonRow = styled(Box)({
   display: "inline-flex",
@@ -19,7 +23,7 @@ export const TextInput = styled("input")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
   fontSize: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
   "&:focus": { borderColor: theme.palette.border.hover },
@@ -55,7 +59,7 @@ export const FactKey = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const FactVal = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 12,
   color: theme.palette.text.information,
   display: "inline-flex",
@@ -106,6 +110,7 @@ interface PathRowProps {
 }
 
 export function PathRow({ label, path }: PathRowProps) {
+  const { t } = useTranslation(I18nNamespace.SETTINGS);
   const dash = "—";
   return (
     <FactRow>
@@ -120,10 +125,10 @@ export function PathRow({ label, path }: PathRowProps) {
           disabled={!path}
           onClick={() => path && navigator.clipboard?.writeText(path)}
         >
-          Copy
+          {t("developer.build.copy")}
         </GeneralButton>
         <GeneralButton size="sm" variant="outline" disabled={!path}>
-          Open
+          {t("developer.build.open")}
         </GeneralButton>
       </ButtonRow>
     </FactRow>

@@ -538,7 +538,11 @@ pub(crate) async fn resolve_repo_path(
     Ok(path)
 }
 
-fn fetch_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Result<(), CommandError> {
+fn fetch_blocking(
+    path: &Path,
+    provider_id: Option<&str>,
+    ssh: SshCreds,
+) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
     let effective = resolve_provider_for_remote(&repo, provider_id);
@@ -846,7 +850,11 @@ fn checkout_blocking(path: &Path, branch: &str) -> Result<(), CommandError> {
     Ok(())
 }
 
-fn push_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Result<(), CommandError> {
+fn push_blocking(
+    path: &Path,
+    provider_id: Option<&str>,
+    ssh: SshCreds,
+) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
 
@@ -875,7 +883,11 @@ fn push_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Resul
     Ok(())
 }
 
-fn pull_blocking(path: &Path, provider_id: Option<&str>, ssh: SshCreds) -> Result<(), CommandError> {
+fn pull_blocking(
+    path: &Path,
+    provider_id: Option<&str>,
+    ssh: SshCreds,
+) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
 

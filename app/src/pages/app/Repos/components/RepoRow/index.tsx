@@ -21,6 +21,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { useRepoActivitySeries } from "@/pages/app/Repos/RepoActivityContext";
 import { RepoActions } from "@/pages/app/Repos/components/RepoActions";
 import {
   Actions,
@@ -50,11 +51,13 @@ export interface RepoRowProps {
 
 export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const dispatch = useAppDispatch();
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
   const ahead = repo.status.ahead;
   const behind = repo.status.behind;
+  const activity = useRepoActivitySeries(repo.id, repo.activity);
   const ctx = useContextMenu();
 
   const stop = (e: MouseEvent) => e.stopPropagation();
@@ -123,19 +126,19 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
               </Box>
             </Diff>
             <FilesMeta component="span" variant="caption">
-              {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
+              {t("list.files_meta", { count: repo.filesChanged })}
             </FilesMeta>
           </>
         ) : (
           <StatusText component="span" variant="caption">
-            clean
+            {t("list.clean")}
           </StatusText>
         )}
       </StatusCell>
 
       <ActivityCell>
         <GeneralSparkline
-          data={repo.activity}
+          data={activity}
           accentColor={dirty ? theme.palette.primary.main : undefined}
           width={110}
           height={28}

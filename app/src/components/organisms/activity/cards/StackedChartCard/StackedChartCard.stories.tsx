@@ -15,6 +15,7 @@ const meta = {
       ],
     })),
     total: 110,
+    windowDays: 14,
   },
 } satisfies Meta<typeof StackedChartCard>;
 

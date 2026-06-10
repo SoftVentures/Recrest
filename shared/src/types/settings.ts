@@ -1,4 +1,4 @@
-import type { FontId, FontSizeId } from "../constants/ui.js";
+import type { FontSelection, FontSizeId, LigatureMode } from "../constants/ui.js";
 
 export type ThemeMode = "light" | "dark" | "system";
 
@@ -37,8 +37,31 @@ export interface AppearanceSettings {
    *  user's explicit pick and the OS toggle is ignored. */
   followsSystem: boolean;
   primaryColor: PrimaryColorScheme;
-  font: FontId;
+  /** UI font — a built-in {@link FontId} or a `custom:<family>` upload. */
+  font: FontSelection;
+  /** Monospace font for code surfaces (snippets, diffs, …). Separate from the
+   *  UI `font` so the interface and code can use different typefaces. Accepts
+   *  built-in mono {@link FontId}s or a `custom:<family>` upload. */
+  codeFont: FontSelection;
+  /** Ligature rendering mode for code surfaces — independent of `codeFont`. */
+  codeLigatures: LigatureMode;
   fontSize: FontSizeId;
+}
+
+/** A user-uploaded font, stored under `<app_data>/fonts/` and registered at
+ *  runtime via the Font Loading API. Mirrors `commands::fonts::CustomFont`. */
+export interface CustomFont {
+  /** Stable id (the sanitized family name); used for delete + dedupe. */
+  id: string;
+  /** CSS family name the font is registered under and selected by
+   *  (`custom:<family>` in the `font` / `codeFont` slots). */
+  family: string;
+  /** On-disk file name under the managed fonts dir. */
+  fileName: string;
+  /** CSS `@font-face` format hint (`truetype` | `opentype` | `woff2` | `woff`). */
+  format: string;
+  /** Base64-encoded font bytes for runtime `FontFace` registration. */
+  data: string;
 }
 
 export interface AccessibilitySettings {

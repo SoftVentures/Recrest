@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 /**
  * Size of the icon-button hitbox. The icon itself sits in the middle — pass
@@ -93,9 +94,9 @@ const Root = styled("button", {
         : theme.palette.text.information;
   const hoverColor =
     $tone === IconButtonTone.PRIMARY
-      ? theme.palette.primary.dark
+      ? toneText(theme, StatusTone.PRIMARY)
       : $tone === IconButtonTone.DANGER
-        ? theme.palette.error.dark
+        ? toneText(theme, StatusTone.ERROR)
         : theme.palette.text.primary;
 
   return {

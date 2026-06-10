@@ -5,11 +5,7 @@ import { SEED_PRS, SEED_REPOS } from "../../helpers/seed/index.js";
 import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / merge requests", () => {
-  test("lists PR rows from connected-provider repos", async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name === "app-mobile",
-      "mobile MR layout hides the list view behind a filter drawer",
-    );
+  test("lists PR rows from connected-provider repos", async ({ page }) => {
     await page.goto(AppRoute.MERGE_REQUESTS);
     await expect(page.getByTestId(TEST_IDS.mr.page)).toBeVisible();
 

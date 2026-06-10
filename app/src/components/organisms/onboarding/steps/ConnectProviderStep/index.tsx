@@ -2,10 +2,10 @@ import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Typography } from "@mui/material";
+import { Box, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { Check, Info } from "lucide-react";
+import { Check, ExternalLink, Info, PlugZap, Server } from "lucide-react";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
@@ -20,19 +20,31 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import {
+  PROVIDER_API_URLS,
   PROVIDER_IDS,
   PROVIDER_NAMES,
   Provider,
   type ProviderId,
 } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { setProviderToken } from "@/store/actions/providers.actions";
+import { openExternal } from "@/lib/tauri";
+import { tokenCreateUrlFor } from "@/lib/utils/providerToken.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { setProviderBaseUrl, setProviderToken } from "@/store/actions/providers.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export interface ConnectProviderStepProps {
   onBack: () => void;
   onNext: () => void;
 }
+
+// Self-hosted base-URL placeholders mirror the Settings → Accounts editor: the
+// stored value is the REST API root, so the example carries the API path.
+const BASE_URL_PLACEHOLDERS: Record<ProviderId, string> = {
+  github: "https://github.example.com/api/v3",
+  gitlab: "https://gitlab.example.com/api/v4",
+  bitbucket: "https://bitbucket.example.com/2.0",
+};
 
 const Note = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -68,13 +80,12 @@ const ProviderRow = styled(Box)(({ theme }) => ({
 
 interface PickerProps {
   active: boolean;
-  disabled?: boolean;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required for accessibility (focus/keyboard)
 const ProviderPicker = styled("button", {
-  shouldForwardProp: (p) => p !== "active" && p !== "disabled",
-})<PickerProps>(({ theme, active, disabled }) => ({
+  shouldForwardProp: (p) => p !== "active",
+})<PickerProps>(({ theme, active }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
@@ -82,26 +93,17 @@ const ProviderPicker = styled("button", {
   borderRadius: 8,
   border: `1px solid ${active ? theme.palette.primary.main : theme.palette.divider}`,
   background: active ? theme.palette.surface.interface.active : theme.palette.background.paper,
-  color: disabled ? theme.palette.text.information : theme.palette.text.primary,
+  color: theme.palette.text.primary,
   fontFamily: "inherit",
   fontSize: 13,
   fontWeight: 600,
-  cursor: disabled ? "not-allowed" : "pointer",
-  opacity: disabled ? 0.5 : 1,
+  cursor: "pointer",
   flex: "0 0 auto",
-  "&:hover": disabled
-    ? undefined
-    : {
-        borderColor: theme.palette.border.hover,
-        background: theme.palette.surface.interface.active,
-      },
+  "&:hover": {
+    borderColor: theme.palette.border.hover,
+    background: theme.palette.surface.interface.active,
+  },
 }));
-
-const Stub = styled(Box)(({ theme }) => ({
-  fontSize: 10.5,
-  fontWeight: 500,
-  color: theme.palette.text.information,
-})) as typeof Box;
 
 const Form = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -109,24 +111,33 @@ const Form = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 })) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <input> required for password autocomplete + IME
-const TokenInput = styled("input")(({ theme }) => ({
-  height: 36,
-  padding: "0 12px",
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  background: theme.palette.background.default,
-  color: theme.palette.text.primary,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-  fontSize: 12,
-  outline: "none",
-  "&:focus": { borderColor: theme.palette.border.hover },
-  "&::placeholder": { color: theme.palette.text.informationLight },
-}));
+// Field left, action button(s) right — the standard "input + adjacent action"
+// row used across the wizard (mirrors PickFolderStep).
+const InputRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+})) as typeof Box;
+
+const Field = styled(TextField)({
+  flex: 1,
+  minWidth: 0,
+});
+
+const LinkRow = styled(Box)({
+  display: "flex",
+  justifyContent: "flex-start",
+}) as typeof Box;
+
+const Hint = styled(Typography)(({ theme }) => ({
+  fontSize: 11.5,
+  color: theme.palette.text.information,
+  lineHeight: 1.5,
+})) as typeof Typography;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
   fontSize: 11.5,
-  color: theme.palette.error.main,
+  color: toneText(theme, StatusTone.ERROR),
 })) as typeof Typography;
 
 const ConnectedBadge = styled(Box)(({ theme }) => ({
@@ -135,7 +146,7 @@ const ConnectedBadge = styled(Box)(({ theme }) => ({
   gap: 6,
   fontSize: 12,
   fontWeight: 600,
-  color: theme.palette.success.dark,
+  color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Box;
 
 function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
@@ -145,19 +156,71 @@ function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
 
   const [providerId, setProviderId] = useState<ProviderId>(Provider.GITHUB);
   const [token, setToken] = useState("");
+  const [username, setUsername] = useState("");
+  const [baseUrlExpanded, setBaseUrlExpanded] = useState(false);
+  const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const connected = !!connections[providerId]?.connected;
+  const connection = connections[providerId];
+  const connected = !!connection?.connected;
   const anyConnected = PROVIDER_IDS.some((id) => connections[id]?.connected);
+  const providerName = PROVIDER_NAMES[providerId];
 
-  const onConnect = async () => {
-    if (!token.trim()) return;
+  // Bitbucket authenticates an app password against a username; GitHub/GitLab
+  // tokens carry their own identity, so the field only shows for Bitbucket.
+  const requiresUsername = providerId === Provider.BITBUCKET;
+  const effectiveBaseUrl = connection?.baseUrl ?? PROVIDER_API_URLS[providerId];
+  const isSelfHosted =
+    !!connection?.baseUrl && connection.baseUrl !== PROVIDER_API_URLS[providerId];
+
+  // Reset the per-provider form when the user switches the active tab so a
+  // GitHub token can't accidentally be submitted against GitLab.
+  const selectProvider = (id: ProviderId) => {
+    setProviderId(id);
+    setToken("");
+    setUsername("");
+    setBaseUrlExpanded(false);
+    setBaseUrlDraft("");
+    setError(null);
+  };
+
+  const cancelBaseUrl = () => {
+    setBaseUrlExpanded(false);
+    setBaseUrlDraft("");
+  };
+
+  const onSaveBaseUrl = async () => {
+    const next = baseUrlDraft.trim();
     setSubmitting(true);
     setError(null);
     try {
-      await dispatch(setProviderToken({ providerId, token: token.trim() })).unwrap();
+      await dispatch(
+        setProviderBaseUrl({ providerId, baseUrl: next.length > 0 ? next : null }),
+      ).unwrap();
+      setBaseUrlExpanded(false);
+    } catch (err) {
+      setError((err as { message?: string })?.message ?? t("connectProvider.failed"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onConnect = async () => {
+    if (!token.trim()) return;
+    if (requiresUsername && !username.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await dispatch(
+        setProviderToken({
+          providerId,
+          token: token.trim(),
+          username: requiresUsername ? username.trim() : null,
+        }),
+      ).unwrap();
       setToken("");
+      setUsername("");
     } catch (err) {
       setError((err as { message?: string })?.message ?? t("connectProvider.failed"));
     } finally {
@@ -180,50 +243,146 @@ function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
         </Note>
 
         <ProviderRow>
-          {PROVIDER_IDS.map((id) => {
-            const isStub = id !== Provider.GITHUB;
-            return (
-              <ProviderPicker
-                key={id}
-                type="button"
-                active={providerId === id}
-                disabled={isStub}
-                onClick={() => !isStub && setProviderId(id)}
-              >
-                <BrandIcon slug={id} size={14} />
-                <Box component="span">{PROVIDER_NAMES[id]}</Box>
-                {isStub && <Stub component="span">soon</Stub>}
-              </ProviderPicker>
-            );
-          })}
+          {PROVIDER_IDS.map((id) => (
+            <ProviderPicker
+              key={id}
+              type="button"
+              active={providerId === id}
+              onClick={() => selectProvider(id)}
+              data-testid={TEST_IDS.onboarding.providerPick(id)}
+            >
+              {/* GitHub's brand mark is near-black, so keep it theme-aware
+                  (currentColor); GitLab/Bitbucket render in their brand hue. */}
+              <BrandIcon
+                slug={id}
+                size={14}
+                color={id === Provider.GITHUB ? "currentColor" : "brand"}
+              />
+              <Box component="span">{PROVIDER_NAMES[id]}</Box>
+            </ProviderPicker>
+          ))}
         </ProviderRow>
 
         {connected ? (
-          <ConnectedBadge>
+          <ConnectedBadge data-testid={TEST_IDS.onboarding.providerConnected}>
             <Check size={14} />
-            {t("connectProvider.connected", { name: PROVIDER_NAMES[providerId] })}
+            {t("connectProvider.connected", { name: providerName })}
           </ConnectedBadge>
         ) : (
           <Form>
-            <TokenInput
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder={t("connectProvider.token_placeholder")}
-              data-testid={TEST_IDS.onboarding.providerToken}
-            />
+            {baseUrlExpanded ? (
+              <>
+                <InputRow>
+                  <Field
+                    size="small"
+                    type="url"
+                    autoFocus
+                    spellCheck={false}
+                    value={baseUrlDraft}
+                    onChange={(e) => setBaseUrlDraft(e.target.value)}
+                    placeholder={BASE_URL_PLACEHOLDERS[providerId]}
+                    slotProps={{
+                      htmlInput: { "data-testid": TEST_IDS.onboarding.providerBaseUrl },
+                    }}
+                  />
+                  <GeneralButton
+                    variant="outline"
+                    onClick={() => void onSaveBaseUrl()}
+                    loading={submitting}
+                    data-testid={TEST_IDS.onboarding.providerBaseUrlSave}
+                  >
+                    {t("connectProvider.base_url_save")}
+                  </GeneralButton>
+                  <GeneralButton variant="ghost" onClick={cancelBaseUrl} disabled={submitting}>
+                    {t("connectProvider.base_url_cancel")}
+                  </GeneralButton>
+                </InputRow>
+                <Hint component="p">
+                  {t("connectProvider.base_url_hint", { name: providerName })}
+                </Hint>
+              </>
+            ) : (
+              <LinkRow>
+                <GeneralButton
+                  variant="link"
+                  size="sm"
+                  startIcon={<Server size={12} />}
+                  onClick={() => {
+                    setBaseUrlDraft(isSelfHosted ? effectiveBaseUrl : "");
+                    setBaseUrlExpanded(true);
+                  }}
+                  data-testid={TEST_IDS.onboarding.providerSelfHosted}
+                >
+                  {t("connectProvider.self_hosted", { name: providerName })}
+                </GeneralButton>
+              </LinkRow>
+            )}
+
+            {requiresUsername && (
+              <Field
+                size="small"
+                type="text"
+                autoComplete="username"
+                spellCheck={false}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t("connectProvider.username_placeholder")}
+                slotProps={{
+                  htmlInput: { "data-testid": TEST_IDS.onboarding.providerUsername },
+                }}
+              />
+            )}
+
+            <InputRow>
+              <Field
+                size="small"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void onConnect();
+                  }
+                }}
+                placeholder={t(
+                  requiresUsername
+                    ? "connectProvider.app_password_placeholder"
+                    : "connectProvider.token_placeholder",
+                )}
+                slotProps={{
+                  htmlInput: { "data-testid": TEST_IDS.onboarding.providerToken },
+                }}
+              />
+              <GeneralButton
+                variant="default"
+                startIcon={<PlugZap size={14} />}
+                onClick={() => void onConnect()}
+                loading={submitting}
+                disabled={!token.trim() || submitting || (requiresUsername && !username.trim())}
+                data-testid={TEST_IDS.onboarding.providerConnect}
+              >
+                {t("connectProvider.connect")}
+              </GeneralButton>
+            </InputRow>
+
+            <LinkRow>
+              <GeneralButton
+                variant="link"
+                size="sm"
+                startIcon={<ExternalLink size={12} />}
+                onClick={() =>
+                  void openExternal(tokenCreateUrlFor(providerId, connection?.baseUrl))
+                }
+                data-testid={TEST_IDS.onboarding.providerTokenHelp}
+              >
+                {t("connectProvider.token_help", { name: providerName })}
+              </GeneralButton>
+            </LinkRow>
+
             {error && <ErrorText component="p">{error}</ErrorText>}
-            <GeneralButton
-              variant="default"
-              onClick={() => void onConnect()}
-              loading={submitting}
-              disabled={!token.trim() || submitting}
-              data-testid={TEST_IDS.onboarding.providerConnect}
-            >
-              {t("connectProvider.connect")}
-            </GeneralButton>
           </Form>
         )}
 

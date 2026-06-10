@@ -108,14 +108,31 @@ export function providerFeatureStub(cmd: string, a: Args): unknown | typeof UNHA
           ],
         },
       ];
-    case "post_pr_comment":
+    case "post_pr_comment": {
+      // Echo the anchor back so dev:web renders the comment next to its line,
+      // mirroring what `commands::providers::post_pr_comment` stamps on real
+      // builds. Each boundary carries its own side (a range can cross sides).
+      type Anchor = { side: "LEFT" | "RIGHT"; oldLineNo: number | null; newLineNo: number | null };
+      const pos = a.position as { start: Anchor | null; end: Anchor } | null;
+      const anchorLine = (an: Anchor) => (an.side === "RIGHT" ? an.newLineNo : an.oldLineNo);
+      const endSide = pos?.end.side ?? null;
+      const line = pos ? anchorLine(pos.end) : null;
+      const startLine = pos?.start ? anchorLine(pos.start) : null;
+      const startSide = pos?.start?.side ?? null;
+      const isRange = pos?.start != null && (startLine !== line || startSide !== endSide);
       return {
         id: `dev-${Date.now()}`,
         author: "you",
+        authorAvatarUrl: null,
         body: String(a.body ?? ""),
         path: (a.path as string | null) ?? null,
+        side: endSide,
+        line,
+        startLine: isRange ? startLine : null,
+        startSide: isRange ? startSide : null,
         createdAt: new Date().toISOString(),
       };
+    }
     case "list_workflows":
       return [
         {

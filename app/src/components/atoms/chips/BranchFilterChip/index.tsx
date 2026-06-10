@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { styled } from "@mui/material/styles";
 
+import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+
 export type BranchFilterChipTone = "current" | "dirty" | "clean" | "remote";
 
 export interface BranchFilterChipProps {
@@ -24,14 +26,8 @@ const Root = styled("span", { shouldForwardProp: FORWARD })<{ tone: BranchFilter
     letterSpacing: "0.05em",
     padding: "2px 7px",
     borderRadius: 100,
-    ...(tone === "current" && {
-      backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
-      color: theme.palette.primary.dark,
-    }),
-    ...(tone === "dirty" && {
-      backgroundColor: `color-mix(in srgb, ${theme.palette.warning.main} 18%, transparent)`,
-      color: theme.palette.warning.dark,
-    }),
+    ...(tone === "current" && toneChip(theme, StatusTone.PRIMARY, 14)),
+    ...(tone === "dirty" && toneChip(theme, StatusTone.WARNING)),
     ...(tone === "clean" && {
       backgroundColor: theme.palette.surface.interface.backElevation,
       color: theme.palette.text.information,

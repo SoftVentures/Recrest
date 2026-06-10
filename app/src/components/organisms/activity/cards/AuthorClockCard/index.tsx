@@ -1,27 +1,48 @@
+import { memo } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
+import { ResponsiveBar } from "@nivo/bar";
+
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { fade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   hours: number[];
   loading?: boolean;
 }
 
+const AXIS_HOURS = ["0", "6", "12", "18"];
+
 const Wrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  alignItems: "center",
+  alignItems: "stretch",
   gap: 6,
 });
 
-const Svg = styled("svg")({
-  width: 150,
+const Chart = styled(Box)({
   height: 150,
 });
+
+// TODO(next-pass): unify with parts/ChartTooltip
+const Tooltip = styled(Box)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  fontSize: 12,
+  padding: "6px 10px",
+  color: theme.palette.text.primary,
+  whiteSpace: "nowrap",
+}));
 
 const Foot = styled(Box)(({ theme }) => ({
   textAlign: "center",
@@ -36,32 +57,27 @@ const Foot = styled(Box)(({ theme }) => ({
   },
 }));
 
-/** 24-segment radial chart — one wedge per hour, radius scaled by commit count. */
+/** 24-column histogram — one bar per hour, height scaled by commit count. */
 function AuthorClockCard({ hours, loading }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const nivoTheme = useNivoTheme();
+  const { show, move, hide, portal } = useChartTooltip();
+  // Single-metric chart → follow the user's primary color, not a fixed accent.
+  const accent = theme.palette.primary.main;
+
+  const data = hours.map((count, h) => ({ hour: String(h), count }));
+
+  const renderTip = (h: number, count: number) => (
+    <Tooltip>
+      {t("activity.cards.clock_tooltip", {
+        range: `${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00`,
+        commits: t("activity.cards.commits_count", { count }),
+      })}
+    </Tooltip>
+  );
+
   const peak = Math.max(1, ...hours);
-  const cx = 75;
-  const cy = 75;
-  const rMax = 62;
-  const rMin = 26;
-  const wedge = (2 * Math.PI) / 24;
-  const scale = (v: number) => (v === 0 ? 0 : Math.sqrt(v / peak));
-
-  const wedgePath = (hour: number, radius: number): string => {
-    const a1 = -Math.PI / 2 + hour * wedge;
-    const a2 = a1 + wedge * 0.9;
-    const x1 = cx + Math.cos(a1) * rMin;
-    const y1 = cy + Math.sin(a1) * rMin;
-    const x2 = cx + Math.cos(a1) * radius;
-    const y2 = cy + Math.sin(a1) * radius;
-    const x3 = cx + Math.cos(a2) * radius;
-    const y3 = cy + Math.sin(a2) * radius;
-    const x4 = cx + Math.cos(a2) * rMin;
-    const y4 = cy + Math.sin(a2) * rMin;
-    return `M ${x1} ${y1} L ${x2} ${y2} A ${radius} ${radius} 0 0 1 ${x3} ${y3} L ${x4} ${y4} A ${rMin} ${rMin} 0 0 0 ${x1} ${y1} Z`;
-  };
-
   const total = hours.reduce((a, b) => a + b, 0);
   const peakHour = hours.indexOf(peak);
   const peakLabel =
@@ -78,54 +94,40 @@ function AuthorClockCard({ hours, loading }: Props) {
       testId={TEST_IDS.activity.cards.authorClock}
     >
       <Wrap>
-        <Svg viewBox="0 0 150 150">
-          <circle
-            cx={cx}
-            cy={cy}
-            r={rMax}
-            fill={theme.palette.surface.interface.backElevation}
-            opacity="0.55"
+        {/* @nivo/bar fires only onMouseEnter — feed the wrapper's mousemove to
+            keep the portalled tooltip glued to the cursor inside the bar. */}
+        <Chart onMouseMove={(e) => move(e.clientX, e.clientY)}>
+          <ResponsiveBar
+            data={data}
+            keys={["count"]}
+            indexBy="hour"
+            theme={nivoTheme}
+            colors={(bar) => fade(accent, 0.25 + 0.75 * (Number(bar.data.count) / peak))}
+            margin={{ top: 4, right: 4, bottom: 26, left: 4 }}
+            padding={0.25}
+            borderRadius={2}
+            enableLabel={false}
+            axisLeft={null}
+            axisBottom={{
+              format: (v) => (AXIS_HOURS.includes(String(v)) ? String(v) : ""),
+            }}
+            enableGridY={false}
+            tooltip={() => <></>}
+            onMouseEnter={(d, e) =>
+              show(e.clientX, e.clientY, renderTip(Number(d.data.hour), Number(d.data.count)))
+            }
+            onMouseLeave={hide}
           />
-          <circle cx={cx} cy={cy} r={rMin - 2} fill={theme.palette.surface.interface.base} />
-          {hours.map((v, h) => {
-            const k = scale(v);
-            const r = v === 0 ? rMin + 0.5 : rMin + (rMax - rMin) * k;
-            const opacity = v === 0 ? 0.12 : 0.55 + 0.45 * k;
-            return (
-              <path
-                key={h}
-                d={wedgePath(h, r)}
-                fill={theme.palette.primary.main}
-                opacity={opacity}
-              />
-            );
-          })}
-          {[0, 6, 12, 18].map((h) => {
-            const a = -Math.PI / 2 + h * wedge;
-            const x = cx + Math.cos(a) * (rMax + 8);
-            const y = cy + Math.sin(a) * (rMax + 8);
-            return (
-              <text
-                key={h}
-                x={x}
-                y={y}
-                fontSize="9"
-                fill={theme.palette.text.information}
-                textAnchor="middle"
-                dominantBaseline="central"
-              >
-                {String(h).padStart(2, "0")}
-              </text>
-            );
-          })}
-        </Svg>
+        </Chart>
+        {portal}
         <Foot>
           <Box component="strong">{peakLabel}</Box>
-          <Box component="span">{total} commits</Box>
+          <Box component="span">{t("activity.cards.commits_count", { count: total })}</Box>
         </Foot>
       </Wrap>
     </GeneralCard>
   );
 }
 
-export default AuthorClockCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(AuthorClockCard);

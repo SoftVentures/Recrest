@@ -15,7 +15,18 @@
     "quote": "Zitat",
     "link": "Link einfügen",
     "link_prompt": "Link-URL",
-    "unlink": "Link entfernen"
+    "link_placeholder": "https://example.com",
+    "link_apply": "Übernehmen",
+    "link_cancel": "Abbrechen",
+    "unlink": "Link entfernen",
+    "toolbar_aria": "Formatierung"
+  },
+  "updater": {
+    "available": "Eine neue Version ist verfügbar:",
+    "current": "(aktuell {{version}})",
+    "install": "Installieren & neu starten",
+    "download": "Herunterladen",
+    "dismiss": "Schließen"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -26,6 +37,7 @@
     "branches": "Branches",
     "activity": "Aktivität",
     "settings": "Einstellungen",
+    "about": "Über Recrest",
     "groups": "Gruppen",
     "collapse": "Einklappen",
     "expand": "Ausklappen"
@@ -55,11 +67,6 @@
     "save": "Speichern",
     "delete": "Löschen",
     "clear": "Leeren",
-    "add_scope_label": "Geltungsbereich",
-    "add_scope": {
-      "local": "Lokal",
-      "global": "Global"
-    },
     "adding": "Wird hinzugefügt…",
     "clone": "Klonen",
     "cloning": "Wird geklont…",
@@ -68,7 +75,9 @@
     "search_group_mrs": "Merge Requests",
     "search_group_nav": "Gehe zu",
     "search_group_repos": "Repositories",
-    "clear_search": "Suche zurücksetzen"
+    "clear_search": "Suche zurücksetzen",
+    "go_back": "Zurück",
+    "confirm": "Bestätigen"
   },
   "context_menu": {
     "open_in_terminal": "Im Terminal öffnen",
@@ -140,7 +149,7 @@
     },
     "activity": {
       "title": "Aktivität",
-      "meta": "letzte 14 Tage"
+      "meta": "letzte {{days}} Tage"
     },
     "settings": {
       "title": "Einstellungen"
@@ -151,7 +160,7 @@
       "repository": "Repository",
       "branch": "Branch",
       "status": "Status",
-      "activity": "Aktivität · 14T",
+      "activity": "Aktivität",
       "actions": "Aktionen"
     },
     "group": {
@@ -191,18 +200,28 @@
       "merge_requests_sub": "{{count}} Entwurf",
       "ahead_behind": "Ahead / Behind",
       "ahead_behind_sub": "über alle Remotes",
-      "commits": "Commits · 14T",
-      "commits_sub": "Spitzentag {{count}}",
+      "commits": "Commits · {{days}}T",
+      "commits_sub": "Spitze {{count}}",
       "clean_repos": "Saubere Repos",
       "clean_repos_sub": "{{count}} von {{total}} vollständig synchron"
     },
     "activity": {
-      "title": "Aktivität · letzte 14 Tage",
-      "meta": "{{total}} Commits in {{repos}} Repos"
+      "title": "Aktivität · letzte {{days}} Tage",
+      "meta": "{{total}} Commits in {{repos}} Repos",
+      "commits_one": "{{count}} Commit",
+      "commits_other": "{{count}} Commits",
+      "span": {
+        "day": { "now": "heute", "prev": "gestern", "ago": "vor {{count}} Tagen" },
+        "week": { "now": "diese Woche", "prev": "letzte Woche", "ago": "vor {{count}} Wochen" },
+        "month": { "now": "dieser Monat", "prev": "letzter Monat", "ago": "vor {{count}} Monaten" }
+      }
     },
     "attention": {
       "title": "Braucht deine Aufmerksamkeit",
-      "empty": "Alles sauber und synchron."
+      "empty": "Alles sauber und synchron.",
+      "changed": "{{count}} geändert",
+      "behind_one": "{{count}} Commit hinterher",
+      "behind_other": "{{count}} Commits hinterher"
     },
     "empty": {
       "title": "Noch keine Repositories",
@@ -236,14 +255,18 @@
       "recent_commits": "Letzte Commits",
       "create_branch": "Branch erstellen",
       "pull_all": "Alle pullen",
-      "coming_soon": "Demnächst verfügbar"
+      "coming_soon": "Demnächst verfügbar",
+      "fetched_one": "{{count}} Repo gefetcht",
+      "fetched_other": "{{count}} Repos gefetcht",
+      "fetch_all_error": "Fetch fehlgeschlagen"
     }
   },
   "titlebar": {
     "minimize": "Minimieren",
     "maximize": "Maximieren",
     "restore": "Wiederherstellen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "app_menu": "Menü"
   },
   "mrs": {
     "filter": {
@@ -341,13 +364,26 @@
     }
   },
   "activity": {
+    "range": {
+      "preset_7d": "7 Tage",
+      "preset_14d": "14 Tage",
+      "preset_30d": "30 Tage",
+      "preset_90d": "90 Tage",
+      "preset_1y": "1 Jahr",
+      "preset_all": "Alles",
+      "truncated_banner": "Zeitraum gekürzt — Range verkleinern für vollständige Daten."
+    },
     "chart": {
-      "title": "Commits · letzte 14 Tage",
+      "title": "Commits · letzte {{days}} Tage",
       "sub": "{{total}} Commits"
     },
     "filter": {
       "all_repos": "Alle Repositories",
       "all_authors": "Alle Autor:innen"
+    },
+    "source": {
+      "all": "Alle",
+      "remote": "Remote"
     },
     "commits": "Commits",
     "empty": "Keine Commits passen zum Filter.",
@@ -365,7 +401,7 @@
     },
     "leaders": {
       "title": "Top-Contributors",
-      "sub": "letzte 14 Tage · {{count}} Autor:innen",
+      "sub": "letzte {{days}} Tage · {{count}} Autor:innen",
       "empty": "Keine Contributors im Zeitraum.",
       "share": "{{pct}}% Anteil"
     },
@@ -391,7 +427,7 @@
       "ci_legend_other": "{{count}} sonstige"
     },
     "cards": {
-      "chart_title": "Commit-Aktivität · 14 Tage",
+      "chart_title": "Commit-Aktivität · {{days}} Tage",
       "heatmap_title": "Wochentag × Stunde",
       "heatmap_sub": "wann das Team committed",
       "heatmap_none": "wenig",
@@ -403,25 +439,71 @@
       "churn_title": "Churn · Working Tree",
       "churn_sub": "hinzugefügte + entfernte Zeilen",
       "pr_velocity_title": "MR-Velocity",
-      "pr_velocity_sub": "geöffnet vs. gemerged · 14 Tage",
+      "pr_velocity_sub": "geöffnet vs. gemerged · {{days}} Tage",
       "pr_velocity_opened": "Geöffnet",
       "pr_velocity_merged": "Gemerged",
       "time_to_merge_title": "Merge-Dauer",
-      "time_to_merge_sub": "letzte 14 Tage",
+      "time_to_merge_sub": "letzte {{days}} Tage",
       "review_queue_title": "Review-Queue",
       "review_queue_sub": "älteste offene MRs",
       "review_queue_empty": "Keine offenen MRs warten.",
-      "ci_trend_title": "CI-Pass-Rate · 14 Tage",
+      "ci_trend_title": "CI-Pass-Rate · {{days}} Tage",
       "ci_trend_sub": "tägliche Pass-Quote",
+      "ci_trend_sub_repos_one": "über {{count}} Repo",
+      "ci_trend_sub_repos_other": "über {{count}} Repos",
+      "ci_trend_sub_runs": "{{count}} Läufe",
+      "ci_trend_avg": "Ø Pass",
       "flaky_title": "Instabilste Repos",
-      "flaky_sub": "Fehlerquote · letzte 14 Tage",
+      "flaky_sub": "Fehlerquote · letzte {{days}} Tage",
       "flaky_empty": "Noch keine Check-Run-Daten.",
       "busiest_peak_title": "Aktivität & Peak",
       "busiest_label": "Aktivster Tag",
       "peak_label": "Haupt-Zeiten",
       "age_days_one": "{{count}} Tag alt",
       "age_days_other": "{{count}} Tage alt",
-      "ci_trend_sub_window": "letzte 14 Tage"
+      "age_short": "{{count}}d",
+      "ci_trend_sub_window": "letzte {{days}} Tage",
+      "stacked_axis_days_ago": "vor {{count}} T.",
+      "stacked_axis_today": "heute",
+      "commits_count_one": "{{count}} Commit",
+      "commits_count_other": "{{count}} Commits",
+      "commits_label": "Commits",
+      "heatmap_tooltip": "{{weekday}} {{hour}} — {{commits}}",
+      "clock_tooltip": "{{range}} — {{commits}}",
+      "language_tooltip": "{{language}} — {{percent}}%"
+    },
+    "tooltip": {
+      "ci_passed": "{{passed}}/{{total}} bestanden"
+    },
+    "feed": {
+      "no_remote": "Kein Remote-URL für diesen Commit",
+      "failing_checks_one": "{{count}} fehlgeschlagener Check",
+      "failing_checks_other": "{{count}} fehlgeschlagene Checks",
+      "passing": "{{count}} bestanden"
+    },
+    "insights": {
+      "section_title": "Insights",
+      "streak_title": "Commit-Serie",
+      "streak_sub": "Aufeinanderfolgende Tage mit Commits",
+      "streak_value_days_one": "{{count}} Tag",
+      "streak_value_days_other": "{{count}} Tage",
+      "streak_longest": "Längste: {{count}} ({{range}})",
+      "trend_title": "Trend",
+      "trend_sub": "Letzte {{days}} Tage vs. davor",
+      "trend_up": "Aktiver",
+      "trend_down": "Weniger aktiv",
+      "trend_flat": "Stabil",
+      "top_authors_title": "Top-Autoren",
+      "top_authors_sub": "Letzte {{days}} Tage",
+      "active_weekday_title": "Aktivster Tag",
+      "active_weekday_sub": "Über den geladenen Zeitraum",
+      "avg_per_week_title": "Commits / Woche",
+      "avg_per_week_sub": "Durchschnitt über den geladenen Zeitraum",
+      "longest_gap_title": "Längste Pause",
+      "longest_gap_sub": "Tage ohne Commit",
+      "longest_gap_value_one": "{{count}} Tag",
+      "longest_gap_value_other": "{{count}} Tage",
+      "empty": "Noch keine Daten"
     },
     "timeline": {
       "title": "Verlauf",
@@ -454,7 +536,8 @@
           "one": "{{count}} Check fehlgeschlagen",
           "other": "{{count}} Checks fehlgeschlagen"
         }
-      }
+      },
+      "show_more": "{{count}} weitere anzeigen"
     }
   },
   "settings": {
@@ -698,6 +781,14 @@
       "default_ide": "Standard-IDE",
       "default_shell": "Standard-Shell",
       "default_terminal": "Standard-Terminal",
+      "code_font": "Code-Schrift",
+      "code_font_sub": "Monospace-Schrift für Code-Flächen — Diffs, Snippets und Dateiinhalte.",
+      "code_ligatures": "Code-Ligaturen",
+      "code_ligatures_sub": "Wie Programmier-Ligaturen (=>, !=, >=) im Code dargestellt werden. „Stilistisch“ aktiviert zusätzlich die alternativen Glyphenformen der Schrift.",
+      "custom_fonts": "Eigene Schriften",
+      "custom_fonts_sub": "Lade eine .ttf, .otf oder .woff2 hoch, um sie als UI- oder Code-Schrift zu nutzen.",
+      "custom_fonts_upload": "Schrift hochladen",
+      "custom_fonts_remove": "Schrift entfernen",
       "font": "Schriftart",
       "font_size": "Schriftgröße",
       "font_size_sub": "Skaliert Text überall von kompakt bis großzügig.",
@@ -764,7 +855,12 @@
       "auto_system_default": "System-Standard ({{terminal}})",
       "detection_done": "Öffnet dieses Terminal, wenn du „Terminal öffnen“ auslöst.",
       "detection_hint": "Es wurde kein installiertes Terminal gefunden. Installiere eines, um dieses Auswahlfeld zu aktivieren.",
-      "no_terminal_detected": "Kein Terminal erkannt"
+      "no_terminal_detected": "Kein Terminal erkannt",
+      "custom_option": "Eigener Befehl…",
+      "profile_label": "Terminal-Profil",
+      "profile_hint": "Profilname, der ans Terminal übergeben wird (z. B. wt.exe -p).",
+      "custom_command_label": "Eigener Befehl",
+      "custom_command_hint": "Vollständiger Befehl; der Repo-Pfad ist das Arbeitsverzeichnis."
     },
     "updates": {
       "check_now_label": "Nach Updates suchen",
@@ -772,7 +868,10 @@
       "checking": "Wird geprüft…",
       "current_version_label": "Aktuelle Version",
       "mode": "Update-Modus",
-      "mode_hint": "Automatisch lädt + installiert im Hintergrund. Manuell zeigt einen Banner. Aus deaktiviert die Prüfung."
+      "mode_hint": "Automatisch lädt + installiert im Hintergrund. Manuell zeigt einen Banner. Aus deaktiviert die Prüfung.",
+      "mode_auto": "Automatisch",
+      "mode_manual": "Manuell",
+      "mode_off": "Aus"
     }
   },
   "notifications": {

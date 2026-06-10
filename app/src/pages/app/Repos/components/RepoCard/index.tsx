@@ -1,5 +1,7 @@
 import { type KeyboardEvent, type MouseEvent } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -11,9 +13,11 @@ import AheadBehind from "@/components/atoms/git/AheadBehind";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
 import RepoContextMenu from "@/components/molecules/menus/RepoContextMenu";
 import { useContextMenu } from "@/hooks/useContextMenu";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { useRepoActivitySeries } from "@/pages/app/Repos/RepoActivityContext";
 import { RepoActions } from "@/pages/app/Repos/components/RepoActions";
 import {
   Actions,
@@ -40,8 +44,10 @@ export interface RepoCardProps {
 }
 
 export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
+  const activity = useRepoActivitySeries(repo.id, repo.activity);
   const ctx = useContextMenu();
 
   const stop = (e: MouseEvent) => e.stopPropagation();
@@ -95,17 +101,17 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
                 −{repo.removed}
               </Box>
               <FilesMeta component="span" variant="caption">
-                · {repo.filesChanged} files
+                {t("list.card_files_meta", { count: repo.filesChanged })}
               </FilesMeta>
             </Diff>
           ) : (
             <StatusText component="span" variant="caption">
-              clean
+              {t("list.clean")}
             </StatusText>
           )}
         </StatusGroup>
         <GeneralSparkline
-          data={repo.activity}
+          data={activity}
           accentColor={dirty ? theme.palette.primary.main : undefined}
           width={88}
           height={18}

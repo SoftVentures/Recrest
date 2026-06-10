@@ -324,6 +324,242 @@ fn collect_recent_commits(
     Ok(())
 }
 
+/// Hard default cap per repo per request; the UI may raise it explicitly.
+pub const MAX_COMMITS_PER_REPO_DEFAULT: u32 = 5_000;
+/// Streamed batch size for `activity://commits-chunk`.
+pub const COMMITS_CHUNK_SIZE: usize = 1_000;
+
+/// Walks `repo` newest-first, collecting commits with `since <= ts <= until`
+/// into batches of `chunk_size` handed to `on_chunk(batch, done)`. Returns
+/// whether the walk was truncated by `cap`. Pure w.r.t. Tauri so tests don't
+/// need an `AppHandle`.
+#[allow(clippy::too_many_arguments)]
+pub fn collect_commits_range(
+    id: &str,
+    name: &str,
+    repo: &git2::Repository,
+    since: DateTime<Utc>,
+    until: DateTime<Utc>,
+    cap: u32,
+    chunk_size: usize,
+    on_chunk: &mut dyn FnMut(Vec<RecentCommitDto>, bool),
+) -> Result<bool, git2::Error> {
+    let head = match repo.head() {
+        Ok(h) => h,
+        Err(_) => {
+            on_chunk(Vec::new(), true);
+            return Ok(false);
+        }
+    };
+    let Some(head_oid) = head.target() else {
+        on_chunk(Vec::new(), true);
+        return Ok(false);
+    };
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(git2::Sort::TIME)?;
+    revwalk.push(head_oid)?;
+
+    let mut batch: Vec<RecentCommitDto> = Vec::with_capacity(chunk_size);
+    let mut emitted: u32 = 0;
+    let mut truncated = false;
+    for oid in revwalk {
+        let Ok(oid) = oid else { continue };
+        let Ok(commit) = repo.find_commit(oid) else {
+            continue;
+        };
+        let ts = commit.time().seconds();
+        let Some(utc_ts) = Utc.timestamp_opt(ts, 0).single() else {
+            continue;
+        };
+        if utc_ts > until {
+            continue; // newer than the window — keep walking
+        }
+        if utc_ts < since {
+            break; // TIME-sorted: the rest is older
+        }
+        if emitted >= cap {
+            truncated = true;
+            break;
+        }
+        let author = commit.author();
+        let email = author
+            .email()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        let display_name = author.name().unwrap_or("unknown").to_string();
+        let signature_key =
+            crate::git::author_normalize::signature_key(&display_name, email.as_deref());
+        batch.push(RecentCommitDto {
+            sha: commit.id().to_string(),
+            summary: commit.summary().unwrap_or("").to_string(),
+            author: display_name,
+            author_email: email,
+            signature_key,
+            timestamp: utc_ts,
+            repo_id: id.to_string(),
+            repo_name: name.to_string(),
+        });
+        emitted += 1;
+        if batch.len() >= chunk_size {
+            on_chunk(std::mem::take(&mut batch), false);
+        }
+    }
+    on_chunk(batch, true); // final flush, may be empty — carries `done`
+    Ok(truncated)
+}
+
+/// Timestamp of the root (oldest) commit reachable from HEAD, if any.
+pub fn oldest_commit_date(repo: &git2::Repository) -> Option<DateTime<Utc>> {
+    let head_oid = repo.head().ok()?.target()?;
+    let mut revwalk = repo.revwalk().ok()?;
+    revwalk
+        .set_sorting(git2::Sort::TIME | git2::Sort::REVERSE)
+        .ok()?;
+    revwalk.push(head_oid).ok()?;
+    let oldest = revwalk.flatten().next()?;
+    let commit = repo.find_commit(oldest).ok()?;
+    Utc.timestamp_opt(commit.time().seconds(), 0).single()
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitsChunkPayload {
+    pub request_id: String,
+    pub repo_id: String,
+    pub commits: Vec<RecentCommitDto>,
+    pub done: bool,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListCommitsSummaryDto {
+    pub request_id: String,
+    pub totals: std::collections::HashMap<String, u32>,
+    pub truncated: std::collections::HashMap<String, bool>,
+}
+
+/// Range-based replacement for `list_recent_commits` (Plan 04/01 §C.1).
+/// Commit data is streamed via `activity://commits-chunk`; the return value
+/// only carries per-repo totals + truncation flags.
+#[tauri::command]
+pub async fn list_commits(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    request_id: String,
+    repo_ids: Option<Vec<String>>,
+    since: String,
+    until: String,
+    max_commits_per_repo: Option<u32>,
+) -> Result<ListCommitsSummaryDto, CommandError> {
+    use tauri::Emitter;
+    let since: DateTime<Utc> = since
+        .parse()
+        .map_err(|e| CommandError::bad_request(format!("invalid since: {e}")))?;
+    let until: DateTime<Utc> = until
+        .parse()
+        .map_err(|e| CommandError::bad_request(format!("invalid until: {e}")))?;
+    if since > until {
+        return Err(CommandError::bad_request("since must be <= until"));
+    }
+    let cap = max_commits_per_repo.unwrap_or(MAX_COMMITS_PER_REPO_DEFAULT);
+
+    let config = state.config.lock().await;
+    let records: Vec<(String, String, PathBuf)> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|r| repo_ids.as_ref().map_or(true, |ids| ids.contains(&r.id)))
+        .map(|r| (r.id.clone(), r.name.clone(), r.path.clone()))
+        .collect();
+    drop(config);
+
+    // git2 revwalks are synchronous and the `all` preset can walk full
+    // history (cap 5000/repo × N repos) — running this inline would block the
+    // Tokio runtime and stall every other IPC call. Push the whole per-repo
+    // loop onto the blocking pool; `AppHandle` is `Clone + Send` and `emit`
+    // works from a blocking thread, so chunks still stream as they're walked.
+    let app = app.clone();
+    let request_id_for_walk = request_id.clone();
+    let (totals, truncated_map) = tokio::task::spawn_blocking(move || {
+        let mut totals = std::collections::HashMap::new();
+        let mut truncated_map = std::collections::HashMap::new();
+        for (id, name, path) in records {
+            let Ok(repo) = git2::Repository::open(&path) else {
+                tracing::debug!("list_commits: skipped {id}: open failed");
+                continue;
+            };
+            let mut total: u32 = 0;
+            let truncated = collect_commits_range(
+                &id,
+                &name,
+                &repo,
+                since,
+                until,
+                cap,
+                COMMITS_CHUNK_SIZE,
+                &mut |commits, done| {
+                    total += commits.len() as u32;
+                    // Event name mirrors `ACTIVITY_COMMITS_CHUNK_EVENT` in
+                    // `shared/src/constants/events.ts`. The chunk-level
+                    // `truncated` stays false — the summary carries the real flag.
+                    let _ = app.emit(
+                        "activity://commits-chunk",
+                        CommitsChunkPayload {
+                            request_id: request_id_for_walk.clone(),
+                            repo_id: id.clone(),
+                            commits,
+                            done,
+                            truncated: false,
+                        },
+                    );
+                },
+            )
+            .map_err(|e| CommandError::internal(format!("walk failed for {id}: {e}")))?;
+            totals.insert(id.clone(), total);
+            truncated_map.insert(id, truncated);
+        }
+        Ok::<_, CommandError>((totals, truncated_map))
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("list_commits task failed: {e}")))??;
+
+    Ok(ListCommitsSummaryDto {
+        request_id,
+        totals,
+        truncated: truncated_map,
+    })
+}
+
+/// Oldest commit timestamp across the given repos — feeds the `all` preset.
+#[tauri::command]
+pub async fn get_oldest_commit_date(
+    state: State<'_, AppState>,
+    repo_ids: Option<Vec<String>>,
+) -> Result<Option<DateTime<Utc>>, CommandError> {
+    let config = state.config.lock().await;
+    let paths: Vec<PathBuf> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|r| repo_ids.as_ref().map_or(true, |ids| ids.contains(&r.id)))
+        .map(|r| r.path.clone())
+        .collect();
+    drop(config);
+    // Each `oldest_commit_date` runs a synchronous git2 revwalk to the root
+    // commit; across N repos this would block the Tokio runtime, so do the
+    // walk on the blocking pool.
+    tokio::task::spawn_blocking(move || {
+        paths
+            .iter()
+            .filter_map(|p| git2::Repository::open(p).ok())
+            .filter_map(|repo| oldest_commit_date(&repo))
+            .min()
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("get_oldest_commit_date task failed: {e}")))
+}
+
 /// Base64-encoded image bytes + MIME, returned to the renderer as a data URI.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -740,6 +976,34 @@ pub async fn open_in_ide(
     Ok(())
 }
 
+/// Opens a single file at `line`/`column` in the user's IDE — drives the
+/// cross-repo search's "jump to match" row click. `path` is absolute (the
+/// search emits `absolutePath`); the IDE selection falls back to the configured
+/// `default_ide`, then to the first IDE detected on the machine.
+#[tauri::command]
+pub async fn open_file_in_ide(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    line: Option<u32>,
+    column: Option<u32>,
+    ide: Option<String>,
+) -> Result<(), CommandError> {
+    let default_ide = {
+        let config = state.config.lock().await;
+        config.settings().default_ide.clone()
+    };
+    let selected = ide.or(default_ide);
+    crate::commands::ide::open_file(
+        &app,
+        std::path::Path::new(&path),
+        line.unwrap_or(1).max(1),
+        column.unwrap_or(1).max(1),
+        selected.as_deref(),
+    )?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn open_terminal(
     state: State<'_, AppState>,
@@ -756,4 +1020,180 @@ pub async fn open_terminal(
     let terminal = config.settings().terminal.clone();
     drop(config);
     crate::commands::terminal::open_at(&record_path, &terminal)
+}
+
+#[cfg(test)]
+mod range_tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+
+    /// Commits `entries.len()` empty-tree commits onto HEAD, one per entry,
+    /// at the given UTC timestamp. Entries are committed oldest-first so the
+    /// resulting revwalk TIME order matches chronological reality.
+    fn commit_at_times(repo: &git2::Repository, timestamps: &[chrono::DateTime<Utc>]) {
+        let mut parent: Option<git2::Oid> = None;
+        let tree_id = {
+            let mut index = repo.index().expect("index");
+            index.write_tree().expect("tree")
+        };
+        for (i, ts) in timestamps.iter().enumerate() {
+            let sig = git2::Signature::new(
+                "Test Author",
+                "test@example.com",
+                &git2::Time::new(ts.timestamp(), 0),
+            )
+            .expect("sig");
+            let tree = repo.find_tree(tree_id).expect("find tree");
+            let parents: Vec<git2::Commit> = parent
+                .map(|oid| vec![repo.find_commit(oid).expect("parent")])
+                .unwrap_or_default();
+            let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
+            let oid = repo
+                .commit(
+                    Some("HEAD"),
+                    &sig,
+                    &sig,
+                    &format!("commit {i}"),
+                    &tree,
+                    &parent_refs,
+                )
+                .expect("commit");
+            parent = Some(oid);
+        }
+    }
+
+    /// Builds a throwaway repo with one commit per entry in `days_ago`,
+    /// committed at `n` days before `anchor`.
+    fn fixture_repo(
+        days_ago: &[i64],
+        anchor: chrono::DateTime<Utc>,
+    ) -> (tempfile::TempDir, git2::Repository) {
+        let dir = tempfile::tempdir().expect("tmpdir");
+        let repo = git2::Repository::init(dir.path()).expect("init");
+        let mut sorted: Vec<i64> = days_ago.to_vec();
+        sorted.sort_unstable_by(|a, b| b.cmp(a)); // oldest first
+        let timestamps: Vec<chrono::DateTime<Utc>> = sorted
+            .iter()
+            .map(|d| anchor - chrono::Duration::days(*d))
+            .collect();
+        commit_at_times(&repo, &timestamps);
+        (dir, repo)
+    }
+
+    /// Like `fixture_repo` but one commit per entry, `n` minutes before anchor.
+    fn fixture_repo_minutes(
+        minutes_ago: &[i64],
+        anchor: chrono::DateTime<Utc>,
+    ) -> (tempfile::TempDir, git2::Repository) {
+        let dir = tempfile::tempdir().expect("tmpdir");
+        let repo = git2::Repository::init(dir.path()).expect("init");
+        let mut sorted: Vec<i64> = minutes_ago.to_vec();
+        sorted.sort_unstable_by(|a, b| b.cmp(a)); // oldest first
+        let timestamps: Vec<chrono::DateTime<Utc>> = sorted
+            .iter()
+            .map(|m| anchor - chrono::Duration::minutes(*m))
+            .collect();
+        commit_at_times(&repo, &timestamps);
+        (dir, repo)
+    }
+
+    #[test]
+    fn range_filter_takes_only_commits_inside_window() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        // 10 commits spread over ~6 months; 5 of them inside the last 30 days.
+        let (_dir, repo) = fixture_repo(&[1, 5, 10, 20, 29, 45, 80, 120, 150, 170], anchor);
+        let since = anchor - chrono::Duration::days(30);
+        let mut collected: Vec<RecentCommitDto> = Vec::new();
+        let truncated = collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |chunk: Vec<RecentCommitDto>, _done| collected.extend(chunk),
+        )
+        .expect("collect");
+        assert_eq!(collected.len(), 5);
+        assert!(!truncated);
+        assert!(collected
+            .iter()
+            .all(|c| c.timestamp >= since && c.timestamp <= anchor));
+    }
+
+    #[test]
+    fn chunking_emits_thousand_sized_batches() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        // 2500 commits on consecutive minutes — small enough for CI, still 3 chunks.
+        let minutes: Vec<i64> = (0..2_500).collect();
+        let (_dir, repo) = fixture_repo_minutes(&minutes, anchor);
+        let since = anchor - chrono::Duration::days(30);
+        let mut chunks: Vec<(usize, bool)> = Vec::new();
+        collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |chunk, done| chunks.push((chunk.len(), done)),
+        )
+        .expect("collect");
+        // The final 500-batch IS the final flush, so it carries done=true.
+        assert_eq!(chunks, vec![(1_000, false), (1_000, false), (500, true)]);
+    }
+
+    #[test]
+    fn cap_truncates_and_reports() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let minutes: Vec<i64> = (0..1_200).collect();
+        let (_dir, repo) = fixture_repo_minutes(&minutes, anchor);
+        let since = anchor - chrono::Duration::days(30);
+        let mut total = 0usize;
+        let truncated = collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            1_000,
+            1_000,
+            &mut |chunk, _done| total += chunk.len(),
+        )
+        .expect("collect");
+        assert_eq!(total, 1_000);
+        assert!(truncated);
+    }
+
+    #[test]
+    fn oldest_commit_date_finds_root() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let (_dir, repo) = fixture_repo(&[1, 100, 200], anchor);
+        let oldest = oldest_commit_date(&repo).expect("some");
+        assert_eq!(oldest, anchor - chrono::Duration::days(200));
+    }
+
+    #[test]
+    fn unborn_head_yields_empty_done_chunk() {
+        let dir = tempfile::tempdir().expect("tmpdir");
+        let repo = git2::Repository::init(dir.path()).expect("init");
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let since = anchor - chrono::Duration::days(30);
+        let mut chunks: Vec<(usize, bool)> = Vec::new();
+        let truncated = collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |chunk, done| chunks.push((chunk.len(), done)),
+        )
+        .expect("collect");
+        assert!(!truncated);
+        assert_eq!(chunks, vec![(0, true)]);
+    }
 }

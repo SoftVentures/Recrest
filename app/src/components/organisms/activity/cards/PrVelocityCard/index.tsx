@@ -1,37 +1,31 @@
+import { memo } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
+import { ResponsiveBar } from "@nivo/bar";
+
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { VelocityDay } from "@/lib/activityAggregates";
-import { smoothSeries } from "@/lib/charts/smoothLine";
+import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   rows: VelocityDay[];
+  windowDays?: number;
   loading?: boolean;
 }
 
 const ChartWrap = styled(Box)({
   width: "100%",
-});
-
-const Svg = styled("svg")({
-  width: "100%",
   height: 140,
-});
-
-const Axis = styled("line")(({ theme }) => ({
-  stroke: theme.palette.divider,
-  strokeWidth: 1,
-}));
-
-const Series = styled("path")({
-  fill: "none",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
 });
 
 const Legend = styled(Box)(({ theme }) => ({
@@ -57,33 +51,76 @@ const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   backgroundColor: color,
 }));
 
-function PrVelocityCard({ rows, loading }: Props) {
-  const { t } = useTranslation();
+function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const chronological = [...rows].reverse();
-  const opened = chronological.map((r) => r.opened);
-  const merged = chronological.map((r) => r.merged);
-  const peak = Math.max(1, ...opened, ...merged);
-  const w = 320;
-  const h = 140;
-  const pad = 12;
+  const nivoTheme = useNivoTheme();
+  const { show, move, hide, portal } = useChartTooltip();
   const openedColor = theme.palette.primary.main;
   const mergedColor = theme.palette.success.main;
+  const openedLabel = t("activity.cards.pr_velocity_opened");
+  const mergedLabel = t("activity.cards.pr_velocity_merged");
+
+  const size = bucketSizeForWindow(windowDays);
+  // Newest-first buckets → reverse for chronological left-to-right.
+  const buckets = bucketDays(rows, (r) => r.day, size).reverse();
+  const data = buckets.map((b) => ({
+    x: dayLabel(b.newestDay, i18n.language),
+    [openedLabel]: b.rows.reduce((a, r) => a + r.opened, 0),
+    [mergedLabel]: b.rows.reduce((a, r) => a + r.merged, 0),
+  }));
+
+  const labels = data.map((d) => String(d.x));
+  const every = Math.max(1, Math.ceil(labels.length / 5));
+  const tickValues = labels.filter((_, i) => i % every === 0);
+  const colorByKey: Record<string, string> = {
+    [openedLabel]: openedColor,
+    [mergedLabel]: mergedColor,
+  };
+
+  const renderTip = (indexValue: string | number, row: Record<string, string | number>) => (
+    <ChartTooltip
+      title={String(indexValue)}
+      rows={[openedLabel, mergedLabel].map((key) => ({
+        color: colorByKey[key],
+        label: key,
+        value: String(Number(row[key] ?? 0)),
+      }))}
+    />
+  );
+
   return (
     <GeneralCard
       title={t("activity.cards.pr_velocity_title")}
-      sub={t("activity.cards.pr_velocity_sub")}
+      sub={t("activity.cards.pr_velocity_sub", { days: windowDays })}
       loading={loading}
-      skeleton="line"
+      skeleton="bars"
       testId={TEST_IDS.activity.cards.prVelocity}
     >
-      <ChartWrap>
-        <Svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-          <Axis x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} />
-          <Series d={smoothSeries(opened, peak, w, h, pad)} stroke={openedColor} />
-          <Series d={smoothSeries(merged, peak, w, h, pad)} stroke={mergedColor} />
-        </Svg>
+      {/* @nivo/bar fires only onMouseEnter — wrapper mousemove keeps the
+          portalled tooltip tracking the cursor across the bar. */}
+      <ChartWrap onMouseMove={(e) => move(e.clientX, e.clientY)}>
+        <ResponsiveBar
+          data={data}
+          keys={[openedLabel, mergedLabel]}
+          indexBy="x"
+          groupMode="grouped"
+          theme={nivoTheme}
+          colors={(bar) => colorByKey[String(bar.id)] ?? theme.palette.primary.main}
+          margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
+          padding={0.3}
+          innerPadding={2}
+          borderRadius={2}
+          enableLabel={false}
+          enableGridX={false}
+          axisBottom={{ tickValues, tickRotation: 0 }}
+          axisLeft={{ tickValues: 4 }}
+          tooltip={() => <></>}
+          onMouseEnter={(d, e) => show(e.clientX, e.clientY, renderTip(d.indexValue, d.data))}
+          onMouseLeave={hide}
+        />
       </ChartWrap>
+      {portal}
       <Legend>
         <Box component="span">
           <LegendDot color={openedColor} />
@@ -98,4 +135,5 @@ function PrVelocityCard({ rows, loading }: Props) {
   );
 }
 
-export default PrVelocityCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(PrVelocityCard);

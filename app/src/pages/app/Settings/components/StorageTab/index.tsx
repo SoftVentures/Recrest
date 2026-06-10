@@ -12,6 +12,8 @@ import GeneralIconButton, {
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setCrashReporting } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -23,7 +25,7 @@ const FactRow = styled(Box)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.primary,
   padding: "10px 16px",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   "& strong": {
     fontWeight: 600,
     fontFamily: "inherit",
@@ -72,17 +74,23 @@ export function StorageSection() {
         <GeneralSwitchInput
           checked={crashReporting}
           onCheckedChange={(v) => dispatch(setCrashReporting(v))}
+          aria-label={t("settings.storage.crash_reporting")}
+          data-testid={TEST_IDS.settings.storage.crashReporting}
         />
       </SettingsRow>
 
       <FactsBox>
         <FactRow>
-          <Box component="strong">Operating system:</Box>
-          <Box component="span">macos 15.0 (x86_64)</Box>
+          <Box component="strong">
+            {t("storage_facts.os_label", { ns: I18nNamespace.SETTINGS })}
+          </Box>
+          <Box component="span">{t("storage_facts.os_value", { ns: I18nNamespace.SETTINGS })}</Box>
         </FactRow>
         <FactRow>
-          <Box component="strong">Git:</Box>
-          <Box component="span">2.44.0</Box>
+          <Box component="strong">
+            {t("storage_facts.git_label", { ns: I18nNamespace.SETTINGS })}
+          </Box>
+          <Box component="span">{t("storage_facts.git_value", { ns: I18nNamespace.SETTINGS })}</Box>
           <GeneralIconButton
             size={IconButtonSize.XS}
             variant={IconButtonVariant.GHOST}

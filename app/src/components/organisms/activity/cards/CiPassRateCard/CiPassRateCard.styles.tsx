@@ -1,47 +1,10 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-export const Chart = styled(Box)({
-  display: "grid",
-  gridTemplateColumns: "28px 1fr",
-  gap: 6,
-  alignItems: "stretch",
-}) as typeof Box;
-
-export const Axis = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  fontSize: 10,
-  color: theme.palette.text.information,
-  textAlign: "right",
-  padding: "8px 0",
-})) as typeof Box;
-
-export const Plot = styled(Box)({
-  width: "100%",
-}) as typeof Box;
-
-export const Svg = styled("svg")({
+export const ChartWrap = styled(Box)({
   width: "100%",
   height: 140,
-});
-
-export const AxisLine = styled("line")(({ theme }) => ({
-  stroke: theme.palette.divider,
-  strokeWidth: 1,
-}));
-
-export const Series = styled("path")({
-  fill: "none",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-});
-
-export const Fill = styled("path")({
-  fillOpacity: 0.18,
-});
+}) as typeof Box;
 
 export const Headline = styled(Box)(({ theme }) => ({
   display: "flex",

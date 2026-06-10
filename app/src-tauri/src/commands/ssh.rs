@@ -30,7 +30,10 @@ pub struct SshKeyListing {
 #[tauri::command]
 pub async fn list_ssh_keys() -> Result<SshKeyListing, CommandError> {
     let Some(home) = dirs::home_dir() else {
-        return Ok(SshKeyListing { dir: None, keys: vec![] });
+        return Ok(SshKeyListing {
+            dir: None,
+            keys: vec![],
+        });
     };
     let dir = home.join(".ssh");
     let dir_str = Some(dir.to_string_lossy().to_string());

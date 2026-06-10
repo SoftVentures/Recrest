@@ -14,12 +14,37 @@
     "closed": "Closed"
   },
   "empty": "No open merge requests.",
+  "empty_desc": "Connect a provider in settings to see the merge requests from your repositories here.",
+  "info": {
+    "branch": "Branch",
+    "changes": "Changes"
+  },
+  "actions": {
+    "merge": "Merge",
+    "merging": "Merging…",
+    "checkout": "Checkout",
+    "checkout_busy": "…",
+    "open_on_host": "Open on host",
+    "close": "Close"
+  },
+  "checkout": {
+    "success": "Checked out {{branch}}",
+    "failed": "Checkout failed"
+  },
+  "empty_states": {
+    "none_title": "No open merge requests",
+    "none_description": "Connected providers haven't returned any open PRs yet.",
+    "no_match_title": "No merge requests match",
+    "no_match_description": "Try clearing the search or relaxing your filters."
+  },
   "diff": {
     "title": "Diff",
     "loading": "Loading diff…",
     "empty": "No changes to show.",
     "binary": "Binary file — no inline diff.",
     "add_comment": "Comment on this line",
+    "comment_hint": "Comment on this line — drag down to select a range",
+    "range_label": "L{{start}}–{{end}}",
     "comment_placeholder": "Leave a comment…",
     "comment_submit": "Comment",
     "comment_cancel": "Cancel",
@@ -33,6 +58,8 @@
     "section_description": "Description",
     "section_reviewers": "Reviewers",
     "section_files": "Files",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
     "section_diff": "Diff",
     "section_timeline": "Timeline",
     "section_metadata": "Metadata",
@@ -113,11 +140,12 @@
     "ref_placeholder": "main",
     "no_inputs": "This workflow takes no inputs.",
     "required": "required",
-    "run_number": "#{{n}}"
+    "run_number": "#{{n}}",
+    "open_run": "Open run #{{n}}"
   },
   "deployments": {
     "title": "Deployments",
-    "visit": "Visit site",
+    "visit_aria": "Open deployment {{url}}",
     "status_building": "Building",
     "status_built": "Live",
     "status_errored": "Errored",

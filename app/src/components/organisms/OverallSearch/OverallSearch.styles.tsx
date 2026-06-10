@@ -1,6 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
 export { default as Kbd } from "@/components/atoms/inputs/Kbd";
 
 export const Backdrop = styled(Box)({
@@ -93,12 +96,12 @@ export const Row = styled("button", {
   border: 0,
   borderRadius: 8,
   cursor: "pointer",
-  color: active ? theme.palette.primary.dark : theme.palette.text.primary,
+  color: active ? toneText(theme, StatusTone.PRIMARY) : theme.palette.text.primary,
   fontFamily: "inherit",
   fontSize: 13,
   textAlign: "left",
   "& .row-icon, & .row-hint": {
-    color: active ? theme.palette.primary.dark : theme.palette.text.information,
+    color: active ? toneText(theme, StatusTone.PRIMARY) : theme.palette.text.information,
   },
   "& .row-hint": {
     opacity: active ? 0.7 : 1,
@@ -129,7 +132,7 @@ export const RowHint = styled(Typography)({
   overflow: "hidden",
   textOverflow: "ellipsis",
   maxWidth: "52%",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
 }) as typeof Typography;
 
 export const Empty = styled(Box)(({ theme }) => ({

@@ -297,9 +297,7 @@ const MIGRATION_PROVIDER_IDS: &[&str] = &["github", "gitlab", "bitbucket"];
 #[cfg(debug_assertions)]
 pub fn migrate_keychain_to_file_if_empty() -> keyring::Result<()> {
     let Some(path) = FILE_BACKEND_PATH.get().cloned() else {
-        tracing::warn!(
-            "[token] migration skipped: file backend path not initialized yet"
-        );
+        tracing::warn!("[token] migration skipped: file backend path not initialized yet");
         return Ok(());
     };
     migrate_keychain_to_file_at(&path, &keychain_read_dev_token)
@@ -354,9 +352,7 @@ fn migrate_keychain_to_file_at(
     backend.save(&migrated)?;
 
     if count > 0 {
-        tracing::info!(
-            "[token] migrated {count} provider token(s) from keychain to file backend"
-        );
+        tracing::info!("[token] migrated {count} provider token(s) from keychain to file backend");
     } else {
         tracing::info!(
             "[token] keychain→file migration ran with 0 tokens found; wrote empty sentinel file"
@@ -452,7 +448,10 @@ mod tests {
         backend.store("gitlab", "glpat_xyz").unwrap();
 
         assert_eq!(backend.read("github").unwrap().as_deref(), Some("ghp_abc"));
-        assert_eq!(backend.read("gitlab").unwrap().as_deref(), Some("glpat_xyz"));
+        assert_eq!(
+            backend.read("gitlab").unwrap().as_deref(),
+            Some("glpat_xyz")
+        );
 
         backend.delete("github").unwrap();
         assert_eq!(backend.read("github").unwrap(), None);
@@ -515,7 +514,10 @@ mod tests {
 
         migrate_keychain_to_file_at(&path, &|_| None).unwrap();
 
-        assert!(path.exists(), "sentinel file must be written even on 0 tokens");
+        assert!(
+            path.exists(),
+            "sentinel file must be written even on 0 tokens"
+        );
         let backend = FileBackend::new(path);
         assert_eq!(backend.read("github").unwrap(), None);
         assert_eq!(backend.read("gitlab").unwrap(), None);
@@ -536,7 +538,10 @@ mod tests {
 
         let backend = FileBackend::new(path);
         assert_eq!(backend.read("github").unwrap().as_deref(), Some("ghp_abc"));
-        assert_eq!(backend.read("gitlab").unwrap().as_deref(), Some("glpat_xyz"));
+        assert_eq!(
+            backend.read("gitlab").unwrap().as_deref(),
+            Some("glpat_xyz")
+        );
         assert_eq!(backend.read("bitbucket").unwrap(), None);
     }
 

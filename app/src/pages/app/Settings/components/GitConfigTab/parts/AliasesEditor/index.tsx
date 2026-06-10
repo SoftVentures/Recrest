@@ -24,6 +24,7 @@ import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { ALIAS_PREFIX } from "@/lib/constants/gitConfigSchema";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import {
   AddFormActions,
   CustomCellKey,
@@ -46,7 +47,7 @@ const AliasRow = styled(CustomRow)({
 const StaticLayerLabel = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   color: theme.palette.text.information,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   textAlign: "center",
   flex: "0 0 auto",
 })) as typeof Typography;

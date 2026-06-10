@@ -1,3 +1,4 @@
+export * from "@/lib/constants/activity.constants";
 export * from "@/lib/constants/ciStates.constants";
 export * from "@/lib/constants/componentTests.constants";
 export * from "@/lib/constants/events.constants";

@@ -339,7 +339,7 @@ function WorkingCopyPanel({ repoId, onCommitClick }: WorkingCopyPanelProps) {
           <StashList>
             {stash.map((s) => (
               <StashRow key={s.oid} data-testid={TEST_IDS.workingCopy.stashRow(s.index)}>
-                <StashIndex component="span">stash@{`{${s.index}}`}</StashIndex>
+                <StashIndex component="span">{t("stash_index", { index: s.index })}</StashIndex>
                 <StashMessage component="span">{s.message}</StashMessage>
                 <GeneralButton
                   size="sm"

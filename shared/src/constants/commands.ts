@@ -15,12 +15,17 @@ export const TauriCommand = {
   REMOVE_REPO: "remove_repo",
   FORGET_REPOS_UNDER_PATH: "forget_repos_under_path",
   DELETE_REPO: "delete_repo",
+  GET_OLDEST_COMMIT_DATE: "get_oldest_commit_date",
+  LIST_COMMITS: "list_commits",
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
   SET_REPO_LOGO: "set_repo_logo",
   CLEAR_REPO_LOGO: "clear_repo_logo",
   OPEN_IN_IDE: "open_in_ide",
+  OPEN_FILE_IN_IDE: "open_file_in_ide",
   DETECT_IDES: "detect_ides",
+  DETECT_SHELLS: "detect_shells",
+  DETECT_TERMINALS: "detect_terminals",
   OPEN_TERMINAL: "open_terminal",
   SSH_UNLOCK_KEY: "ssh_unlock_key",
   SET_REPO_SSH_KEY: "set_repo_ssh_key",
@@ -96,10 +101,12 @@ export const TauriCommand = {
   UPDATE_SETTINGS: "update_settings",
   FACTORY_RESET: "factory_reset",
 
+  // custom fonts
+  LIST_CUSTOM_FONTS: "list_custom_fonts",
+  UPLOAD_FONT: "upload_font",
+  DELETE_CUSTOM_FONT: "delete_custom_font",
+
   // window
-  SAVE_WINDOW_STATE: "save_window_state",
-  LOAD_WINDOW_STATE: "load_window_state",
-  VALIDATE_WINDOW_POSITION: "validate_window_position",
   SET_CAPTION_BUTTON_BOUNDS: "set_caption_button_bounds",
 
   // system

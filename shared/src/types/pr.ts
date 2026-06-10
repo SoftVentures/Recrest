@@ -142,17 +142,55 @@ export const CommentSide = {
 } as const;
 export type CommentSide = (typeof CommentSide)[keyof typeof CommentSide];
 
-export interface CommentPosition {
+/**
+ * One diff line addressed on both sides of a hunk. Lines that exist on only
+ * one side (pure add / pure remove) still carry the running counterpart of the
+ * absent side, resolved by the frontend from the hunk — GitLab's `line_code`
+ * needs both numbers for every boundary line of a range.
+ */
+export interface CommentLineRef {
+  oldLineNo: number | null;
+  newLineNo: number | null;
+}
+
+/**
+ * One boundary of a comment range. `side` picks which number is this line's
+ * anchor (RIGHT = post-change/new line, LEFT = pre-change/old line). Carries
+ * both numbers because GitLab's `line_code` needs the full pair. Start and end
+ * can sit on *different* sides — a range may run from a deleted (LEFT) line to
+ * an added (RIGHT) one, exactly like GitHub/GitLab.
+ */
+export interface CommentAnchor {
   side: CommentSide;
-  line: number;
-  startLine: number | null;
+  oldLineNo: number | null;
+  newLineNo: number | null;
+}
+
+/**
+ * Where an inline review comment anchors. `start` is the first line of a
+ * multi-line range; `null` means a single-line comment anchored at `end`.
+ * `end` is always the last (anchor) line — the comment renders there.
+ */
+export interface CommentPosition {
+  start: CommentAnchor | null;
+  end: CommentAnchor;
 }
 
 export interface Comment {
   id: string;
   author: string;
+  /** Provider avatar URL of the author, when the API returned one. */
+  authorAvatarUrl: string | null;
   body: string;
   path: string | null;
+  /** Anchor (end) side, or `null` for a general (non-inline) comment. */
+  side: CommentSide | null;
+  /** Anchor (end) line number on `side`, or `null` for a general comment. */
+  line: number | null;
+  /** First line of the range, on `startSide`; `null` for single-line/general. */
+  startLine: number | null;
+  /** Side of the range's first line (may differ from `side`); `null` if none. */
+  startSide: CommentSide | null;
   createdAt: string; // ISO-8601
 }
 

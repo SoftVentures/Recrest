@@ -106,7 +106,7 @@ export function NotificationsSection() {
           aria-label={t("settings.send_test_notification", { ns: I18nNamespace.ARIA })}
           onClick={() => void sendTestNotification(kind)}
         >
-          <Send size={11} /> Test
+          <Send size={11} /> {t("notifications_test_button", { ns: I18nNamespace.SETTINGS })}
         </TestBtn>
       )}
       <GeneralSwitchInput
@@ -132,7 +132,7 @@ export function NotificationsSection() {
               aria-label={t("settings.send_test_notification", { ns: I18nNamespace.ARIA })}
               onClick={() => void sendTestNotification(NotificationKind.GENERIC)}
             >
-              <Send size={11} /> Test
+              <Send size={11} /> {t("notifications_test_button", { ns: I18nNamespace.SETTINGS })}
             </TestBtn>
           )}
           <GeneralSwitchInput

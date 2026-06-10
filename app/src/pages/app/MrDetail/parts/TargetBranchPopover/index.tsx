@@ -13,6 +13,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 interface Props {
   open: boolean;
@@ -219,7 +220,7 @@ const OptionRow = styled("button", {
   background: selected ? theme.palette.surface.interface.active : "transparent",
   color: selected ? theme.palette.text.primary : theme.palette.text.information,
   cursor: "pointer",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11.5,
   textAlign: "left",
   "&:hover": {

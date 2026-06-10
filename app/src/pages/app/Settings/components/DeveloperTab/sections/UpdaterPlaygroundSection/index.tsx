@@ -1,11 +1,14 @@
 import { useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { TauriCommand } from "@recrest/shared";
 
 import { toast } from "sonner";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { safeInvoke } from "@/lib/tauri";
@@ -19,6 +22,7 @@ import { setUpdaterBanner } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
 
 export function UpdaterPlaygroundSection() {
+  const { t } = useTranslation(I18nNamespace.SETTINGS);
   const dispatch = useAppDispatch();
   const [forceFallback, setForceFallback] = useState(false);
   const [simVersion, setSimVersion] = useState("99.99.99");
@@ -31,7 +35,7 @@ export function UpdaterPlaygroundSection() {
       forceFallback,
       endpointOverride: endpointOverride.trim() || null,
     });
-    toast.info("Checking for updates…");
+    toast.info(t("developer.updater.checking"));
   };
 
   const emit = () => {
@@ -39,12 +43,12 @@ export function UpdaterPlaygroundSection() {
       setUpdaterBanner({
         version: simVersion.trim() || "99.99.99",
         currentVersion: "dev",
-        body: "Simulated event",
+        body: t("developer.updater.simulated_body"),
         canAutoInstall: simCanAutoInstall,
         downloadUrl: simCanAutoInstall ? null : "https://example.com/download",
       }),
     );
-    toast.success("Updater banner emitted");
+    toast.success(t("developer.updater.banner_emitted"));
   };
 
   const resetLastSeen = () => {
@@ -53,27 +57,27 @@ export function UpdaterPlaygroundSection() {
     } catch {
       /* ignore */
     }
-    toast.success("Last-seen version reset");
+    toast.success(t("developer.updater.reset_last_seen_done"));
   };
 
   return (
     <SettingsSection
-      title="Updater playground"
+      title={t("developer.sections.updater_playground")}
       testId={TEST_IDS.settings.developer.sections.updater}
     >
-      <SettingsRow label="Force check now">
+      <SettingsRow label={t("developer.updater.force_check")}>
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.updater.forceCheck}
           onClick={() => void forceCheck()}
         >
-          Force check
+          {t("developer.updater.force_check_button")}
         </GeneralButton>
       </SettingsRow>
       <SettingsRow
-        label="Force download fallback"
-        sub="Treat the auto-installer path as broken — surface the manual download link instead."
+        label={t("developer.updater.force_fallback")}
+        sub={t("developer.updater.force_fallback_sub")}
       >
         <GeneralSwitchInput
           checked={forceFallback}
@@ -81,17 +85,17 @@ export function UpdaterPlaygroundSection() {
           data-testid={TEST_IDS.settings.developer.updater.forceFallback}
         />
       </SettingsRow>
-      <SettingsRow label="Endpoint override">
+      <SettingsRow label={t("developer.updater.endpoint_override")}>
         <TextInput
           type="text"
-          placeholder="https://updates.example.com/manifest.json"
+          placeholder={t("developer.updater.endpoint_override_input_placeholder")}
           value={endpointOverride}
           onChange={(e) => setEndpointOverride(e.target.value)}
           style={{ minWidth: 260 }}
           data-testid={TEST_IDS.settings.developer.updater.endpointOverride}
         />
       </SettingsRow>
-      <SettingsRow label="Simulate update event">
+      <SettingsRow label={t("developer.updater.simulate")}>
         <ButtonRow>
           <TextInput
             type="text"
@@ -107,7 +111,7 @@ export function UpdaterPlaygroundSection() {
               onCheckedChange={setSimCanAutoInstall}
               data-testid={TEST_IDS.settings.developer.updater.simCanAutoInstall}
             />
-            canAutoInstall
+            {t("developer.updater.can_auto_install")}
           </InlineLabel>
           <GeneralButton
             size="sm"
@@ -115,13 +119,13 @@ export function UpdaterPlaygroundSection() {
             onClick={emit}
             data-testid={TEST_IDS.settings.developer.updater.emit}
           >
-            Emit
+            {t("developer.updater.simulate_emit")}
           </GeneralButton>
         </ButtonRow>
       </SettingsRow>
       <SettingsRow
-        label="Reset last-seen version"
-        sub="Make the update banner appear again for the current version."
+        label={t("developer.updater.reset_last_seen")}
+        sub={t("developer.updater.reset_last_seen_sub")}
       >
         <GeneralButton
           size="sm"
@@ -129,7 +133,7 @@ export function UpdaterPlaygroundSection() {
           data-testid={TEST_IDS.settings.developer.updater.resetLastSeen}
           onClick={resetLastSeen}
         >
-          Reset
+          {t("developer.updater.reset_button")}
         </GeneralButton>
       </SettingsRow>
     </SettingsSection>

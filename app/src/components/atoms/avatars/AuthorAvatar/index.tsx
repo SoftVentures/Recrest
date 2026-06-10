@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 
-import { Bot } from "lucide-react";
-
+import BotIcon from "@/assets/icons/BotIcon";
 import GeneralAvatar from "@/components/atoms/avatars/GeneralAvatar";
-import { isBotAuthor } from "@/lib/utils/bot.utils";
+import { identifyBot, isBotAuthor } from "@/lib/utils/bot.utils";
 import { gravatarHash, gravatarUrl } from "@/lib/utils/gravatar.utils";
 import { hashCode } from "@/lib/utils/hash.utils";
 
@@ -27,6 +26,11 @@ const AUTHOR_GRADIENTS: ReadonlyArray<readonly [string, string]> = [
 // (not the colour) does the identification.
 const BOT_GRADIENT: readonly [string, string] = ["#475569", "#64748b"];
 
+// Figma's logo is multicoloured, so it needs a dark slate backdrop (rather
+// than its brand `color`) for the glyph to read. Kept here as a presentation
+// choice specific to the avatar, not part of the bot's brand identity.
+const FIGMA_AVATAR_GRADIENT: readonly [string, string] = ["#2b2b34", "#1e1e26"];
+
 function gradientForAuthor(id: string): readonly [string, string] {
   const idx = hashCode(id.toLowerCase()) % AUTHOR_GRADIENTS.length;
   return AUTHOR_GRADIENTS[idx] ?? AUTHOR_GRADIENTS[0]!;
@@ -43,8 +47,17 @@ interface Props {
 
 function AuthorAvatar({ name, email, avatarUrl, size = 24 }: Props) {
   const id = (email || name).trim();
+  const botDef = identifyBot(name);
   const bot = isBotAuthor(name);
-  const [c1, c2] = bot ? BOT_GRADIENT : gradientForAuthor(id);
+  // Known bot → its brand colour (Figma keeps a dark slate so its multicolour
+  // logo reads); generic `[bot]` → neutral slate; humans → hashed gradient.
+  const [c1, c2] = botDef
+    ? botDef.id === "figma"
+      ? FIGMA_AVATAR_GRADIENT
+      : [botDef.color, botDef.color]
+    : bot
+      ? BOT_GRADIENT
+      : gradientForAuthor(id);
   const gradient = `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
   const letter = (name.trim().charAt(0) || "?").toUpperCase();
 
@@ -84,7 +97,7 @@ function AuthorAvatar({ name, email, avatarUrl, size = 24 }: Props) {
       letter={letter}
       label={name}
       imageUrl={imageUrl}
-      glyph={bot ? <Bot size={Math.round(size * 0.6)} aria-hidden /> : undefined}
+      glyph={bot ? <BotIcon id={botDef?.id ?? null} size={Math.round(size * 0.6)} /> : undefined}
       onImageError={() => {
         if (providerUrl) setProviderUrl(null);
         else setGravatarFailed(true);

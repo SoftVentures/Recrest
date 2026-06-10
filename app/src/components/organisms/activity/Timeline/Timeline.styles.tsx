@@ -1,46 +1,7 @@
-import { Box, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-export const Pills = styled(ToggleButtonGroup)(({ theme }) => ({
-  backgroundColor: theme.palette.surface.interface.backElevation,
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 999,
-  padding: 3,
-  gap: 2,
-  "& .MuiToggleButtonGroup-grouped": {
-    border: 0,
-    margin: 0,
-    "&:not(:first-of-type)": { marginLeft: 0, borderLeft: 0 },
-  },
-}));
-
-export const Pill = styled(ToggleButton)(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  height: 24,
-  padding: "0 10px",
-  border: 0,
-  background: "transparent",
-  color: theme.palette.text.secondary,
-  fontFamily: "inherit",
-  fontSize: 11.5,
-  fontWeight: 500,
-  borderRadius: 999,
-  textTransform: "none",
-  "&:hover": {
-    color: theme.palette.text.primary,
-    backgroundColor: "rgba(17, 17, 22, 0.05)",
-  },
-  "&.Mui-selected": {
-    color: theme.palette.text.primary,
-    backgroundColor: theme.palette.surface.interface.base,
-    boxShadow: `0 0 0 1px ${theme.palette.border.default}, 0 1px 2px rgba(0, 0, 0, 0.06)`,
-  },
-  "&.Mui-selected:hover": {
-    backgroundColor: theme.palette.surface.interface.base,
-  },
-}));
+import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
 
 export const PillCount = styled(Box)(({ theme }) => ({
   display: "inline-flex",
@@ -56,8 +17,8 @@ export const PillCount = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.backElevation,
   color: theme.palette.text.information,
   ".Mui-selected &": {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
-    color: theme.palette.primary.dark,
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
   },
 })) as typeof Box;
 
@@ -110,18 +71,9 @@ export const Chip = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
   fontWeight: 600,
   padding: "2px 7px",
   borderRadius: 100,
-  ...(tone === "ok" && {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.success.main} 16%, transparent)`,
-    color: theme.palette.success.dark,
-  }),
-  ...(tone === "info" && {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
-    color: theme.palette.primary.dark,
-  }),
-  ...(tone === "err" && {
-    backgroundColor: `color-mix(in srgb, ${theme.palette.error.main} 16%, transparent)`,
-    color: theme.palette.error.dark,
-  }),
+  ...(tone === "ok" && toneChip(theme, StatusTone.SUCCESS)),
+  ...(tone === "info" && toneChip(theme, StatusTone.PRIMARY)),
+  ...(tone === "err" && toneChip(theme, StatusTone.ERROR)),
   ...(tone === "neutral" && {
     backgroundColor: theme.palette.surface.interface.base,
     color: theme.palette.text.secondary,
@@ -143,3 +95,9 @@ export const Empty = styled(Box)(({ theme }) => ({
   padding: "16px 0",
   textAlign: "center",
 })) as typeof Box;
+
+export const ShowMore = styled(Box)({
+  display: "flex",
+  justifyContent: "center",
+  paddingTop: 4,
+}) as typeof Box;

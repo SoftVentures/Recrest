@@ -13,9 +13,9 @@ use super::api::{
 };
 use super::diff_parse::parse_hunks;
 use super::r#trait::GitProvider;
-use base64::Engine;
 use crate::auth::token::TokenStore;
 use crate::commands::error::CommandError;
+use base64::Engine;
 
 pub const PROVIDER_ID: &str = "github";
 const API_BASE: &str = "https://api.github.com";
@@ -96,7 +96,11 @@ impl GithubProvider {
             return Ok(Vec::new());
         }
         // GitHub wraps the base64 payload at 60 cols — strip whitespace first.
-        let cleaned: String = file.content.chars().filter(|c| !c.is_whitespace()).collect();
+        let cleaned: String = file
+            .content
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(cleaned.as_bytes())
             .map_err(|e| CommandError::internal(format!("github: workflow base64: {e}")))?;
@@ -146,13 +150,19 @@ fn parse_workflow_dispatch_inputs(yaml: &str) -> Vec<WorkflowInputDef> {
             .and_then(|v| v.as_str())
             .map(str::to_string)
             .unwrap_or_else(|| key.to_string());
-        let required = spec.get("required").and_then(|v| v.as_bool()).unwrap_or(false);
+        let required = spec
+            .get("required")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         let default = spec.get("default").and_then(yaml_scalar_to_string);
-        let choices = spec.get("options").and_then(|v| v.as_sequence()).map(|seq| {
-            seq.iter()
-                .filter_map(|o| o.as_str().map(str::to_string))
-                .collect::<Vec<_>>()
-        });
+        let choices = spec
+            .get("options")
+            .and_then(|v| v.as_sequence())
+            .map(|seq| {
+                seq.iter()
+                    .filter_map(|o| o.as_str().map(str::to_string))
+                    .collect::<Vec<_>>()
+            });
         out.push(WorkflowInputDef {
             key: key.to_string(),
             label,
@@ -336,21 +346,36 @@ impl GitProvider for GithubProvider {
             })
             .collect();
 
-        let mut reviewers: Vec<ReviewerDto> = reviews_res
-            .into_iter()
-            .map(|r| ReviewerDto {
-                login: r.user.as_ref().map(|u| u.login.clone()).unwrap_or_default(),
-                name: None,
-                avatar_url: r.user.and_then(|u| u.avatar_url),
-                state: match r.state.as_str() {
-                    "APPROVED" => ReviewState::Approved,
-                    "CHANGES_REQUESTED" => ReviewState::ChangesRequested,
-                    "COMMENTED" => ReviewState::Commented,
-                    "DISMISSED" => ReviewState::Dismissed,
-                    _ => ReviewState::Pending,
-                },
-            })
-            .collect();
+        // One entry per reviewer, not per review: GitHub returns a row for each
+        // review, so a person who reviewed more than once (e.g. commented then
+        // approved) would otherwise appear several times. Reviews come back in
+        // chronological order, so the last one for a login is their current
+        // state.
+        let mut reviewers: Vec<ReviewerDto> = Vec::new();
+        for r in reviews_res {
+            let login = r.user.as_ref().map(|u| u.login.clone()).unwrap_or_default();
+            let avatar_url = r.user.and_then(|u| u.avatar_url);
+            let state = match r.state.as_str() {
+                "APPROVED" => ReviewState::Approved,
+                "CHANGES_REQUESTED" => ReviewState::ChangesRequested,
+                "COMMENTED" => ReviewState::Commented,
+                "DISMISSED" => ReviewState::Dismissed,
+                _ => ReviewState::Pending,
+            };
+            if let Some(existing) = reviewers.iter_mut().find(|e| e.login == login) {
+                existing.state = state;
+                if existing.avatar_url.is_none() {
+                    existing.avatar_url = avatar_url;
+                }
+            } else {
+                reviewers.push(ReviewerDto {
+                    login,
+                    name: None,
+                    avatar_url,
+                    state,
+                });
+            }
+        }
         for r in pr_res.base_pull.requested_reviewers.unwrap_or_default() {
             if !reviewers.iter().any(|existing| existing.login == r.login) {
                 reviewers.push(ReviewerDto {
@@ -727,13 +752,31 @@ impl GitProvider for GithubProvider {
             let pr_url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}");
             let pr: GhPullDetail = gh_json(&self.http, &token, &pr_url, None).await?;
             let url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}/comments");
-            let payload = serde_json::json!({
+            let line = pos.anchor_line().ok_or_else(|| {
+                CommandError::bad_request("github: inline comment is missing an anchor line")
+            })?;
+            let side_str = |s: CommentSide| match s {
+                CommentSide::Left => "LEFT",
+                CommentSide::Right => "RIGHT",
+            };
+            let mut payload = serde_json::json!({
                 "body": body,
                 "commit_id": pr.base_pull.head.sha,
                 "path": path,
-                "line": pos.line,
-                "side": match pos.side { CommentSide::Left => "LEFT", CommentSide::Right => "RIGHT" },
+                "line": line,
+                "side": side_str(pos.end.side),
             });
+            // Multi-line range: GitHub takes `start_line` + `start_side` per
+            // boundary, so a range can span sides (LEFT deletion → RIGHT
+            // addition). Only sent when the start actually differs from the end.
+            if let Some(start) = pos.start {
+                let start_line = start.line();
+                let differs = start.side != pos.end.side || start_line != Some(line);
+                if let (Some(sl), true) = (start_line, differs) {
+                    payload["start_line"] = sl.into();
+                    payload["start_side"] = side_str(start.side).into();
+                }
+            }
             let res = self
                 .http
                 .post(&url)
@@ -751,9 +794,18 @@ impl GitProvider for GithubProvider {
             let raw: GhReviewComment = res.json().await?;
             return Ok(CommentDto {
                 id: raw.id.to_string(),
-                author: raw.user.as_ref().map(|u| u.login.clone()).unwrap_or_default(),
+                author: raw
+                    .user
+                    .as_ref()
+                    .map(|u| u.login.clone())
+                    .unwrap_or_default(),
+                author_avatar_url: raw.user.as_ref().and_then(|u| u.avatar_url.clone()),
                 body: raw.body,
                 path: raw.path,
+                side: None,
+                line: None,
+                start_line: None,
+                start_side: None,
                 created_at: raw.created_at,
             });
         }
@@ -778,9 +830,18 @@ impl GitProvider for GithubProvider {
         let raw: GhIssueComment = res.json().await?;
         Ok(CommentDto {
             id: raw.id.to_string(),
-            author: raw.user.as_ref().map(|u| u.login.clone()).unwrap_or_default(),
+            author: raw
+                .user
+                .as_ref()
+                .map(|u| u.login.clone())
+                .unwrap_or_default(),
+            author_avatar_url: raw.user.as_ref().and_then(|u| u.avatar_url.clone()),
             body: raw.body,
             path: None,
+            side: None,
+            line: None,
+            start_line: None,
+            start_side: None,
             created_at: raw.created_at,
         })
     }
@@ -828,7 +889,11 @@ impl GitProvider for GithubProvider {
             "{base}/repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs?per_page={per_page}"
         );
         let res: GhWorkflowRunsResponse = gh_json(&self.http, &token, &url, None).await?;
-        Ok(res.workflow_runs.into_iter().map(map_workflow_run).collect())
+        Ok(res
+            .workflow_runs
+            .into_iter()
+            .map(map_workflow_run)
+            .collect())
     }
 
     async fn trigger_workflow(
@@ -842,8 +907,7 @@ impl GitProvider for GithubProvider {
         let (owner, repo) = parse_owner_repo(remote_url)
             .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
         let base = self.api_base();
-        let url =
-            format!("{base}/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches");
+        let url = format!("{base}/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches");
 
         // GitHub's dispatch endpoint takes only string-valued inputs, so
         // stringify each JSON value (numbers/bools become their text form).
@@ -942,12 +1006,11 @@ impl GitProvider for GithubProvider {
 
         // Latest build gives us a deploy timestamp + finer status; best-effort.
         let build_url = format!("{base}/repos/{owner}/{repo}/pages/builds/latest");
-        let last_deployed_at = match gh_json::<GhPagesBuild>(&self.http, &token, &build_url, None)
-            .await
-        {
-            Ok(b) => b.updated_at.or(b.created_at),
-            Err(_) => None,
-        };
+        let last_deployed_at =
+            match gh_json::<GhPagesBuild>(&self.http, &token, &build_url, None).await {
+                Ok(b) => b.updated_at.or(b.created_at),
+                Err(_) => None,
+            };
 
         Ok(Some(crate::providers::api::PagesStatusDto {
             url: pages.html_url,
@@ -975,12 +1038,21 @@ impl GitProvider for GithubProvider {
         };
 
         let mut body = serde_json::Map::new();
-        body.insert("merge_method".into(), serde_json::Value::String(merge_method.into()));
+        body.insert(
+            "merge_method".into(),
+            serde_json::Value::String(merge_method.into()),
+        );
         if let Some(title) = input.commit_title.as_ref().filter(|s| !s.is_empty()) {
-            body.insert("commit_title".into(), serde_json::Value::String(title.clone()));
+            body.insert(
+                "commit_title".into(),
+                serde_json::Value::String(title.clone()),
+            );
         }
         if let Some(msg) = input.commit_message.as_ref().filter(|s| !s.is_empty()) {
-            body.insert("commit_message".into(), serde_json::Value::String(msg.clone()));
+            body.insert(
+                "commit_message".into(),
+                serde_json::Value::String(msg.clone()),
+            );
         }
 
         let url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}/merge");
@@ -1012,9 +1084,9 @@ impl GitProvider for GithubProvider {
         }
         let result: GhMergeResult = res.json().await?;
         if !result.merged {
-            return Err(CommandError::bad_request(
-                result.message.unwrap_or_else(|| "GitHub returned merged=false without a message".into()),
-            ));
+            return Err(CommandError::bad_request(result.message.unwrap_or_else(
+                || "GitHub returned merged=false without a message".into(),
+            )));
         }
 
         let mut source_branch_deleted = false;
@@ -1425,6 +1497,7 @@ struct GhPagesBuild {
 mod tests {
     use super::*;
     use crate::auth::token::install_keyring_mock;
+    use crate::providers::api::CommentAnchor;
     use wiremock::matchers::{method, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -1511,9 +1584,12 @@ mod tests {
                 "looks good!",
                 Some("src/lib.rs"),
                 Some(CommentPosition {
-                    side: CommentSide::Right,
-                    line: 2,
-                    start_line: None,
+                    start: None,
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    },
                 }),
             )
             .await
@@ -1523,6 +1599,105 @@ mod tests {
         assert_eq!(comment.author, "alice");
         assert_eq!(comment.body, "looks good!");
         assert_eq!(comment.path.as_deref(), Some("src/lib.rs"));
+    }
+
+    #[tokio::test]
+    async fn github_post_pr_comment_range_sends_start_line() {
+        use wiremock::matchers::body_string_contains;
+
+        let server = MockServer::start().await;
+        let pr_body = include_str!("../../tests/fixtures/github/pr_for_diff.json");
+        let created = include_str!("../../tests/fixtures/github/pr_comment_created.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(pr_body))
+            .mount(&server)
+            .await;
+        // A range comment must send `start_line` + `start_side` alongside the
+        // anchor `line` — the POST is only matched when it does.
+        Mock::given(method("POST"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+/comments$"))
+            .and(body_string_contains("\"start_line\":2"))
+            .and(body_string_contains("\"start_side\":\"RIGHT\""))
+            .and(body_string_contains("\"line\":4"))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://github.com/acme/widget.git",
+                7,
+                "spans three lines",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    start: Some(CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    }),
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(4),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "998877");
+    }
+
+    #[tokio::test]
+    async fn github_post_pr_comment_cross_side_range_keeps_each_boundary_side() {
+        use wiremock::matchers::body_string_contains;
+
+        let server = MockServer::start().await;
+        let pr_body = include_str!("../../tests/fixtures/github/pr_for_diff.json");
+        let created = include_str!("../../tests/fixtures/github/pr_comment_created.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(pr_body))
+            .mount(&server)
+            .await;
+        // A range that runs from a deleted (LEFT) line to an added (RIGHT) one
+        // must keep each boundary's own side: start_side LEFT, side RIGHT.
+        Mock::given(method("POST"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+/comments$"))
+            .and(body_string_contains("\"side\":\"RIGHT\""))
+            .and(body_string_contains("\"start_side\":\"LEFT\""))
+            .and(body_string_contains("\"start_line\":1"))
+            .and(body_string_contains("\"line\":2"))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://github.com/acme/widget.git",
+                7,
+                "from deletion to addition",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    start: Some(CommentAnchor {
+                        side: CommentSide::Left,
+                        old_line_no: Some(1),
+                        new_line_no: None,
+                    }),
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "998877");
     }
 
     #[tokio::test]
@@ -1686,7 +1861,8 @@ on:
     async fn github_get_pages_status_200_maps_fields() {
         let server = MockServer::start().await;
         let pages_body = r#"{"html_url":"https://acme.github.io/widget/","status":"built","cname":"docs.acme.dev"}"#;
-        let build_body = r#"{"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-02T00:00:00Z"}"#;
+        let build_body =
+            r#"{"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-02T00:00:00Z"}"#;
         Mock::given(method("GET"))
             .and(path_regex(r".*/repos/[^/]+/[^/]+/pages$"))
             .respond_with(ResponseTemplate::new(200).set_body_string(pages_body))
@@ -1795,11 +1971,9 @@ on:
         let server = MockServer::start().await;
         Mock::given(method("PUT"))
             .and(path("/repos/acme/widget/pulls/2/merge"))
-            .respond_with(
-                ResponseTemplate::new(405).set_body_json(serde_json::json!({
-                    "message": "Pull Request is not mergeable",
-                })),
-            )
+            .respond_with(ResponseTemplate::new(405).set_body_json(serde_json::json!({
+                "message": "Pull Request is not mergeable",
+            })))
             .mount(&server)
             .await;
 

@@ -15,7 +15,9 @@ import Sidebar from "@/components/organisms/layout/Sidebar";
 import OnboardingWizard from "@/components/organisms/onboarding/OnboardingWizard";
 import FindAcrossReposDialog from "@/components/organisms/repos/FindAcrossReposDialog";
 import Titlebar from "@/components/organisms/titlebars/Titlebar";
+import { useActivityCommitsSync } from "@/hooks/useActivityCommits";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+import { useCustomFonts } from "@/hooks/useCustomFonts";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
 import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
@@ -104,6 +106,11 @@ const ContentScroll = styled(Box)({
 
 export function AppLayout() {
   useAppBootstrap();
+  // Single app-wide driver for the global time-range commit stream. Every page
+  // reads it via useActivityCommits / useRangeActivity — never mount a second
+  // driver (it would double each backend scan on range change).
+  useActivityCommitsSync();
+  useCustomFonts();
   useThemeAttribute();
   useFaviconSync();
   useLocaleSync();

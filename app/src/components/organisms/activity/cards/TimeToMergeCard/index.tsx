@@ -9,6 +9,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
   buckets: MergeBucket[];
+  windowDays?: number;
   loading?: boolean;
 }
 
@@ -60,13 +61,13 @@ const Count = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
 
-function TimeToMergeCard({ buckets, loading }: Props) {
+function TimeToMergeCard({ buckets, windowDays = 14, loading }: Props) {
   const { t } = useTranslation();
   const peak = Math.max(1, ...buckets.map((b) => b.count));
   return (
     <GeneralCard
       title={t("activity.cards.time_to_merge_title")}
-      sub={t("activity.cards.time_to_merge_sub")}
+      sub={t("activity.cards.time_to_merge_sub", { days: windowDays })}
       loading={loading}
       skeleton="rows"
       testId={TEST_IDS.activity.cards.timeToMerge}

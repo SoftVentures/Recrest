@@ -36,6 +36,30 @@ export async function pickFile(defaultPath?: string): Promise<string | null> {
   }
 }
 
+/** Native single-font picker — limits the dialog to the formats the custom
+ *  font upload accepts. Mirrors `ALLOWED_FONT_EXTENSIONS` in
+ *  `commands/fonts.rs`. */
+export async function pickFontFile(defaultPath?: string): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const picked = await open({
+      directory: false,
+      multiple: false,
+      defaultPath: defaultPath || undefined,
+      filters: [
+        {
+          name: "Font",
+          extensions: ["ttf", "otf", "woff2", "woff"],
+        },
+      ],
+    });
+    return typeof picked === "string" ? picked : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Native single-image picker — limits the dialog to the formats the repo
  *  avatar upload accepts. Mirrors `UPLOAD_EXTENSIONS` in
  *  `commands/repos.rs::set_repo_logo`. */

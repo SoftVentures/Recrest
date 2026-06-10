@@ -18,6 +18,7 @@ import {
   PrimaryBtn,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
@@ -48,12 +49,12 @@ export function LocalPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       const repo = await dispatch(addRepo({ path: trimmed })).unwrap();
-      toast.success(`Added ${repo.name}`);
+      toast.success(t("add_modal.toast_local_added", { ns: I18nNamespace.REPOS, name: repo.name }));
       setPath("");
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Could not add repository: ${msg}`);
+      toast.error(t("add_modal.toast_local_failed", { ns: I18nNamespace.REPOS, message: msg }));
     } finally {
       setBusy(false);
     }
@@ -70,7 +71,7 @@ export function LocalPanel({ onClose }: { onClose: () => void }) {
               type="text"
               value={path}
               onChange={(e) => setPath(e.target.value)}
-              placeholder="/Users/you/Code/my-repo"
+              placeholder={t("add_modal.local_path_placeholder", { ns: I18nNamespace.REPOS })}
               autoFocus
               data-testid={TEST_IDS.addRepoDialog.path}
             />

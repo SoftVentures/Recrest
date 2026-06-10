@@ -9,6 +9,7 @@ import { Box } from "@mui/material";
 import {
   AppRoute,
   PrState,
+  type PullRequest,
   TauriCommand,
   type TauriCommandName,
   routeToRepo,
@@ -35,8 +36,8 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -83,6 +84,11 @@ import {
 } from "@/pages/app/Repos/components/DetailPane/DetailPane.styles";
 import { useAppSelector } from "@/store/hooks";
 
+// Stable empty-array reference so the `prs` selector keeps the same value when
+// a repo has no cached PRs — an inline `[]` makes react-redux warn about an
+// unstable selector result.
+const NO_PRS: readonly PullRequest[] = [];
+
 export interface DetailPaneProps {
   repo: EnrichedRepo;
   onClose?: () => void;
@@ -90,14 +96,18 @@ export interface DetailPaneProps {
 
 export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const ide = useDefaultIde();
   const ideLabel = ide.name
     ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
     : tAria("actions.open_in_ide", { ns: I18nNamespace.COMMON });
   const navigate = useNavigate();
-  const prs = useAppSelector((s) => s.prs.items[repo.id] ?? []);
-  const { commits } = useRecentCommits({ repoId: repo.id, days: 30, limit: 4 });
-  const repoCommits = commits;
+  const prs = useAppSelector((s) => s.prs.items[repo.id] ?? NO_PRS);
+  const { commits: rangeCommits } = useActivityCommits();
+  const repoCommits = useMemo(
+    () => rangeCommits.filter((c) => c.repoId === repo.id).slice(0, 4),
+    [rangeCommits, repo.id],
+  );
   const openPrs = useMemo(() => prs.filter((p) => p.state === PrState.OPEN), [prs]);
   const brand = brandFromUrl(repo.remoteUrl);
 
@@ -106,7 +116,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     try {
       await invoke(cmd, { repoId: repo.id });
     } catch {
-      toast.error(`${label} failed`);
+      toast.error(t("row_actions.toast_command_failed", { label }));
     }
   };
 
@@ -144,15 +154,15 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             size={IconButtonSize.MD}
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_terminal")}
-            tooltip="Open in Terminal"
-            onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
+            tooltip={t("detail_pane.open_in_terminal")}
+            onClick={() => void run(TauriCommand.OPEN_TERMINAL, t("detail_pane.open_in_terminal"))}
             icon={<TerminalLucide size={13} />}
           />
           <GeneralIconButton
             size={IconButtonSize.MD}
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_explorer")}
-            tooltip="Open in Explorer"
+            tooltip={t("detail_pane.open_in_explorer")}
             onClick={() => void revealPathInSystem(repo.path)}
             icon={<Folder size={13} />}
           />
@@ -161,7 +171,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
               size={IconButtonSize.MD}
               variant={IconButtonVariant.OUTLINE}
               aria-label={tAria("repo.open_remote")}
-              tooltip="Open on host"
+              tooltip={t("detail_pane.open_on_host")}
               onClick={() => void openExternal(repo.remoteUrl!)}
               icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
             />
@@ -184,27 +194,27 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
         </BranchTop>
         <BranchQuick>
           <GhostBtn type="button">
-            <ArrowDown size={11} /> Pull
+            <ArrowDown size={11} /> {t("detail_pane.pull")}
           </GhostBtn>
           <GhostBtn type="button">
-            <RefreshCw size={11} /> Fetch
+            <RefreshCw size={11} /> {t("detail_pane.fetch")}
           </GhostBtn>
           <GhostBtn type="button">
-            <Plus size={11} /> Branch
+            <Plus size={11} /> {t("detail_pane.branch")}
           </GhostBtn>
         </BranchQuick>
       </BranchCard>
 
       <Section>
         <SectionHead>
-          <SectionTitle>Recent commits</SectionTitle>
+          <SectionTitle>{t("detail_pane.recent_commits")}</SectionTitle>
           <SectionAction type="button" onClick={() => navigate(AppRoute.ACTIVITY)}>
-            Log →
+            {t("detail_pane.view_log")}
           </SectionAction>
         </SectionHead>
         <SectionBody>
           {repoCommits.length === 0 ? (
-            <SectionEmpty>No recent commits.</SectionEmpty>
+            <SectionEmpty>{t("detail_pane.no_recent_commits")}</SectionEmpty>
           ) : (
             <CommitsList>
               {repoCommits.map((c) => (
@@ -229,14 +239,14 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
 
       <Section>
         <SectionHead>
-          <SectionTitle>Open merge requests</SectionTitle>
+          <SectionTitle>{t("detail_pane.open_merge_requests")}</SectionTitle>
           <Count component="span" variant="caption">
             {openPrs.length}
           </Count>
         </SectionHead>
         <SectionBody>
           {openPrs.length === 0 ? (
-            <SectionEmpty>No open requests.</SectionEmpty>
+            <SectionEmpty>{t("detail_pane.no_open_requests")}</SectionEmpty>
           ) : (
             <PrList>
               {openPrs.slice(0, 4).map((pr) => (
@@ -254,7 +264,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
 
       <Footer>
         <FullView type="button" onClick={() => navigate(routeToRepo(repo.id))}>
-          <Maximize2 size={13} /> Open full view
+          <Maximize2 size={13} /> {t("detail_pane.open_full_view")}
         </FullView>
       </Footer>
     </Pane>

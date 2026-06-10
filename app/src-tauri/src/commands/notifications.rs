@@ -85,12 +85,12 @@ pub async fn notify(
     #[cfg(target_os = "linux")]
     {
         let _ = &app; // plugin handle unused on this branch
-        // On Linux, missing or broken notification daemons (sandbox containers,
-        // headless sessions, dunst not running, no D-Bus) cause `show()` to
-        // return Err. Surfacing that as a `CommandError::internal` would pop
-        // an error toast inside the app for trying to receive a notification
-        // — bad UX. Match macOS/Windows behaviour where missing toasts are
-        // silent: log + Ok(()).
+                      // On Linux, missing or broken notification daemons (sandbox containers,
+                      // headless sessions, dunst not running, no D-Bus) cause `show()` to
+                      // return Err. Surfacing that as a `CommandError::internal` would pop
+                      // an error toast inside the app for trying to receive a notification
+                      // — bad UX. Match macOS/Windows behaviour where missing toasts are
+                      // silent: log + Ok(()).
         if let Err(err) = notify_rust::Notification::new()
             .appname("Recrest")
             .icon("recrest")

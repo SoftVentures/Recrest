@@ -7,6 +7,8 @@ import type { ChangedFile } from "@recrest/shared";
 
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 export interface ChangedFilesListProps {
   files: ChangedFile[];
@@ -24,7 +26,8 @@ const Root = styled(Box, {
   flexDirection: "column",
   maxHeight: maxHeight === "auto" ? undefined : maxHeight,
   overflowY: maxHeight === "auto" ? "visible" : "auto",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 12,
 }));
 
@@ -52,15 +55,15 @@ const KindBadge = styled("span", {
   const infoColor = theme.palette.text.information ?? theme.palette.text.secondary;
   const palette: Record<string, { color: string; bg: string }> = {
     added: {
-      color: theme.palette.success.dark,
+      color: toneText(theme, StatusTone.SUCCESS),
       bg: `color-mix(in srgb, ${theme.palette.success.main} 14%, transparent)`,
     },
     modified: {
-      color: theme.palette.primary.dark,
+      color: toneText(theme, StatusTone.PRIMARY),
       bg: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
     },
     deleted: {
-      color: theme.palette.error.dark,
+      color: toneText(theme, StatusTone.ERROR),
       bg: `color-mix(in srgb, ${theme.palette.error.main} 14%, transparent)`,
     },
     renamed: { color: infoColor, bg: theme.palette.surface.interface.backElevation },

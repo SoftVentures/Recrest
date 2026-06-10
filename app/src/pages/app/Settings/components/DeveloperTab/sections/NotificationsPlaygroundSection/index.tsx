@@ -1,6 +1,9 @@
+import { useTranslation } from "react-i18next";
+
 import { toast } from "sonner";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { NOTIF_KEY_PREFIX } from "@/lib/constants/storage.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { BURST_REPO_ID, makeBurstPr, makeBurstRepo } from "@/lib/dev/seed/notificationBurst";
@@ -11,18 +14,19 @@ import { upsertRepo } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 
 export function NotificationsPlaygroundSection() {
+  const { t } = useTranslation(I18nNamespace.SETTINGS);
   const dispatch = useAppDispatch();
 
   const burst = () => {
     dispatch(upsertRepo(makeBurstRepo()));
     const prs = Array.from({ length: 7 }, (_, i) => makeBurstPr(i + 1));
     dispatch(setPrs({ repoId: BURST_REPO_ID, prs }));
-    toast.info("Notification burst dispatched");
+    toast.info(t("developer.notifications.burst_dispatched"));
   };
 
   const clearBurst = () => {
     dispatch(setPrs({ repoId: BURST_REPO_ID, prs: [] }));
-    toast.success("Burst cleared");
+    toast.success(t("developer.notifications.clear_burst_done"));
   };
 
   const clearBaseline = () => {
@@ -31,20 +35,20 @@ export function NotificationsPlaygroundSection() {
         const key = localStorage.key(i);
         if (key && key.startsWith(NOTIF_KEY_PREFIX)) localStorage.removeItem(key);
       }
-      toast.success("Notification baseline cleared");
+      toast.success(t("developer.notifications.baseline_cleared"));
     } catch {
-      toast.error("Could not access localStorage");
+      toast.error(t("developer.notifications.localstorage_error"));
     }
   };
 
   return (
     <SettingsSection
-      title="Notifications playground"
+      title={t("developer.sections.notifications")}
       testId={TEST_IDS.settings.developer.sections.notifications}
     >
       <SettingsRow
-        label="Send burst"
-        sub="Inject 7 fake PRs from a dev-burst repo to test coalescing behavior."
+        label={t("developer.notifications.send_burst_label")}
+        sub={t("developer.notifications.send_burst_sub")}
       >
         <ButtonRow>
           <GeneralButton
@@ -53,7 +57,7 @@ export function NotificationsPlaygroundSection() {
             data-testid={TEST_IDS.settings.developer.notif.sendBurst}
             onClick={burst}
           >
-            Send burst
+            {t("developer.notifications.send_burst")}
           </GeneralButton>
           <GeneralButton
             size="sm"
@@ -61,18 +65,18 @@ export function NotificationsPlaygroundSection() {
             data-testid={TEST_IDS.settings.developer.notif.clearBurst}
             onClick={clearBurst}
           >
-            Clear burst
+            {t("developer.notifications.clear_burst")}
           </GeneralButton>
         </ButtonRow>
       </SettingsRow>
-      <SettingsRow label="Clear notification baseline">
+      <SettingsRow label={t("developer.notifications.clear_baseline")}>
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.notif.clearBaseline}
           onClick={clearBaseline}
         >
-          Clear baseline
+          {t("developer.notifications.clear_baseline_button")}
         </GeneralButton>
       </SettingsRow>
     </SettingsSection>

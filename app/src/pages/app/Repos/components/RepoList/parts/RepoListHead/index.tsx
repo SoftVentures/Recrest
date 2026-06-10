@@ -108,12 +108,16 @@ export function RepoListHead({ sort = "default", onSort }: RepoListHeadProps) {
     );
   };
 
+  const nameCol = renderSortable("name", t("repos.col.repository"));
+  const statusCol = renderSortable("status", t("repos.col.status"));
+  const activityCol = renderSortable("lastModified", t("repos.col.activity"));
+
   return (
     <TableHead>
-      {renderSortable("name", t("repos.col.repository"))}
+      {nameCol}
       <HeadCell>{t("repos.col.branch")}</HeadCell>
-      {renderSortable("status", t("repos.col.status"))}
-      {renderSortable("lastModified", t("repos.col.activity"))}
+      {statusCol}
+      {activityCol}
       <ActionsHeadCell>{t("repos.col.actions")}</ActionsHeadCell>
     </TableHead>
   );

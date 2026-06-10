@@ -58,12 +58,13 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
       return seed.settings;
     }
 
-    case "save_window_state":
+    // Custom fonts are Tauri-only (filesystem-backed); the upload button is
+    // disabled outside Tauri, so the list is always empty here.
+    case "list_custom_fonts":
+      return [];
+    case "upload_font":
+    case "delete_custom_font":
       return undefined;
-    case "load_window_state":
-      return null;
-    case "validate_window_position":
-      return true;
 
     case "get_platform_info": {
       const os = detectPlatform();
@@ -76,8 +77,19 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
       };
     }
 
+    // OS probes degrade to the renderer's stub maps on an empty result, so
+    // returning [] outside Tauri is the correct no-detection signal.
+    case "detect_terminals":
+    case "detect_shells":
+      return [];
+
     case "check_git":
       return { installed: true, version: "2.44.0" };
+
+    // ThemeWrapper queries the OS truth on mount; null means "no override", so
+    // the browser keeps trusting matchMedia (no real OS bridge under dev:web).
+    case "get_system_dark_mode":
+      return null;
 
     case "update_tray_badge":
       return undefined;

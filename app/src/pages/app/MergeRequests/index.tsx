@@ -295,14 +295,14 @@ export default function MergeRequestsPage() {
         {allRows.length === 0 ? (
           <EmptyState
             mascot="snoozing"
-            title="No open merge requests"
-            description="Connected providers haven't returned any open PRs yet."
+            title={t("empty_states.none_title", { ns: I18nNamespace.PRS })}
+            description={t("empty_states.none_description", { ns: I18nNamespace.PRS })}
           />
         ) : visibleRows.length === 0 ? (
           <EmptyState
             mascot="shrugging"
-            title="No merge requests match"
-            description="Try clearing the search or relaxing your filters."
+            title={t("empty_states.no_match_title", { ns: I18nNamespace.PRS })}
+            description={t("empty_states.no_match_description", { ns: I18nNamespace.PRS })}
           />
         ) : (
           <Card>

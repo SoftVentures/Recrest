@@ -6,6 +6,7 @@ import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 import { type FontSizeId, TauriCommand } from "@recrest/shared";
 
 import { safeInvoke } from "@/lib/tauri";
+import { codeLigatureFeatureSettings, fontCssFamily } from "@/lib/utils/appearance.utils";
 import { syncSystemTheme } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getTheme } from "@/theme";
@@ -53,6 +54,8 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   const primaryColor = useAppSelector((s) => s.settings.primaryColor);
   const dyslexiaFont = useAppSelector((s) => s.settings.dyslexiaFont);
   const font = useAppSelector((s) => s.settings.font);
+  const codeFont = useAppSelector((s) => s.settings.codeFont);
+  const codeLigatures = useAppSelector((s) => s.settings.codeLigatures);
   const fontSize = useAppSelector((s) => s.settings.fontSize);
   const highContrast = useAppSelector((s) => s.settings.highContrast);
   const reducedMotion = useAppSelector((s) => s.settings.reducedMotion);
@@ -109,7 +112,14 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     const root = document.documentElement;
     root.style.setProperty("--app-font-family", theme.typography.fontFamily ?? "");
     root.style.setProperty("--app-font-size", `${theme.typography.fontSize}px`);
+    // Code-surface font (snippets, diffs, …) — consumed via `MONO_STACK` /
+    // `monoFont` so every monospace component follows the user's code font.
+    root.style.setProperty("--recrest-font-mono", fontCssFamily(codeFont, "mono"));
+    // Code-ligature features (consumed via `monoFont` / `CODE_LIGATURES`).
+    root.style.setProperty("--recrest-code-ligatures", codeLigatureFeatureSettings(codeLigatures));
     root.dataset.font = font;
+    root.dataset.codeFont = codeFont;
+    root.dataset.codeLigatures = codeLigatures;
     root.dataset.fontSize = fontSize;
     // Accessibility — `globals.css` keys CSS rules off these attributes so
     // every component (MUI, native, third-party) picks them up at once.
@@ -144,6 +154,8 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     theme.typography.fontFamily,
     theme.typography.fontSize,
     font,
+    codeFont,
+    codeLigatures,
     fontSize,
     highContrast,
     reducedMotion,

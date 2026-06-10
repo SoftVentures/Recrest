@@ -20,6 +20,7 @@ import {
 import GeneralButtonGroup, {
   GeneralButtonGroupItem,
 } from "@/components/atoms/buttons/GeneralButtonGroup";
+import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import type { RepoSortKey } from "@/lib/constants/sortKeys.constants";
@@ -35,6 +36,7 @@ import {
   viewFromBackend,
   viewToBackend,
 } from "@/lib/utils/repoSort.utils";
+import { RepoActivitySeriesProvider } from "@/pages/app/Repos/RepoActivityContext";
 import {
   FilterBadge,
   FilterButton,
@@ -58,21 +60,23 @@ export interface ReposPageProps {
 
 interface SortOption {
   key: RepoSortKey;
-  label: string;
+  labelKey: string;
 }
 
 const SORT_OPTIONS: SortOption[] = [
-  { key: "default", label: "Default (grouped)" },
-  { key: "name:asc", label: "Name (A → Z)" },
-  { key: "name:desc", label: "Name (Z → A)" },
-  { key: "lastModified:desc", label: "Recently modified" },
-  { key: "status:asc", label: "Status" },
+  { key: "default", labelKey: "toolbar.sort_default" },
+  { key: "name:asc", labelKey: "toolbar.sort_name_asc" },
+  { key: "name:desc", labelKey: "toolbar.sort_name_desc" },
+  { key: "lastModified:desc", labelKey: "toolbar.sort_recently_modified" },
+  { key: "status:asc", labelKey: "toolbar.sort_status" },
 ];
 
 export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const { t: tCommon } = useTranslation(I18nNamespace.COMMON);
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const enriched = useEnrichedRepos();
+  const { byRepo: activityByRepo } = useRangeActivity();
   const dispatch = useAppDispatch();
   const backend = useAppSelector((s) => s.settings.backend);
   const { repoId } = useParams<{ repoId?: string }>();
@@ -177,11 +181,11 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
           >
             <GeneralButtonGroupItem value="list" data-testid={TEST_IDS.repos.viewToggle.grouped}>
               <ListIcon size={14} aria-hidden style={{ marginRight: 6 }} />
-              Default
+              {t("toolbar.view_default")}
             </GeneralButtonGroupItem>
             <GeneralButtonGroupItem value="card" data-testid={TEST_IDS.repos.viewToggle.card}>
               <LayoutGrid size={14} aria-hidden style={{ marginRight: 6 }} />
-              Cards
+              {t("toolbar.view_cards")}
             </GeneralButtonGroupItem>
           </GeneralButtonGroup>
 
@@ -192,7 +196,7 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             data-active={activeFilterCount > 0 ? "true" : undefined}
           >
             <Filter size={13} />
-            <Box component="span">Filter</Box>
+            <Box component="span">{t("toolbar.filter")}</Box>
             {activeFilterCount > 0 && (
               <FilterBadge component="span" variant="caption">
                 {activeFilterCount}
@@ -208,28 +212,28 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
-            <SectionLabel>Status</SectionLabel>
+            <SectionLabel>{t("toolbar.status")}</SectionLabel>
             <ChipItem
               icon={<CircleDashed size={13} />}
-              label="Dirty"
+              label={t("toolbar.filter_dirty")}
               active={statusChips.has("dirty")}
               onSelect={() => toggleChip("dirty")}
             />
             <ChipItem
               icon={<CheckCircle2 size={13} />}
-              label="Clean"
+              label={t("toolbar.filter_clean")}
               active={statusChips.has("clean")}
               onSelect={() => toggleChip("clean")}
             />
             <ChipItem
               icon={<ArrowUpFromLine size={13} />}
-              label="Ahead"
+              label={t("toolbar.filter_ahead")}
               active={statusChips.has("ahead")}
               onSelect={() => toggleChip("ahead")}
             />
             <ChipItem
               icon={<ArrowDownFromLine size={13} />}
-              label="Behind"
+              label={t("toolbar.filter_behind")}
               active={statusChips.has("behind")}
               onSelect={() => toggleChip("behind")}
             />
@@ -256,11 +260,11 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
               </>
             )}
             <MenuSeparator />
-            <SectionLabel>Sort by</SectionLabel>
+            <SectionLabel>{t("toolbar.sort_by")}</SectionLabel>
             {SORT_OPTIONS.map((opt) => (
               <ChipItem
                 key={opt.key}
-                label={opt.label}
+                label={t(opt.labelKey)}
                 active={sort === opt.key}
                 onSelect={() => handleSort(opt.key)}
                 indicator="radio"
@@ -269,21 +273,19 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
           </FilterMenu>
         </ToolbarRow>
         <ListScroll>
-          <RepoList
-            repos={repos}
-            grouped={grouped}
-            viewMode={view}
-            sort={sort}
-            onSort={handleSort}
-            selectedRepoId={selectedId}
-            onSelect={(r) => setSelectedId((cur) => (cur === r.id ? null : r.id))}
-            emptyTitle={dirtyOnly ? "No dirty repositories" : "No repositories"}
-            emptyDescription={
-              dirtyOnly
-                ? "Working copies match HEAD — there's nothing to commit."
-                : "Add a repo from the header to get started."
-            }
-          />
+          <RepoActivitySeriesProvider value={activityByRepo}>
+            <RepoList
+              repos={repos}
+              grouped={grouped}
+              viewMode={view}
+              sort={sort}
+              onSort={handleSort}
+              selectedRepoId={selectedId}
+              onSelect={(r) => setSelectedId((cur) => (cur === r.id ? null : r.id))}
+              emptyTitle={dirtyOnly ? t("list.empty_dirty_title") : t("list.empty_title")}
+              emptyDescription={dirtyOnly ? t("list.empty_dirty_desc") : t("list.empty_desc")}
+            />
+          </RepoActivitySeriesProvider>
         </ListScroll>
       </MainColumn>
       {selected && <DetailPane repo={selected} onClose={() => setSelectedId(null)} />}

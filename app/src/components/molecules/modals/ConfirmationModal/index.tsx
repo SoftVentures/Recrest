@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -17,12 +19,13 @@ function ConfirmationModal({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   destructive,
   onCancel,
   onConfirm,
 }: ConfirmationModalProps) {
+  const { t } = useTranslation();
   return (
     <GeneralModal
       open={open}
@@ -39,14 +42,14 @@ function ConfirmationModal({
             onClick={onCancel}
             data-testid={TEST_IDS.confirmDialog.cancel}
           >
-            {cancelLabel}
+            {cancelLabel ?? t("actions.cancel")}
           </GeneralButton>
           <GeneralButton
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
             data-testid={TEST_IDS.confirmDialog.confirm}
           >
-            {confirmLabel}
+            {confirmLabel ?? t("actions.confirm")}
           </GeneralButton>
         </>
       }

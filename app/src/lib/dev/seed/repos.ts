@@ -490,10 +490,26 @@ const COMMIT_SUMMARIES = [
 
 const CO_AUTHORS = ["demo-user", "maren", "tomi", "lea"] as const;
 
-// Spread commits across the 14-day window AND across varied weekday hours so
-// the heatmap/author-clock cards light up in multiple cells. Twelve commits
-// per repo × 8 repos ≈ 96 data points, enough for visible texture.
+// Spread commits across a ~365-day window AND across varied weekday hours so
+// the heatmap/author-clock cards light up in multiple cells and the Activity
+// page's 90d / 1y / All range presets render real texture (streaks, gaps,
+// trend) instead of a near-empty chart.
+//
+// Layout, by design:
+//   • days 0–13   — the 12 dense recent slots (unchanged). The dashboard's
+//                   14-day views depend on these exact slots, so do NOT touch.
+//   • days 30–43  — a 14-day consecutive streak run (one slot per day) so the
+//                   "Longest streak" insight has something real to report.
+//   • days 190–212 — a deliberate ~3-week gap (no slots) so "Longest gap" is
+//                    non-trivial.
+//   • elsewhere   — 1–3 slots/week across days 15–365 with varied hours
+//                   (8–22) and weekdays for organic-looking history.
+//
+// NOTE: this year-long extension is dev:web-only on purpose. The E2E seed at
+// `tests/src/helpers/seed/` is intentionally left at its shorter span because
+// Playwright assertions pin commit counts — do not mirror this there.
 const COMMIT_SCHEDULE: ReadonlyArray<{ days: number; hour: number; minute: number }> = [
+  // ── Dense recent slots (days 0–13) — keep in lockstep with the dashboard ──
   { days: 0, hour: 10, minute: 12 },
   { days: 1, hour: 14, minute: 38 },
   { days: 2, hour: 9, minute: 5 },
@@ -506,6 +522,58 @@ const COMMIT_SCHEDULE: ReadonlyArray<{ days: number; hour: number; minute: numbe
   { days: 10, hour: 15, minute: 22 },
   { days: 11, hour: 12, minute: 4 },
   { days: 13, hour: 18, minute: 41 },
+  // ── Sparse run, days 15–29 (1–2/week) ──
+  { days: 16, hour: 9, minute: 20 },
+  { days: 19, hour: 14, minute: 10 },
+  { days: 23, hour: 17, minute: 45 },
+  { days: 27, hour: 11, minute: 33 },
+  // ── 14-day consecutive streak, days 30–43 ──
+  { days: 30, hour: 8, minute: 15 },
+  { days: 31, hour: 9, minute: 40 },
+  { days: 32, hour: 13, minute: 5 },
+  { days: 33, hour: 18, minute: 22 },
+  { days: 34, hour: 10, minute: 50 },
+  { days: 35, hour: 16, minute: 12 },
+  { days: 36, hour: 21, minute: 8 },
+  { days: 37, hour: 12, minute: 33 },
+  { days: 38, hour: 14, minute: 55 },
+  { days: 39, hour: 9, minute: 18 },
+  { days: 40, hour: 19, minute: 41 },
+  { days: 41, hour: 11, minute: 27 },
+  { days: 42, hour: 15, minute: 3 },
+  { days: 43, hour: 17, minute: 36 },
+  // ── 1–3/week through the mid-history, days 50–189 ──
+  { days: 52, hour: 10, minute: 5 },
+  { days: 55, hour: 22, minute: 14 },
+  { days: 61, hour: 13, minute: 48 },
+  { days: 68, hour: 9, minute: 30 },
+  { days: 74, hour: 16, minute: 52 },
+  { days: 80, hour: 8, minute: 9 },
+  { days: 87, hour: 20, minute: 41 },
+  { days: 95, hour: 12, minute: 17 },
+  { days: 103, hour: 18, minute: 33 },
+  { days: 110, hour: 11, minute: 4 },
+  { days: 118, hour: 15, minute: 56 },
+  { days: 126, hour: 9, minute: 22 },
+  { days: 134, hour: 14, minute: 38 },
+  { days: 145, hour: 17, minute: 11 },
+  { days: 156, hour: 10, minute: 47 },
+  { days: 168, hour: 21, minute: 19 },
+  { days: 179, hour: 13, minute: 2 },
+  { days: 188, hour: 8, minute: 50 },
+  // ── ~3-week gap on purpose: nothing between days 190 and 212 ──
+  // ── Resume, days 213–365 (1–2/week) ──
+  { days: 214, hour: 16, minute: 25 },
+  { days: 223, hour: 9, minute: 13 },
+  { days: 235, hour: 19, minute: 44 },
+  { days: 248, hour: 12, minute: 8 },
+  { days: 262, hour: 14, minute: 51 },
+  { days: 277, hour: 10, minute: 32 },
+  { days: 293, hour: 22, minute: 5 },
+  { days: 310, hour: 11, minute: 39 },
+  { days: 328, hour: 17, minute: 16 },
+  { days: 347, hour: 8, minute: 28 },
+  { days: 362, hour: 15, minute: 9 },
 ];
 
 export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEntries(

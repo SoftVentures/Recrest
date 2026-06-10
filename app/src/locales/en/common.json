@@ -15,7 +15,18 @@
     "quote": "Quote",
     "link": "Insert link",
     "link_prompt": "Link URL",
-    "unlink": "Remove link"
+    "link_placeholder": "https://example.com",
+    "link_apply": "Apply",
+    "link_cancel": "Cancel",
+    "unlink": "Remove link",
+    "toolbar_aria": "Formatting"
+  },
+  "updater": {
+    "available": "A new version is available:",
+    "current": "(current {{version}})",
+    "install": "Install & restart",
+    "download": "Download",
+    "dismiss": "Dismiss"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -26,6 +37,7 @@
     "branches": "Branches",
     "activity": "Activity",
     "settings": "Settings",
+    "about": "About Recrest",
     "groups": "Groups",
     "collapse": "Collapse",
     "expand": "Expand"
@@ -55,11 +67,6 @@
     "save": "Save",
     "delete": "Delete",
     "clear": "Clear",
-    "add_scope_label": "Add scope",
-    "add_scope": {
-      "local": "Local",
-      "global": "Global"
-    },
     "adding": "Adding…",
     "clone": "Clone",
     "cloning": "Cloning…",
@@ -68,7 +75,9 @@
     "search_group_mrs": "Merge requests",
     "search_group_nav": "Go to",
     "search_group_repos": "Repositories",
-    "clear_search": "Clear search"
+    "clear_search": "Clear search",
+    "go_back": "Back",
+    "confirm": "Confirm"
   },
   "context_menu": {
     "open_in_terminal": "Open in Terminal",
@@ -140,7 +149,7 @@
     },
     "activity": {
       "title": "Activity",
-      "meta": "last 14 days"
+      "meta": "last {{days}} days"
     },
     "settings": {
       "title": "Settings"
@@ -151,7 +160,7 @@
       "repository": "Repository",
       "branch": "Branch",
       "status": "Status",
-      "activity": "Activity · 14d",
+      "activity": "Activity",
       "actions": "Actions"
     },
     "group": {
@@ -191,18 +200,28 @@
       "merge_requests_sub": "{{count}} draft",
       "ahead_behind": "Ahead / behind",
       "ahead_behind_sub": "across all remotes",
-      "commits": "Commits · 14d",
-      "commits_sub": "peak day {{count}}",
+      "commits": "Commits · {{days}}d",
+      "commits_sub": "peak {{count}}",
       "clean_repos": "Clean repos",
       "clean_repos_sub": "{{count}} of {{total}} fully in sync"
     },
     "activity": {
-      "title": "Activity · last 14 days",
-      "meta": "{{total}} commits across {{repos}} repos"
+      "title": "Activity · last {{days}} days",
+      "meta": "{{total}} commits across {{repos}} repos",
+      "commits_one": "{{count}} commit",
+      "commits_other": "{{count}} commits",
+      "span": {
+        "day": { "now": "today", "prev": "yesterday", "ago": "{{count}} days ago" },
+        "week": { "now": "this week", "prev": "last week", "ago": "{{count}} weeks ago" },
+        "month": { "now": "this month", "prev": "last month", "ago": "{{count}} months ago" }
+      }
     },
     "attention": {
       "title": "Needs your attention",
-      "empty": "Everything is clean and in sync."
+      "empty": "Everything is clean and in sync.",
+      "changed": "{{count}} changed",
+      "behind_one": "{{count}} commit behind",
+      "behind_other": "{{count}} commits behind"
     },
     "empty": {
       "title": "No repositories yet",
@@ -236,14 +255,18 @@
       "recent_commits": "Recent commits",
       "create_branch": "Create branch",
       "pull_all": "Pull all",
-      "coming_soon": "Coming soon"
+      "coming_soon": "Coming soon",
+      "fetched_one": "Fetched {{count}} repo",
+      "fetched_other": "Fetched {{count}} repos",
+      "fetch_all_error": "Fetch all failed"
     }
   },
   "titlebar": {
     "minimize": "Minimize",
     "maximize": "Maximize",
     "restore": "Restore",
-    "close": "Close"
+    "close": "Close",
+    "app_menu": "Menu"
   },
   "mrs": {
     "filter": {
@@ -341,13 +364,26 @@
     }
   },
   "activity": {
+    "range": {
+      "preset_7d": "7 days",
+      "preset_14d": "14 days",
+      "preset_30d": "30 days",
+      "preset_90d": "90 days",
+      "preset_1y": "1 year",
+      "preset_all": "All",
+      "truncated_banner": "Range trimmed — shrink the range for complete data."
+    },
     "chart": {
-      "title": "Commits · last 14 days",
+      "title": "Commits · last {{days}} days",
       "sub": "{{total}} commits"
     },
     "filter": {
       "all_repos": "All repositories",
       "all_authors": "All authors"
+    },
+    "source": {
+      "all": "All",
+      "remote": "Remote"
     },
     "commits": "commits",
     "empty": "No commits match your filter.",
@@ -365,7 +401,7 @@
     },
     "leaders": {
       "title": "Top contributors",
-      "sub": "last 14 days · {{count}} authors",
+      "sub": "last {{days}} days · {{count}} authors",
       "empty": "No contributors in range.",
       "share": "{{pct}}% share"
     },
@@ -391,7 +427,7 @@
       "ci_legend_other": "{{count}} other"
     },
     "cards": {
-      "chart_title": "Commit activity · 14 days",
+      "chart_title": "Commit activity · {{days}} days",
       "heatmap_title": "Weekday × hour heatmap",
       "heatmap_sub": "when the team commits",
       "heatmap_none": "low",
@@ -403,25 +439,71 @@
       "churn_title": "Churn · working tree",
       "churn_sub": "added + removed lines",
       "pr_velocity_title": "MR velocity",
-      "pr_velocity_sub": "opened vs merged · 14 days",
+      "pr_velocity_sub": "opened vs merged · {{days}} days",
       "pr_velocity_opened": "Opened",
       "pr_velocity_merged": "Merged",
       "time_to_merge_title": "Time to merge",
-      "time_to_merge_sub": "last 14 days",
+      "time_to_merge_sub": "last {{days}} days",
       "review_queue_title": "Review queue",
       "review_queue_sub": "oldest open MRs",
       "review_queue_empty": "No open MRs waiting.",
-      "ci_trend_title": "CI pass rate · 14 days",
+      "ci_trend_title": "CI pass rate · {{days}} days",
       "ci_trend_sub": "daily % pass",
+      "ci_trend_sub_repos_one": "across {{count}} repo",
+      "ci_trend_sub_repos_other": "across {{count}} repos",
+      "ci_trend_sub_runs": "{{count}} runs",
+      "ci_trend_avg": "avg pass",
       "flaky_title": "Flakiest repos",
-      "flaky_sub": "failure rate · last 14 days",
+      "flaky_sub": "failure rate · last {{days}} days",
       "flaky_empty": "No check-run data yet.",
       "busiest_peak_title": "Busiest & peak",
       "busiest_label": "Busiest day",
       "peak_label": "Peak hours",
       "age_days_one": "{{count}} day old",
       "age_days_other": "{{count}} days old",
-      "ci_trend_sub_window": "last 14 days"
+      "age_short": "{{count}}d",
+      "ci_trend_sub_window": "last {{days}} days",
+      "stacked_axis_days_ago": "{{count}}d ago",
+      "stacked_axis_today": "today",
+      "commits_count_one": "{{count}} commit",
+      "commits_count_other": "{{count}} commits",
+      "commits_label": "commits",
+      "heatmap_tooltip": "{{weekday}} {{hour}} — {{commits}}",
+      "clock_tooltip": "{{range}} — {{commits}}",
+      "language_tooltip": "{{language}} — {{percent}}%"
+    },
+    "tooltip": {
+      "ci_passed": "{{passed}}/{{total}} passed"
+    },
+    "feed": {
+      "no_remote": "No remote URL for this commit",
+      "failing_checks_one": "{{count}} failing check",
+      "failing_checks_other": "{{count}} failing checks",
+      "passing": "{{count}} passing"
+    },
+    "insights": {
+      "section_title": "Insights",
+      "streak_title": "Commit streak",
+      "streak_sub": "Consecutive days with commits",
+      "streak_value_days_one": "{{count}} day",
+      "streak_value_days_other": "{{count}} days",
+      "streak_longest": "Longest: {{count}} ({{range}})",
+      "trend_title": "Trend",
+      "trend_sub": "Last {{days}} days vs previous",
+      "trend_up": "More active",
+      "trend_down": "Less active",
+      "trend_flat": "Steady",
+      "top_authors_title": "Top authors",
+      "top_authors_sub": "Last {{days}} days",
+      "active_weekday_title": "Most active day",
+      "active_weekday_sub": "Across the loaded range",
+      "avg_per_week_title": "Commits / week",
+      "avg_per_week_sub": "Average over the loaded range",
+      "longest_gap_title": "Longest gap",
+      "longest_gap_sub": "Days without a commit",
+      "longest_gap_value_one": "{{count}} day",
+      "longest_gap_value_other": "{{count}} days",
+      "empty": "No data yet"
     },
     "timeline": {
       "title": "History",
@@ -454,7 +536,8 @@
           "one": "{{count}} check failed",
           "other": "{{count}} checks failed"
         }
-      }
+      },
+      "show_more": "Show {{count}} more"
     }
   },
   "settings": {
@@ -698,6 +781,14 @@
       "default_ide": "Default IDE",
       "default_shell": "Default shell",
       "default_terminal": "Default terminal",
+      "code_font": "Code font",
+      "code_font_sub": "Monospace font for code surfaces — diffs, snippets and file contents.",
+      "code_ligatures": "Code ligatures",
+      "code_ligatures_sub": "How programming ligatures (=>, !=, >=) render in code. Stylistic also enables the font's alternative glyph shapes.",
+      "custom_fonts": "Custom fonts",
+      "custom_fonts_sub": "Upload a .ttf, .otf or .woff2 to use it as your UI or code font.",
+      "custom_fonts_upload": "Upload font",
+      "custom_fonts_remove": "Remove font",
       "font": "Font",
       "font_size": "Font size",
       "font_size_sub": "Scale text everywhere from compact to spacious.",
@@ -764,7 +855,12 @@
       "auto_system_default": "System default ({{terminal}})",
       "detection_done": "Opens this terminal when you trigger “Open terminal”.",
       "detection_hint": "No installed terminal emulators were detected. Install one to enable this dropdown.",
-      "no_terminal_detected": "No terminal detected"
+      "no_terminal_detected": "No terminal detected",
+      "custom_option": "Custom command…",
+      "profile_label": "Terminal profile",
+      "profile_hint": "Profile name passed to the terminal (e.g. wt.exe -p).",
+      "custom_command_label": "Custom command",
+      "custom_command_hint": "Full command to run; the repo path is the working directory."
     },
     "updates": {
       "check_now_label": "Check for updates",
@@ -772,7 +868,10 @@
       "checking": "Checking…",
       "current_version_label": "Current version",
       "mode": "Update mode",
-      "mode_hint": "Automatic downloads + installs silently. Manual prompts a banner. Off disables checks."
+      "mode_hint": "Automatic downloads + installs silently. Manual prompts a banner. Off disables checks.",
+      "mode_auto": "Automatic",
+      "mode_manual": "Manual",
+      "mode_off": "Off"
     }
   },
   "notifications": {

@@ -11,6 +11,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import SshKeyField from "@/components/organisms/ssh/SshKeyField";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { gitFetch, setRepoSshKey, sshUnlockKey } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 
@@ -42,7 +43,7 @@ const TextInput = styled("input")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
   fontSize: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
   "&:focus": { borderColor: theme.palette.border.hover },

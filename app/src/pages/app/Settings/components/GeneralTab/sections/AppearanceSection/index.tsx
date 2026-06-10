@@ -6,9 +6,12 @@ import { styled } from "@mui/material/styles";
 
 import {
   type AccentId,
-  FONT_LABELS,
-  type FontId,
+  CUSTOM_FONT_PREFIX,
+  type FontSelection,
   type FontSizeId,
+  LIGATURE_MODES,
+  LIGATURE_MODE_LABELS,
+  type LigatureMode,
   MONO_FONT_IDS,
   SANS_FONT_IDS,
 } from "@recrest/shared";
@@ -31,13 +34,18 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { PRIMARY_COLOR_SCHEMES, type PrimaryColorScheme } from "@/lib/constants/theme.constants";
 import {
   type ThemeChoice,
+  codeLigatureFeatureSettings,
   fontCssFamily,
+  fontLabel,
   fontSizeLabel,
   themeChoiceLabel,
 } from "@/lib/utils/appearance.utils";
+import { CustomFontRow } from "@/pages/app/Settings/components/GeneralTab/sections/AppearanceSection/parts/CustomFontRow";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import {
+  setCodeFont,
+  setCodeLigatures,
   setFollowsSystem,
   setFont,
   setFontSize,
@@ -65,6 +73,7 @@ const SCHEME_TO_ACCENT: Record<PrimaryColorScheme, AccentId> = {
 };
 const ACCENT_IDS: AccentId[] = ["coral", "blue", "green", "purple", "pink", "amber"];
 const FONT_SIZE_IDS: FontSizeId[] = ["sm", "md", "lg", "xl"];
+const LIGATURE_MODE_IDS: LigatureMode[] = [...LIGATURE_MODES];
 const THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled", "glassy"];
 
 const LOCALES: { code: string; countryCode: string; label: string }[] = [
@@ -159,7 +168,10 @@ export function AppearanceSection() {
   const followsSystem = useAppSelector((s) => s.settings.followsSystem);
   const themeChoice: ThemeChoice = followsSystem ? "system" : themeId;
   const font = useAppSelector((s) => s.settings.font);
+  const codeFont = useAppSelector((s) => s.settings.codeFont);
+  const codeLigatures = useAppSelector((s) => s.settings.codeLigatures);
   const fontSize = useAppSelector((s) => s.settings.fontSize);
+  const customFonts = useAppSelector((s) => s.settings.customFonts);
 
   const onThemeChoice = (choice: ThemeChoice) => {
     if (choice === "system") {
@@ -249,33 +261,167 @@ export function AppearanceSection() {
         <FontSelect
           size="small"
           value={font}
-          onChange={(e: SelectChangeEvent<unknown>) => dispatch(setFont(e.target.value as FontId))}
+          onChange={(e: SelectChangeEvent<unknown>) =>
+            dispatch(setFont(e.target.value as FontSelection))
+          }
           slotProps={{ input: { "aria-label": t("settings.fields.font") } }}
           data-testid={TEST_IDS.settings.general.fontSelect}
           renderValue={(value) => (
-            <Box component="span" style={{ fontFamily: fontCssFamily(value as FontId) }}>
-              {FONT_LABELS[value as FontId]}
+            <Box component="span" style={{ fontFamily: fontCssFamily(value as FontSelection) }}>
+              {fontLabel(value as FontSelection)}
             </Box>
           )}
         >
-          <FontGroupLabel>Sans</FontGroupLabel>
+          <FontGroupLabel>{t("font_groups.sans", { ns: I18nNamespace.SETTINGS })}</FontGroupLabel>
           {SANS_FONT_IDS.map((f) => (
-            <MenuItem key={f} value={f}>
+            <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.fontOption(f)}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
-                {FONT_LABELS[f]}
+                {fontLabel(f)}
               </Box>
             </MenuItem>
           ))}
-          <FontGroupLabel withDivider>Monospace</FontGroupLabel>
+          <FontGroupLabel withDivider>
+            {t("font_groups.monospace", { ns: I18nNamespace.SETTINGS })}
+          </FontGroupLabel>
           {MONO_FONT_IDS.map((f) => (
-            <MenuItem key={f} value={f}>
+            <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.fontOption(f)}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
-                {FONT_LABELS[f]}
+                {fontLabel(f)}
+              </Box>
+            </MenuItem>
+          ))}
+          {customFonts.length > 0 && (
+            <FontGroupLabel withDivider>
+              {t("font_groups.custom", { ns: I18nNamespace.SETTINGS })}
+            </FontGroupLabel>
+          )}
+          {customFonts.map((cf) => {
+            const value = `${CUSTOM_FONT_PREFIX}${cf.family}`;
+            return (
+              <MenuItem
+                key={value}
+                value={value}
+                data-testid={TEST_IDS.settings.general.fontOption(value)}
+              >
+                <Box component="span" style={{ fontFamily: fontCssFamily(value) }}>
+                  {cf.family}
+                </Box>
+              </MenuItem>
+            );
+          })}
+        </FontSelect>
+      </SettingsRow>
+
+      <SettingsRow label={t("settings.fields.code_font")} sub={t("settings.fields.code_font_sub")}>
+        <FontSelect
+          size="small"
+          value={codeFont}
+          onChange={(e: SelectChangeEvent<unknown>) =>
+            dispatch(setCodeFont(e.target.value as FontSelection))
+          }
+          slotProps={{ input: { "aria-label": t("settings.fields.code_font") } }}
+          data-testid={TEST_IDS.settings.general.codeFontSelect}
+          renderValue={(value) => (
+            <Box
+              component="span"
+              style={{
+                fontFamily: fontCssFamily(value as FontSelection, "mono"),
+                fontFeatureSettings: codeLigatureFeatureSettings(codeLigatures),
+              }}
+            >
+              {fontLabel(value as FontSelection)}
+            </Box>
+          )}
+        >
+          {MONO_FONT_IDS.map((f) => (
+            <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.codeFontOption(f)}>
+              <Box
+                component="span"
+                style={{
+                  fontFamily: fontCssFamily(f, "mono"),
+                  fontFeatureSettings: codeLigatureFeatureSettings(codeLigatures),
+                }}
+              >
+                {fontLabel(f)} &nbsp; =&gt; != &gt;=
+              </Box>
+            </MenuItem>
+          ))}
+          {customFonts.length > 0 && (
+            <FontGroupLabel withDivider>
+              {t("font_groups.custom", { ns: I18nNamespace.SETTINGS })}
+            </FontGroupLabel>
+          )}
+          {customFonts.map((cf) => {
+            const value = `${CUSTOM_FONT_PREFIX}${cf.family}`;
+            return (
+              <MenuItem
+                key={value}
+                value={value}
+                data-testid={TEST_IDS.settings.general.codeFontOption(value)}
+              >
+                <Box
+                  component="span"
+                  style={{
+                    fontFamily: fontCssFamily(value, "mono"),
+                    fontFeatureSettings: codeLigatureFeatureSettings(codeLigatures),
+                  }}
+                >
+                  {cf.family} &nbsp; =&gt; != &gt;=
+                </Box>
+              </MenuItem>
+            );
+          })}
+        </FontSelect>
+      </SettingsRow>
+
+      <SettingsRow
+        label={t("settings.fields.code_ligatures")}
+        sub={t("settings.fields.code_ligatures_sub")}
+      >
+        <FontSelect
+          size="small"
+          value={codeLigatures}
+          onChange={(e: SelectChangeEvent<unknown>) =>
+            dispatch(setCodeLigatures(e.target.value as LigatureMode))
+          }
+          slotProps={{ input: { "aria-label": t("settings.fields.code_ligatures") } }}
+          data-testid={TEST_IDS.settings.general.codeLigaturesSelect}
+          renderValue={(value) => {
+            const mode = value as LigatureMode;
+            return (
+              <Box
+                component="span"
+                style={{
+                  fontFamily: fontCssFamily(codeFont, "mono"),
+                  fontFeatureSettings: codeLigatureFeatureSettings(mode),
+                }}
+              >
+                {LIGATURE_MODE_LABELS[mode]}
+              </Box>
+            );
+          }}
+        >
+          {LIGATURE_MODE_IDS.map((mode) => (
+            <MenuItem
+              key={mode}
+              value={mode}
+              data-testid={TEST_IDS.settings.general.codeLigaturesOption(mode)}
+            >
+              <Box
+                component="span"
+                style={{
+                  fontFamily: fontCssFamily(codeFont, "mono"),
+                  fontFeatureSettings: codeLigatureFeatureSettings(mode),
+                }}
+              >
+                {LIGATURE_MODE_LABELS[mode]} &nbsp; =&gt; != &gt;= -&gt; ===
               </Box>
             </MenuItem>
           ))}
         </FontSelect>
       </SettingsRow>
+
+      <CustomFontRow />
 
       <SettingsRow label={t("settings.fields.font_size")} sub={t("settings.fields.font_size_sub")}>
         <FontSizeSelect

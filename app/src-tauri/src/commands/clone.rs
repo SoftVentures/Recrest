@@ -60,9 +60,11 @@ pub async fn clone_and_register(
     let provider_hint = provider_for_url(url);
     let url_owned = url.to_string();
     let final_path_clone = final_path.clone();
-    tokio::task::spawn_blocking(move || clone_blocking(&url_owned, &final_path_clone, provider_hint))
-        .await
-        .map_err(|e| CommandError::internal(format!("clone task failed: {e}")))??;
+    tokio::task::spawn_blocking(move || {
+        clone_blocking(&url_owned, &final_path_clone, provider_hint)
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("clone task failed: {e}")))??;
 
     let mut config = state.config.lock().await;
     let mut record = config.upsert_scanned_repo(&final_path)?;

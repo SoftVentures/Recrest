@@ -51,7 +51,11 @@ pub fn unstage_paths_blocking(repo_path: &Path, paths: &[String]) -> Result<(), 
     let repo = Repository::open(repo_path)
         .map_err(|e| CommandError::internal(format!("open repo: {e}")))?;
     let pathspecs: Vec<&str> = paths.iter().map(String::as_str).collect();
-    match repo.head().ok().and_then(|h| h.peel(ObjectType::Commit).ok()) {
+    match repo
+        .head()
+        .ok()
+        .and_then(|h| h.peel(ObjectType::Commit).ok())
+    {
         Some(head_obj) => {
             repo.reset_default(Some(&head_obj), pathspecs.iter())
                 .map_err(|e| CommandError::bad_request(format!("unstage: {e}")))?;
@@ -222,12 +226,9 @@ fn repo_signature(repo: &Repository) -> Result<git2::Signature<'static>, Command
         .map_err(|_| CommandError::bad_request("git user.name / user.email not configured"))
 }
 
-pub fn stash_save_blocking(
-    repo_path: &Path,
-    message: Option<&str>,
-) -> Result<(), CommandError> {
-    let mut repo = Repository::open(repo_path)
-        .map_err(|e| CommandError::internal(format!("open: {e}")))?;
+pub fn stash_save_blocking(repo_path: &Path, message: Option<&str>) -> Result<(), CommandError> {
+    let mut repo =
+        Repository::open(repo_path).map_err(|e| CommandError::internal(format!("open: {e}")))?;
     let sig = repo_signature(&repo)?;
     repo.stash_save2(&sig, message, Some(git2::StashFlags::INCLUDE_UNTRACKED))
         .map_err(|e| CommandError::bad_request(format!("stash: {e}")))?;
@@ -235,8 +236,8 @@ pub fn stash_save_blocking(
 }
 
 pub fn stash_list_blocking(repo_path: &Path) -> Result<Vec<StashEntryDto>, CommandError> {
-    let mut repo = Repository::open(repo_path)
-        .map_err(|e| CommandError::internal(format!("open: {e}")))?;
+    let mut repo =
+        Repository::open(repo_path).map_err(|e| CommandError::internal(format!("open: {e}")))?;
     let mut out = Vec::new();
     repo.stash_foreach(|index, message, oid| {
         out.push(StashEntryDto {
@@ -251,8 +252,8 @@ pub fn stash_list_blocking(repo_path: &Path) -> Result<Vec<StashEntryDto>, Comma
 }
 
 pub fn stash_pop_blocking(repo_path: &Path, index: usize) -> Result<(), CommandError> {
-    let mut repo = Repository::open(repo_path)
-        .map_err(|e| CommandError::internal(format!("open: {e}")))?;
+    let mut repo =
+        Repository::open(repo_path).map_err(|e| CommandError::internal(format!("open: {e}")))?;
     repo.stash_pop(index, None).map_err(|e| {
         CommandError::bad_request(format!(
             "stash pop failed (working tree dirty / conflict?): {e}"
@@ -262,8 +263,8 @@ pub fn stash_pop_blocking(repo_path: &Path, index: usize) -> Result<(), CommandE
 }
 
 pub fn stash_drop_blocking(repo_path: &Path, index: usize) -> Result<(), CommandError> {
-    let mut repo = Repository::open(repo_path)
-        .map_err(|e| CommandError::internal(format!("open: {e}")))?;
+    let mut repo =
+        Repository::open(repo_path).map_err(|e| CommandError::internal(format!("open: {e}")))?;
     repo.stash_drop(index)
         .map_err(|e| CommandError::bad_request(format!("stash drop: {e}")))?;
     Ok(())
@@ -366,8 +367,8 @@ pub fn commit_blocking(
     message: &str,
     fallback: Option<(&str, &str)>,
 ) -> Result<(), CommandError> {
-    let repo = Repository::open(repo_path)
-        .map_err(|e| CommandError::internal(format!("open: {e}")))?;
+    let repo =
+        Repository::open(repo_path).map_err(|e| CommandError::internal(format!("open: {e}")))?;
     let sig = match repo.signature() {
         Ok(s) => s,
         Err(_) => match fallback {
@@ -474,7 +475,9 @@ pub async fn git_commit(
         commit_via_git(
             &p2,
             &message,
-            override_pair.as_ref().map(|(n, e)| (n.as_str(), e.as_str())),
+            override_pair
+                .as_ref()
+                .map(|(n, e)| (n.as_str(), e.as_str())),
         )
         .await?;
     } else {
@@ -484,7 +487,9 @@ pub async fn git_commit(
             commit_blocking(
                 &p2,
                 &msg,
-                override_pair.as_ref().map(|(n, e)| (n.as_str(), e.as_str())),
+                override_pair
+                    .as_ref()
+                    .map(|(n, e)| (n.as_str(), e.as_str())),
             )
         })
         .await
@@ -499,6 +504,77 @@ mod tests {
     use super::*;
     use crate::git::status::{read_status, ChangedFileStatus};
     use crate::test_support::TempRepo;
+
+    /// Hermetic isolation from any ambient git identity. libgit2 merges the
+    /// user's real global/system config into every `Repository::config()`,
+    /// so on a developer machine with `user.name`/`user.email` set globally,
+    /// `repo.signature()` succeeds even after the local entries are removed —
+    /// which would mask the fallback paths these tests exercise.
+    ///
+    /// libgit2 (unlike the git CLI) ignores `GIT_CONFIG_GLOBAL` /
+    /// `GIT_CONFIG_SYSTEM`; the only seam is the process-global config search
+    /// path. We point every level at an empty temp dir for the guard's
+    /// lifetime and restore the originals on drop. Because the search path is
+    /// process-global state, callers must hold `CONFIG_SEARCH_LOCK` so the
+    /// two tests that use it never run concurrently (the crate intentionally
+    /// has no `serial_test` dependency — see `identity.rs`).
+    struct IsolatedGitConfig {
+        _empty: tempfile::TempDir,
+        saved: Vec<(git2::ConfigLevel, std::ffi::CString)>,
+        _guard: std::sync::MutexGuard<'static, ()>,
+    }
+
+    static CONFIG_SEARCH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    impl IsolatedGitConfig {
+        fn new() -> Self {
+            // Recover from a poisoned lock: a panic in an earlier guarded test
+            // must not cascade-fail the rest of the suite.
+            let guard = CONFIG_SEARCH_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+            let empty = tempfile::TempDir::new().expect("tempdir");
+            let empty_path = empty.path().to_string_lossy().replace('\\', "/");
+            // Windows resolves config from all four levels; redirect each one.
+            let levels = [
+                git2::ConfigLevel::ProgramData,
+                git2::ConfigLevel::System,
+                git2::ConfigLevel::XDG,
+                git2::ConfigLevel::Global,
+            ];
+            let mut saved = Vec::new();
+            for level in levels {
+                // SAFETY: serialized by CONFIG_SEARCH_LOCK; restored on drop.
+                unsafe {
+                    if let Ok(prev) = git2::opts::get_search_path(level) {
+                        saved.push((level, prev));
+                    }
+                    git2::opts::set_search_path(level, empty_path.as_str())
+                        .expect("override config search path");
+                }
+            }
+            Self {
+                _empty: empty,
+                saved,
+                _guard: guard,
+            }
+        }
+    }
+
+    impl Drop for IsolatedGitConfig {
+        fn drop(&mut self) {
+            for (level, path) in self.saved.drain(..) {
+                // SAFETY: still holding CONFIG_SEARCH_LOCK via `_guard`.
+                unsafe {
+                    let restored = path
+                        .to_str()
+                        .ok()
+                        .and_then(|s| git2::opts::set_search_path(level, s).ok());
+                    if restored.is_none() {
+                        let _ = git2::opts::reset_search_path(level);
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn stage_then_unstage_tracked_file() {
@@ -651,6 +727,8 @@ mod tests {
 
     #[test]
     fn commit_requires_git_config_when_signature_missing() {
+        // Hide any ambient global identity so the fallback path is reachable.
+        let _isolated = IsolatedGitConfig::new();
         let tr = TempRepo::init();
         tr.commit_file("a", "1", "init");
         // Wipe the local signature so libgit2 falls through to fallback.
@@ -672,6 +750,8 @@ mod tests {
 
     #[test]
     fn commit_falls_back_to_override_signature() {
+        // Hide any ambient global identity so the fallback path is reachable.
+        let _isolated = IsolatedGitConfig::new();
         let tr = TempRepo::init();
         tr.commit_file("a", "1", "init");
         {
@@ -681,8 +761,12 @@ mod tests {
         }
         tr.write_file("a", "2");
         stage_paths_blocking(tr.dir.path(), &["a".into()]).unwrap();
-        commit_blocking(tr.dir.path(), "from-override", Some(("Override", "ov@example.invalid")))
-            .expect("commit with override");
+        commit_blocking(
+            tr.dir.path(),
+            "from-override",
+            Some(("Override", "ov@example.invalid")),
+        )
+        .expect("commit with override");
         let head = tr.repo.head().unwrap().peel_to_commit().unwrap();
         assert_eq!(head.author().name().unwrap(), "Override");
         assert_eq!(head.author().email().unwrap(), "ov@example.invalid");
@@ -704,7 +788,10 @@ mod tests {
         tr.write_file("a", "2");
         stage_paths_blocking(tr.dir.path(), &["a".into()]).unwrap();
         let res = commit_via_git(tr.dir.path(), "blocked", None).await;
-        assert!(res.is_err(), "a failing pre-commit hook must block the commit");
+        assert!(
+            res.is_err(),
+            "a failing pre-commit hook must block the commit"
+        );
     }
 
     #[cfg(unix)]

@@ -29,6 +29,10 @@ export const CLONE_PROGRESS_EVENT = "clone://progress";
  *  own `localStorage`/`sessionStorage` and remount the onboarding wizard. */
 export const SETTINGS_RESET_EVENT = "settings://reset";
 
+/** Streamed commit batches for a `list_commits` request (Plan 04/01).
+ *  Payload: `CommitsChunkPayload`. */
+export const ACTIVITY_COMMITS_CHUNK_EVENT = "activity://commits-chunk";
+
 export const EventChannel = {
   REPO_STATUS: REPO_STATUS_EVENT,
   UPDATER_AVAILABLE: UPDATER_AVAILABLE_EVENT,
@@ -36,6 +40,7 @@ export const EventChannel = {
   OAUTH_CALLBACK: OAUTH_CALLBACK_EVENT,
   CLONE_PROGRESS: CLONE_PROGRESS_EVENT,
   SETTINGS_RESET: SETTINGS_RESET_EVENT,
+  ACTIVITY_COMMITS_CHUNK: ACTIVITY_COMMITS_CHUNK_EVENT,
 } as const;
 
 export type EventChannelName = (typeof EventChannel)[keyof typeof EventChannel];

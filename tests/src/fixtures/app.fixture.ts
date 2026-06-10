@@ -17,20 +17,30 @@ import { buildTauriStub } from "../helpers/tauri-stub.js";
 type AppOptions = {
   seed: AppSeed;
   uiLocale: Locale;
+  /**
+   * When `true`, the first-run wizard is *not* pre-dismissed, so `useFirstRun`
+   * can gate it open (provided the seed also has no scanPaths and no connected
+   * provider). Defaults to `false` — every other spec skips the wizard because
+   * it would cover their assertions.
+   */
+  showOnboarding: boolean;
 };
 
 export const test = base.extend<AppOptions>({
   seed: [DEFAULT_SEED, { option: true }],
   uiLocale: ["en", { option: true }],
-  page: async ({ page, seed, uiLocale }, use) => {
+  showOnboarding: [false, { option: true }],
+  page: async ({ page, seed, uiLocale, showOnboarding }, use) => {
     const resolved = resolveSeed(seed);
     await page.addInitScript({ content: buildTauriStub(resolved) });
     await page.addInitScript(
-      ([localeKey, locale, onboardingKey, uiStateKey, theme]) => {
+      ([localeKey, locale, onboardingKey, uiStateKey, theme, keepOnboarding]) => {
         try {
           window.localStorage.setItem(localeKey, locale);
           // Skip the first-run wizard — it would cover every test assertion.
-          window.localStorage.setItem(onboardingKey, "true");
+          // Specs that exercise the wizard opt out via `showOnboarding: true`.
+          if (keepOnboarding === "1") window.localStorage.removeItem(onboardingKey);
+          else window.localStorage.setItem(onboardingKey, "true");
           // `persistenceMiddleware` only *writes*; the initial theme comes
           // from `loadPersisted()` on boot. Pre-seed it so useThemeEffect
           // applies the theme immediately, without waiting for loadSettings
@@ -51,6 +61,7 @@ export const test = base.extend<AppOptions>({
         StorageKey.ONBOARDING_DISMISSED,
         StorageKey.UI_STATE,
         resolved.settings.theme,
+        showOnboarding ? "1" : "0",
       ] as const,
     );
     await use(page);

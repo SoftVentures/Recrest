@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const FIELD_ROW_MIN_HEIGHT = 60;
 export const FIELD_INPUT_WIDTH = 280;
 export const FIELD_LAYER_WIDTH = 180;
@@ -29,7 +31,11 @@ export const FieldRight = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 10,
-  flex: "0 0 auto",
+  // Grow into the available row width and allow shrinking below content so the
+  // control + layer chip stay inside narrow cards (3-col grid / mobile) instead
+  // of overflowing the card edge. `minWidth: 0` is what lets the flex children
+  // actually shrink.
+  flex: "1 1 280px",
   minWidth: 0,
   justifyContent: "flex-end",
   flexWrap: "wrap",
@@ -53,23 +59,27 @@ export const FieldSubtitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const InputBox = styled(Box)({
-  width: FIELD_INPUT_WIDTH,
-  maxWidth: "100%",
-  flex: "0 0 auto",
+  // Caps at the comfortable desktop width but shrinks on narrow cards.
+  flex: "1 1 180px",
+  minWidth: 0,
+  maxWidth: FIELD_INPUT_WIDTH,
 }) as typeof Box;
 
 export const LayerSelectBox = styled(Box)({
+  flex: "0 1 auto",
+  minWidth: 0,
   width: FIELD_LAYER_WIDTH,
-  flex: "0 0 auto",
+  maxWidth: FIELD_LAYER_WIDTH,
 }) as typeof Box;
 
 export const SwitchBox = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "flex-end",
-  width: FIELD_INPUT_WIDTH,
+  flex: "1 1 auto",
+  minWidth: 0,
+  maxWidth: FIELD_INPUT_WIDTH,
   height: 38,
-  flex: "0 0 auto",
 }) as typeof Box;
 
 export const LayerChip = styled(Box)(({ theme }) => ({
@@ -85,11 +95,13 @@ export const LayerChip = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 12,
   color: theme.palette.text.information,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  flex: "0 0 auto",
+  // Shrink instead of overflowing the card; the inner text already truncates.
+  flex: "0 1 auto",
+  minWidth: 0,
 })) as typeof Box;
 
 export const LayerChipText = styled(Box)({
@@ -108,7 +120,7 @@ export const SourceBadge = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
 })) as typeof Box;
 
@@ -133,10 +145,10 @@ export const ReadOnlyChip = styled(Box)(({ theme }) => ({
 export const ValueText = styled(Typography)(({ theme }) => ({
   fontSize: 13,
   color: theme.palette.text.primary,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamily: MONO_STACK,
   wordBreak: "break-all",
-  width: FIELD_INPUT_WIDTH,
-  maxWidth: "100%",
+  flex: "1 1 auto",
+  minWidth: 0,
+  maxWidth: FIELD_INPUT_WIDTH,
   textAlign: "right",
-  flex: "0 0 auto",
 })) as typeof Typography;

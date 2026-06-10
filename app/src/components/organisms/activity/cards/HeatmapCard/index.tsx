@@ -1,26 +1,53 @@
-import type { CSSProperties } from "react";
+import { memo } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Typography } from "@mui/material";
-import { keyframes, styled } from "@mui/material/styles";
+import { Box } from "@mui/material";
+import { styled, useTheme } from "@mui/material/styles";
+
+import { ResponsiveHeatMap } from "@nivo/heatmap";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
-import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   matrix: HeatmapMatrix;
   loading?: boolean;
 }
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+const AXIS_HOURS = ["0", "6", "12", "18"];
 
 function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
-  const peak = Math.max(1, ...matrix.flat());
+  const theme = useTheme();
+  const nivoTheme = useNivoTheme();
+  const { show, hide, portal } = useChartTooltip();
+  // Single-metric chart → follow the user's primary color, not a fixed accent.
+  const accent = theme.palette.primary.main;
+
+  const renderTip = (weekday: string, hour: string, count: number) => (
+    <Tooltip>
+      {t("activity.cards.heatmap_tooltip", {
+        weekday,
+        hour: `${hour.padStart(2, "0")}:00`,
+        commits: t("activity.cards.commits_count", { count }),
+      })}
+    </Tooltip>
+  );
+
+  const data = matrix.map((row, weekday) => ({
+    id: WEEKDAYS[weekday]!,
+    data: row.map((count, hour) => ({ x: String(hour), y: count })),
+  }));
+
   return (
     <GeneralCard
       title={t("activity.cards.heatmap_title")}
@@ -34,91 +61,70 @@ function HeatmapCard({ matrix, loading }: Props) {
         role="img"
         aria-label={t("repo.heatmap", { ns: I18nNamespace.ARIA })}
       >
-        {matrix.map((row, dayIdx) => (
-          <Row key={dayIdx}>
-            <Label variant="caption" component="span" aria-hidden>
-              {WEEKDAYS[dayIdx]}
-            </Label>
-            {row.map((v, hourIdx) => {
-              const intensity = v === 0 ? 0 : 0.35 + 0.65 * (v / peak);
-              return (
-                <GeneralTooltip
-                  key={hourIdx}
-                  arrow
-                  placement="top"
-                  title={`${WEEKDAYS[dayIdx]} · ${String(hourIdx).padStart(2, "0")}:00 · ${v}`}
-                >
-                  <Cell
-                    role="img"
-                    intensity={intensity}
-                    style={{ "--cell-delay": dayIdx * 24 + hourIdx } as CSSProperties}
-                    data-testid={TEST_IDS.activity.heatmap.cell}
-                  />
-                </GeneralTooltip>
-              );
-            })}
-          </Row>
-        ))}
+        <ResponsiveHeatMap
+          data={data}
+          theme={nivoTheme}
+          margin={{ top: 4, right: 4, bottom: 20, left: 34 }}
+          forceSquare
+          xInnerPadding={0.18}
+          yInnerPadding={0.18}
+          colors={{
+            type: "quantize",
+            // Empty + lowest-activity cells read as a clean neutral grey; only
+            // real activity tints orange, ramping to the solid accent at the
+            // busy end. No faint orange wash across every cell.
+            //
+            // Every entry is run through `fade()` so the whole scale is `rgba()`
+            // — react-spring interpolates the cell fill on range switch and
+            // throws "arity of each output value must be equal" when a hex
+            // (`#262935`, one extracted number) animates into an `rgba()` (four).
+            // Keeping a single format keeps the arity uniform.
+            colors: [
+              fade(theme.palette.surface.interface.backElevation, 1),
+              fade(accent, 0.45),
+              fade(accent, 0.65),
+              fade(accent, 0.85),
+              fade(accent, 1),
+            ],
+          }}
+          emptyColor={fade(theme.palette.surface.interface.backElevation, 1)}
+          enableLabels={false}
+          axisTop={null}
+          axisBottom={{
+            format: (v) => (AXIS_HOURS.includes(String(v)) ? String(v) : ""),
+          }}
+          borderRadius={2}
+          hoverTarget="cell"
+          tooltip={() => <></>}
+          onMouseMove={(cell, e) =>
+            show(
+              e.clientX,
+              e.clientY,
+              renderTip(String(cell.serieId), String(cell.data.x), Number(cell.value ?? 0)),
+            )
+          }
+          onMouseLeave={hide}
+        />
+        {portal}
       </Grid>
-      <Foot aria-hidden>
-        <Box component="span">00</Box>
-        <Box component="span">06</Box>
-        <Box component="span">12</Box>
-        <Box component="span">18</Box>
-        <Box component="span">23</Box>
-      </Foot>
     </GeneralCard>
   );
 }
 
-export default HeatmapCard;
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(HeatmapCard);
 
 const Grid = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  gap: 3,
+  height: 180,
 });
 
-const Row = styled(Box)({
-  display: "grid",
-  gridTemplateColumns: "18px repeat(24, 1fr)",
-  gap: 3,
-  alignItems: "center",
-});
-
-const Label = styled(Typography)(({ theme }) => ({
-  fontSize: 9.5,
-  color: theme.palette.text.information,
-  textAlign: "right",
-  paddingRight: 2,
-})) as typeof Typography;
-
-const cellFade = keyframes`
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1); }
-`;
-
-const Cell = styled(Box, { shouldForwardProp: (p) => p !== "intensity" })<{
-  intensity: number;
-}>(({ theme, intensity }) => ({
-  height: 12,
-  borderRadius: 2,
-  backgroundColor:
-    intensity === 0
-      ? theme.palette.surface.interface.backElevation
-      : `color-mix(in srgb, ${theme.palette.primary.main} ${intensity * 100}%, ${theme.palette.surface.interface.backElevation})`,
-  animation: `${cellFade} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
-  animationDelay: "calc(var(--cell-delay, 0) * 4ms)",
-  'html[data-reduced-motion="true"] &': {
-    animation: "none",
-  },
-}));
-
-const Foot = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  fontSize: 10,
-  color: theme.palette.text.information,
-  marginTop: 4,
-  paddingLeft: 21,
+// TODO(next-pass): unify with parts/ChartTooltip
+const Tooltip = styled(Box)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  fontSize: 12,
+  padding: "6px 10px",
+  color: theme.palette.text.primary,
+  whiteSpace: "nowrap",
 }));

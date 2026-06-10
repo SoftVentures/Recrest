@@ -50,6 +50,7 @@ describe("RepoStats", () => {
         repo={makeRepo()}
         totalCommits={8}
         maxBucket={3}
+        windowDays={14}
         openMrsCount={5}
         draftMrsCount={1}
       />,
@@ -68,6 +69,7 @@ describe("RepoStats", () => {
         repo={makeRepo()}
         totalCommits={8}
         maxBucket={3}
+        windowDays={14}
         openMrsCount={null}
         draftMrsCount={null}
       />,

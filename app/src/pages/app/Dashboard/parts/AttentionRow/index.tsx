@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
@@ -16,6 +18,7 @@ export interface AttentionRowProps {
 }
 
 export function AttentionRow({ repo, kind, onClick }: AttentionRowProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   return (
     <AttnRow type="button" onClick={onClick}>
@@ -25,7 +28,7 @@ export function AttentionRow({ repo, kind, onClick }: AttentionRowProps) {
         <AttnSub>
           {kind === RepoStatusChip.DIRTY ? (
             <>
-              {repo.filesChanged} changed ·{" "}
+              {t("dash.attention.changed", { count: repo.filesChanged })} ·{" "}
               <Box component="span" style={{ color: theme.palette.success.main }}>
                 +{repo.added}
               </Box>{" "}
@@ -33,8 +36,10 @@ export function AttentionRow({ repo, kind, onClick }: AttentionRowProps) {
                 −{repo.removed}
               </Box>
             </>
+          ) : repo.status.behind === 1 ? (
+            t("dash.attention.behind_one", { count: repo.status.behind })
           ) : (
-            `${repo.status.behind} commit${repo.status.behind === 1 ? "" : "s"} behind`
+            t("dash.attention.behind_other", { count: repo.status.behind })
           )}
         </AttnSub>
       </AttnBody>

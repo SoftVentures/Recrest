@@ -1,6 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
 export function GithubGlyph({ size = 16 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">
@@ -53,7 +56,7 @@ export const TopRow = styled(Box)({
 }) as typeof Box;
 
 export const BrandName = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 13,
   fontWeight: 700,
   color: theme.palette.text.primary,
@@ -73,9 +76,9 @@ export const StatusPill = styled("span", { shouldForwardProp: (p) => p !== "tone
   borderRadius: 100,
   color:
     tone === "connected"
-      ? theme.palette.success.dark
+      ? toneText(theme, StatusTone.SUCCESS)
       : tone === "self-hosted"
-        ? theme.palette.warning.dark
+        ? toneText(theme, StatusTone.WARNING)
         : theme.palette.text.information,
   backgroundColor:
     tone === "connected"
@@ -159,7 +162,7 @@ export const ApiRow = styled(Box)(({ theme }) => ({
 export const ApiLabel = styled(Typography)({ fontWeight: 500 }) as typeof Typography;
 
 export const ApiCode = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11.5,
   padding: "3px 8px",
   borderRadius: 8,
@@ -169,7 +172,7 @@ export const ApiCode = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const ApiChange = styled(Box)(({ theme }) => ({
-  color: theme.palette.primary.dark,
+  color: toneText(theme, StatusTone.PRIMARY),
   cursor: "pointer",
   fontSize: 11.5,
   textDecoration: "underline",
@@ -206,7 +209,7 @@ export const ScopesLabel = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const Scope = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 10.5,
   padding: "2px 6px",
   borderRadius: 8,
@@ -225,7 +228,7 @@ export const TokenCreateLink = styled("button")(({ theme }) => ({
   padding: 0,
   cursor: "pointer",
   fontSize: 11.5,
-  color: theme.palette.primary.dark,
+  color: toneText(theme, StatusTone.PRIMARY),
   textDecoration: "underline",
   textUnderlineOffset: 2,
   fontFamily: "inherit",
@@ -260,7 +263,7 @@ export const TextInput = styled("input")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
   fontSize: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
   "&:focus": { borderColor: theme.palette.border.hover },

@@ -48,8 +48,24 @@ pub struct AppearanceSettings {
     pub primary_color: String,
     /// Renderer font slot — "inter" | "opendyslexic" | future additions.
     pub font: String,
+    /// Monospace font for code surfaces, separate from the UI `font`. New in the
+    /// code-font split, so `#[serde(default)]` keeps pre-split settings loading.
+    #[serde(default = "default_code_font")]
+    pub code_font: String,
+    /// Ligature mode for code surfaces — "off" | "standard" | "stylistic".
+    /// Separate from `code_font`; `#[serde(default)]` keeps older files loading.
+    #[serde(default = "default_code_ligatures")]
+    pub code_ligatures: String,
     /// Renderer font size token — "sm" | "md" | "lg".
     pub font_size: String,
+}
+
+fn default_code_font() -> String {
+    "jetbrains-mono".into()
+}
+
+fn default_code_ligatures() -> String {
+    "standard".into()
 }
 
 impl Default for AppearanceSettings {
@@ -59,6 +75,8 @@ impl Default for AppearanceSettings {
             follows_system: true,
             primary_color: "default".into(),
             font: "inter".into(),
+            code_font: default_code_font(),
+            code_ligatures: default_code_ligatures(),
             font_size: "md".into(),
         }
     }
@@ -361,6 +379,31 @@ mod tests {
         assert!(parsed.terminal.custom_command.is_none());
         assert_eq!(parsed.commit_message_template, "{{author}}: {{date}}");
         assert!(!parsed.privacy.fetch_favicons);
+        // Appearance code-font fields were added after the split; legacy JSON
+        // without them must fall back to the renderer defaults rather than
+        // silently regressing.
+        assert_eq!(parsed.appearance.code_font, "jetbrains-mono");
+        assert_eq!(parsed.appearance.code_ligatures, "standard");
+    }
+
+    /// Settings JSON that carries an `appearance` block but predates the
+    /// code-font split (no `codeFont` / `codeLigatures` keys) must still
+    /// migrate those two fields to their `serde(default)` values.
+    #[test]
+    fn legacy_appearance_without_code_font_loads_defaults() {
+        let legacy = r#"{
+            "appearance": {
+                "themeId": "dark",
+                "followsSystem": false,
+                "primaryColor": "blue",
+                "font": "inter",
+                "fontSize": "md"
+            }
+        }"#;
+        let parsed: AppSettings = serde_json::from_str(legacy).expect("legacy appearance json");
+        assert_eq!(parsed.appearance.theme_id, "dark");
+        assert_eq!(parsed.appearance.code_font, "jetbrains-mono");
+        assert_eq!(parsed.appearance.code_ligatures, "standard");
     }
 
     /// Round-tripping the default value preserves all fields, so we don't

@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 
 import { PrEventKind } from "@recrest/shared";
@@ -26,6 +28,7 @@ export interface FeedEventRowProps {
 }
 
 export function FeedEventRow({ event, today }: FeedEventRowProps) {
+  const { t } = useTranslation();
   const day = daysAgo(event.at, today);
   const when = day >= 0 ? relativeWhen(event.at, day) : "";
 
@@ -33,7 +36,7 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
     const url = commitUrl(event.repo?.remoteUrl, event.data.sha);
     const open = () => {
       if (url) void openExternal(url);
-      else toast.info("No remote URL for this commit");
+      else toast.info(t("activity.feed.no_remote"));
     };
     return (
       <FeedItem
@@ -112,7 +115,10 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
   const s = event.data;
   const failingTone: "check-ok" | "check-fail" = s.failed > 0 ? "check-fail" : "check-ok";
   const Icon = s.failed > 0 ? ShieldAlert : ShieldCheck;
-  const failedLabel = s.failed === 1 ? "1 failing check" : `${s.failed} failing checks`;
+  const failedLabel =
+    s.failed === 1
+      ? t("activity.feed.failing_checks_one", { count: s.failed })
+      : t("activity.feed.failing_checks_other", { count: s.failed });
   return (
     <FeedItem>
       <FeedIcon tone={failingTone}>
@@ -120,7 +126,7 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
       </FeedIcon>
       <Box />
       <FeedMsg component="span" variant="caption">
-        {failedLabel} · {s.passed} passing
+        {failedLabel} · {t("activity.feed.passing", { count: s.passed })}
       </FeedMsg>
       <FeedMeta component="span" variant="caption">
         {event.repo && <RepoAvatar repo={event.repo} size={14} radius={3} />}

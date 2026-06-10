@@ -27,6 +27,7 @@ import {
   TopBar,
 } from "@/components/organisms/layout/Header/Header.styles";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
+import { windowDaysOf } from "@/lib/activity/rangeBuckets";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
@@ -37,6 +38,7 @@ import {
   setSearchOpen,
 } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectSelectedRange } from "@/store/selectors/activity.selectors";
 
 interface HeaderContext {
   title: string;
@@ -48,6 +50,8 @@ function useHeaderContext(): HeaderContext {
   const location = useLocation();
   const repos = useAppSelector((s) => s.repos.items);
   const prs = useAppSelector((s) => s.prs.items);
+  const activityRange = useAppSelector(selectSelectedRange);
+  const activityWindowDays = windowDaysOf(activityRange);
   const repoList = Object.values(repos);
   const dirtyCount = repoList.filter((r) => r.status.dirty).length;
   const mrOpen = Object.values(prs)
@@ -98,7 +102,7 @@ function useHeaderContext(): HeaderContext {
   if (path.startsWith("/activity")) {
     return {
       title: t("view.activity.title"),
-      meta: t("view.activity.meta"),
+      meta: t("view.activity.meta", { days: activityWindowDays }),
     };
   }
   if (path.startsWith("/settings")) {

@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const Panel = styled(Box)(({ theme }) => ({
   height: "100%",
   display: "flex",
@@ -193,7 +195,7 @@ export const BranchName = styled(Typography)({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 10.5,
 }) as typeof Typography;
 
@@ -336,7 +338,7 @@ export const FileItem = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
   fontSize: 11.5,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
 })) as typeof Box;
 
 export const FilePath = styled(Typography)(({ theme }) => ({

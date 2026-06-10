@@ -11,14 +11,18 @@ export interface VelocityDay {
   merged: number;
 }
 
-export function computePrVelocity(events: readonly PrEvent[], today: Date): VelocityDay[] {
-  const rows: VelocityDay[] = Array.from({ length: ACTIVITY_DAYS }, (_, i) => ({
+export function computePrVelocity(
+  events: readonly PrEvent[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): VelocityDay[] {
+  const rows: VelocityDay[] = Array.from({ length: windowDays }, (_, i) => ({
     day: i,
     opened: 0,
     merged: 0,
   }));
   for (const e of events) {
-    const d = daysAgo(e.timestamp, today);
+    const d = daysAgo(e.timestamp, today, windowDays);
     if (d < 0) continue;
     const row = rows[d];
     if (!row) continue;
@@ -112,15 +116,16 @@ export interface PassRateDay {
 export function computeCiPassRate(
   summaries: readonly CheckRunSummary[],
   today: Date,
+  windowDays: number = ACTIVITY_DAYS,
 ): PassRateDay[] {
-  const rows: PassRateDay[] = Array.from({ length: ACTIVITY_DAYS }, (_, i) => ({
+  const rows: PassRateDay[] = Array.from({ length: windowDays }, (_, i) => ({
     day: i,
     passed: 0,
     total: 0,
     rate: 1,
   }));
   for (const s of summaries) {
-    const d = daysAgo(`${s.day}T12:00:00Z`, today);
+    const d = daysAgo(`${s.day}T12:00:00Z`, today, windowDays);
     if (d < 0) continue;
     const row = rows[d];
     if (!row) continue;
@@ -213,12 +218,16 @@ export function computeFlakyRepos(
 /** Weekday (0=Mon..6=Sun) × hour (0..23) commit counts. */
 export type HeatmapMatrix = number[][];
 
-export function computeHeatmap(commits: readonly RecentCommit[], today: Date): HeatmapMatrix {
+export function computeHeatmap(
+  commits: readonly RecentCommit[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): HeatmapMatrix {
   const matrix: HeatmapMatrix = Array.from({ length: 7 }, () =>
     Array.from({ length: 24 }, () => 0),
   );
   for (const c of commits) {
-    if (daysAgo(c.timestamp, today) < 0) continue;
+    if (daysAgo(c.timestamp, today, windowDays) < 0) continue;
     const dt = new Date(c.timestamp);
     // Convert JS `getDay()` (0=Sun..6=Sat) to Mon-first (0=Mon..6=Sun).
     const weekday = (dt.getDay() + 6) % 7;

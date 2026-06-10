@@ -1,8 +1,68 @@
 import js from "@eslint/js";
+import i18next from "eslint-plugin-i18next";
 import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+
+/**
+ * i18n coverage gate. `no-literal-string` in `jsx-only` mode flags user-visible
+ * text — JSX text nodes plus the text-bearing attributes below — so every such
+ * string must flow through `t()`. CSS values, variants, testids, and other
+ * non-text attributes are NOT flagged (only the `include` list is checked), and
+ * letter-free glyph/number strings (`·`, `—`, `↑12`) are excluded via `words`.
+ * Toasts are gated separately in `no-restricted-syntax` (call args aren't JSX).
+ */
+const i18nNoLiteralString = [
+  "error",
+  {
+    mode: "jsx-only",
+    "jsx-attributes": {
+      // Text-bearing props only. A string LITERAL on any of these must be t();
+      // `prop={t(...)}` and non-text props (variant/tone/size/component/…) pass.
+      include: [
+        "title",
+        "placeholder",
+        "aria-label",
+        "alt",
+        "label",
+        "description",
+        "subtitle",
+        "tooltip",
+        "helperText",
+        "hint",
+        "heading",
+      ],
+    },
+    words: {
+      // Skip strings with no letters in any script (separators, counts, symbols,
+      // emoji) and ALL-CAPS tokens; everything containing real letters is text.
+      exclude: [/^[^\p{L}]+$/u, "[A-Z_-]+"],
+    },
+    callees: {
+      // Args to these are NOT user text. Defaults + our translation-hook aliases
+      // (`tAria`/`tPrs`/`tCommon`/… are all `t` under another name) + a few
+      // method names whose string args are identifiers, not copy.
+      exclude: [
+        "i18n(ext)?",
+        "t",
+        "t[A-Z]\\w*",
+        "require",
+        "addEventListener",
+        "removeEventListener",
+        "postMessage",
+        "getElementById",
+        "dispatch",
+        "commit",
+        "includes",
+        "indexOf",
+        "endsWith",
+        "startsWith",
+        "isActive",
+      ],
+    },
+  },
+];
 
 /**
  * `no-restricted-syntax` selectors that enforce the constants discipline.
@@ -19,8 +79,7 @@ const noRestrictedSyntaxRules = [
     message: "Use TEST_IDS from @/lib/constants/testIds.constants instead of inline strings.",
   },
   {
-    selector:
-      "JSXAttribute[name.name='data-testid'] > JSXExpressionContainer > TemplateLiteral",
+    selector: "JSXAttribute[name.name='data-testid'] > JSXExpressionContainer > TemplateLiteral",
     message:
       "Use TEST_IDS generator functions (e.g. TEST_IDS.settings.tab(id)) instead of inline templates.",
   },
@@ -30,23 +89,21 @@ const noRestrictedSyntaxRules = [
       "Use storage key constants from @/lib/constants/storage.constants (StorageKey.*, storageKeyForLogo, storageKeyForScroll, NOTIF_KEY_PREFIX, etc.).",
   },
   {
-    selector:
-      "CallExpression[callee.name='listen'] > Literal:first-child",
+    selector: "CallExpression[callee.name='listen'] > Literal:first-child",
     message: "Use EventChannel constants from @recrest/shared instead of inline event names.",
   },
   {
-    selector:
-      "CallExpression[callee.name='invoke'] > Literal:first-child",
+    selector: "CallExpression[callee.name='invoke'] > Literal:first-child",
     message: "Use TauriCommand constants from @recrest/shared instead of inline command names.",
   },
   {
-    selector:
-      "CallExpression[callee.name='safeInvoke'] > Literal:first-child",
+    selector: "CallExpression[callee.name='safeInvoke'] > Literal:first-child",
     message: "Use TauriCommand constants from @recrest/shared instead of inline command names.",
   },
   {
     selector: "Literal[value=/^(repo|clone|updater|oauth|settings):\\/\\//]",
-    message: "Use EventChannel constants from @recrest/shared instead of inline IPC scheme strings.",
+    message:
+      "Use EventChannel constants from @recrest/shared instead of inline IPC scheme strings.",
   },
   {
     selector:
@@ -55,9 +112,19 @@ const noRestrictedSyntaxRules = [
       "Use Box/Typography (with `component` prop if a specific semantic tag is required) instead of styled('html-tag'). For native-chrome leaf nodes that *genuinely* need the raw element (titlebar caption, input field, etc.), keep the styled('tag') with an inline `// eslint-disable-next-line no-restricted-syntax -- reason` comment.",
   },
   {
-    selector: "JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^(div|span|p|h[1-6]|section|article|nav|header|footer|main|aside|strong|em|small)$/]",
+    selector:
+      "JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^(div|span|p|h[1-6]|section|article|nav|header|footer|main|aside|strong|em|small)$/]",
     message:
-      "Raw HTML elements (<div>, <span>, <p>, etc.) are forbidden — use MUI primitives: <Box> for layout, <Typography> for text, with the `component` prop when a specific tag is required (e.g. <Box component=\"span\">). SVG elements (svg/path/circle/line/rect/text) are allowed inside SVG contexts.",
+      'Raw HTML elements (<div>, <span>, <p>, etc.) are forbidden — use MUI primitives: <Box> for layout, <Typography> for text, with the `component` prop when a specific tag is required (e.g. <Box component="span">). SVG elements (svg/path/circle/line/rect/text) are allowed inside SVG contexts.',
+  },
+  {
+    // Toasts are user-facing but their text is a call argument, not JSX — so the
+    // i18next gate can't see it. Block literal toast bodies (including the common
+    // `err ?? "fallback"` / ternary shapes) so they go through `t()`.
+    selector:
+      "CallExpression[callee.object.name='toast'] > Literal, CallExpression[callee.object.name='toast'] > LogicalExpression > Literal, CallExpression[callee.object.name='toast'] > ConditionalExpression > Literal, CallExpression[callee.name='toast'] > Literal, CallExpression[callee.name='toast'] > LogicalExpression > Literal, CallExpression[callee.name='toast'] > ConditionalExpression > Literal",
+    message:
+      "User-facing toast text must come from i18n — pass a t(...) result, not a literal string.",
   },
 ];
 
@@ -103,8 +170,14 @@ export default tseslint.config(
               message: "Radix is removed — use the matching MUI component instead.",
             },
             {
-              group: ["tailwindcss", "tw-animate-css", "class-variance-authority", "tailwind-merge"],
-              message: "Tailwind/CVA stack is removed — use MUI styled() components and theme tokens.",
+              group: [
+                "tailwindcss",
+                "tw-animate-css",
+                "class-variance-authority",
+                "tailwind-merge",
+              ],
+              message:
+                "Tailwind/CVA stack is removed — use MUI styled() components and theme tokens.",
             },
             {
               group: [
@@ -136,10 +209,7 @@ export default tseslint.config(
         },
       ],
       "no-restricted-syntax": ["error", ...noRestrictedSyntaxRules],
-      "max-lines": [
-        "warn",
-        { max: 800, skipBlankLines: true, skipComments: true },
-      ],
+      "max-lines": ["warn", { max: 800, skipBlankLines: true, skipComments: true }],
     },
     settings: {
       react: { version: "detect" },
@@ -196,6 +266,17 @@ export default tseslint.config(
     ],
     rules: {
       "no-restricted-imports": "off",
+    },
+  },
+  {
+    // i18n coverage gate — only JSX-bearing UI files. Tests, stories, and
+    // styles companions are dev/build artifacts whose literal copy never ships
+    // to users, so they're exempt.
+    files: ["src/**/*.tsx"],
+    ignores: ["src/**/*.test.tsx", "src/**/*.stories.tsx", "src/**/*.styles.tsx"],
+    plugins: { i18next },
+    rules: {
+      "i18next/no-literal-string": i18nNoLiteralString,
     },
   },
   {

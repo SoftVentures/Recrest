@@ -481,19 +481,23 @@ impl GitProvider for BitbucketProvider {
             CommandError::bad_request("could not parse workspace/repo from remote")
         })?;
         let base = self.api_base();
-        let url = format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/comments");
+        let url =
+            format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/comments");
 
         let mut payload = serde_json::json!({ "content": { "raw": body } });
         if let (Some(path), Some(pos)) = (path, position) {
             // Bitbucket inline comments use `inline.to` for the new-side line
             // and `inline.from` for the old-side line. Only one of the two is
-            // set per comment, mirroring `CommentSide`.
-            let mut inline = serde_json::json!({ "path": path });
-            match pos.side {
-                CommentSide::Right => inline["to"] = pos.line.into(),
-                CommentSide::Left => inline["from"] = pos.line.into(),
+            // set per comment, mirroring `CommentSide`. Bitbucket Cloud has no
+            // multi-line range, so a range collapses to its anchor (end) line.
+            if let Some(line) = pos.anchor_line() {
+                let mut inline = serde_json::json!({ "path": path });
+                match pos.end.side {
+                    CommentSide::Right => inline["to"] = line.into(),
+                    CommentSide::Left => inline["from"] = line.into(),
+                }
+                payload["inline"] = inline;
             }
-            payload["inline"] = inline;
         }
 
         let res = self
@@ -510,6 +514,12 @@ impl GitProvider for BitbucketProvider {
             )));
         }
         let raw: BbCreatedComment = res.json().await?;
+        let author_avatar_url = raw
+            .user
+            .as_ref()
+            .and_then(|u| u.links.as_ref())
+            .and_then(|l| l.avatar.as_ref())
+            .map(|a| a.href.clone());
         Ok(CommentDto {
             id: raw.id.to_string(),
             author: raw
@@ -517,8 +527,13 @@ impl GitProvider for BitbucketProvider {
                 .as_ref()
                 .and_then(|u| u.display_name.clone().or_else(|| u.nickname.clone()))
                 .unwrap_or_default(),
+            author_avatar_url,
             body: raw.content.map(|c| c.raw).unwrap_or_default(),
             path: raw.inline.and_then(|i| i.path),
+            side: None,
+            line: None,
+            start_line: None,
+            start_side: None,
             created_at: raw.created_on,
         })
     }
@@ -602,8 +617,7 @@ impl GitProvider for BitbucketProvider {
             CommandError::bad_request("could not parse workspace/repo from remote")
         })?;
         let base = self.api_base();
-        let url =
-            format!("{base}/repositories/{workspace}/{repo}/pipelines/{run_id}/stopPipeline");
+        let url = format!("{base}/repositories/{workspace}/{repo}/pipelines/{run_id}/stopPipeline");
         let res = self
             .http
             .post(&url)
@@ -632,9 +646,8 @@ impl GitProvider for BitbucketProvider {
         })?;
         let base = self.api_base();
         // Use the repo's default branch via the `src` shortcut (HEAD).
-        let url = format!(
-            "{base}/repositories/{workspace}/{repo}/src/HEAD/bitbucket-pipelines.yml"
-        );
+        let url =
+            format!("{base}/repositories/{workspace}/{repo}/src/HEAD/bitbucket-pipelines.yml");
         let res = self
             .http
             .get(&url)
@@ -684,8 +697,7 @@ impl GitProvider for BitbucketProvider {
             CommandError::bad_request("could not parse Bitbucket workspace/repo from remote")
         })?;
         let base = self.api_base();
-        let url =
-            format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/merge");
+        let url = format!("{base}/repositories/{workspace}/{repo}/pullrequests/{pr_number}/merge");
 
         let mut body = serde_json::Map::new();
         body.insert(
@@ -725,10 +737,7 @@ impl GitProvider for BitbucketProvider {
         }
 
         let merged: BbMerged = res.json().await?;
-        let merge_sha = merged
-            .merge_commit
-            .as_ref()
-            .and_then(|m| m.hash.clone());
+        let merge_sha = merged.merge_commit.as_ref().and_then(|m| m.hash.clone());
         Ok(MergePullRequestResult {
             merged: merged.state.as_deref() == Some("MERGED"),
             merge_sha,
@@ -891,7 +900,9 @@ fn parse_combined_diff(text: &str) -> Vec<FileDiffDto> {
 }
 
 fn strip_diff_prefix(p: &str) -> &str {
-    p.strip_prefix("a/").or_else(|| p.strip_prefix("b/")).unwrap_or(p)
+    p.strip_prefix("a/")
+        .or_else(|| p.strip_prefix("b/"))
+        .unwrap_or(p)
 }
 
 fn map_pr(pr: BbPr, ci: Option<CiStatus>) -> PullRequestDto {
@@ -1402,6 +1413,7 @@ struct BbWorkspace {
 mod tests {
     use super::*;
     use crate::auth::token::install_keyring_mock;
+    use crate::providers::api::CommentAnchor;
     use wiremock::matchers::{method, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -1536,9 +1548,12 @@ mod tests {
                 "looks good!",
                 Some("src/lib.rs"),
                 Some(CommentPosition {
-                    side: CommentSide::Right,
-                    line: 2,
-                    start_line: None,
+                    start: None,
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    },
                 }),
             )
             .await

@@ -89,7 +89,10 @@ mod tests {
         assert_eq!(current_identifier(), IDENTIFIER_DEV);
         assert_eq!(current_deep_link_scheme(), DEEP_LINK_SCHEME_DEV);
         assert_eq!(current_tray_tooltip(), TRAY_TOOLTIP_DEV);
-        assert_eq!(current_oauth_callback_prefix(), "recrest-dev://oauth/callback");
+        assert_eq!(
+            current_oauth_callback_prefix(),
+            "recrest-dev://oauth/callback"
+        );
     }
 
     #[test]

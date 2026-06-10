@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +11,10 @@ import {
   type RecentCommit,
 } from "@recrest/shared";
 
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralButtonGroup, {
+  GeneralButtonGroupItem,
+} from "@/components/atoms/buttons/GeneralButtonGroup";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import {
   Chip,
@@ -20,9 +24,8 @@ import {
   DayTitle,
   Empty,
   Feed,
-  Pill,
   PillCount,
-  Pills,
+  ShowMore,
   Wrap,
 } from "@/components/organisms/activity/Timeline/Timeline.styles";
 import { FeedEventRow } from "@/components/organisms/activity/Timeline/parts/FeedEventRow";
@@ -33,7 +36,9 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   commits: readonly RecentCommit[];
   prEvents: readonly PrEvent[];
   checkRuns: readonly CheckRunSummary[];
@@ -42,6 +47,18 @@ interface Props {
 }
 
 type FilterKind = FeedFilterKind;
+
+// UI-only render budget: a year+ of history can produce thousands of events,
+// and rendering every row at once freezes the page. We render whole day-groups
+// until the cumulative rendered-row count exceeds this cap, then offer a
+// "Show more" button that raises it by another step. Lives locally (not in the
+// constants registry) because it is a single render-tuning knob scoped to this
+// component with no Rust/domain counterpart.
+const TIMELINE_RENDER_CAP = 150;
+
+// Max rows actually painted per day (mirrors the per-day slice below); used so
+// the cap counts real DOM rows rather than the full unsliced event totals.
+const MAX_ROWS_PER_DAY = 12;
 
 interface DayGroup {
   day: number;
@@ -55,6 +72,7 @@ interface DayGroup {
 function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterKind>(FeedFilterKind.ALL);
+  const [cap, setCap] = useState(TIMELINE_RENDER_CAP);
 
   const groups = useMemo<DayGroup[]>(() => {
     const buckets: DayGroup[] = Array.from({ length: ACTIVITY_DAYS }, (_, day) => ({
@@ -158,32 +176,63 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
       .filter((g) => g.events.length > 0);
   }, [groups, filter]);
 
+  // Reset the render budget whenever the filter changes — a fresh filter view
+  // should start from the initial cap rather than inheriting an expanded one.
+  useEffect(() => {
+    setCap(TIMELINE_RENDER_CAP);
+  }, [filter]);
+
+  // Render whole day-groups while the cumulative painted-row count stays within
+  // the cap; always render at least one group. The grouping/totals memos above
+  // stay over the full event set so counts and filters remain correct — only
+  // the rows committed to the DOM are bounded.
+  const { visibleGroups, hiddenCount } = useMemo(() => {
+    const visible: DayGroup[] = [];
+    let rendered = 0;
+    let total = 0;
+    let capped = false;
+    for (const g of filteredGroups) {
+      const rows = Math.min(g.events.length, MAX_ROWS_PER_DAY);
+      total += rows;
+      // Keep groups contiguous: once a group overflows the cap, stop adding
+      // (but keep tallying `total` so hiddenCount stays accurate).
+      if (!capped && (visible.length === 0 || rendered + rows <= cap)) {
+        visible.push(g);
+        rendered += rows;
+      } else {
+        capped = true;
+      }
+    }
+    return { visibleGroups: visible, hiddenCount: Math.max(0, total - rendered) };
+  }, [filteredGroups, cap]);
+
   const sub = t("activity.timeline.sub", { count: totals.all, days: groups.length });
 
   const filterChips = (
-    <Pills
+    <GeneralButtonGroup
       value={filter}
       exclusive
+      density="sm"
       onChange={(_, next: FilterKind | null) => next && setFilter(next)}
       aria-label={t("activity.timeline_filter", { ns: I18nNamespace.ARIA })}
     >
-      <Pill value={FeedFilterKind.ALL}>
+      <GeneralButtonGroupItem value={FeedFilterKind.ALL}>
         <Box component="span">{t("activity.timeline.filter_all")}</Box>
         <PillCount component="span">{totals.all}</PillCount>
-      </Pill>
-      <Pill value={FeedFilterKind.COMMITS}>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.COMMITS}>
         <Box component="span">{t("activity.timeline.filter_commits")}</Box>
         <PillCount component="span">{totals.commits}</PillCount>
-      </Pill>
-      <Pill value={FeedFilterKind.PRS}>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.PRS}>
         <Box component="span">{t("activity.timeline.filter_prs")}</Box>
         <PillCount component="span">{totals.prs}</PillCount>
-      </Pill>
-      <Pill value={FeedFilterKind.CHECKS}>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.CHECKS}>
         <Box component="span">{t("activity.timeline.filter_checks")}</Box>
         <PillCount component="span">{totals.checks}</PillCount>
-      </Pill>
-    </Pills>
+      </GeneralButtonGroupItem>
+    </GeneralButtonGroup>
   );
 
   return (
@@ -199,7 +248,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
         </Empty>
       ) : (
         <Wrap>
-          {filteredGroups.map((g) => (
+          {visibleGroups.map((g) => (
             <DayCard key={g.day} data-testid={TEST_IDS.activity.timeline.day}>
               <DayHead>
                 <DayTitle>{dayLabel(g.day)}</DayTitle>
@@ -243,16 +292,29 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
                 </ChipRow>
               </DayHead>
               <Feed>
-                {g.events.slice(0, 12).map((ev, idx) => (
+                {g.events.slice(0, MAX_ROWS_PER_DAY).map((ev, idx) => (
                   <FeedEventRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
                 ))}
               </Feed>
             </DayCard>
           ))}
+          {hiddenCount > 0 && (
+            <ShowMore>
+              <GeneralButton
+                variant="outline"
+                size="sm"
+                data-testid={TEST_IDS.activity.timeline.showMore}
+                onClick={() => setCap((c) => c + TIMELINE_RENDER_CAP)}
+              >
+                {t("activity.timeline.show_more", { count: hiddenCount })}
+              </GeneralButton>
+            </ShowMore>
+          )}
         </Wrap>
       )}
     </GeneralCard>
   );
 }
 
-export default Timeline;
+// memo: urgent page re-renders during chunk streaming must not re-layout the timeline.
+export default memo(Timeline);

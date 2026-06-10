@@ -23,8 +23,8 @@ import { toast } from "sonner";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { useAppDispatch } from "@/store/hooks";
@@ -46,7 +46,7 @@ function QuickActionsCard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
-  const { commits: recentCommits } = useRecentCommits({ days: 14 });
+  const { commits: recentCommits } = useActivityCommits();
 
   const [fetching, setFetching] = useState(false);
 
@@ -55,11 +55,15 @@ function QuickActionsCard() {
     setFetching(true);
     try {
       const ok = await invoke<number>(TauriCommand.GIT_FETCH_ALL);
-      toast.success(`Fetched ${ok} repo${ok === 1 ? "" : "s"}`);
+      toast.success(
+        ok === 1
+          ? t("dash.quick.fetched_one", { count: ok })
+          : t("dash.quick.fetched_other", { count: ok }),
+      );
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch {
-      toast.error("Fetch all failed");
+      toast.error(t("dash.quick.fetch_all_error"));
     } finally {
       setFetching(false);
     }

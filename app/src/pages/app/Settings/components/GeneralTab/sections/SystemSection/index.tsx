@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { useTranslation } from "react-i18next";
 
 import { Box, MenuItem, type SelectChangeEvent, Typography } from "@mui/material";
@@ -7,9 +9,9 @@ import {
   type AppSettings,
   IDE_DEFINITIONS,
   IDE_IDS,
-  type IdeId,
   POLLING_INTERVAL_MAX_MS,
   POLLING_INTERVAL_MIN_MS,
+  PROFILE_CAPABLE_TERMINAL_IDS,
   SHELL_DEFINITIONS,
   SHELL_IDS,
   type ShellId,
@@ -25,16 +27,26 @@ import ShellIcon from "@/assets/icons/ShellIcon";
 import TerminalIcon from "@/assets/icons/TerminalIcon";
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
-import { saveSettings, setPollingIntervalMinutes } from "@/store/actions/settings.actions";
+import {
+  loadDetectedIdes,
+  loadDetectedShells,
+  loadDetectedTerminals,
+  saveSettings,
+  setPollingIntervalMinutes,
+} from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-const DETECTED_IDES: IdeId[] = ["vscode", "cursor"];
+/** Terminal-select sentinel for the "type my own launch command" mode.
+ *  Persisted as `terminal.id = "custom"`; the Rust `open_at` custom-command
+ *  path runs before id resolution, so no extra spawn arm is needed. */
+const CUSTOM_TERMINAL_ID = "custom";
 
-/** Stub-detected terminals + shells per platform. In Tauri-land Rust runs the
- *  real `which`/`where.exe` probe; in `yarn dev:web` we return a plausible
- *  default set so the dropdowns are usable for visual / interaction testing. */
+/** `yarn dev:web` fallback only. In Tauri the real `detect_terminals` /
+ *  `detect_shells` IPC probe replaces these; outside Tauri the store stays
+ *  `null` and these plausible defaults keep the dropdowns usable. */
 const DETECTED_TERMINALS_BY_PLATFORM: Record<Platform, TerminalId[]> = {
   [Platform.MAC]: ["apple-terminal", "iterm2", "warp"],
   [Platform.WINDOWS]: ["windows-terminal", "powershell", "cmd"],
@@ -50,6 +62,21 @@ const DETECTED_SHELLS_BY_PLATFORM: Record<Platform, ShellId[]> = {
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / autofocus / IME
 const NumberInput = styled("input")(({ theme }) => ({
   width: 80,
+  height: 32,
+  padding: "0 10px",
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  backgroundColor: theme.palette.background.default,
+  color: theme.palette.text.primary,
+  fontSize: 12.5,
+  fontFamily: "inherit",
+  outline: "none",
+  "&:focus": { borderColor: theme.palette.border.hover },
+}));
+
+// eslint-disable-next-line no-restricted-syntax -- native text input mirrors the NumberInput pattern for free-text settings
+const TextInput = styled("input")(({ theme }) => ({
+  width: 260,
   height: 32,
   padding: "0 10px",
   border: `1px solid ${theme.palette.divider}`,
@@ -92,9 +119,21 @@ export function SystemSection() {
   // Source of truth is the persisted backend settings, not local state — local
   // state was lost on tab switch (component remount), resetting the dropdowns.
   const backend = useAppSelector((s) => s.settings.backend);
+  const detectedTerminalsState = useAppSelector((s) => s.settings.detectedTerminals);
+  const detectedShellsState = useAppSelector((s) => s.settings.detectedShells);
+  const detectedIdesState = useAppSelector((s) => s.settings.detectedIdes);
   const defaultIde = backend?.defaultIde ?? "auto";
   const defaultTerminal = backend?.terminal?.id ?? "auto";
   const defaultShell = backend?.shell ?? "auto";
+
+  // Tauri-only: kick off the real OS probe once. Outside Tauri the thunks would
+  // throw `tauri-ipc-unavailable`, so the stub maps below stay authoritative.
+  useEffect(() => {
+    if (!isTauri()) return;
+    void dispatch(loadDetectedTerminals());
+    void dispatch(loadDetectedShells());
+    void dispatch(loadDetectedIdes());
+  }, [dispatch]);
 
   const persist = (patch: Partial<AppSettings>) => {
     void dispatch(saveSettings(patch))
@@ -103,10 +142,24 @@ export function SystemSection() {
       .catch((err) => toast.error(String((err as Error)?.message ?? err)));
   };
 
-  const detectedSet = new Set(DETECTED_IDES);
+  // Real OS probe (`detect_ides`); `null` until it resolves (and in non-Tauri
+  // contexts like Storybook) → no IDE shown as installed until we actually know.
+  const detectedSet = new Set<string>(detectedIdesState ?? []);
 
-  const detectedTerminals = new Set<TerminalId>(DETECTED_TERMINALS_BY_PLATFORM[platform]);
-  const detectedShells = new Set<ShellId>(DETECTED_SHELLS_BY_PLATFORM[platform]);
+  const detectedTerminals = new Set<TerminalId>(
+    detectedTerminalsState
+      ? detectedTerminalsState.filter((d) => d.available).map((d) => d.id)
+      : DETECTED_TERMINALS_BY_PLATFORM[platform],
+  );
+  const detectedShells = new Set<ShellId>(
+    detectedShellsState
+      ? detectedShellsState.filter((d) => d.available).map((d) => d.id)
+      : DETECTED_SHELLS_BY_PLATFORM[platform],
+  );
+  const isProfileCapable = (PROFILE_CAPABLE_TERMINAL_IDS as readonly string[]).includes(
+    defaultTerminal,
+  );
+  const isCustomTerminal = defaultTerminal === CUSTOM_TERMINAL_ID;
   const firstTerminal = TERMINAL_IDS.find((id) => detectedTerminals.has(id)) ?? null;
   const firstShell = SHELL_IDS.find((id) => detectedShells.has(id)) ?? null;
   const platformMap = {
@@ -246,6 +299,9 @@ export function SystemSection() {
                 </>
               );
             }
+            if (v === CUSTOM_TERMINAL_ID) {
+              return <>{t("settings.terminal.custom_option")}</>;
+            }
             return (
               <>
                 <TerminalIcon id={v as TerminalId} size={16} />
@@ -264,8 +320,59 @@ export function SystemSection() {
               <MenuLabel indent>{TERMINAL_DEFINITIONS[id].name}</MenuLabel>
             </MenuItem>
           ))}
+          <MenuItem value={CUSTOM_TERMINAL_ID}>
+            <MenuLabel indent>{t("settings.terminal.custom_option")}</MenuLabel>
+          </MenuItem>
         </WideSelect>
       </SettingsRow>
+
+      {isProfileCapable && (
+        <SettingsRow
+          label={t("settings.terminal.profile_label")}
+          sub={t("settings.terminal.profile_hint")}
+        >
+          <TextInput
+            key={`profile-${defaultTerminal}`}
+            type="text"
+            defaultValue={backend?.terminal?.profile ?? ""}
+            onBlur={(e) =>
+              persist({
+                terminal: {
+                  id: backend?.terminal?.id ?? null,
+                  profile: e.target.value.trim() || null,
+                  customCommand: backend?.terminal?.customCommand ?? null,
+                },
+              })
+            }
+            aria-label={t("settings.terminal.profile_label")}
+            data-testid={TEST_IDS.settings.general.terminalProfileInput}
+          />
+        </SettingsRow>
+      )}
+
+      {isCustomTerminal && (
+        <SettingsRow
+          label={t("settings.terminal.custom_command_label")}
+          sub={t("settings.terminal.custom_command_hint")}
+        >
+          <TextInput
+            key="custom-command"
+            type="text"
+            defaultValue={backend?.terminal?.customCommand ?? ""}
+            onBlur={(e) =>
+              persist({
+                terminal: {
+                  id: CUSTOM_TERMINAL_ID,
+                  profile: backend?.terminal?.profile ?? null,
+                  customCommand: e.target.value.trim() || null,
+                },
+              })
+            }
+            aria-label={t("settings.terminal.custom_command_label")}
+            data-testid={TEST_IDS.settings.general.terminalCustomCommandInput}
+          />
+        </SettingsRow>
+      )}
 
       <SettingsRow
         label={t("settings.fields.default_shell")}

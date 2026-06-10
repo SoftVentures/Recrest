@@ -1,6 +1,10 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { motion } from "motion/react";
+
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const Root = styled(Box)({
   height: "100%",
   minHeight: 0,
@@ -106,7 +110,7 @@ export const LangDot = styled(Box)(({ theme }) => ({
 
 export const PathText = styled(Typography)(({ theme }) => ({
   marginTop: 4,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.information,
 })) as typeof Typography;
@@ -127,10 +131,7 @@ export const Chip = styled("span", {
   display: "inline-flex",
   alignItems: "center",
   gap: 4,
-  fontFamily:
-    tone === "branch"
-      ? 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace'
-      : "inherit",
+  fontFamily: tone === "branch" ? MONO_STACK : "inherit",
   fontSize: tone === "branch" ? 11.5 : 11,
   padding: "2px 8px",
   borderRadius: 8,
@@ -223,18 +224,36 @@ export const IconOnlyBtn = styled(SecondaryBtn)({
   justifyContent: "center",
 });
 
-export const Grid2 = styled(Box)({
+// Paired two-up grid. Both columns are equal width (`minmax(0, 1fr)` — the `0`
+// min lets a column shrink instead of overflowing its content) and every card
+// in a row is stretched to equal height (grid default `align-items: stretch`).
+// Cards are ordered so similar-height siblings pair up; the per-card content
+// fills the stretched height (see `CardSlot`), so equal heights read as
+// intentional rather than leaving a void.
+export const CardGrid = styled(Box)({
   display: "grid",
-  // Stack to a single column once columns can no longer hold ~280px of content
-  // (narrow viewports + zoomed displays).
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  // Cards size to their own content — without this, a tall Working-tree
-  // card (many uncommitted files) stretches its short sibling (Merge
-  // requests / Activity bars) to match, leaving an empty void at the
-  // bottom of the short card. `start` keeps each card honest.
-  alignItems: "start",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
   gap: 12,
 }) as typeof Box;
+
+// One grid cell. It's a `motion.div` so reflow/resize (column reordering, the
+// card set changing when a provider connects) animates smoothly via the shared
+// spring. `display: flex` + `& > * { flex: 1 }` forces whatever card primitive
+// it wraps (the local `Card` or a `GeneralCard`-based CiCard/DeploymentsCard)
+// to fill the full cell height — that's what makes the heights equal without
+// touching each card component. `full` spans the whole row for a lone last card.
+export const CardSlot = styled(motion.div, {
+  shouldForwardProp: (p) => p !== "full",
+})<{ full?: boolean }>(({ full }) => ({
+  display: "flex",
+  flexDirection: "column",
+  minWidth: 0,
+  ...(full ? { gridColumn: "1 / -1" } : null),
+  "& > *": {
+    flex: 1,
+    minWidth: 0,
+  },
+}));
 
 export const Card = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
@@ -264,36 +283,13 @@ export const CardMeta = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
-export const ActivityBars = styled(Box)({
-  height: 120,
-  display: "flex",
-  alignItems: "flex-end",
-  gap: 6,
-}) as typeof Box;
-
-export const ActivityBar = styled(Box, {
-  shouldForwardProp: (p) => p !== "heightPct" && p !== "hot",
-})<{ heightPct: number; hot: boolean }>(({ theme, heightPct, hot }) => ({
-  flex: 1,
-  minWidth: 6,
-  height: `${heightPct}%`,
-  borderRadius: 8,
-  backgroundColor: hot
-    ? theme.palette.primary.main
-    : `color-mix(in srgb, ${theme.palette.primary.main} 35%, transparent)`,
-}));
-
-export const ActivityAxis = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  fontSize: 10,
-  color: theme.palette.text.information,
-})) as typeof Box;
-
 export const CommitsList = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 10,
+  // Fill the stretched card height (equal-height rows) and scroll internally.
+  flex: 1,
+  minHeight: 0,
   maxHeight: 320,
   overflowY: "auto",
 }) as typeof Box;
@@ -327,6 +323,8 @@ export const PrRowSlot = styled(Box)({
 export const WorkingCopyScroll = styled(Box)({
   // Mirrors PrScroller: the Working-tree card can hold many files and would
   // blow the page height to thousands of pixels without an internal cap.
+  flex: 1,
+  minHeight: 0,
   maxHeight: 480,
   overflowY: "auto",
   // Sub-sections inside WorkingCopyPanel use `overflow: hidden`, so the
@@ -338,6 +336,9 @@ export const CleanState = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
+  // Fill the stretched card so the celebrating mascot centres instead of
+  // hugging the top with a void beneath.
+  flex: 1,
   gap: 4,
   padding: "16px 0 8px",
 }) as typeof Box;
@@ -359,20 +360,20 @@ export const MissingRoot = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const RemoteUrlText = styled(Box)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.secondary,
 })) as typeof Box;
 
 export const PrScroller = styled(Box)({
-  // Hard cap with internal scroll. The Grid2 row no longer stretches cards
-  // to match (align-items: start), so PrScroller can't rely on a
-  // stretched parent to bound its growth — we need an explicit ceiling
-  // here, otherwise a long PR list bloats the whole page.
+  // Fills the stretched card height (equal-height rows) and scrolls internally;
+  // the maxHeight is the hard ceiling so a long PR list can't bloat the page.
+  flex: 1,
+  minHeight: 0,
   maxHeight: 480,
   overflowY: "auto",
 }) as typeof Box;
 
 export const CommitSha = styled(Box)({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
 }) as typeof Box;

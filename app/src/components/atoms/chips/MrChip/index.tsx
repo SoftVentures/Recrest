@@ -5,6 +5,8 @@ import { styled } from "@mui/material/styles";
 
 import { PrState } from "@recrest/shared";
 
+import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+
 export interface MrChipProps {
   /** Underlying PR state. Ignored for colouring when `draft` is `true`. */
   state?: PrState;
@@ -33,18 +35,9 @@ const Root = styled(Typography, { shouldForwardProp: FORWARD })<{ tone: Tone }>(
       backgroundColor: theme.palette.surface.interface.backElevation,
       color: theme.palette.text.information,
     }),
-    ...(tone === PrState.OPEN && {
-      backgroundColor: `color-mix(in srgb, ${theme.palette.success.main} 15%, transparent)`,
-      color: theme.palette.success.dark,
-    }),
-    ...(tone === PrState.MERGED && {
-      backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 15%, transparent)`,
-      color: theme.palette.primary.dark,
-    }),
-    ...(tone === PrState.CLOSED && {
-      backgroundColor: `color-mix(in srgb, ${theme.palette.error.main} 15%, transparent)`,
-      color: theme.palette.error.dark,
-    }),
+    ...(tone === PrState.OPEN && toneChip(theme, StatusTone.SUCCESS, 15)),
+    ...(tone === PrState.MERGED && toneChip(theme, StatusTone.PRIMARY, 15)),
+    ...(tone === PrState.CLOSED && toneChip(theme, StatusTone.ERROR, 15)),
   }),
 );
 

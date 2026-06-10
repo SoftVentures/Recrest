@@ -116,7 +116,11 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
     let repo = Repository::open(path)?;
 
     let branch = current_branch(&repo);
-    let head = repo.head().ok().and_then(|r| r.target()).map(|oid| oid.to_string());
+    let head = repo
+        .head()
+        .ok()
+        .and_then(|r| r.target())
+        .map(|oid| oid.to_string());
 
     let mut opts = StatusOptions::new();
     opts.include_untracked(true)
@@ -142,10 +146,8 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
             || s.is_index_modified()
             || s.is_index_deleted()
             || s.is_index_renamed();
-        let is_unstaged = s.is_wt_modified()
-            || s.is_wt_deleted()
-            || s.is_wt_renamed()
-            || s.is_wt_typechange();
+        let is_unstaged =
+            s.is_wt_modified() || s.is_wt_deleted() || s.is_wt_renamed() || s.is_wt_typechange();
         let is_untracked = s.is_wt_new();
 
         if is_conflict {
@@ -324,7 +326,9 @@ fn commit_activity_14d(repo: &Repository) -> Result<[u32; ACTIVITY_DAYS], git2::
         Ok(h) => h,
         Err(_) => return Ok(buckets), // unborn or empty repo
     };
-    let Some(head_oid) = head.target() else { return Ok(buckets) };
+    let Some(head_oid) = head.target() else {
+        return Ok(buckets);
+    };
 
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(git2::Sort::TIME)?;
@@ -332,13 +336,15 @@ fn commit_activity_14d(repo: &Repository) -> Result<[u32; ACTIVITY_DAYS], git2::
 
     for oid in revwalk {
         let Ok(oid) = oid else { continue };
-        let Ok(commit) = repo.find_commit(oid) else { continue };
+        let Ok(commit) = repo.find_commit(oid) else {
+            continue;
+        };
         let ts = commit.time().seconds();
         let day = day_bucket(ts, today, cutoff);
         match day {
             DayBucket::InRange(idx) => buckets[idx] = buckets[idx].saturating_add(1),
             DayBucket::Older => break, // TIME-sorted walk: everything after is older too
-            DayBucket::Future => {} // clock skew: ignore
+            DayBucket::Future => {}    // clock skew: ignore
         }
     }
     Ok(buckets)
@@ -351,7 +357,9 @@ enum DayBucket {
 }
 
 fn day_bucket(ts: i64, today: NaiveDate, cutoff: NaiveDate) -> DayBucket {
-    let Some(dt) = Local.timestamp_opt(ts, 0).single() else { return DayBucket::Older };
+    let Some(dt) = Local.timestamp_opt(ts, 0).single() else {
+        return DayBucket::Older;
+    };
     let commit_day = dt.date_naive();
     if commit_day > today {
         return DayBucket::Future;
@@ -398,8 +406,12 @@ fn detect_languages(
     ),
     git2::Error,
 > {
-    let Ok(head) = repo.head() else { return Ok((None, None)) };
-    let Ok(tree) = head.peel_to_tree() else { return Ok((None, None)) };
+    let Ok(head) = repo.head() else {
+        return Ok((None, None));
+    };
+    let Ok(tree) = head.peel_to_tree() else {
+        return Ok((None, None));
+    };
 
     // Track byte counts per extension so the breakdown reflects file size,
     // not just count — large TS files outweigh a trailing .md sample.
@@ -412,7 +424,9 @@ fn detect_languages(
         if entry.kind() != Some(git2::ObjectType::Blob) {
             return TreeWalkResult::Ok;
         }
-        let Some(name) = entry.name() else { return TreeWalkResult::Ok };
+        let Some(name) = entry.name() else {
+            return TreeWalkResult::Ok;
+        };
         if let Some(ext) = trailing_extension(name) {
             let size = repo
                 .find_blob(entry.id())

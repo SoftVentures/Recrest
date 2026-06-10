@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -28,6 +28,7 @@ import {
   ToolButton,
   Toolbar,
 } from "@/components/atoms/text/RichTextEditor/RichTextEditor.styles";
+import LinkPromptModal from "@/components/atoms/text/RichTextEditor/parts/LinkPromptModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { sanitizeHtml } from "@/lib/utils/security.utils";
 
@@ -63,6 +64,8 @@ function RichTextEditor({
   "data-testid": testId,
 }: RichTextEditorProps) {
   const { t } = useTranslation(I18nNamespace.COMMON);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkInitial, setLinkInitial] = useState("");
 
   const editor = useEditor({
     extensions: [
@@ -117,9 +120,21 @@ function RichTextEditor({
 
   if (!editor) return null;
 
+  // An empty URL removes the link (parity with the old prompt behaviour). The
+  // chain's `.focus()` restores ProseMirror's retained selection that the
+  // modal blurred, so the mark lands on the originally-selected range.
+  const applyLink = (url: string) => {
+    setLinkModalOpen(false);
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
   return (
     <Root>
-      <Toolbar role="toolbar" aria-label="Formatting">
+      <Toolbar role="toolbar" aria-label={t("editor.toolbar_aria")}>
         <ToolBtn editor={editor} mark="bold" label={t("editor.bold")} icon={<Bold size={13} />} />
         <ToolBtn
           editor={editor}
@@ -176,18 +191,12 @@ function RichTextEditor({
           title={t("editor.link")}
           active={editor.isActive("link")}
           onClick={() => {
-            const previous = (editor.getAttributes("link").href as string | undefined) ?? "";
-            // Prompt is the simplest UX for "enter a URL" — for a richer
-            // popover we'd lift this into a controlled dialog. Until then,
-            // the URL still goes through TipTap's `validate` regex above,
-            // so `javascript:` etc. can't slip in.
-            const url = window.prompt(t("editor.link_prompt"), previous);
-            if (url === null) return;
-            if (url === "") {
-              editor.chain().focus().extendMarkRange("link").unsetLink().run();
-              return;
-            }
-            editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+            // Open a controlled dialog instead of `window.prompt` (the Tauri
+            // shell reroutes prompt to the ACL-gated dialog plugin). The URL
+            // still passes TipTap's `validate` regex above, so `javascript:`
+            // etc. can't slip in.
+            setLinkInitial((editor.getAttributes("link").href as string | undefined) ?? "");
+            setLinkModalOpen(true);
           }}
         >
           <LinkIcon size={13} />
@@ -206,6 +215,12 @@ function RichTextEditor({
       <Surface>
         <EditorContent editor={editor} />
       </Surface>
+      <LinkPromptModal
+        open={linkModalOpen}
+        initialUrl={linkInitial}
+        onApply={applyLink}
+        onClose={() => setLinkModalOpen(false)}
+      />
     </Root>
   );
 }

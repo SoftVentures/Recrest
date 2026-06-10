@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -25,6 +25,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
@@ -36,23 +37,23 @@ import RepoGitConfigCard from "@/components/organisms/repos/RepoGitConfigCard";
 import RepoSshModal from "@/components/organisms/repos/RepoSshModal";
 import RepoStats from "@/components/organisms/repos/RepoStats";
 import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
+import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
-import { useRecentCommits } from "@/hooks/useRecentCommits";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import {
-  ActivityAxis,
-  ActivityBar,
-  ActivityBars,
   BackBar,
   BackButton,
   Card,
+  CardGrid,
   CardHead,
   CardMeta,
+  CardSlot,
   CardTitle,
   Chip,
   CleanState,
@@ -65,7 +66,6 @@ import {
   CommitSha,
   CommitsList,
   Content,
-  Grid2,
   Header,
   HeaderActions,
   HeaderBody,
@@ -85,10 +85,24 @@ import {
   TitleRow,
   WorkingCopyScroll,
 } from "@/pages/app/RepoDetail/RepoDetail.styles";
-import { fetchPullRequests } from "@/store/actions/prs.actions";
+import { detailKey, fetchPullRequests, loadPrDiff } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
 import { bumpRefreshNonce } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+
+// Shared spring for the card grid: cells animate to their new size/slot when
+// the grid reflows (window resize) or the card set changes (provider connects).
+const CARD_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 420,
+  damping: 36,
+  mass: 0.7,
+};
+
+// Stable empty-array reference so the `prs` selector keeps the same value when
+// a repo has no cached PRs — an inline `[]` makes react-redux warn about an
+// unstable selector result.
+const NO_PRS: readonly PullRequest[] = [];
 
 export default function RepoDetailPage() {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
@@ -103,11 +117,21 @@ export default function RepoDetailPage() {
   const repos = useEnrichedRepos();
   const repo = useMemo(() => repos.find((r) => r.id === repoId), [repos, repoId]);
 
-  const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? []) : []));
+  const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? NO_PRS) : NO_PRS));
+  const cachedDiffs = useAppSelector((s) => s.prs.diff);
+  const diffsLoading = useAppSelector((s) => s.prs.diffLoading);
   const connections = useAppSelector((s) => s.providers.connections);
   const repoProviderConnected = !!repo?.providerId && !!connections[repo.providerId]?.connected;
 
-  const { commits } = useRecentCommits({ repoId, days: 30, limit: 8 });
+  const { commits: rangeCommits, byRepo, windowDays, unit } = useRangeActivity();
+  const commits = useMemo(
+    () => rangeCommits.filter((c) => c.repoId === repoId).slice(0, 8),
+    [rangeCommits, repoId],
+  );
+  const activitySeries = useMemo(
+    () => (repoId ? (byRepo.get(repoId) ?? []) : []),
+    [byRepo, repoId],
+  );
 
   const [busy, setBusy] = useState<null | "pull" | "push" | "fetch">(null);
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
@@ -118,6 +142,19 @@ export default function RepoDetailPage() {
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
   }, [dispatch, repoId, repoProviderConnected]);
+
+  // Preload each MR's diff so the row can show real +/− stats even when the
+  // provider's PR-list endpoint omits them (GitLab, fork PRs). Mirrors the
+  // MergeRequests page; dispatch is idempotent so we guard on cache + in-flight.
+  useEffect(() => {
+    if (!isTauri() || !repoId || !repoProviderConnected) return;
+    for (const pr of prs) {
+      const key = detailKey(repoId, pr.number);
+      if (!cachedDiffs[key] && !diffsLoading[key]) {
+        void dispatch(loadPrDiff({ repoId, prNumber: pr.number }));
+      }
+    }
+  }, [dispatch, repoId, repoProviderConnected, prs, cachedDiffs, diffsLoading]);
 
   useEffect(() => {
     if (repo) document.title = `${repo.name} — Recrest`;
@@ -145,70 +182,230 @@ export default function RepoDetailPage() {
     setBusy("fetch");
     try {
       await invoke(TauriCommand.GIT_FETCH, { repoId: repo.id });
-      toast.success("Fetched");
+      toast.success(t("detail.toast_fetched", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Fetch failed");
+      toast.error(
+        (err as { message?: string })?.message ??
+          t("detail.toast_fetch_failed", { ns: I18nNamespace.REPOS }),
+      );
     } finally {
       setBusy(null);
     }
-  }, [dispatch, repo]);
+  }, [dispatch, repo, t]);
 
   const doPull = useCallback(async () => {
     if (!repo) return;
     setBusy("pull");
     try {
       await invoke(TauriCommand.GIT_PULL, { repoId: repo.id });
-      toast.success("Pulled");
+      toast.success(t("detail.toast_pulled", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Pull failed");
+      toast.error(
+        (err as { message?: string })?.message ??
+          t("detail.toast_pull_failed", { ns: I18nNamespace.REPOS }),
+      );
     } finally {
       setBusy(null);
     }
-  }, [dispatch, repo]);
+  }, [dispatch, repo, t]);
 
   const doPush = useCallback(async () => {
     if (!repo) return;
     setBusy("push");
     try {
       await invoke(TauriCommand.GIT_PUSH, { repoId: repo.id });
-      toast.success("Pushed");
+      toast.success(t("detail.toast_pushed", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Push failed");
+      toast.error(
+        (err as { message?: string })?.message ??
+          t("detail.toast_push_failed", { ns: I18nNamespace.REPOS }),
+      );
     } finally {
       setBusy(null);
     }
-  }, [dispatch, repo]);
+  }, [dispatch, repo, t]);
 
   if (!repo) {
     return (
       <MissingRoot data-testid={TEST_IDS.repoDetail.page}>
         <EmptyState
           mascot="shrugging"
-          title="Repository not found"
-          description={`No repo with id "${repoId}".`}
+          title={t("detail.not_found_title", { ns: I18nNamespace.REPOS })}
+          description={t("detail.not_found_desc", { ns: I18nNamespace.REPOS, id: repoId })}
         />
       </MissingRoot>
     );
   }
 
-  const totalCommits = repo.activity.reduce((a, b) => a + b, 0);
-  const maxBucket = Math.max(1, ...repo.activity);
+  const totalCommits = activitySeries.reduce((a, b) => a + b, 0);
+  const maxBucket = Math.max(1, ...activitySeries);
   const openMrs = prs.filter((p) => p.state === PrState.OPEN);
   const draftMrs = openMrs.filter((p) => p.draft);
   const brand = brandFromUrl(repo.remoteUrl);
+
+  const workingTreeCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>
+          {repo.status.dirty
+            ? t("status.dirty", { ns: I18nNamespace.REPOS })
+            : t("detail.changes_title", { ns: I18nNamespace.REPOS })}
+        </CardTitle>
+        {repo.status.dirty && (
+          <CardMeta>
+            {t("detail.working_meta", {
+              ns: I18nNamespace.REPOS,
+              added: repo.added,
+              removed: repo.removed,
+              count: repo.filesChanged,
+            })}
+          </CardMeta>
+        )}
+      </CardHead>
+      {repo.status.dirty ? (
+        <WorkingCopyScroll>
+          <WorkingCopyPanel repoId={repo.id} onCommitClick={() => setCommitDialogOpen(true)} />
+        </WorkingCopyScroll>
+      ) : (
+        <CleanState>
+          <Mascot
+            variant="celebrating"
+            size={96}
+            title={t("detail.nothing_to_commit", { ns: I18nNamespace.REPOS })}
+          />
+          <CleanStateText>
+            {t("detail.nothing_to_commit", { ns: I18nNamespace.REPOS })}
+          </CleanStateText>
+          <CleanStateSub>
+            {t("detail.working_tree_clean", { ns: I18nNamespace.REPOS })}
+          </CleanStateSub>
+        </CleanState>
+      )}
+    </Card>
+  );
+
+  const mergeRequestsCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>{t("detail.merge_requests", { ns: I18nNamespace.REPOS })}</CardTitle>
+        <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
+          {t("detail.open_mrs_view", { ns: I18nNamespace.REPOS })}
+        </SecondaryBtn>
+      </CardHead>
+      {prs.length === 0 ? (
+        <EmptyState
+          mascot="snoozing"
+          mascotSize={88}
+          title={t("detail.no_mrs_title", { ns: I18nNamespace.REPOS })}
+          description={t("detail.no_mrs_desc", { ns: I18nNamespace.REPOS })}
+        />
+      ) : (
+        <PrScroller>
+          {prs.map((pr) => (
+            <PrRowSlot
+              key={pr.number}
+              data-testid={TEST_IDS.repoDetail.mrRow}
+              data-mr-number={pr.number}
+              data-mr-state={pr.state}
+              data-mr-author={pr.author || undefined}
+              onClick={() => setSelectedPr(pr)}
+            >
+              <MrRow pr={pr} repoId={repo.id} rightMeta="state" onClick={() => setSelectedPr(pr)} />
+            </PrRowSlot>
+          ))}
+        </PrScroller>
+      )}
+    </Card>
+  );
+
+  const gitConfigCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>{t("settings.git.repo_card_title")}</CardTitle>
+      </CardHead>
+      <RepoGitConfigCard repoId={repo.id} />
+    </Card>
+  );
+
+  const activityCard = (
+    <ActivityChart
+      agg={activitySeries}
+      maxDay={maxBucket}
+      unit={unit}
+      title={t("detail.activity_title", { ns: I18nNamespace.REPOS, days: windowDays })}
+      meta={t("detail.activity_meta", {
+        ns: I18nNamespace.REPOS,
+        count: totalCommits,
+        peak: maxBucket,
+      })}
+    />
+  );
+
+  const recentCommitsCard = (
+    <Card>
+      <CardHead>
+        <CardTitle>{t("detail.recent_title", { ns: I18nNamespace.REPOS })}</CardTitle>
+        <CardMeta>{t("detail.recent_sub", { ns: I18nNamespace.REPOS, days: windowDays })}</CardMeta>
+      </CardHead>
+      {commits.length === 0 ? (
+        <EmptyState
+          mascot="snoozing"
+          mascotSize={88}
+          title={t("detail.no_commits_title", { ns: I18nNamespace.REPOS })}
+          description={t("detail.no_commits_desc", { ns: I18nNamespace.REPOS })}
+        />
+      ) : (
+        <CommitsList>
+          {commits.map((c) => (
+            <CommitRow key={c.sha}>
+              <AuthorAvatar name={c.author} email={c.authorEmail ?? undefined} size={20} />
+              <CommitMain>
+                <CommitMessage>{c.summary}</CommitMessage>
+                <CommitMeta>
+                  {c.author} · <CommitSha component="span">{c.sha.slice(0, 7)}</CommitSha>
+                </CommitMeta>
+              </CommitMain>
+            </CommitRow>
+          ))}
+        </CommitsList>
+      )}
+    </Card>
+  );
+
+  // Order cards so similar-height siblings pair up in the two-up grid (the grid
+  // stretches each row to equal height). When a provider is connected we have 7
+  // cards: tall pair (working + MRs), medium pair (CI + git config), short pair
+  // (deployments + activity), and the tall commits list takes a full-width row
+  // on its own. Without a provider only the 4 always-present cards remain.
+  const cardSlots: { key: string; node: ReactNode }[] = repoProviderConnected
+    ? [
+        { key: "working", node: workingTreeCard },
+        { key: "mr", node: mergeRequestsCard },
+        { key: "ci", node: <CiCard repoId={repo.id} /> },
+        { key: "gitConfig", node: gitConfigCard },
+        { key: "deployments", node: <DeploymentsCard repoId={repo.id} /> },
+        { key: "activity", node: activityCard },
+        { key: "commits", node: recentCommitsCard },
+      ]
+    : [
+        { key: "working", node: workingTreeCard },
+        { key: "commits", node: recentCommitsCard },
+        { key: "gitConfig", node: gitConfigCard },
+        { key: "activity", node: activityCard },
+      ];
 
   return (
     <Root data-testid={TEST_IDS.repoDetail.page}>
       <BackBar>
         <BackButton type="button" onClick={goBack} data-testid={TEST_IDS.repoDetail.back}>
           <ArrowLeft size={14} />
-          <Box component="span">Back to repositories</Box>
+          <Box component="span">{t("detail.back_to_repos", { ns: I18nNamespace.REPOS })}</Box>
         </BackButton>
       </BackBar>
 
@@ -229,9 +426,14 @@ export default function RepoDetailPage() {
               {repo.status.ahead > 0 && <Chip tone="ahead">↑{repo.status.ahead}</Chip>}
               {repo.status.behind > 0 && <Chip tone="behind">↓{repo.status.behind}</Chip>}
               {repo.status.dirty ? (
-                <Chip tone="dirty">{repo.filesChanged} uncommitted</Chip>
+                <Chip tone="dirty">
+                  {t("detail.uncommitted_count", {
+                    ns: I18nNamespace.REPOS,
+                    count: repo.filesChanged,
+                  })}
+                </Chip>
               ) : (
-                <Chip tone="clean">clean</Chip>
+                <Chip tone="clean">{t("detail.clean", { ns: I18nNamespace.REPOS })}</Chip>
               )}
               {repo.remoteUrl && <RemoteUrlText component="span">{repo.remoteUrl}</RemoteUrlText>}
             </MetaRow>
@@ -244,51 +446,69 @@ export default function RepoDetailPage() {
               <IdeIcon id={ide.iconId} size={14} color="currentColor" style={{ opacity: 1 }} />
               <Box component="span">{ideLabel}</Box>
             </PrimaryBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.open_terminal")}
-              onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
-            >
-              <TerminalIcon size={14} />
-            </IconOnlyBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.open_folder")}
-              onClick={() => void revealPathInSystem(repo.path)}
-            >
-              <Folder size={14} />
-            </IconOnlyBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.open_on_host")}
-              disabled={!repo.remoteUrl}
-              onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
-            >
-              {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
-            </IconOnlyBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.ssh_key")}
-              data-testid={TEST_IDS.repoDetail.ssh.trigger}
-              onClick={() => setSshOpen(true)}
-            >
-              <KeyRound size={14} />
-            </IconOnlyBtn>
+            <GeneralTooltip title={tAria("repo.open_terminal")}>
+              <IconOnlyBtn
+                type="button"
+                aria-label={tAria("repo.open_terminal")}
+                onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
+              >
+                <TerminalIcon size={14} />
+              </IconOnlyBtn>
+            </GeneralTooltip>
+            <GeneralTooltip title={tAria("repo.open_folder")}>
+              <IconOnlyBtn
+                type="button"
+                aria-label={tAria("repo.open_folder")}
+                onClick={() => void revealPathInSystem(repo.path)}
+              >
+                <Folder size={14} />
+              </IconOnlyBtn>
+            </GeneralTooltip>
+            <GeneralTooltip title={tAria("repo.open_on_host")}>
+              {/* span wrapper: a disabled <button> swallows pointer events, so
+                  MUI needs an enabled element to anchor the tooltip on. */}
+              <Box component="span">
+                <IconOnlyBtn
+                  type="button"
+                  aria-label={tAria("repo.open_on_host")}
+                  disabled={!repo.remoteUrl}
+                  onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
+                >
+                  {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
+                </IconOnlyBtn>
+              </Box>
+            </GeneralTooltip>
+            <GeneralTooltip title={tAria("repo.ssh_key")}>
+              <IconOnlyBtn
+                type="button"
+                aria-label={tAria("repo.ssh_key")}
+                data-testid={TEST_IDS.repoDetail.ssh.trigger}
+                onClick={() => setSshOpen(true)}
+              >
+                <KeyRound size={14} />
+              </IconOnlyBtn>
+            </GeneralTooltip>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
               <ArrowDown size={13} />
-              {busy === "pull" ? "Pulling…" : "Pull"}
+              {busy === "pull"
+                ? t("detail.pulling", { ns: I18nNamespace.REPOS })
+                : t("detail.pull", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPush()}>
               <ArrowUp size={13} />
-              {busy === "push" ? "Pushing…" : "Push"}
+              {busy === "push"
+                ? t("detail.pushing", { ns: I18nNamespace.REPOS })
+                : t("detail.push", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doFetch()}>
               <RefreshCw size={13} />
-              {busy === "fetch" ? "Fetching…" : "Fetch"}
+              {busy === "fetch"
+                ? t("detail.fetching", { ns: I18nNamespace.REPOS })
+                : t("detail.fetch", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" onClick={() => setBranchDialogOpen(true)}>
               <Plus size={13} />
-              Branch
+              {t("detail.branch", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
           </HeaderActions>
         </Header>
@@ -297,144 +517,23 @@ export default function RepoDetailPage() {
           repo={repo}
           totalCommits={totalCommits}
           maxBucket={maxBucket}
+          windowDays={windowDays}
           openMrsCount={repoProviderConnected ? openMrs.length : null}
           draftMrsCount={repoProviderConnected ? draftMrs.length : null}
         />
 
-        <Grid2>
-          {repoProviderConnected && (
-            <Card>
-              <CardHead>
-                <CardTitle>Merge requests</CardTitle>
-                <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
-                  Open MRs view
-                </SecondaryBtn>
-              </CardHead>
-              {prs.length === 0 ? (
-                <EmptyState
-                  mascot="snoozing"
-                  mascotSize={88}
-                  title="No merge requests"
-                  description="This repository has no open merge requests."
-                />
-              ) : (
-                <PrScroller>
-                  {prs.map((pr) => (
-                    <PrRowSlot
-                      key={pr.number}
-                      data-testid={TEST_IDS.repoDetail.mrRow}
-                      data-mr-number={pr.number}
-                      data-mr-state={pr.state}
-                      data-mr-author={pr.author || undefined}
-                      onClick={() => setSelectedPr(pr)}
-                    >
-                      <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
-                    </PrRowSlot>
-                  ))}
-                </PrScroller>
-              )}
-            </Card>
-          )}
-
-          <Card>
-            <CardHead>
-              <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
-              {repo.status.dirty && (
-                <CardMeta>
-                  +{repo.added} −{repo.removed} · {repo.filesChanged} file
-                  {repo.filesChanged === 1 ? "" : "s"}
-                </CardMeta>
-              )}
-            </CardHead>
-            {repo.status.dirty ? (
-              <WorkingCopyScroll>
-                <WorkingCopyPanel
-                  repoId={repo.id}
-                  onCommitClick={() => setCommitDialogOpen(true)}
-                />
-              </WorkingCopyScroll>
-            ) : (
-              <CleanState>
-                <Mascot variant="celebrating" size={96} title="Nothing to commit" />
-                <CleanStateText>Nothing to commit.</CleanStateText>
-                <CleanStateSub>Working tree is clean.</CleanStateSub>
-              </CleanState>
-            )}
-          </Card>
-
-          <Card>
-            <CardHead>
-              <CardTitle>{t("settings.git.repo_card_title")}</CardTitle>
-            </CardHead>
-            <RepoGitConfigCard repoId={repo.id} />
-          </Card>
-        </Grid2>
-
-        {repoProviderConnected && (
-          <Grid2>
-            <CiCard repoId={repo.id} />
-            <DeploymentsCard repoId={repo.id} />
-          </Grid2>
-        )}
-
-        <Grid2>
-          <Card>
-            <CardHead>
-              <CardTitle>Activity — 14 days</CardTitle>
-              <CardMeta>
-                {totalCommits} commit{totalCommits === 1 ? "" : "s"} · peak {maxBucket}
-              </CardMeta>
-            </CardHead>
-            <ActivityBars>
-              {repo.activity.map((v, i) => {
-                const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
-                return (
-                  <ActivityBar
-                    key={i}
-                    heightPct={heightPct}
-                    hot={v >= maxBucket * 0.66}
-                    aria-label={`${tAria("repo.heatmap_commits", { count: v })}, ${tAria("repo.heatmap_days_ago", { count: 13 - i })}`}
-                    data-testid={TEST_IDS.repoDetail.sparkCell}
-                    data-index={i}
-                  />
-                );
-              })}
-            </ActivityBars>
-            <ActivityAxis>
-              <Box component="span">14d ago</Box>
-              <Box component="span">today</Box>
-            </ActivityAxis>
-          </Card>
-
-          <Card>
-            <CardHead>
-              <CardTitle>Recent commits</CardTitle>
-              <CardMeta>last 30 days</CardMeta>
-            </CardHead>
-            {commits.length === 0 ? (
-              <EmptyState
-                mascot="snoozing"
-                mascotSize={88}
-                title="No recent commits"
-                description="Nothing landed in this window."
-              />
-            ) : (
-              <CommitsList>
-                {commits.map((c) => (
-                  <CommitRow key={c.sha}>
-                    <AuthorAvatar name={c.author} email={c.authorEmail ?? undefined} size={20} />
-                    <CommitMain>
-                      <CommitMessage>{c.summary}</CommitMessage>
-                      <CommitMeta>
-                        {c.author} · <CommitSha component="span">{c.sha.slice(0, 7)}</CommitSha>
-                      </CommitMeta>
-                    </CommitMain>
-                  </CommitRow>
-                ))}
-              </CommitsList>
-            )}
-          </Card>
-        </Grid2>
+        <CardGrid>
+          {cardSlots.map((slot, i) => (
+            <CardSlot
+              key={slot.key}
+              full={i === cardSlots.length - 1 && cardSlots.length % 2 === 1}
+              layout
+              transition={CARD_TRANSITION}
+            >
+              {slot.node}
+            </CardSlot>
+          ))}
+        </CardGrid>
       </Content>
 
       <MrDetailDrawer

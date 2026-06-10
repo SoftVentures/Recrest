@@ -24,6 +24,9 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
 (() => {
   const SEED = ${serialised};
   const callbacks = new Map();
+  // Channel name -> set of callback ids, so emit() delivers a payload only to
+  // listeners of that event (mirrors the dev:web stub's eventListeners map).
+  const eventListeners = new Map();
   let nextId = 1;
 
   function transformCallback(callback, once = false) {
@@ -33,6 +36,59 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       try { callback?.(arg); } catch (err) { console.warn("[tauri-stub] callback err:", err); }
     });
     return id;
+  }
+
+  function registerEventListener(event, handler) {
+    const id = transformCallback(handler);
+    let set = eventListeners.get(event);
+    if (!set) { set = new Set(); eventListeners.set(event, set); }
+    set.add(id);
+    return id;
+  }
+
+  function removeListener(id) {
+    callbacks.delete(id);
+    for (const set of eventListeners.values()) set.delete(id);
+  }
+
+  // Shape the argument like \`@tauri-apps/api/event\` (\`{ event, id, payload }\`)
+  // so handlers read \`e.payload\` exactly as against the real runtime.
+  function emit(event, payload) {
+    const set = eventListeners.get(event);
+    if (!set) return;
+    for (const id of set) {
+      const cb = callbacks.get(id);
+      if (cb) cb({ event, id, payload });
+    }
+  }
+
+  function resolveCommitsInRange(args) {
+    const sinceMs = args && args.since ? Date.parse(args.since) : -Infinity;
+    const untilMs = args && args.until ? Date.parse(args.until) : Infinity;
+    const cap = args && args.maxCommitsPerRepo;
+    const buckets = SEED.recentCommits || {};
+    const out = [];
+    for (const repoId of Object.keys(buckets)) {
+      const inRange = (buckets[repoId] || []).filter((c) => {
+        const ts = Date.parse(c.timestamp);
+        return ts >= sinceMs && ts <= untilMs;
+      });
+      const commits = typeof cap === "number" ? inRange.slice(0, cap) : inRange;
+      if (commits.length > 0) out.push({ repoId, commits });
+    }
+    return out;
+  }
+
+  function resolveOldestCommitDate() {
+    const buckets = SEED.recentCommits || {};
+    let oldest = null;
+    for (const repoId of Object.keys(buckets)) {
+      for (const c of buckets[repoId] || []) {
+        const ts = Date.parse(c.timestamp);
+        if (!Number.isNaN(ts) && (oldest === null || ts < oldest)) oldest = ts;
+      }
+    }
+    return oldest === null ? null : new Date(oldest).toISOString();
   }
 
   function resolveRecentCommits(args) {
@@ -276,8 +332,22 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "get_git_config":
       case "set_git_config":
         return { scope: args && args.repoId == null ? "global" : "repo", entries: {} };
+      // Layered git-config (RepoGitConfigCard + GitConfigTab). Empty layers /
+      // origins are a valid "nothing configured yet" shape; the include
+      // add/remove commands are fire-and-forget.
+      case "list_git_config_layers":
+        return [];
+      case "get_git_config_with_origins":
+      case "set_git_config_in_layer":
+        return {};
+      case "add_git_config_include":
+      case "remove_git_config_include":
+        return undefined;
       case "get_pr_diff":
-        return { files: [], truncated: false };
+        // loadPrDiff resolves this value AS the FileDiff[] diff array directly.
+        // Returning the Rust PrDiff wrapper object made the diff a non-array,
+        // which threw "diff is not iterable" in the MR detail panel.
+        return [];
       case "post_pr_comment":
         return undefined;
       case "list_workflows":
@@ -294,12 +364,38 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return undefined;
       case "list_recent_commits":
         return resolveRecentCommits(args);
+      case "list_commits": {
+        // Range query: filter the recent-commit feed to since<=ts<=until and
+        // stream one chunk per repo over activity://commits-chunk (the only
+        // path the frontend reads commit data through). Chunks MUST fire
+        // before the summary resolves: the real backend emits while the
+        // command is still running, and the activity reducer drops chunks
+        // whose requestId no longer matches the in-flight request.
+        const requestId = (args && args.requestId) || "";
+        const grouped = resolveCommitsInRange(args);
+        const totals = {};
+        const truncated = {};
+        for (const g of grouped) { totals[g.repoId] = g.commits.length; truncated[g.repoId] = false; }
+        for (const g of grouped) {
+          emit("activity://commits-chunk", {
+            requestId, repoId: g.repoId, commits: g.commits, done: true, truncated: false,
+          });
+        }
+        return { requestId, totals, truncated };
+      }
+      case "get_oldest_commit_date":
+        return resolveOldestCommitDate();
       case "list_pr_events":
         return resolvePrEvents(args);
       case "list_check_runs":
         return resolveCheckRuns(args);
       case "detect_ides":
         return ["vscode"];
+      // OS probes degrade to the renderer's stub maps on an empty result, so
+      // [] is the correct no-detection signal outside a real OS scan.
+      case "detect_terminals":
+      case "detect_shells":
+        return [];
       case "load_logo_bytes":
         return null;
       case "open_in_ide":
@@ -328,8 +424,35 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return SEED.repos[0] ?? null;
 
       // --- search
-      case "find_across_repos":
-        return { matches: [], truncated: false };
+      case "find_across_repos": {
+        const q = String(args?.query ?? "").trim();
+        const repoId = args?.repoId;
+        const repo = SEED.repos[0];
+        if (q.length < 2 || !repo) return [];
+        if (repoId && repoId !== repo.id) return [];
+        return [
+          {
+            repoId: repo.id,
+            repoName: repo.name,
+            path: "src/index.ts",
+            absolutePath: repo.path + "/src/index.ts",
+            line: 10,
+            column: 3,
+            snippet: 'import { ' + q + ' } from "./lib";',
+          },
+          {
+            repoId: repo.id,
+            repoName: repo.name,
+            path: "README.md",
+            absolutePath: repo.path + "/README.md",
+            line: 1,
+            column: 1,
+            snippet: "# " + q,
+          },
+        ];
+      }
+      case "open_file_in_ide":
+        return undefined;
 
       // --- remote import
       case "list_remote_repositories":
@@ -346,8 +469,43 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       // --- providers
       case "list_providers":
         return Object.values(SEED.providers || {});
-      case "set_provider_token":
-      case "set_provider_base_url":
+      case "set_provider_token": {
+        // The real command verifies the token and returns the refreshed
+        // ProviderConnection (connected=true). setProviderToken.fulfilled
+        // writes action.payload straight into state.connections, so returning
+        // undefined would corrupt the slice. Mutate SEED so a follow-up
+        // list_providers (ProviderRow re-fetches after save) stays consistent.
+        const id = args && args.providerId;
+        const prev = (SEED.providers && SEED.providers[id]) || {
+          providerId: id,
+          displayName: id,
+          supportsOauth: false,
+          baseUrl: null,
+        };
+        const next = {
+          ...prev,
+          providerId: id,
+          connected: true,
+          username: (args && args.username) || prev.username || (id + "-user"),
+        };
+        if (!SEED.providers) SEED.providers = {};
+        SEED.providers[id] = next;
+        return next;
+      }
+      case "set_provider_base_url": {
+        const id = args && args.providerId;
+        const prev = (SEED.providers && SEED.providers[id]) || {
+          providerId: id,
+          displayName: id,
+          connected: false,
+          username: null,
+          supportsOauth: false,
+        };
+        const next = { ...prev, providerId: id, baseUrl: (args && args.baseUrl) ?? null };
+        if (!SEED.providers) SEED.providers = {};
+        SEED.providers[id] = next;
+        return next;
+      }
       case "clear_provider_token":
         return undefined;
       case "fetch_pull_requests":
@@ -358,6 +516,24 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         if (!base) return null;
         return { ...base, body: "", mergeable: true, reviewers: [], files: [], timeline: [] };
       }
+      case "merge_pull_request": {
+        // The frontend optimistically flips the row's state after this resolves;
+        // mirror the dev:web stub's MergeResult shape.
+        const input = (args && args.input) || {};
+        return {
+          merged: true,
+          mergeSha: "stubmerge" + ((args && args.prNumber) ?? "0"),
+          sourceBranchDeleted: !!input.deleteSourceBranch,
+          message: "stub merge (" + (input.strategy || "merge") + ")",
+        };
+      }
+
+      // --- custom fonts (Tauri-only filesystem upload; empty under the stub)
+      case "list_custom_fonts":
+        return [];
+      case "upload_font":
+      case "delete_custom_font":
+        return undefined;
 
       // --- notifications / oauth / settings / window / system
       case "notify":
@@ -396,14 +572,12 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         } catch (e) { void e; }
         return SEED.settings;
       }
-      case "save_window_state":
-        return undefined;
-      case "load_window_state":
-        return null;
-      case "validate_window_position":
-        return true;
       case "get_platform_info":
         return { platform: "windows", osVersion: "10.0.22000", arch: "x86_64", tauriVersion: "2.0.0" };
+      // ThemeWrapper queries the OS truth on mount; null means "no override",
+      // so the app keeps trusting matchMedia (the stub's seeded theme).
+      case "get_system_dark_mode":
+        return null;
       case "check_git":
         return { installed: true, version: "2.44.0" };
       case "update_tray_badge":
@@ -544,6 +718,16 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
     }
   }
 
+  // Tag ourselves as a dev/browser stub so the app hides its native titlebar
+  // chrome (usePlatform reads \`isTauri() && !('__RECREST_DEV_STUB__' in window)\`
+  // to decide whether to paint the Win11/mac/GNOME caption controls). Without
+  // this the app believes it is the real Tauri shell and renders the titlebar,
+  // which shifts every visual-regression baseline and the updater-banner layout.
+  Object.defineProperty(window, "__RECREST_DEV_STUB__", {
+    configurable: true,
+    writable: false,
+    value: true,
+  });
   Object.defineProperty(window, "__TAURI_INTERNALS__", {
     configurable: true,
     writable: false,
@@ -553,12 +737,12 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
       callbacks,
       convertFileSrc: (path) => path,
-      unregisterListener: (_event, id) => { callbacks.delete(id); },
+      unregisterListener: (_event, id) => { removeListener(id); },
       plugins: {
         event: {
-          listen: (_event, _target, handler) => transformCallback(handler),
-          unlisten: (_event, id) => { callbacks.delete(id); },
-          unregisterListener: (_event, id) => { callbacks.delete(id); },
+          listen: (event, _target, handler) => registerEventListener(event, handler),
+          unlisten: (_event, id) => { removeListener(id); },
+          unregisterListener: (_event, id) => { removeListener(id); },
         },
       },
     },
@@ -570,7 +754,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
     configurable: true,
     writable: false,
     value: {
-      unregisterListener: (_event, id) => { callbacks.delete(id); },
+      unregisterListener: (_event, id) => { removeListener(id); },
     },
   });
   Object.defineProperty(window, "__TAURI_OS_PLUGIN_INTERNALS__", {

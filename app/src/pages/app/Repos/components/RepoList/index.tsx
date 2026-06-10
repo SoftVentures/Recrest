@@ -1,9 +1,12 @@
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import type { RepoSortKey } from "@recrest/shared";
 
 import EmptyState from "@/components/molecules/feedback/EmptyState";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { RepoListCardGroup } from "@/pages/app/Repos/components/RepoList/parts/RepoListCardGroup";
@@ -63,13 +66,14 @@ export function RepoList({
   emptyTitle,
   emptyDescription,
 }: RepoListProps) {
+  const { t } = useTranslation(I18nNamespace.REPOS);
   if (repos.length === 0) {
     return (
       <Box data-testid={TEST_IDS.repos.listEmpty}>
         <EmptyState
           mascot="waving"
-          title={emptyTitle ?? "No repositories"}
-          description={emptyDescription ?? "Add a repo from the header to get started."}
+          title={emptyTitle ?? t("list.empty_title")}
+          description={emptyDescription ?? t("list.empty_desc")}
         />
       </Box>
     );

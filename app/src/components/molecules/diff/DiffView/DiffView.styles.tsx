@@ -1,7 +1,11 @@
 import { Box, Typography } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { alpha, styled } from "@mui/material/styles";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { DIFF_ATTR } from "@/lib/constants/diff.constants";
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
+const MONO = MONO_STACK;
 
 export const Root = styled(Box)({
   display: "flex",
@@ -39,6 +43,7 @@ export const FileHeader = styled("button")(({ theme }) => ({
 
 export const FilePath = styled(Typography)({
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 12,
   fontWeight: 600,
   flex: 1,
@@ -60,21 +65,23 @@ export const StatusTag = styled("span", { shouldForwardProp: (p) => p !== "tone"
   borderRadius: 100,
   color:
     tone === "add"
-      ? theme.palette.success.dark
+      ? toneText(theme, StatusTone.SUCCESS)
       : tone === "remove"
-        ? theme.palette.error.dark
+        ? toneText(theme, StatusTone.ERROR)
         : theme.palette.text.information,
   backgroundColor: theme.palette.surface.interface.backElevation,
 }));
 
 export const RenamedFrom = styled(Typography)(({ theme }) => ({
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 10.5,
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const HunkHeader = styled(Box)(({ theme }) => ({
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 11,
   color: theme.palette.text.information,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -87,14 +94,43 @@ export const Lines = styled(Box)({
   flexDirection: "column",
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed kind prop on a diff row
-export const Line = styled("div", { shouldForwardProp: (p) => p !== "kind" })<{
+// Selection highlight is driven by a `data-sel` DOM attribute toggled directly
+// during the drag (no React re-render per crossed line — that janks large
+// diffs). A deliberately distinct blue, so it never blends with the red of a
+// removed line or the green of an added one. Same blue in both modes, just a
+// touch more opaque on dark.
+const SELECT_BLUE = "#388bfd";
+const SELECT_FILL_LIGHT = "rgba(56,139,253,0.22)";
+const SELECT_FILL_DARK = "rgba(56,139,253,0.32)";
+// Gentler tint for the comment-card-hover band (the drag band above is stronger).
+const SELECT_HL_LIGHT = "rgba(56,139,253,0.10)";
+const SELECT_HL_DARK = "rgba(56,139,253,0.14)";
+
+// Build a blue "border box" from inset shadows (no layout shift): left + right
+// on every covered line, top on the range's first line, bottom on its last.
+function selectionBox(top?: boolean, bottom?: boolean): string {
+  const edges = [`inset 2px 0 0 0 ${SELECT_BLUE}`, `inset -2px 0 0 0 ${SELECT_BLUE}`];
+  if (top) edges.push(`inset 0 2px 0 0 ${SELECT_BLUE}`);
+  if (bottom) edges.push(`inset 0 -2px 0 0 ${SELECT_BLUE}`);
+  return edges.join(", ");
+}
+
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed kind/selection props on a diff row
+export const Line = styled("div", {
+  shouldForwardProp: (p) => p !== "kind" && p !== "selected" && p !== "selTop" && p !== "selBottom",
+})<{
   kind: "context" | "add" | "remove";
-}>(({ theme, kind }) => ({
+  /** Line is inside a posted comment's covered range → persistent border box. */
+  selected?: boolean;
+  /** First / last line of that range → close the box top / bottom. */
+  selTop?: boolean;
+  selBottom?: boolean;
+}>(({ theme, kind, selected, selTop, selBottom }) => ({
   display: "grid",
   gridTemplateColumns: "44px 44px 1fr auto",
   alignItems: "stretch",
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 12,
   lineHeight: "18px",
   position: "relative",
@@ -108,10 +144,24 @@ export const Line = styled("div", { shouldForwardProp: (p) => p !== "kind" })<{
           ? "rgba(248,81,73,0.15)"
           : "rgba(248,81,73,0.10)"
         : "transparent",
-  // Reveal the affordance while the cursor is over this specific line and
-  // while the button itself is keyboard-focused. `pointer-events: auto` only
-  // when visible so the invisible-but-present button never silently captures
-  // clicks that should reach the underlying line content.
+  // A posted comment's covered lines keep a blue border box so the range stays
+  // visible. The live drag / card-hover band (below) only adds the fill, so it
+  // layers on top of this box without erasing it.
+  ...(selected ? { boxShadow: selectionBox(selTop, selBottom) } : {}),
+  // Fill-only (no boxShadow) so the comment border box survives underneath.
+  // `data-sel` is the live drag band (stronger); `data-hl` is the gentler tint
+  // shown while hovering a comment card.
+  [`&[${DIFF_ATTR.selected}]`]: {
+    backgroundColor: theme.palette.mode === "dark" ? SELECT_FILL_DARK : SELECT_FILL_LIGHT,
+  },
+  [`&[${DIFF_ATTR.highlight}]`]: {
+    backgroundColor: theme.palette.mode === "dark" ? SELECT_HL_DARK : SELECT_HL_LIGHT,
+  },
+  // Reveal the affordance only while the cursor is over this specific line (or
+  // the button is keyboard-focused). `pointer-events: auto` only when visible
+  // so the invisible-but-present button never swallows clicks meant for the
+  // line content. The range itself is built by dragging from this button, not
+  // by revealing every line's button at once.
   "&:hover .diff-comment-affordance, & .diff-comment-affordance:focus-visible": {
     opacity: 1,
     pointerEvents: "auto",
@@ -178,19 +228,54 @@ export const CommentRow = styled(Box)(({ theme }) => ({
 
 export const PostedComment = styled(Box)(({ theme }) => ({
   gridColumn: "1 / -1",
-  borderTop: `1px solid ${theme.palette.divider}`,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
   background: theme.palette.surface.interface.backElevation,
-  padding: "6px 12px",
+  margin: "6px 10px",
+  padding: "8px 12px",
   fontFamily: theme.typography.fontFamily,
   fontSize: 12,
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  transition: "border-color 120ms ease",
+  // Hovering the card sharpens its border (and, via JS, gives its covered lines
+  // a gentle tint so you can see which lines it refers to).
+  "&:hover": {
+    borderColor: SELECT_BLUE,
+  },
 })) as typeof Box;
+
+export const PostedHead = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+}) as typeof Box;
 
 export const PostedAuthor = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
-  fontSize: 11,
+  fontSize: 11.5,
   color: theme.palette.text.primary,
-  marginRight: 6,
 })) as typeof Typography;
+
+export const PostedBody = styled(Box)(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.text.primary,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+})) as typeof Box;
+
+export const RangeBadge = styled(Box)(({ theme }) => ({
+  fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
+  fontSize: 10,
+  fontWeight: 600,
+  padding: "1px 6px",
+  marginRight: 6,
+  borderRadius: 100,
+  color: theme.palette.primary.main,
+  backgroundColor: alpha(theme.palette.primary.main, 0.12),
+})) as typeof Box;
 
 export const Empty = styled(Typography)(({ theme }) => ({
   fontSize: 12,

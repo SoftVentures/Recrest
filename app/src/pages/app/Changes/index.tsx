@@ -30,6 +30,8 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 const PageRoot = styled(Box)({
   display: "flex",
@@ -113,7 +115,7 @@ const RepoName = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const RepoPath = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   fontSize: 11,
   color: theme.palette.text.information,
   whiteSpace: "nowrap",
@@ -145,12 +147,12 @@ const DiffMeta = styled(Box)({
 }) as typeof Box;
 
 const Added = styled(Box)(({ theme }) => ({
-  color: theme.palette.success.dark,
+  color: toneText(theme, StatusTone.SUCCESS),
   fontWeight: 600,
 })) as typeof Box;
 
 const Removed = styled(Box)(({ theme }) => ({
-  color: theme.palette.error.dark,
+  color: toneText(theme, StatusTone.ERROR),
   fontWeight: 600,
 })) as typeof Box;
 
@@ -192,7 +194,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
 
   const onCommit = async () => {
     if (!isTauri()) {
-      toast.info("Available in the desktop app");
+      toast.info(t("changes.toast_desktop_only"));
       return;
     }
     navigate(AppRoute.REPO.replace(":repoId", repo.id));
@@ -204,9 +206,9 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
     setBusy("pull");
     try {
       await invoke(TauriCommand.GIT_PULL, { repoId: repo.id });
-      toast.success(t("pull_success", { defaultValue: "Pulled" }));
+      toast.success(t("changes.toast_pulled"));
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Pull failed");
+      toast.error((err as { message?: string })?.message ?? t("changes.toast_pull_failed"));
     } finally {
       setBusy(null);
     }
@@ -232,7 +234,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
           }
         }}
         aria-expanded={expanded}
-        aria-label={expanded ? "Collapse changed files" : "Expand changed files"}
+        aria-label={expanded ? t("changes.collapse_aria") : t("changes.expand_aria")}
       >
         <Chevron component="span" aria-hidden>
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -252,7 +254,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
           <Added component="span">+{repo.added}</Added>
           <Removed component="span">−{repo.removed}</Removed>
         </DiffMeta>
-        <FilesMeta>{fileCount === 1 ? "1 file" : `${fileCount} files`}</FilesMeta>
+        <FilesMeta>{t("changes.files", { count: fileCount })}</FilesMeta>
         <Actions>
           <GeneralButton
             variant="outline"
@@ -263,7 +265,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
               void onCommit();
             }}
           >
-            Open
+            {t("changes.open")}
           </GeneralButton>
           <GeneralButton
             variant="ghost"
@@ -271,7 +273,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
             disabled={busy !== null}
             onClick={(e) => void onPull(e)}
           >
-            {busy === "pull" ? "Pulling…" : "Pull"}
+            {busy === "pull" ? t("changes.pulling") : t("changes.pull")}
           </GeneralButton>
         </Actions>
       </RowHeader>
@@ -292,7 +294,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
 }
 
 export default function ChangesPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const repos = useEnrichedRepos();
   const dirtyRepos = useMemo(() => repos.filter((r) => r.status.dirty), [repos]);
 
@@ -324,8 +326,8 @@ export default function ChangesPage() {
         <Scroll>
           <EmptyState
             mascot="celebrating"
-            title="No uncommitted changes"
-            description="Every working tree is clean."
+            title={t("changes.empty_clean_title")}
+            description={t("changes.empty_clean_desc")}
           />
         </Scroll>
       </PageRoot>
@@ -338,9 +340,7 @@ export default function ChangesPage() {
         <GeneralSearchInput
           value={filter}
           onChange={setFilter}
-          placeholder={t("changes.filter_placeholder", {
-            defaultValue: "Filter by repo or file path…",
-          })}
+          placeholder={t("changes.filter_placeholder")}
           aria-label={t("search.input", { ns: I18nNamespace.ARIA })}
           clearLabel={t("search.clear", { ns: I18nNamespace.ARIA })}
         />
@@ -349,8 +349,8 @@ export default function ChangesPage() {
         {filtered.length === 0 ? (
           <EmptyState
             mascot="shrugging"
-            title="No matches"
-            description="No repos or files match your filter."
+            title={t("changes.empty_no_matches_title")}
+            description={t("changes.empty_no_matches_desc")}
           />
         ) : (
           <Card>

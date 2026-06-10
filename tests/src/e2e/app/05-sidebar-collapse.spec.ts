@@ -2,13 +2,7 @@ import { expect, test } from "../../fixtures/app.fixture.js";
 import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / sidebar collapse", () => {
-  test("fold button toggles the collapsed state + persists across reload", async ({
-    page,
-  }, testInfo) => {
-    test.skip(
-      testInfo.project.name === "app-mobile",
-      "sidebar is already force-collapsed on mobile by useResponsiveSidebar",
-    );
+  test("fold button toggles the collapsed state + persists across reload", async ({ page }) => {
     await page.goto("/");
     const sidebar = page.getByTestId(TEST_IDS.sidebar.root);
     await expect(sidebar).toBeVisible();

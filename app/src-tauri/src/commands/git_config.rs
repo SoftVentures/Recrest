@@ -212,9 +212,7 @@ fn push_layer_chain(
             // We can't evaluate `gitdir:` against nothing, so default to true:
             // every `[includeIf]` surface their values and stays individually
             // editable. Repo-scoped reads keep the strict match semantics.
-            Some(cond) => target
-                .map(|p| gitdir_matches(cond, p))
-                .unwrap_or(true),
+            Some(cond) => target.map(|p| gitdir_matches(cond, p)).unwrap_or(true),
         };
         if matched {
             push_layer_chain(&inc.resolved_path, inc.condition.clone(), target, out)?;
@@ -301,7 +299,9 @@ fn gitdir_matches(condition: &str, target: &Path) -> bool {
         return false;
     }
     let expanded = expand_home(Path::new(trimmed));
-    let target_canon = target.canonicalize().unwrap_or_else(|_| target.to_path_buf());
+    let target_canon = target
+        .canonicalize()
+        .unwrap_or_else(|_| target.to_path_buf());
     let pattern_canon = expanded
         .canonicalize()
         .unwrap_or_else(|_| expanded.to_path_buf());
@@ -668,7 +668,10 @@ fn strip_include_block(body: &str, condition: Option<&str>, target_path: &Path) 
 }
 
 fn section_matches_include(header_line: &str, condition: Option<&str>) -> bool {
-    let Some(inner) = header_line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) else {
+    let Some(inner) = header_line
+        .strip_prefix('[')
+        .and_then(|s| s.strip_suffix(']'))
+    else {
         return false;
     };
     let (name, sub) = parse_section_header(inner);
@@ -744,6 +747,13 @@ mod tests {
     use super::*;
     use crate::test_support::TempRepo;
 
+    /// Render a path for embedding in a git config file. gitconfig parses
+    /// backslashes as escape sequences, so Windows paths must be written
+    /// POSIX-style or libgit2 rejects the file with "invalid escape".
+    fn to_config_path(p: &Path) -> String {
+        p.to_string_lossy().replace('\\', "/")
+    }
+
     #[test]
     fn set_then_get_local_config_round_trips() {
         let tr = TempRepo::init();
@@ -783,10 +793,15 @@ mod tests {
             "",
         )
         .unwrap();
-        let map = get_config_blocking(GitConfigScope::Repo(tr.dir.path().to_path_buf())).unwrap();
+        // Read the local config file directly rather than the flattened
+        // repo view: on a machine with an ambient global `user.name`,
+        // `get_config_blocking` would still surface the inherited value and
+        // mask whether the local key was actually removed.
+        let local = tr.dir.path().join(".git").join("config");
+        let map = read_layer_blocking(&local).unwrap();
         assert!(
             !map.contains_key("user.name"),
-            "empty value should remove the key",
+            "empty value should remove the key from the local config",
         );
     }
 
@@ -816,12 +831,16 @@ mod tests {
         let work = tmp.path().join("gitconfig-work");
         let work_dir = tmp.path().join("work");
         std::fs::create_dir_all(&work_dir).unwrap();
+        // gitconfig treats backslashes as escape sequences, so paths written
+        // into config files (the `includeIf` gitdir pattern and the include
+        // `path`) must be POSIX-style — otherwise libgit2 rejects the file
+        // with "invalid escape" on Windows.
         std::fs::write(
             &global,
             format!(
                 "[includeIf \"gitdir:{base}/\"]\n\tpath = {work}\n",
-                base = work_dir.display(),
-                work = work.display(),
+                base = to_config_path(&work_dir),
+                work = to_config_path(&work),
             ),
         )
         .unwrap();
@@ -855,8 +874,8 @@ mod tests {
             &global,
             format!(
                 "[includeIf \"gitdir:{base}/\"]\n\tpath = {work}\n",
-                base = work_dir.display(),
-                work = work.display(),
+                base = to_config_path(&work_dir),
+                work = to_config_path(&work),
             ),
         )
         .unwrap();
@@ -871,7 +890,11 @@ mod tests {
             Some(other_dir.join("repo")),
         )
         .unwrap();
-        assert_eq!(layers.len(), 2, "non-matching include still listed (inactive)");
+        assert_eq!(
+            layers.len(),
+            2,
+            "non-matching include still listed (inactive)"
+        );
         assert!(layers[0].active);
         assert!(!layers[1].active);
     }
@@ -881,11 +904,7 @@ mod tests {
         let tmp = tempfile::TempDir::new().unwrap();
         let global = tmp.path().join("gitconfig");
         let work = tmp.path().join("gitconfig-work");
-        std::fs::write(
-            &global,
-            "[user]\n\tname = Global Name\n",
-        )
-        .unwrap();
+        std::fs::write(&global, "[user]\n\tname = Global Name\n").unwrap();
         std::fs::write(&work, "[user]\n\temail = work@example.invalid\n").unwrap();
 
         let global_entries = read_layer_blocking(&global).unwrap();
@@ -914,8 +933,8 @@ mod tests {
             &global,
             format!(
                 "[user]\n\tname = Default\n\temail = default@x\n[includeIf \"gitdir:{base}/\"]\n\tpath = {work}\n",
-                base = work_dir.display(),
-                work = work.display(),
+                base = to_config_path(&work_dir),
+                work = to_config_path(&work),
             ),
         )
         .unwrap();
@@ -989,13 +1008,7 @@ mod tests {
         std::fs::write(&global, "[user]\n\tname = X\n").unwrap();
         let work = tmp.path().join("gitconfig-work");
 
-        add_include_blocking(
-            &global,
-            Some("gitdir:~/Developer/work/"),
-            &work,
-            true,
-        )
-        .unwrap();
+        add_include_blocking(&global, Some("gitdir:~/Developer/work/"), &work, true).unwrap();
 
         let body = std::fs::read_to_string(&global).unwrap();
         assert!(body.contains("[includeIf \"gitdir:~/Developer/work/\"]"));
@@ -1036,13 +1049,7 @@ mod tests {
         )
         .unwrap();
 
-        remove_include_blocking(
-            &global,
-            Some("gitdir:~/Developer/work/"),
-            &work,
-            false,
-        )
-        .unwrap();
+        remove_include_blocking(&global, Some("gitdir:~/Developer/work/"), &work, false).unwrap();
 
         let body = std::fs::read_to_string(&global).unwrap();
         assert!(!body.contains("gitdir:~/Developer/work/"));
@@ -1058,10 +1065,7 @@ mod tests {
         std::fs::write(&work, "[user]\n").unwrap();
         std::fs::write(
             &global,
-            format!(
-                "[includeIf \"gitdir:~/x/\"]\n\tpath = {}\n",
-                work.display(),
-            ),
+            format!("[includeIf \"gitdir:~/x/\"]\n\tpath = {}\n", work.display(),),
         )
         .unwrap();
 
@@ -1075,10 +1079,7 @@ mod tests {
         let tmp = tempfile::TempDir::new().unwrap();
         let global = tmp.path().join("gitconfig");
         let home = dirs::home_dir().expect("home dir required for test");
-        let target_name = format!(
-            ".recrest-test-include-{}.gitconfig",
-            std::process::id(),
-        );
+        let target_name = format!(".recrest-test-include-{}.gitconfig", std::process::id(),);
         let absolute_target = home.join(&target_name);
         std::fs::write(&absolute_target, "[user]\n").unwrap();
 

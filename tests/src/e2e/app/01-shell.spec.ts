@@ -20,13 +20,7 @@ test.describe("app / shell", () => {
     await expect(page).toHaveURL(new RegExp(`${AppRoute.DASHBOARD.replace("/", "\\/")}$`));
   });
 
-  test("Sidebar shows repo count + MR count + dirty count from the seed", async ({
-    page,
-  }, testInfo) => {
-    test.skip(
-      testInfo.project.name === "app-mobile",
-      "mobile auto-collapses the sidebar; counts are rendered as dots",
-    );
+  test("Sidebar shows repo count + MR count + dirty count from the seed", async ({ page }) => {
     await page.goto(AppRoute.REPOS);
 
     const reposCount = page.getByTestId(navCountTestId("/repos"));

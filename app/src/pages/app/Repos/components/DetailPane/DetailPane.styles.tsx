@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+
 export const Pane = styled(Box)(({ theme }) => ({
   width: 360,
   flexShrink: 0,
@@ -46,7 +48,7 @@ export const RepoPath = styled(Box)(({ theme }) => ({
   marginTop: 3,
   fontSize: 11,
   color: theme.palette.text.information,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -134,7 +136,7 @@ export const BranchChip = styled(Box)(({ theme }) => ({
   borderRadius: 8,
   fontSize: 12.5,
   fontWeight: 500,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   color: theme.palette.text.primary,
   maxWidth: 200,
   minWidth: 0,
@@ -271,7 +273,7 @@ export const CommitMeta = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const CommitSha = styled(Typography)(({ theme }) => ({
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
   color: theme.palette.text.secondary,
 })) as typeof Typography;
 

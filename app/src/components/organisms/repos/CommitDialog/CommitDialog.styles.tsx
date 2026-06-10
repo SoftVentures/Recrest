@@ -1,6 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+
 // eslint-disable-next-line no-restricted-syntax -- native <form> for submit semantics
 export const Form = styled("form")(({ theme }) => ({
   display: "flex",
@@ -35,7 +38,8 @@ export const BranchChip = styled(Box)(({ theme }) => ({
   gap: 4,
   padding: "2px 8px",
   borderRadius: 100,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 11,
   color: theme.palette.text.primary,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -56,7 +60,7 @@ export const HooksBadge = styled(Box)(({ theme }) => ({
   padding: "2px 8px",
   borderRadius: 100,
   border: `1px solid ${theme.palette.warning.main}`,
-  color: theme.palette.warning.main,
+  color: toneText(theme, StatusTone.WARNING),
   backgroundColor: `color-mix(in srgb, ${theme.palette.warning.main} 12%, transparent)`,
   fontSize: 11,
   fontWeight: 600,
@@ -107,7 +111,8 @@ export const FilesList = styled(Box)(({ theme }) => ({
   padding: "6px 10px",
   maxHeight: 160,
   overflowY: "auto",
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 11.5,
 })) as typeof Box;
 
@@ -134,15 +139,15 @@ export const KindBadge = styled("span", {
   const infoColor = theme.palette.text.information ?? theme.palette.text.secondary;
   const palette: Record<string, { color: string; bg: string }> = {
     added: {
-      color: theme.palette.success.dark,
+      color: toneText(theme, StatusTone.SUCCESS),
       bg: `color-mix(in srgb, ${theme.palette.success.main} 14%, transparent)`,
     },
     modified: {
-      color: theme.palette.primary.dark,
+      color: toneText(theme, StatusTone.PRIMARY),
       bg: `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`,
     },
     deleted: {
-      color: theme.palette.error.dark,
+      color: toneText(theme, StatusTone.ERROR),
       bg: `color-mix(in srgb, ${theme.palette.error.main} 14%, transparent)`,
     },
     renamed: { color: infoColor, bg: theme.palette.surface.interface.backElevation },
@@ -215,13 +220,14 @@ export const SubjectCounter = styled(Typography, {
   shouldForwardProp: (p) => p !== "tone",
 })<{ tone: "default" | "warn" | "error" }>(({ theme, tone }) => ({
   fontSize: 10.5,
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  fontFamily: MONO_STACK,
+  fontFeatureSettings: CODE_LIGATURES,
   fontVariantNumeric: "tabular-nums",
   color:
     tone === "error"
-      ? theme.palette.error.main
+      ? toneText(theme, StatusTone.ERROR)
       : tone === "warn"
-        ? theme.palette.warning.main
+        ? toneText(theme, StatusTone.WARNING)
         : theme.palette.text.information,
   flexShrink: 0,
 }));
@@ -230,6 +236,6 @@ export const NoAuthorWarn = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  color: theme.palette.warning.main,
+  color: toneText(theme, StatusTone.WARNING),
   fontWeight: 500,
 })) as typeof Box;

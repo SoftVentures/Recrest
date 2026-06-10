@@ -1,6 +1,12 @@
 import { createTheme, responsiveFontSizes } from "@mui/material/styles";
 
-import { DEFAULT_FONT, DEFAULT_FONT_SIZE, type FontId, type FontSizeId } from "@recrest/shared";
+import {
+  CUSTOM_FONT_PREFIX,
+  DEFAULT_FONT,
+  DEFAULT_FONT_SIZE,
+  type FontSelection,
+  type FontSizeId,
+} from "@recrest/shared";
 
 import {
   BASE_THEME_COLORS,
@@ -20,7 +26,7 @@ export interface AccessibilityOptions {
   /** Legacy boolean; superseded by `font` but still honoured as a synonym for "opendyslexic". */
   dyslexiaFont?: boolean;
   primaryColor?: PrimaryColorScheme | null;
-  font?: FontId;
+  font?: FontSelection;
   fontSize?: FontSizeId;
 }
 
@@ -29,7 +35,11 @@ export interface AccessibilityOptions {
  * stack. Each entry falls back to system defaults so a missing webfont
  * still yields a legible UI rather than the browser's serif default.
  */
-function fontFamilyForId(id: FontId): string {
+export function fontFamilyForId(id: FontSelection): string {
+  if (id.startsWith(CUSTOM_FONT_PREFIX)) {
+    const family = id.slice(CUSTOM_FONT_PREFIX.length);
+    return `"${family}", "Helvetica Neue", system-ui, sans-serif`;
+  }
   switch (id) {
     case "inter":
       return 'Inter, "Helvetica Neue", system-ui, sans-serif';
@@ -53,6 +63,8 @@ function fontFamilyForId(id: FontId): string {
       return '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
     case "sf-mono":
       return 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace';
+    default:
+      return 'Inter, "Helvetica Neue", system-ui, sans-serif';
   }
 }
 
@@ -112,7 +124,7 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
   // working unchanged.
   const explicitFont = opts?.font;
   const dyslexiaFont = opts?.dyslexiaFont ?? false;
-  const resolvedFont: FontId =
+  const resolvedFont: FontSelection =
     dyslexiaFont && !explicitFont ? "opendyslexic" : (explicitFont ?? DEFAULT_FONT);
   const fontFamily = fontFamilyForId(resolvedFont);
   const fontSize = baseFontSizeForId(opts?.fontSize ?? DEFAULT_FONT_SIZE);

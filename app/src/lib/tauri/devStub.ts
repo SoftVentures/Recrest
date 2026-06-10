@@ -39,6 +39,11 @@ function installStub(seed: Required_<AppSeed>): void {
   const state: DevStubState = createDevStubState(seed as unknown as DevSeed);
 
   const callbacks = new Map<number, (arg: unknown) => void>();
+  // Maps an event channel name to the set of callback ids subscribed to it,
+  // so `emit` can deliver only to that channel's listeners instead of
+  // fanning every payload out to every subscription (which would feed a
+  // `repo://status` listener a `commits-chunk` payload, and vice versa).
+  const eventListeners = new Map<string, Set<number>>();
   let nextId = 1;
 
   function transformCallback(callback?: (arg: unknown) => void, once = false): number {
@@ -54,12 +59,51 @@ function installStub(seed: Required_<AppSeed>): void {
     return id;
   }
 
+  function registerEventListener(event: string, handler: (arg: unknown) => void): number {
+    const id = transformCallback(handler);
+    let set = eventListeners.get(event);
+    if (!set) {
+      set = new Set();
+      eventListeners.set(event, set);
+    }
+    set.add(id);
+    return id;
+  }
+
+  function removeListener(id: number): void {
+    callbacks.delete(id);
+    for (const set of eventListeners.values()) set.delete(id);
+  }
+
+  // Deliver an event to every listener subscribed to `event`, shaping the
+  // argument like `@tauri-apps/api/event` does (`{ event, id, payload }`) so
+  // handlers can read `e.payload` exactly as they do against the real runtime.
+  function emit(event: string, payload: unknown): void {
+    const set = eventListeners.get(event);
+    if (!set) return;
+    for (const id of set) {
+      callbacks.get(id)?.({ event, id, payload });
+    }
+  }
+
   const pluginCtx = {
     registerListener: (handler: (arg: unknown) => void) => transformCallback(handler),
+    // `plugin:event|listen` arrives with a callback id the Tauri API already
+    // created via `transformCallback`; bind that existing id to the channel.
+    bindEventListener: (event: string, handlerId: number) => {
+      let set = eventListeners.get(event);
+      if (!set) {
+        set = new Set();
+        eventListeners.set(event, set);
+      }
+      set.add(handlerId);
+    },
     unregisterListener: (id: number) => {
-      callbacks.delete(id);
+      removeListener(id);
     },
   };
+
+  const reposCtx = { emit };
 
   async function handleCommand(cmd: string, args: Record<string, unknown>): Promise<unknown> {
     // Dispatch through each domain handler in priority order. The first one
@@ -69,7 +113,7 @@ function installStub(seed: Required_<AppSeed>): void {
     // first.
     const handlers: Array<(cmd: string, a: Record<string, unknown>) => unknown | typeof UNHANDLED> =
       [
-        (c, a) => reposStub(c, a, state),
+        (c, a) => reposStub(c, a, state, reposCtx),
         (c, a) => gitStub(c, a, state),
         (c, a) => gitConfigStub(c, a, state),
         (c, a) => remoteStub(c, a, state),
@@ -125,17 +169,17 @@ function installStub(seed: Required_<AppSeed>): void {
       // `__TAURI_EVENT_PLUGIN_INTERNALS__` global below. Mirror it here so
       // both code paths resolve.
       unregisterListener: (_event: string, id: number) => {
-        callbacks.delete(id);
+        removeListener(id);
       },
       plugins: {
         event: {
-          listen: (_event: string, _target: unknown, handler: (arg: unknown) => void) =>
-            transformCallback(handler),
+          listen: (event: string, _target: unknown, handler: (arg: unknown) => void) =>
+            registerEventListener(event, handler),
           unlisten: (_event: string, id: number) => {
-            callbacks.delete(id);
+            removeListener(id);
           },
           unregisterListener: (_event: string, id: number) => {
-            callbacks.delete(id);
+            removeListener(id);
           },
         },
       },
@@ -153,7 +197,7 @@ function installStub(seed: Required_<AppSeed>): void {
     writable: false,
     value: {
       unregisterListener: (_event: string, id: number) => {
-        callbacks.delete(id);
+        removeListener(id);
       },
     },
   });

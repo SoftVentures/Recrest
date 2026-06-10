@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { keyframes, styled } from "@mui/material/styles";
+
+import { Search } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
-import GeneralCircularLoader, {
-  CircularLoaderSize,
-} from "@/components/atoms/loaders/GeneralCircularLoader";
 import {
   StepContent,
   StepFooter,
@@ -16,6 +15,7 @@ import {
   StepRoot,
   StepTitle,
 } from "@/components/organisms/onboarding/steps/_shared";
+import { prefersReducedMotionGuard } from "@/lib/animations/pageAnimations";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -38,6 +38,35 @@ const ScanState = styled(Box)({
   justifyContent: "center",
 }) as typeof Box;
 
+// The magnifier sweeps across the lens area (left → up → right → up …) so the
+// scan reads as "looking around" rather than a generic spinner.
+const sweep = keyframes`
+  0%   { transform: translate(-9px, 2px) rotate(-12deg); }
+  25%  { transform: translate(0, -3px) rotate(0deg); }
+  50%  { transform: translate(9px, 2px) rotate(12deg); }
+  75%  { transform: translate(0, -3px) rotate(0deg); }
+  100% { transform: translate(-9px, 2px) rotate(-12deg); }
+`;
+
+const ScanArea = styled(Box)(({ theme }) => ({
+  width: 56,
+  height: 56,
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: theme.palette.surface.interface.backElevation,
+  border: `1px solid ${theme.palette.divider}`,
+  overflow: "hidden",
+})) as typeof Box;
+
+const ScanGlass = styled(Box)(({ theme }) => ({
+  display: "inline-flex",
+  color: theme.palette.primary.main,
+  animation: `${sweep} 1.7s ease-in-out infinite`,
+  ...prefersReducedMotionGuard,
+})) as typeof Box;
+
 const Summary = styled(Typography)(({ theme }) => ({
   fontSize: 15,
   fontWeight: 600,
@@ -57,7 +86,11 @@ function InitialScanStep({ onBack, onNext }: InitialScanStepProps) {
   const { t } = useTranslation(I18nNamespace.ONBOARDING);
   const dispatch = useAppDispatch();
   const scanPaths = useAppSelector((s) => s.repos.scanPaths);
-  const repos = useAppSelector((s) => Object.values(s.repos.items));
+  // Select the stable map reference, then derive the array under useMemo — a
+  // selector that returns `Object.values(...)` builds a new array every call
+  // and makes react-redux warn about an unstable result.
+  const reposById = useAppSelector((s) => s.repos.items);
+  const repos = useMemo(() => Object.values(reposById), [reposById]);
 
   const [scanning, setScanning] = useState(true);
 
@@ -90,7 +123,11 @@ function InitialScanStep({ onBack, onNext }: InitialScanStepProps) {
         <ScanState>
           {scanning ? (
             <>
-              <GeneralCircularLoader size={CircularLoaderSize.MD} />
+              <ScanArea>
+                <ScanGlass>
+                  <Search size={26} strokeWidth={2.25} />
+                </ScanGlass>
+              </ScanArea>
               <SubSummary component="p">{t("scan.scanning")}</SubSummary>
             </>
           ) : repos.length === 0 ? (

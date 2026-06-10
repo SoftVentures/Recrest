@@ -1,7 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+
+const MONO = MONO_STACK;
 
 export const Body = styled(Box)({
   display: "flex",
@@ -87,6 +89,7 @@ export const TitleInput = styled("input")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
   fontFamily: MONO,
+  fontFeatureSettings: CODE_LIGATURES,
   fontSize: 13,
   outline: "none",
   "&:focus": { borderColor: theme.palette.border.hover },

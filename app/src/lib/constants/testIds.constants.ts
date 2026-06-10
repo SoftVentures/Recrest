@@ -46,6 +46,8 @@ export const TEST_IDS = {
     navSettings: "nav-settings",
     nav: navTestId,
     navCount: navCountTestId,
+    rangeSelect: "sidebar-range-select",
+    rangeOption: (key: string) => `sidebar-range-option-${key}` as const,
   },
 
   titlebar: {
@@ -55,6 +57,11 @@ export const TEST_IDS = {
     min: "titlebar-min",
     max: "titlebar-max",
     close: "titlebar-close",
+    menu: "titlebar-menu",
+    menuAddRepo: "titlebar-menu-add-repo",
+    menuSearch: "titlebar-menu-search",
+    menuSettings: "titlebar-menu-settings",
+    menuAbout: "titlebar-menu-about",
   },
 
   searchOverlay: {
@@ -68,6 +75,7 @@ export const TEST_IDS = {
   // --- Pages
   dashboard: {
     page: "dashboard-page",
+    activityAxis: "dash-activity-axis",
     qa: {
       clone: "dash-qa-clone",
       workspace: "dash-qa-workspace",
@@ -98,11 +106,6 @@ export const TEST_IDS = {
     cardName: "repo-card-name",
     contextMenu: "repo-context-menu",
     detailPane: "detail-pane",
-    addScope: {
-      root: "repo-add-scope",
-      local: "repo-add-scope-local",
-      global: "repo-add-scope-global",
-    },
   },
 
   contextMenu: {
@@ -114,7 +117,6 @@ export const TEST_IDS = {
     back: "repo-detail-back",
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
-    sparkCell: "repo-detail-spark-cell",
     mrRow: "repo-detail-mr-row",
     mrDrawer: "repo-detail-mr-drawer",
     ssh: {
@@ -194,6 +196,7 @@ export const TEST_IDS = {
     contextMenu: "mr-row-context-menu",
     drawer: "mr-drawer",
     row: "mr-row",
+    stateBadge: "mr-row-state-badge",
     detailPanel: "mr-detail-panel",
     detailPage: "mr-detail-page",
     openFullView: "mr-detail-open-full",
@@ -229,6 +232,8 @@ export const TEST_IDS = {
       composerInput: "mr-diff-composer-input",
       composerSubmit: "mr-diff-composer-submit",
       composerCancel: "mr-diff-composer-cancel",
+      postedComment: "mr-diff-posted-comment",
+      rangeBadge: "mr-diff-range-badge",
     },
   },
 
@@ -253,12 +258,14 @@ export const TEST_IDS = {
 
   activity: {
     page: "activity-page",
+    truncatedBanner: "activity-truncated-banner",
     repoFilter: "activity-repo-filter",
     authorFilter: "activity-author-filter",
     timeline: {
       empty: "activity-timeline-empty",
       day: "activity-timeline-day",
       card: "activity-timeline-card",
+      showMore: "activity-timeline-show-more",
     },
     heatmap: {
       root: "activity-heatmap",
@@ -267,8 +274,13 @@ export const TEST_IDS = {
     },
     stacked: {
       chart: "activity-stacked-chart",
-      col: "activity-stacked-col",
       card: "activity-stacked-card",
+    },
+    chartTooltip: "activity-chart-tooltip",
+    sourceToggle: {
+      root: "activity-source-toggle",
+      all: "activity-source-all",
+      remote: "activity-source-remote",
     },
     cards: {
       reviewQueue: "activity-review-queue-card",
@@ -284,6 +296,14 @@ export const TEST_IDS = {
       language: "activity-language-card",
       prVelocity: "activity-velocity-card",
       quietestRepos: "activity-quietest-card",
+      insights: {
+        streak: "activity-insight-streak",
+        trend: "activity-insight-trend",
+        topAuthors: "activity-insight-top-authors",
+        activeWeekday: "activity-insight-active-weekday",
+        avgPerWeek: "activity-insight-avg-per-week",
+        longestGap: "activity-insight-longest-gap",
+      },
     },
   },
 
@@ -311,7 +331,16 @@ export const TEST_IDS = {
       accentSwatches: "settings-accent-swatches",
       accentChip: <T extends string>(id: T) => `accent-chip-${id}` as const,
       fontSelect: "settings-font-select",
+      fontOption: <T extends string>(id: T) => `settings-font-option-${id}` as const,
+      codeFontSelect: "settings-code-font-select",
+      codeFontOption: <T extends string>(id: T) => `settings-code-font-option-${id}` as const,
+      codeLigaturesSelect: "settings-code-ligatures-select",
+      codeLigaturesOption: <T extends string>(mode: T) =>
+        `settings-code-ligatures-option-${mode}` as const,
       fontSizeSelect: "settings-font-size-select",
+      customFontUpload: "settings-custom-font-upload",
+      customFontDelete: <T extends string>(id: T) => `settings-custom-font-delete-${id}` as const,
+      customFontChip: <T extends string>(id: T) => `settings-custom-font-chip-${id}` as const,
       a11yHighContrast: "settings-a11y-high-contrast",
       a11yReducedMotion: "settings-a11y-reduced-motion",
       a11yUnderlineLinks: "settings-a11y-underline-links",
@@ -319,6 +348,8 @@ export const TEST_IDS = {
       defaultIdeSelect: "settings-default-ide-select",
       defaultTerminalSelect: "settings-default-terminal-select",
       defaultShellSelect: "settings-default-shell-select",
+      terminalProfileInput: "settings-terminal-profile-input",
+      terminalCustomCommandInput: "settings-terminal-custom-command-input",
       desktopAutoStart: "settings-desktop-auto-start",
       desktopStartMinimized: "settings-desktop-start-minimized",
       desktopCloseToTray: "settings-desktop-close-to-tray",
@@ -331,6 +362,26 @@ export const TEST_IDS = {
       },
       updateModeSelect: "settings-update-mode-select",
       updateCheckNow: "settings-update-check-now",
+    },
+
+    shortcuts: {
+      navigation: "settings-shortcuts-navigation",
+      git: "settings-shortcuts-git",
+      editor: "settings-shortcuts-editor",
+    },
+
+    storage: {
+      crashReporting: "settings-storage-crash-reporting",
+    },
+
+    accounts: {
+      connectButton: "settings-accounts-connect",
+      tokenCreateLink: "settings-accounts-token-create-link",
+      providerRow: <T extends string>(id: T) => `settings-accounts-provider-${id}` as const,
+      statusPill: <T extends string>(id: T) => `settings-accounts-status-${id}` as const,
+      tokenInput: "settings-accounts-token-input",
+      usernameInput: "settings-accounts-username-input",
+      tokenSave: "settings-accounts-token-save",
     },
 
     integrations: {
@@ -413,6 +464,15 @@ export const TEST_IDS = {
     root: "confirm-dialog",
     cancel: "confirm-dialog-cancel",
     confirm: "confirm-dialog-confirm",
+  },
+
+  editor: {
+    linkModal: {
+      root: "editor-link-modal",
+      input: "editor-link-modal-input",
+      apply: "editor-link-modal-apply",
+      cancel: "editor-link-modal-cancel",
+    },
   },
 
   createBranchDialog: {
@@ -502,7 +562,9 @@ export const TEST_IDS = {
     root: "find-across-dialog",
     input: "find-across-input",
     clear: "find-across-clear",
+    repoFilter: "find-across-repo-filter",
     list: "find-across-list",
+    group: <T extends string>(id: T) => `find-across-group-${id}` as const,
     row: <T extends string>(id: T) => `find-across-row-${id}` as const,
     empty: "find-across-empty",
   },
@@ -561,8 +623,15 @@ export const TEST_IDS = {
     providerNext: "onboarding-provider-next",
     providerBack: "onboarding-provider-back",
     providerSkip: "onboarding-provider-skip",
+    providerPick: <T extends string>(id: T) => `onboarding-provider-pick-${id}` as const,
     providerToken: "onboarding-provider-token",
+    providerUsername: "onboarding-provider-username",
+    providerTokenHelp: "onboarding-provider-token-help",
+    providerSelfHosted: "onboarding-provider-self-hosted",
+    providerBaseUrl: "onboarding-provider-base-url",
+    providerBaseUrlSave: "onboarding-provider-base-url-save",
     providerConnect: "onboarding-provider-connect",
+    providerConnected: "onboarding-provider-connected",
     scanNext: "onboarding-scan-next",
     scanBack: "onboarding-scan-back",
     doneFinish: "onboarding-done-finish",

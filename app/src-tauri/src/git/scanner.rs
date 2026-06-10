@@ -10,7 +10,10 @@ pub struct ScanOptions {
 
 impl Default for ScanOptions {
     fn default() -> Self {
-        Self { max_depth: 6, follow_links: false }
+        Self {
+            max_depth: 6,
+            follow_links: false,
+        }
     }
 }
 

@@ -27,24 +27,6 @@ export const Ring = styled(Box)({
   flexShrink: 0,
 }) as typeof Box;
 
-export const RingSvg = styled("svg")({
-  width: 66,
-  height: 66,
-  transform: "rotate(-90deg)",
-});
-
-export const RingTrack = styled("circle")(({ theme }) => ({
-  fill: "none",
-  stroke: theme.palette.surface.interface.backElevation,
-  strokeWidth: 6,
-}));
-
-export const RingFill = styled("circle")({
-  fill: "none",
-  strokeWidth: 6,
-  strokeLinecap: "butt",
-});
-
 export const RingLabel = styled(Box)({
   position: "absolute",
   inset: 0,
@@ -64,14 +46,6 @@ export const RingValue = styled(Box)({
   fontVariantNumeric: "tabular-nums",
   lineHeight: 1,
 }) as typeof Box;
-
-export const RingSub = styled(Box)(({ theme }) => ({
-  fontSize: 9,
-  color: theme.palette.text.information,
-  marginTop: 2,
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 1,
-})) as typeof Box;
 
 export const HeadRow = styled(Box)({
   display: "flex",
