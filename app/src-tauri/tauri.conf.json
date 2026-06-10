@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Recrest",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "identifier": "eu.softventures.recrest",
   "build": {
     "beforeDevCommand": "yarn dev",
@@ -34,13 +34,17 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["recrest"]
+        "schemes": [
+          "recrest"
+        ]
       }
     },
     "updater": {
       "active": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRCQjM4QkRDQUNBQzc3N0IKUldSN2Q2eXMzSXV6UzA5dVFUZDhaWWl3UGR4TTh6YzFMWEltcXdPbDlsMllLL3dUcXlMMFo1NVoK",
-      "endpoints": ["https://github.com/SoftVentures/Recrest/releases/latest/download/latest.json"],
+      "endpoints": [
+        "https://github.com/SoftVentures/Recrest/releases/latest/download/latest.json"
+      ],
       "dialog": false
     }
   },
@@ -63,7 +67,10 @@
     "windows": {
       "nsis": {
         "displayLanguageSelector": true,
-        "languages": ["English", "German"],
+        "languages": [
+          "English",
+          "German"
+        ],
         "installerIcon": "icons/windows/icon.ico",
         "headerImage": "installer-assets/build/nsis-header.bmp",
         "sidebarImage": "installer-assets/build/nsis-sidebar.bmp"
@@ -76,15 +83,27 @@
     "macOS": {
       "minimumSystemVersion": "10.15",
       "dmg": {
-        "appPosition": { "x": 180, "y": 170 },
-        "applicationFolderPosition": { "x": 480, "y": 170 },
-        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
         "background": "installer-assets/build/dmg-background.png"
       }
     },
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ],
         "section": "devel",
         "files": {
           "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
