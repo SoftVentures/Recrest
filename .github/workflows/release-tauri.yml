@@ -256,6 +256,47 @@ jobs:
           args: ${{ matrix.args }}
           projectPath: ./app
 
+      # Backstop for tauri-action's asset upload, which intermittently returns
+      # a transient GitHub 401 ("Requires authentication") mid-sequence — seen
+      # on the ~100 MB Linux AppImage while the smaller deb/rpm went through.
+      # The bundles are already built locally at this point, so re-upload every
+      # produced installer/updater artifact with --clobber (idempotent) and
+      # retries, guaranteeing the draft has every asset the repackage job needs
+      # even when the action's own upload flaked. A no-op when uploads
+      # succeeded. Runs always() so a failed action upload doesn't skip it.
+      # Globs match exactly the artifact set tauri-action ships (no standalone
+      # .exe — only its .sig), so the repackaged per-OS ZIPs are unchanged.
+      - name: Backstop — ensure installers are on the release
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          # mapfile is unavailable on the macOS runner's bash 3.2 — use a
+          # process-substitution read loop, which works on all three OSes.
+          set -uo pipefail
+          rc=0
+          found=0
+          while IFS= read -r f; do
+            found=1
+            ok=0
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$TAG" "$f" --clobber --repo "$REPO"; then
+                echo "✓ $(basename "$f")"; ok=1; break
+              fi
+              echo "  upload attempt $attempt for $(basename "$f") failed; retry in $((attempt * 10))s"
+              sleep $((attempt * 10))
+            done
+            [ "$ok" -eq 1 ] || { echo "::error::could not upload $(basename "$f") after retries"; rc=1; }
+          done < <(find app/src-tauri/target -type f -path '*/release/bundle/*' \
+            \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
+               -o -name '*.msi' -o -name '*.dmg' -o -name '*.tar.gz' \
+               -o -name '*.sig' \) 2>/dev/null)
+          [ "$found" -eq 1 ] || echo "No bundle artifacts found under app/src-tauri/target — nothing to backstop."
+          exit $rc
+
   # Lädt alle Einzel-Installer vom Draft-Release runter, packt sie per OS in
   # ein ZIP (`recrest-<tag>-windows.zip` usw.), lädt die ZIPs hoch und entfernt
   # die ursprünglichen Einzel-Assets, damit die Release-Seite drei klare
