@@ -27,7 +27,8 @@ export function Hero() {
                 0: <strong />,
               }}
             >
-              <strong>v{__APP_VERSION__}</strong> — Bitbucket support added
+              <strong>v{__APP_VERSION__}</strong> — Git actions + full GitLab &amp; Bitbucket
+              support
             </Trans>
           </span>
         </div>

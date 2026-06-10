@@ -44,7 +44,7 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 - `Cargo.toml` uses `git2` with `vendored-libgit2` (no system libgit2 needed) and `keyring` with native backends.
 - `git/scanner.rs` calls `skip_current_dir` on discovery so nested repos aren't re-scanned.
 - `git/watcher.rs` is instantiated in `lib.rs::run()` and held in `AppState.watcher`; it auto-subscribes existing repos on startup and is kept in sync by the `commands/repos.rs` add/remove paths and `commands/clone.rs`. Any new command that creates or removes a repo must update the watcher too.
-- `providers/r#trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`. **Debug builds** transparently swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` — the macOS keychain ACL is bound to the binary's code signature, which `cargo build` regenerates on every rebuild, so the keychain prompt would fire on every `yarn dev` launch. Release builds keep the OS keychain unchanged. On first dev launch after the file-backend migration shipped, existing keychain tokens are auto-migrated into the file (one set of keychain prompts the user clicks through; the file then becomes the sentinel and migration never re-runs).
+- `providers/trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`. **Debug builds** transparently swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` — the macOS keychain ACL is bound to the binary's code signature, which `cargo build` regenerates on every rebuild, so the keychain prompt would fire on every `yarn dev` launch. Release builds keep the OS keychain unchanged. On first dev launch after the file-backend migration shipped, existing keychain tokens are auto-migrated into the file (one set of keychain prompts the user clicks through; the file then becomes the sentinel and migration never re-runs).
 - Add a crate: `cargo add <name>` inside `src-tauri/`. Watch that it works under `vendored-libgit2` linking; avoid crates that pull in a second libgit2.
 
 ## App icons (production vs dev, per-platform layout)
@@ -94,9 +94,9 @@ All three call the same script with `--prod` / `--dev` filters; the only-flagged
 
 ## Redux + i18n
 
-- Five slices in `src/store/slices/`. Async thunks inside each slice own the `invoke` calls — components dispatch, they don't call IPC directly.
-- `persistenceMiddleware` in `src/store/persistence.ts` mirrors **only** `ui.sidebarCollapsed` and `settings.theme` to `localStorage`. **Locale is owned by i18next's own detector** — don't duplicate it here, they will fight.
-- Every user-visible string goes through `t()`. When adding UI text, update both `src/i18n/locales/en/<ns>.json` and `src/i18n/locales/de/<ns>.json`. Pluralization uses i18next v4 JSON format (`key_one` / `key_other`).
+- Seven reducers in `src/store/reducers/` (`ui`, `settings`, `providers`, `repos`, `prs`, `remoteImport`, `activity`); thunks + action creators live under `src/store/actions/`, selectors under `src/store/selectors/`. Components dispatch — they don't call IPC directly.
+- `settingsBackendSync` (`src/store/backendSync.ts`) mirrors settings to the Tauri backend; `activityRangePersistMiddleware` (`src/store/activityRangePersistence.ts`) persists the selected activity range. **Locale is owned by i18next's own detector** — don't duplicate it here, they will fight.
+- Every user-visible string goes through `t()`. When adding UI text, update both `src/locales/en/<ns>.json` and `src/locales/de/<ns>.json`. Pluralization uses i18next v4 JSON format (`key_one` / `key_other`).
 
 ## UI conventions
 

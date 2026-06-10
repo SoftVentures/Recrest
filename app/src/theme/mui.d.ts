@@ -124,6 +124,10 @@ export interface PaletteSurfaceInterface {
   active: string;
   dark: string;
   navigation: string;
+  /** Window chrome (custom titlebar) surface. Stays fully opaque even in the
+   *  Glassy theme so the OS window controls sit on a solid strip rather than
+   *  letting the native acrylic/vibrancy bleed through them. */
+  chrome: string;
   overlay: string;
   disabled: string;
   boxShadow: string;

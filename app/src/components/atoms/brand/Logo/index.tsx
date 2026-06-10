@@ -4,6 +4,7 @@ import { styled } from "@mui/material/styles";
 import IconDev from "@/assets/logos/recrest-icon-dev.svg?react";
 import IconTransparentDark from "@/assets/logos/recrest-icon-transparent-dark.svg?react";
 import IconTransparentWhite from "@/assets/logos/recrest-icon-transparent-white.svg?react";
+import { isDemoMode } from "@/lib/utils/demoMode.utils";
 
 export interface LogoProps {
   className?: string;
@@ -43,8 +44,10 @@ const DarkVariant = styled(IconTransparentWhite)({
 // `import.meta.env.DEV` is true for both `yarn tauri:dev` and `yarn dev:web`,
 // so the orange `</>` dev badge appears in every dev workflow — the favicon
 // gate in `useFaviconSync` uses the same flag so tab + sidebar stay in sync.
+// Demo mode (`?demoChrome=`) suppresses the dev badge so marketing captures
+// taken from `dev:web` show the production brand mark.
 function Logo({ className, title = "Recrest" }: LogoProps) {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && !isDemoMode()) {
     return (
       <Root component="span" className={className} role="img" aria-label={title}>
         <DevMark aria-hidden />

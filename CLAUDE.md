@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Recrest is a native desktop developer dashboard built with Tauri v2. It surfaces local git repos, their working-tree status, open pull requests (GitHub/GitLab/Bitbucket), and CI checks. Full design + scope lives in `docs/plans/implementation-plan.md` — **treat that file as the source of truth when the plan and code diverge**.
+Recrest is a native desktop developer dashboard built with Tauri v2. It surfaces local git repos, their working-tree status, open pull requests (GitHub/GitLab/Bitbucket), and CI checks. Full design + scope lives in the phased plans under `docs/plans/` (start with `00-acceptance-checklist.md`) — **treat those as the source of truth when the plan and code diverge**.
 
 ## Commands
 
@@ -47,7 +47,7 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 
 ### Provider abstraction
 
-`app/src-tauri/src/providers/` defines `GitProvider` (async trait in `r#trait.rs`) + `ProviderRegistry`. The trait surface is deliberately narrow (`list_pull_requests`, token get/set) so a later WASM-plugin refactor can swap implementations without touching the frontend. GitHub/GitLab/Bitbucket all have full implementations (PR list/detail, repos, orgs/groups/workspaces, diffs, comments, CI). Tokens are stored in the OS keychain (`auth/token.rs` via the `keyring` crate) — never in `settings.json`. **Debug builds** swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` (see `app/CLAUDE.md` for why). Release builds keep keychain.
+`app/src-tauri/src/providers/` defines `GitProvider` (async trait in `trait.rs`) + `ProviderRegistry`. The trait is kept implementation-agnostic so a later WASM-plugin refactor can swap implementations without touching the frontend. GitHub/GitLab/Bitbucket all have full implementations: PR list/detail, repos, orgs/groups/workspaces, diffs (`get_pr_diff`), inline comments (`post_pr_comment`), CI/workflows (`list_workflows`/`list_workflow_runs`/`trigger_workflow`/`cancel_workflow_run`), and deployment status (`get_pages_status`). Tokens are stored in the OS keychain (`auth/token.rs` via the `keyring` crate) — never in `settings.json`. **Debug builds** swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` (see `app/CLAUDE.md` for why). Release builds keep keychain.
 
 ### Git subsystem
 
@@ -55,11 +55,11 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 
 ### Redux store
 
-`app/src/store/index.ts` wires five slices (`repos`, `prs`, `providers`, `settings`, `ui`). Async thunks live in each slice and call `invoke`. A small `persistenceMiddleware` (`store/persistence.ts`) mirrors `ui.sidebarCollapsed` and `settings.theme` to `localStorage` under `recrest:ui`. Locale persistence is owned by i18next's own detector — **don't duplicate it in the middleware**.
+`app/src/store/index.ts` wires seven reducers (`ui`, `settings`, `providers`, `repos`, `prs`, `remoteImport`, `activity`). The store is reducer-based: each reducer lives in `store/reducers/<name>Reducer.ts`, async thunks and action creators live under `store/actions/`, and memoized selectors under `store/selectors/`. Two middlewares are concatenated: `settingsBackendSync` (mirrors settings to the Tauri backend) and `activityRangePersistMiddleware` (persists the selected activity range, preloaded back into `activity.selectedRange` on boot). Locale persistence is owned by i18next's own detector — **don't duplicate it in middleware**.
 
 ### i18n
 
-`react-i18next` with four namespaces (`common`, `repos`, `prs`, `settings`) × two locales (`en`, `de`). EN is the fallback; DE ships in MVP. Every user-visible string goes through `t()`. When you add UI text, add it to both locale bundles. `AppShell` has `useLocaleSync` that keeps Redux `settings.locale` in step with i18next.
+`react-i18next` with seven namespaces (`common`, `repos`, `prs`, `settings`, `onboarding`, `errors`, `aria`) × two locales (`en`, `de`), in `app/src/locales/{en,de}/`. EN is the fallback; DE ships fully. Every user-visible string goes through `t()`. When you add UI text, add it to both locale bundles. `AppShell` has `useLocaleSync` that keeps Redux `settings.locale` in step with i18next.
 
 ### Device-aware layout
 
@@ -76,5 +76,5 @@ Rust commands are registered in `app/src-tauri/src/lib.rs::run()`. DTOs use `#[s
 
 ## Known scope gaps (not bugs)
 
-- OAuth is scaffolded; MVP ships PAT-only auth.
-- GitLab/Bitbucket providers implement PR list/detail, repos, and orgs/groups/workspaces; remaining provider depth (diffs, comments, workflows, pages) is tracked in `docs/plans/03/`.
+- OAuth is scaffolded; auth ships PAT / app-password only.
+- All three providers reach feature parity (PR list/detail, repos, orgs/groups/workspaces, diffs, comments, CI/workflows, deployments). Bitbucket deployments are best-effort (pipeline detection) rather than a first-class API. Remaining cross-OS smoke items are tracked in `docs/plans/00-acceptance-checklist.md`.
