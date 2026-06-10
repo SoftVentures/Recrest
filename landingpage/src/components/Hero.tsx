@@ -1,5 +1,7 @@
 import { Trans, useTranslation } from "react-i18next";
 
+import { PROVIDER_WEB_URLS } from "@recrest/shared";
+
 import { DownloadButton } from "./DownloadButton";
 import { HeroDemo } from "./HeroDemo";
 import {
@@ -27,7 +29,8 @@ export function Hero() {
                 0: <strong />,
               }}
             >
-              <strong>v{__APP_VERSION__}</strong> — Bitbucket support added
+              <strong>v{__APP_VERSION__}</strong> — Git actions + full GitLab &amp; Bitbucket
+              support
             </Trans>
           </span>
         </div>
@@ -90,18 +93,33 @@ export function Hero() {
 
         <div className="remotes">
           <span className="remotes-label">{t("hero.worksWith")}</span>
-          <span className="remote-logo">
+          <a
+            className="remote-logo remote-logo-github"
+            href={PROVIDER_WEB_URLS.github}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
             <GithubIcon width={20} height={20} />
             GitHub
-          </span>
-          <span className="remote-logo">
+          </a>
+          <a
+            className="remote-logo remote-logo-gitlab"
+            href={PROVIDER_WEB_URLS.gitlab}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
             <GitlabIcon />
             GitLab
-          </span>
-          <span className="remote-logo">
+          </a>
+          <a
+            className="remote-logo remote-logo-bitbucket"
+            href={PROVIDER_WEB_URLS.bitbucket}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
             <BitbucketIcon />
             Bitbucket
-          </span>
+          </a>
         </div>
       </div>
 

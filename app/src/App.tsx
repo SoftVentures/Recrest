@@ -13,9 +13,17 @@ import RepoDetailPage from "@/pages/app/RepoDetail";
 import ReposPage from "@/pages/app/Repos";
 import SettingsPage from "@/pages/app/Settings";
 
+// Vite injects BASE_URL from `build.base` ("/" in Tauri/dev, "/Recrest/demo/"
+// in the landingpage live-demo build). Strip the trailing slash; an empty
+// basename must be `undefined` for react-router.
+const routerBasename = import.meta.env.BASE_URL.replace(/\/+$/, "") || undefined;
+
 export default function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter
+      basename={routerBasename}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <Routes>
         <Route element={<AppLayout />}>
           <Route path={AppRoute.ROOT} element={<Navigate to={AppRoute.DASHBOARD} replace />} />

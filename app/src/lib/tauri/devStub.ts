@@ -30,6 +30,7 @@ import { prDetailStub } from "@/lib/tauri/devStub.handlers.prDetail";
 import { remoteStub } from "@/lib/tauri/devStub.handlers.remote";
 import { reposStub } from "@/lib/tauri/devStub.handlers.repos";
 import { systemStub } from "@/lib/tauri/devStub.handlers.system";
+import { type DevSeedOverrides, applySeedOverrides } from "@/lib/tauri/devStub.overrides";
 import { UNHANDLED } from "@/lib/tauri/devStub.providers";
 import { type DevSeed, type DevStubState, createDevStubState } from "@/lib/tauri/devStub.state";
 
@@ -225,10 +226,11 @@ function installStub(seed: Required_<AppSeed>): void {
  * Install the dev-only Tauri stub. Idempotent: calling twice is a no-op
  * because `__TAURI_INTERNALS__` is non-writable after the first install.
  */
-export function installDevTauriStub(): void {
-  installStub(DEFAULT_SEED as Required_<AppSeed>);
-  const repoCount = DEFAULT_SEED.repos.length;
-  const prCount = Object.values(DEFAULT_SEED.prs).reduce((sum, list) => sum + list.length, 0);
+export function installDevTauriStub(overrides?: DevSeedOverrides): void {
+  const seed = applySeedOverrides(DEFAULT_SEED, overrides);
+  installStub(seed as Required_<AppSeed>);
+  const repoCount = seed.repos.length;
+  const prCount = Object.values(seed.prs).reduce((sum, list) => sum + list.length, 0);
   console.info(
     `[dev] Tauri stub installed with seed (${repoCount} repos, ${prCount} pull requests)`,
   );

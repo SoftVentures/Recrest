@@ -70,8 +70,12 @@
           // Paint the body in the correct surface immediately so the first
           // frame doesn't show the browser's default white before MUI's
           // CssBaseline applies the palette. Values match `theme/palette`
-          // defaults for `background.default` (light/dark).
-          root.style.backgroundColor = isDark ? "#0b0d12" : "#ffffff";
+          // defaults for `background.default` (light/dark). Glassy stays
+          // transparent so the native window vibrancy/acrylic shows through
+          // from the very first paint instead of being covered by an opaque
+          // bootstrap colour.
+          root.style.backgroundColor =
+            themeId === "glassy" ? "transparent" : isDark ? "#0b0d12" : "#ffffff";
         } catch (e) {
           /* swallow — defaults stand */
         }

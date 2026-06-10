@@ -182,8 +182,12 @@ export const SEED_REPOS: Repository[] = [
     groupId: "acme-labs",
     remoteUrl: "https://gitlab.com/acme-labs/pulse-ios",
     providerId: "gitlab",
-    logoPath: null,
-    logoDarkPath: null,
+    // Markers resolved by the dev-stub `load_logo_bytes` handler to a generated
+    // app-style icon — gives the showcased demo repo a real logo instead of a
+    // letter avatar in marketing captures. Same icon for both themes (it ships
+    // its own gradient background).
+    logoPath: "demo-pulse-icon.svg",
+    logoDarkPath: "demo-pulse-icon.svg",
     sshKeyPath: null,
     status: makeStatus({
       branch: "feat/home-v2",

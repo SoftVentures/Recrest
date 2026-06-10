@@ -13,6 +13,7 @@ From the repo root via `yarn workspace @recrest/app <script>`:
 - `dev` — Vite only. Tauri IPC no-ops via `isTauri()`. Use this for pure UI work. Port follows `TAURI_ENV_PLATFORM`: **3000** outside Tauri (matches the root `yarn dev:web` flow and Playwright's base URL), **1420** when invoked via `tauri:dev`. `strictPort: true` on both — no silent fallback.
 - `tauri:dev` — full desktop shell on port **1420**. Requires Rust toolchain.
 - `build` — `tsc -b && vite build` (production bundle).
+- `build:demo` — public live-demo build for the landingpage (`--mode demo --base /Recrest/demo/ --outDir ../landingpage/dist/demo`). Keeps the dev stub/seed in the bundle; see "Demo build" below.
 - `tauri:build` — wraps the desktop installer. **Will fail until `src-tauri/icons/` contains PNGs** — that's a known scope gap.
 - `test` — vitest (jsdom).
 - `test:ts` — `tsc -b` across both sub-projects (the fast feedback loop).
@@ -20,6 +21,10 @@ From the repo root via `yarn workspace @recrest/app <script>`:
 - `lint`, `format`, `format:check`.
 
 Run a single vitest file from the repo root: `yarn workspace @recrest/app test src/store/slices/uiSlice.test.ts`.
+
+## Demo build (`--mode demo`)
+
+The marketing landingpage embeds this app as a seeded live demo (plan 06). `app/src/main.tsx` gates the dev Tauri stub on `(import.meta.env.DEV || import.meta.env.MODE === "demo")` — **keep those expressions literal**; wrapping them in runtime variables or helper functions defeats Vite's static replacement and would ship the stub/seed to desktop users (verify: `app/dist/assets` must contain no `devStub` chunk). The demo additionally reads `?theme=`/`?lng=` boot params and listens for landingpage `postMessage`s via `src/lib/demo/demoBridge.ts` (contract constants in `@recrest/shared`), and pre-sets `StorageKey.ONBOARDING_DISMISSED` so visitors land on the dashboard, not the wizard.
 
 ## TypeScript setup (non-obvious)
 
@@ -44,7 +49,7 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 - `Cargo.toml` uses `git2` with `vendored-libgit2` (no system libgit2 needed) and `keyring` with native backends.
 - `git/scanner.rs` calls `skip_current_dir` on discovery so nested repos aren't re-scanned.
 - `git/watcher.rs` is instantiated in `lib.rs::run()` and held in `AppState.watcher`; it auto-subscribes existing repos on startup and is kept in sync by the `commands/repos.rs` add/remove paths and `commands/clone.rs`. Any new command that creates or removes a repo must update the watcher too.
-- `providers/r#trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`. **Debug builds** transparently swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` — the macOS keychain ACL is bound to the binary's code signature, which `cargo build` regenerates on every rebuild, so the keychain prompt would fire on every `yarn dev` launch. Release builds keep the OS keychain unchanged. On first dev launch after the file-backend migration shipped, existing keychain tokens are auto-migrated into the file (one set of keychain prompts the user clicks through; the file then becomes the sentinel and migration never re-runs).
+- `providers/trait.rs` is the shared async-trait surface. Tokens are accessed exclusively through `auth::token::TokenStore` (keyring); never serialize them into `settings.json`. **Debug builds** transparently swap the keyring for a `chmod 600` JSON file at `<app_data_dir>/dev-tokens.json` — the macOS keychain ACL is bound to the binary's code signature, which `cargo build` regenerates on every rebuild, so the keychain prompt would fire on every `yarn dev` launch. Release builds keep the OS keychain unchanged. On first dev launch after the file-backend migration shipped, existing keychain tokens are auto-migrated into the file (one set of keychain prompts the user clicks through; the file then becomes the sentinel and migration never re-runs).
 - Add a crate: `cargo add <name>` inside `src-tauri/`. Watch that it works under `vendored-libgit2` linking; avoid crates that pull in a second libgit2.
 
 ## App icons (production vs dev, per-platform layout)
@@ -85,6 +90,7 @@ All three call the same script with `--prod` / `--dev` filters; the only-flagged
 **Runtime icon swapping** — both macOS (`set_macos_app_icon`) and Windows (`apply_windows_theme_icon`) swap between the light/dark variants when the OS theme flips. **Windows** hooks Tauri's `WindowEvent::ThemeChanged` (dispatched on the main thread by the event loop) and re-applies window + tray icons from there. **macOS** uses a 1.5s polling task spawned in `spawn_macos_appearance_poller` instead — both notification paths were tried and discarded as unreliable for system-wide appearance flips: `WindowEvent::ThemeChanged` on macOS only fires for explicit per-window theme overrides (a known tao behaviour), and an `NSDistributedNotificationCenter` observer for `AppleInterfaceThemeChangedNotification` registered cleanly but its block never fired against the Tauri dev/release binary (likely because the dev binary isn't a proper `.app` bundle and lacks the LSUIElement/sandbox plumbing needed to receive system-wide distributed notifications). The poller reads `NSApp.effectiveAppearance` on the main thread via `app_handle.run_on_main_thread(...)` and calls `set_macos_app_icon()` only when the dark-mode bit actually flips. The dock/taskbar icon is bundle-icon based, the tray uses `tray_icon_bytes()`.
 
 **Tray click behavior** — platform-conditional in `TrayIconBuilder`:
+
 - macOS: `.show_menu_on_left_click(true)` + `.icon_as_template(true)` — single left-click opens the menu (like Wi-Fi, Battery, Spotlight). No `on_tray_icon_event` handler.
 - Windows + Linux: `.show_menu_on_left_click(false)` + `on_tray_icon_event` left-click → `show_main_window`. Right-click opens the menu.
 
@@ -94,9 +100,9 @@ All three call the same script with `--prod` / `--dev` filters; the only-flagged
 
 ## Redux + i18n
 
-- Five slices in `src/store/slices/`. Async thunks inside each slice own the `invoke` calls — components dispatch, they don't call IPC directly.
-- `persistenceMiddleware` in `src/store/persistence.ts` mirrors **only** `ui.sidebarCollapsed` and `settings.theme` to `localStorage`. **Locale is owned by i18next's own detector** — don't duplicate it here, they will fight.
-- Every user-visible string goes through `t()`. When adding UI text, update both `src/i18n/locales/en/<ns>.json` and `src/i18n/locales/de/<ns>.json`. Pluralization uses i18next v4 JSON format (`key_one` / `key_other`).
+- Seven reducers in `src/store/reducers/` (`ui`, `settings`, `providers`, `repos`, `prs`, `remoteImport`, `activity`); thunks + action creators live under `src/store/actions/`, selectors under `src/store/selectors/`. Components dispatch — they don't call IPC directly.
+- `settingsBackendSync` (`src/store/backendSync.ts`) mirrors settings to the Tauri backend; `activityRangePersistMiddleware` (`src/store/activityRangePersistence.ts`) persists the selected activity range. **Locale is owned by i18next's own detector** — don't duplicate it here, they will fight.
+- Every user-visible string goes through `t()`. When adding UI text, update both `src/locales/en/<ns>.json` and `src/locales/de/<ns>.json`. Pluralization uses i18next v4 JSON format (`key_one` / `key_other`).
 
 ## UI conventions
 
@@ -137,7 +143,7 @@ Card chrome lives in `molecules/cards/GeneralCard`, never in `organisms/cards/*`
 
 `GeneralX` is reserved for cross-cutting primitives every page composes — `GeneralButton`, `GeneralButtonGroup`, `GeneralIconButton`, `GeneralCard`, `GeneralTooltip`, `GeneralSparkline`, `GeneralSwitchInput`, `GeneralSearchInput`, `GeneralAvatar`, `GeneralDrawer`, `GeneralModal`, `GeneralLoader`, `GeneralCircularLoader`, `GeneralLinearLoader`, `GeneralSkeletonLoader`. Domain specialisations of those primitives drop the prefix: `AuthorAvatar` and `RepoAvatar` compose `GeneralAvatar`, `ConfirmationModal` composes `GeneralModal`, `MrDetailDrawer` composes `GeneralDrawer`, etc. Brand atoms (`Logo`, `Mascot`) and tag/icon helpers (`BrandIcon`, `IdeIcon`, `ShellIcon`, `TerminalIcon`) don't carry the prefix because they aren't substitutable primitives.
 
-**Modal vs. drawer vs. dialog naming:** there is no `dialogs/` folder, and modals/drawers each live in one folder regardless of complexity. Every full-screen overlay that asks for input or confirmation is a *modal* — all of them live in `molecules/modals/` (`GeneralModal`, `ConfirmationModal`, `AddRepoModal`, etc.); no separate `organisms/modals/`. Side-pane overlays are *drawers*; specialisations sit under `molecules/drawers/` alongside `GeneralDrawer`.
+**Modal vs. drawer vs. dialog naming:** there is no `dialogs/` folder, and modals/drawers each live in one folder regardless of complexity. Every full-screen overlay that asks for input or confirmation is a _modal_ — all of them live in `molecules/modals/` (`GeneralModal`, `ConfirmationModal`, `AddRepoModal`, etc.); no separate `organisms/modals/`. Side-pane overlays are _drawers_; specialisations sit under `molecules/drawers/` alongside `GeneralDrawer`.
 
 **Buttons & button groups** live in `atoms/buttons/`. `ScopeButtonGroup` (formerly the `ScopeToggle` "molecule") sits next to `GeneralButton`/`GeneralButtonGroup`/`GeneralIconButton` because it is, structurally, a `GeneralButtonGroup` composition with two scope items — not a separate molecule kind. There is no `molecules/toggles/` folder.
 

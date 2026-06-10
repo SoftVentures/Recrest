@@ -14,6 +14,34 @@ import type { DevStubState } from "@/lib/tauri/devStub.state";
 
 type Args = Record<string, unknown>;
 
+// UTF-8-safe base64 for the inline SVG markers below — mirrors the
+// `{ mimeType, data }` LogoBlob the real `load_logo_bytes` command returns.
+function svgToBase64(svg: string): string {
+  const bytes = new TextEncoder().encode(svg);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+// A generated app-style icon (waveform on a gradient) so a showcased demo repo
+// renders with a real logo instead of a letter avatar in marketing captures.
+const PULSE_ICON_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pulseBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="0.55" stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#pulseBg)"/>
+  <path d="M9 33 H21 L26 19 L33 47 L39 28 L43 33 H55" fill="none" stroke="#fff"
+    stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+const DEMO_REPO_LOGOS: Record<string, string> = {
+  "demo-pulse-icon.svg": PULSE_ICON_SVG,
+};
+
 /** Optional context the dispatcher passes so this handler can deliver the
  *  `activity://commits-chunk` stream the real backend emits. */
 export interface ReposStubContext {
@@ -128,8 +156,10 @@ export function reposStub(
     case "detect_ides":
       return ["vscode"];
 
-    case "load_logo_bytes":
-      return null;
+    case "load_logo_bytes": {
+      const svg = DEMO_REPO_LOGOS[String(a.path ?? "")];
+      return svg ? { mimeType: "image/svg+xml", data: svgToBase64(svg) } : null;
+    }
 
     case "open_in_ide":
     case "open_terminal":

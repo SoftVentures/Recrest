@@ -2,6 +2,90 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] — 2026-06-10
+
+Patch release on top of `0.9.0`: fixes a Windows-only regression in the packaged build and finishes the Windows installer branding.
+
+### Fixed
+
+- **Windows: no more console-window flashes or UI freeze.** In the installed (GUI-subsystem) build, opening Settings → General or auto-detecting terminals/shells ran `where` probes — and the hook-aware commit ran `git` — without `CREATE_NO_WINDOW`, so a black console flashed on every call and the synchronous probes briefly froze the window. All of those spawns now go through the `CREATE_NO_WINDOW` helper (`commands/terminal.rs::which_like`, `commands/git_index.rs::commit_via_git`). `yarn dev` never surfaced it because it inherits a console from the terminal it launches from.
+
+### Changed
+
+- **Windows MSI now carries Recrest branding.** Added a WiX `bannerPath` + `dialogImagePath` (493×58 / 493×312, rasterised from SVG sources alongside the existing NSIS bitmaps) so the `.msi` welcome/finish dialogs show the branded dark rail + logo instead of the generic WiX UI — matching the already-branded NSIS installer.
+
+### Known gaps
+
+- Unchanged from 0.9.0: auth is PAT / app-password only; installers remain unsigned, so macOS Gatekeeper / Windows SmartScreen warn on first launch.
+
+## [0.9.0] — 2026-06-10
+
+Fourth beta — and the largest release so far. Four planned phases landed together: a sweep of platform/UI bug fixes, a full migration of the styling layer to Material UI, a real repository-management and Git-actions surface, and a rebuilt Activity/Statistics stack. `0.8.0` was burned internally and never tagged, so this jumps straight from `0.7.0` to `0.9.0`.
+
+The big shift for users: **GitLab and Bitbucket are no longer "not yet implemented."** Both now back PR diffs, inline comments, CI/pipeline runs, deployment status, and org/group/workspace browsing alongside GitHub.
+
+Still a beta — treat it as "use it, tell us what's broken" rather than "rely on it in your daily loop."
+
+### Added
+
+#### Repository management & Git actions
+
+- Working-copy panel in repo detail — stage / unstage individual files, bulk "stage all" / "unstage all", and a stash lifecycle (save / list / pop / drop). Backed by libgit2 index operations (`commands/git_index.rs`).
+- Discard-changes guard — discarding sensitive files (`.env`, `.env.local`, `id_*`, `*.pem`) requires an explicit confirmation instead of silently deleting them.
+- Commit dialog with a "default template" button (`{author}: {date}`) and pre-commit hook detection — when a `pre-commit` hook (or `core.hooksPath`) is present, the commit runs through `git commit` so the hook actually fires; a "hooks active" badge shows when detected. Repos without hooks keep the fast libgit2 path.
+- Git config tab in Settings — view and edit `user.name`, `user.email`, `core.editor` and friends, layer-aware (global vs. repo-local vs. `includeIf`), with per-repo overrides.
+- CI / workflow management in repo detail — list GitHub Actions / GitLab Pipelines / Bitbucket Pipelines, browse run history, and trigger a run with a dynamic inputs form (GitHub parses `workflow_dispatch` inputs from YAML; GitLab takes free-form variables; Bitbucket triggers without inputs).
+- PR diff view with inline comments — per-file diffs normalized across all three providers, with a line-anchored comment composer.
+- Deployments card — GitHub Pages / GitLab Pages status (URL, state, custom domain); Bitbucket shows a best-effort "pipeline-based deploy detected".
+- Per-repo SSH key picker — override the credential used for a single repo; passphrases stay in memory only.
+- "Open in Terminal" now honors the terminal you pick in Settings and resolves the right launch command per OS (macOS Terminal/iTerm/Warp, Linux kitty/foot/wezterm/alacritty/gnome-terminal/konsole, Windows Terminal/PowerShell/cmd); paths with spaces are quoted correctly.
+
+#### Activity & statistics
+
+- Configurable activity date range — preset chips (7d / 30d / 90d / 1y / all) plus a date picker; the range is mirrored into the URL (`?since=…&until=…`).
+- Full-history loading — "all" streams a repo's complete commit history in chunks, with a truncation banner past 5,000 commits per repo; ranges are cached so re-selecting one doesn't refetch.
+- Insights block — six cards: current + longest streak, trend, top authors, most-active weekday, average commits/week, and longest gap. Streak and gap math uses your local timezone.
+- Activity source toggle — filter to provider-connected repos only, or show every local repo.
+- Custom font upload (Settings → Appearance) — drop in a TTF/OTF/WOFF/WOFF2 (≤10 MB), registered at runtime via `@font-face`.
+
+#### UI & platform polish
+
+- Pinned repositories — a dedicated section at the top of the repo list; pins persist across restarts.
+- Repo-list view modes — Grouped / Flat / Card, with a sortable header in Flat mode (Name / Branch / Status / Activity); view and sort persist, and narrow viewports auto-switch to Card.
+- Branch view — collapsible sections (Local / Remote / Stale / Merged), a search input, and status filters.
+- UI scale hotkeys — `Ctrl/Cmd` + `+` / `-` / `0`, bidirectionally synced with the Settings slider, persisted across restarts.
+- Confirmation dialogs for destructive actions (remove repo, force push, discard, token reset), gated by a "confirm risky actions" setting.
+- Swipe gestures — close the drawer with a right-swipe, switch pages with a horizontal swipe.
+- Scroll-position memory per page (Activity, Repositories, Merge Requests).
+- macOS Spotlight reopen brings the app to the foreground from the tray.
+
+### Changed
+
+- **Styling layer migrated to Material UI v9 + Emotion.** Tailwind v4, Radix UI, shadcn-style primitives, and the hand-rolled SCSS layer were removed in favor of a single MUI theme (`createTheme`) plus `styled()` components. Light/dark mode, accent palettes, and font scaling are preserved and now flow through one `ThemeWrapper`. The `sx` prop is banned in favor of `styled()` so styles stay statically extractable.
+- Components reorganized into a strict atoms / molecules / organisms / pages hierarchy, with cross-cutting `GeneralX` primitives (`GeneralButton`, `GeneralDrawer`, `GeneralModal`, …) and colocated Storybook stories + Vitest tests.
+- Activity charts re-platformed onto Nivo (`@nivo/*`, MIT) — heatmap, language donut, CI health, PR velocity, author clock, stacked activity — replacing the hand-rolled SVG charts.
+- GitLab and Bitbucket PR listings now show the author's avatar and display name (not the username).
+- The provider trait gained `get_pr_diff`, `post_pr_comment`, `list_workflows`, `list_workflow_runs`, `trigger_workflow`, `cancel_workflow_run`, and `get_pages_status` — implemented across GitHub, GitLab, and Bitbucket.
+- Dev and production builds now use fully separated identities (`eu.softventures.recrest` vs. `…​.recrest.dev`) — isolated app data, keychain tokens, single-instance locks, and deep-link schemes (`identity.rs`), so `yarn dev` can no longer clobber your installed install's state.
+- All seven Redux slices gained reducer + thunk tests; Vitest now enforces a coverage gate (≥60% lines / ≥50% branches).
+
+### Fixed
+
+- MR drawer is now visually identical in the Merge Requests page and Repo Detail (shared 440px overlay, ESC + click-outside dismiss in both); clicking an open PR in Repo Detail opens it inline instead of navigating away.
+- Author deduplication across Unicode variants — "Müller" and "Mueller" collapse to one leaderboard entry (German → diaspora → deunicode → lowercase pipeline), with a manual alias override for stubborn cases.
+- PR notifications fire only for PRs assigned to / requesting you; the PR list still shows everyone's PRs, and a cold start before identity loads no longer emits false notifications.
+- Per-provider CI-failure wording ("Checks failed" on GitHub, "Pipelines failed" on GitLab/Bitbucket).
+- Long repo names in cards and the review queue now ellipsize instead of overflowing.
+- Chart colors are consistent for a given repo across every chart type, with a deterministic faded-hover variant.
+- Repo default-avatar gradients vary deterministically instead of all reading "bright pixels top-left".
+- Settings "Start minimized" no longer minimizes the window live on toggle — the Rust setup hook is the single source of truth (boot-time only).
+
+### Known gaps
+
+- OAuth remains scaffolded; PAT / app-password auth only.
+- Installers are unsigned (Apple Developer ID / Windows EV certs pending) — see "Why unsigned?" in `RELEASE.md`.
+- Some platform-specific items still need on-device smoke testing: Windows Snap-Layouts flyout on the maximize button (1.C2), Windows autostart-after-reboot (1.C3), and Linux notification-icon display across dunst/Plasma/GNOME (1.C7).
+
 ## [0.7.0] — 2026-04-22
 
 Third beta. Headline additions are the in-app auto-updater, the Developer tab, native OS notifications, and a page-transition animation pass. The stylesheet layer also migrated from flat CSS to SCSS.
@@ -103,6 +187,8 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.9.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.1
+[0.9.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.0
 [0.7.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.7.0
 [0.6.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.6.0
 [0.5.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.5.1

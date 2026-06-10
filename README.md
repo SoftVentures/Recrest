@@ -13,7 +13,7 @@ without juggling a browser, a terminal, and three Electron apps.
 [![Tauri v2](https://img.shields.io/badge/built%20with-Tauri%20v2-24C8DB)](https://tauri.app)
 [![WCAG 2.1 AA](https://img.shields.io/badge/a11y-WCAG%202.1%20AA-success)](./ACCESSIBILITY.md)
 
-![Recrest preview](./docs/images/app-preview.png)
+![Recrest — repositories with the repo detail pane open](./docs/images/app-preview.png)
 
 </div>
 
@@ -32,22 +32,35 @@ without juggling a browser, a terminal, and three Electron apps.
   Manager, libsecret on Linux. Never on disk.
 - **Keyboard-first.** `Ctrl/Cmd + K` opens the command palette. Everything
   else is one key away.
-- **i18n.** English and German ship with v0.1. OS locale is auto-detected.
+- **i18n.** English and German ship today. OS locale is auto-detected.
 - **Light / dark / system theme.** Persisted across restarts.
 - **Accessible.** Meets [WCAG 2.1 AA](./ACCESSIBILITY.md); tested on every
   commit.
 
-## Providers (v0.1)
+## Providers
 
-| Provider  | Status        | Tokens       | PRs  | CI checks |
-| --------- | ------------- | ------------ | ---- | --------- |
-| GitHub    | ✅ Supported  | PAT          | ✅   | ✅        |
-| GitLab    | 🧪 Scaffolded | PAT          | Soon | Soon      |
-| Bitbucket | 🧪 Scaffolded | App Password | Soon | Soon      |
+| Provider  | Status       | Tokens       | PRs | Diffs + comments | CI / pipelines | Deployments |
+| --------- | ------------ | ------------ | --- | ---------------- | -------------- | ----------- |
+| GitHub    | ✅ Supported | PAT          | ✅  | ✅               | ✅ Actions     | ✅ Pages    |
+| GitLab    | ✅ Supported | PAT          | ✅  | ✅               | ✅ Pipelines   | ✅ Pages    |
+| Bitbucket | ✅ Supported | App Password | ✅  | ✅               | ✅ Pipelines   | 🧪 Detected |
+
+All three providers back PR list/detail, repos, orgs/groups/workspaces, diffs
+with inline comments, CI/pipeline runs, and deployment status. OAuth is
+scaffolded but not user-facing yet — auth is PAT / app-password only.
 
 The provider layer lives behind a narrow async trait
-(`src-tauri/src/providers/r#trait.rs`) so adding a new host or swapping in a
+(`src-tauri/src/providers/trait.rs`) so adding a new host or swapping in a
 WASM-plugin implementation later is a drop-in.
+
+---
+
+## Activity & insights
+
+Per-repo commit history, author leaderboards, streaks, CI health, time-to-merge
+and a language breakdown — all computed locally, nothing leaves your machine.
+
+![Recrest — the Activity dashboard with commit, author and CI analytics](./docs/images/activity-dark.png)
 
 ---
 
@@ -182,7 +195,7 @@ yarn build          # Tauri installer for your platform, in app/src-tauri/target
 | Layer         | Choice                                                                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Desktop shell | [Tauri v2](https://tauri.app)                                                                                                                                                                       |
-| Frontend      | React 19 · TypeScript (strict) · Tailwind CSS v4 · shadcn-style primitives · lucide-react                                                                                                           |
+| Frontend      | React 19 · TypeScript (strict) · Material UI v9 · Emotion (`styled`) · Nivo charts · lucide-react                                                                                                   |
 | State         | Redux Toolkit + react-redux                                                                                                                                                                         |
 | i18n          | [react-i18next](https://react.i18next.com)                                                                                                                                                          |
 | Backend       | Rust — [`git2`](https://crates.io/crates/git2) (libgit2), [`notify`](https://crates.io/crates/notify), [`reqwest`](https://crates.io/crates/reqwest), [`keyring`](https://crates.io/crates/keyring) |
@@ -201,7 +214,7 @@ Recrest/
 ├─ landingpage/      # @recrest/landingpage — marketing site, GitHub Pages
 ├─ tests/            # @recrest/tests — Playwright E2E suite
 └─ docs/
-   └─ plans/         # implementation-plan.md — authoritative design
+   └─ plans/         # phased implementation plans + acceptance checklist
 ```
 
 Each workspace has its own `CLAUDE.md` with workspace-specific conventions.
@@ -265,14 +278,15 @@ yarn test:ts && yarn lint && yarn test && yarn format:check
 ```
 
 Add every new UI string to **both** `en/` and `de/` locale bundles in
-`app/src/i18n/locales/`. When you add a Rust IPC command, mirror its
+`app/src/locales/`. When you add a Rust IPC command, mirror its
 return type as a TypeScript DTO in `@recrest/shared` so the cross-language
 contract stays typed on both ends.
 
 Architecture details and conventions live in the `CLAUDE.md` files at the
-repo root and in each workspace. Start with
-[`docs/plans/implementation-plan.md`](./docs/plans/implementation-plan.md)
-— that's the source of truth when plan and code diverge.
+repo root and in each workspace. The phased design lives under
+[`docs/plans/`](./docs/plans/) — start with
+[`00-acceptance-checklist.md`](./docs/plans/00-acceptance-checklist.md), the
+source of truth when plan and code diverge.
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and
 [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).

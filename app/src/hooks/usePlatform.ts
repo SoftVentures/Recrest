@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
+  DEMO_CHROME_QUERY_PARAM,
+  DEMO_CHROME_VALUES,
   PLATFORM_LABELS,
   PLATFORM_MODIFIER_LABELS,
   PLATFORM_WINDOW_CHROME,
@@ -47,21 +49,34 @@ export function usePlatform(): Platform {
 }
 
 /**
+ * True only under the real Tauri desktop runtime — not the `yarn dev:web`
+ * stub. The dev stub installs `__TAURI_INTERNALS__` so the seed IPC works,
+ * but tags itself with `__RECREST_DEV_STUB__`; we check that here so only the
+ * real desktop shell triggers OS-owned behaviour (native traffic-lights,
+ * window controls, …).
+ */
+export function isRealTauri(): boolean {
+  return isTauri() && !(typeof window !== "undefined" && "__RECREST_DEV_STUB__" in window);
+}
+
+/** Reads the `?demoChrome=` override (see `DEMO_CHROME_QUERY_PARAM`). */
+function demoChromeOverride(): WindowChrome | null {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get(DEMO_CHROME_QUERY_PARAM);
+  return (value && DEMO_CHROME_VALUES[value]) || null;
+}
+
+/**
  * Maps platform + runtime to the chrome variant the UI should render.
  * In the pure-web dev mode the browser provides its own chrome — we return
- * `"none"` so the app mounts without a bespoke titlebar.
+ * `"none"` so the app mounts without a bespoke titlebar, unless the
+ * `?demoChrome=` override forces a variant for screenshots/demos.
  */
 export function useWindowChrome(): WindowChrome {
   const platform = usePlatform();
-  // In the pure-web dev mode (`yarn dev:web`) the browser already paints
-  // its own chrome — rendering ours on top would just steal vertical space
-  // for no benefit. The dev stub installs `__TAURI_INTERNALS__` so the seed
-  // IPC works, but tags itself with `__RECREST_DEV_STUB__`; we explicitly
-  // check that here so only the real Tauri runtime triggers the bespoke
-  // titlebar.
-  const isRealTauri =
-    isTauri() && !(typeof window !== "undefined" && "__RECREST_DEV_STUB__" in window);
-  if (!isRealTauri) return WindowChrome.NONE;
+  const override = useMemo(() => demoChromeOverride(), []);
+  if (override) return override;
+  if (!isRealTauri()) return WindowChrome.NONE;
   return PLATFORM_WINDOW_CHROME[platform];
 }
 

@@ -64,3 +64,21 @@ export const WINDOW_CHROME_HEIGHT_PX: Record<WindowChrome, number> = {
   [WindowChrome.GNOME]: 42,
   [WindowChrome.NONE]: 0,
 };
+
+/**
+ * Demo / screenshot escape hatch: `?demoChrome=macos` (or `win11` / `gnome`)
+ * forces a window-chrome variant even in pure-web mode, where the browser
+ * would otherwise own the frame and `useWindowChrome` returns `"none"`. This
+ * lets `yarn dev:web` and the README capture spec render the real titlebar
+ * component so marketing shots look like the installed app. Production (real
+ * Tauri) ignores it — the OS already provides chrome there. Because the web
+ * has no OS to draw macOS traffic-lights, `MacOverlayTitlebar` paints faux
+ * lights whenever it isn't running under the real Tauri runtime.
+ */
+export const DEMO_CHROME_QUERY_PARAM = "demoChrome";
+
+export const DEMO_CHROME_VALUES: Record<string, WindowChrome> = {
+  macos: WindowChrome.MACOS_OVERLAY,
+  win11: WindowChrome.WIN11,
+  gnome: WindowChrome.GNOME,
+};

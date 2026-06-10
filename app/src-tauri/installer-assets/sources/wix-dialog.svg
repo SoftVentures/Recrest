@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="493" height="312" viewBox="0 0 493 312">
+  <title>Recrest WiX installer welcome / finish dialog</title>
+  <!-- WixUI overlays the welcome/finish title + body in dark text on the RIGHT
+       (x >= ~164), so keep that area white. The left 164px is the branded rail,
+       mirroring the NSIS sidebar. -->
+  <defs>
+    <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1D24"/>
+      <stop offset="1" stop-color="#0B0D12"/>
+    </linearGradient>
+  </defs>
+  <rect width="493" height="312" fill="#FFFFFF"/>
+  <rect width="164" height="312" fill="url(#rail)"/>
+  <g transform="translate(57, 96)" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 50 L25 25 L50 50"/>
+    <path d="M0 74 L25 49 L50 74" opacity="0.5"/>
+  </g>
+  <text x="82" y="212" font-family="Segoe UI, Inter, system-ui, Arial, sans-serif" font-size="22" font-weight="600" text-anchor="middle" fill="#FFFFFF" letter-spacing="-0.3">Recrest</text>
+  <text x="82" y="234" font-family="Segoe UI, Inter, system-ui, Arial, sans-serif" font-size="9.5" text-anchor="middle" fill="#9CA3AF" letter-spacing="0.5">DEVELOPER DASHBOARD</text>
+</svg>

@@ -2,6 +2,7 @@ export * from "./constants/app.js";
 export * from "./constants/classnames.js";
 export * from "./constants/commands.js";
 export * from "./constants/deep-links.js";
+export * from "./constants/demo.js";
 export * from "./constants/events.js";
 export * from "./constants/git.js";
 export * from "./constants/ide.js";

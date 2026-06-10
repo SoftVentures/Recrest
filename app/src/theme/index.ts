@@ -248,8 +248,14 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
           content: isGlassy ? surfaceAlpha(C.CANVAS, 0.55) : C.CANVAS,
           backElevation: C.SURFACE_2,
           active: C.SURFACE_HOVER,
-          dark: C.SIDEBAR_BG,
-          navigation: C.SIDEBAR_BG,
+          // Sidebar becomes translucent in Glassy so the native acrylic shows
+          // through the left nav too; opaque in every other theme.
+          dark: isGlassy ? surfaceAlpha(C.SIDEBAR_BG, 0.6) : C.SIDEBAR_BG,
+          navigation: isGlassy ? surfaceAlpha(C.SIDEBAR_BG, 0.6) : C.SIDEBAR_BG,
+          // Titlebar strip — always opaque (never alpha'd), so the window
+          // controls keep a solid backdrop in Glassy instead of bleeding the
+          // acrylic through. Matches `background.paper` in the opaque themes.
+          chrome: C.SURFACE_1,
           overlay: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(17, 17, 22, 0.4)",
           disabled: C.SURFACE_3,
           boxShadow: C.SHADOW_CARD,
