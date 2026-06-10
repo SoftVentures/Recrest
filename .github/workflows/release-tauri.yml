@@ -115,12 +115,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # macOS disables LTO (`off`) while Windows/Linux keep fat LTO. The
+          # `window-vibrancy` crate (Glassy backdrop) registers the macOS-only
+          # `NSVisualEffectView` Obj-C class; under fat LTO the universal build
+          # aborts with `failed to load bitcode … window_vibrancy` +
+          # `__CLASS_NSVisualEffectViewTagged: symbol multiply defined`. The
+          # symbol doesn't exist on Win/Linux, so their fat-LTO build is fine.
+          # Scoped via the CARGO_PROFILE_RELEASE_LTO env override below so the
+          # shipped Win/Linux binaries keep full LTO.
           - platform: macos-latest
             args: "--target universal-apple-darwin"
+            releaseLto: "off"
           - platform: ubuntu-22.04
             args: ""
+            releaseLto: "fat"
           - platform: windows-latest
             args: ""
+            releaseLto: "fat"
     runs-on: ${{ matrix.platform }}
     # Each OS is independent; one platform failing should not block the other
     # two from publishing their installers. Missing assets can be attached
@@ -233,6 +244,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # Per-platform LTO (see matrix comment): `off` on macOS to dodge the
+          # window-vibrancy bitcode-LTO failure, `fat` elsewhere.
+          CARGO_PROFILE_RELEASE_LTO: ${{ matrix.releaseLto }}
         with:
           tagName: ${{ needs.resolve.outputs.tag }}
           releaseName: "Recrest ${{ needs.resolve.outputs.tag }}"
