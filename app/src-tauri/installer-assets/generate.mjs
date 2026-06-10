@@ -4,6 +4,8 @@
  * erwarteten Installer-Branding-Assets:
  *   - NSIS-Header          150×57  BMP (24-bit, kein Alpha)
  *   - NSIS-Sidebar         164×314 BMP
+ *   - WiX-Banner           493×58  BMP (Top-Banner aller MSI-Dialoge)
+ *   - WiX-Dialog           493×312 BMP (Welcome-/Finish-Dialog)
  *   - DMG-Background       660×400 PNG  + 1320×800 @2x
  *
  * SVG → PNG-Buffer via `@resvg/resvg-js` (pure Rust WASM, keine System-Deps);
@@ -25,6 +27,8 @@ const buildDir = join(__dirname, "build");
 const targets = [
   { src: "nsis-header.svg", out: "nsis-header.bmp", width: 150, height: 57, fmt: "bmp" },
   { src: "nsis-sidebar.svg", out: "nsis-sidebar.bmp", width: 164, height: 314, fmt: "bmp" },
+  { src: "wix-banner.svg", out: "wix-banner.bmp", width: 493, height: 58, fmt: "bmp" },
+  { src: "wix-dialog.svg", out: "wix-dialog.bmp", width: 493, height: 312, fmt: "bmp" },
   { src: "dmg-background.svg", out: "dmg-background.png", width: 660, height: 400, fmt: "png" },
   { src: "dmg-background.svg", out: "dmg-background@2x.png", width: 1320, height: 800, fmt: "png" },
 ];

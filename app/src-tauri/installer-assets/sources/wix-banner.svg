@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="493" height="58" viewBox="0 0 493 58">
+  <title>Recrest WiX installer top banner</title>
+  <!-- WixUI draws the step title in dark text on the LEFT of this banner, so
+       brand on the RIGHT and keep the background white for legibility. -->
+  <rect width="493" height="58" fill="#FFFFFF"/>
+  <g transform="translate(398, 16)" fill="none" stroke="#0F1115" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 18 L13 5 L26 18"/>
+    <path d="M0 26 L13 13 L26 26" opacity="0.45"/>
+  </g>
+  <text x="432" y="37" font-family="Segoe UI, Inter, system-ui, Arial, sans-serif" font-size="18" font-weight="600" fill="#0F1115" letter-spacing="-0.2">Recrest</text>
+</svg>

@@ -40,20 +40,22 @@ fn binary_on_path(bin: &str) -> bool {
 
 #[cfg(unix)]
 fn which_like(bin: &str) -> bool {
-    Command::new("which")
-        .arg(bin)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    let mut cmd = Command::new("which");
+    cmd.arg(bin);
+    super::process::configure(&mut cmd);
+    cmd.output().map(|o| o.status.success()).unwrap_or(false)
 }
 
 #[cfg(windows)]
 fn which_like(bin: &str) -> bool {
-    Command::new("where")
-        .arg(bin)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    // CREATE_NO_WINDOW: detect_terminals / detect_shells probe each candidate
+    // with `where`; without this every probe flashes a console window on the
+    // packaged (GUI-subsystem) build — and since detect_* run synchronously,
+    // the burst froze the UI. Dev never showed it (inherited terminal).
+    let mut cmd = Command::new("where");
+    cmd.arg(bin);
+    super::process::configure(&mut cmd);
+    cmd.output().map(|o| o.status.success()).unwrap_or(false)
 }
 
 /// Testable core: first candidate whose probe returns true.

@@ -413,6 +413,14 @@ pub async fn commit_via_git(
     fallback: Option<(&str, &str)>,
 ) -> Result<(), CommandError> {
     let mut cmd = tokio::process::Command::new("git");
+    // CREATE_NO_WINDOW — without it the hook-aware commit flashes a console
+    // window on the packaged Windows build. `process::configure` only takes a
+    // std Command, so set the flag inline on the tokio builder.
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
     if let Some((name, email)) = fallback {
         if !name.is_empty() && !email.is_empty() {
             cmd.arg("-c").arg(format!("user.name={name}"));

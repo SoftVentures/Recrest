@@ -2,6 +2,22 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] — 2026-06-10
+
+Patch release on top of `0.9.0`: fixes a Windows-only regression in the packaged build and finishes the Windows installer branding.
+
+### Fixed
+
+- **Windows: no more console-window flashes or UI freeze.** In the installed (GUI-subsystem) build, opening Settings → General or auto-detecting terminals/shells ran `where` probes — and the hook-aware commit ran `git` — without `CREATE_NO_WINDOW`, so a black console flashed on every call and the synchronous probes briefly froze the window. All of those spawns now go through the `CREATE_NO_WINDOW` helper (`commands/terminal.rs::which_like`, `commands/git_index.rs::commit_via_git`). `yarn dev` never surfaced it because it inherits a console from the terminal it launches from.
+
+### Changed
+
+- **Windows MSI now carries Recrest branding.** Added a WiX `bannerPath` + `dialogImagePath` (493×58 / 493×312, rasterised from SVG sources alongside the existing NSIS bitmaps) so the `.msi` welcome/finish dialogs show the branded dark rail + logo instead of the generic WiX UI — matching the already-branded NSIS installer.
+
+### Known gaps
+
+- Unchanged from 0.9.0: auth is PAT / app-password only; installers remain unsigned, so macOS Gatekeeper / Windows SmartScreen warn on first launch.
+
 ## [0.9.0] — 2026-06-10
 
 Fourth beta — and the largest release so far. Four planned phases landed together: a sweep of platform/UI bug fixes, a full migration of the styling layer to Material UI, a real repository-management and Git-actions surface, and a rebuilt Activity/Statistics stack. `0.8.0` was burned internally and never tagged, so this jumps straight from `0.7.0` to `0.9.0`.
@@ -171,6 +187,7 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.9.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.1
 [0.9.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.0
 [0.7.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.7.0
 [0.6.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.6.0
