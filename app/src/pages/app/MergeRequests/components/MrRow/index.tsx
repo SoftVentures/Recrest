@@ -7,9 +7,20 @@ import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { type PullRequest, TauriCommand, routeToMr } from "@recrest/shared";
+import { PrState, type PullRequest, TauriCommand, routeToMr } from "@recrest/shared";
 
-import { Code, Copy, ExternalLink, GitBranch, GitMerge, Maximize2, Type } from "lucide-react";
+import {
+  Code,
+  Copy,
+  ExternalLink,
+  GitBranch,
+  GitMerge,
+  GitPullRequest,
+  GitPullRequestClosed,
+  GitPullRequestDraft,
+  Maximize2,
+  Type,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
@@ -28,6 +39,7 @@ import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
+import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
 import { detailKey } from "@/store/actions/prs.actions";
 import { useAppSelector } from "@/store/hooks";
 
@@ -39,8 +51,28 @@ export interface MrRowProps {
    *  the context-menu uses, so the visual selection state matches across
    *  click-and-drawer vs. right-click-and-menu interactions. */
   selected?: boolean;
+  /** What the row shows on its right edge. `"ci"` renders the CI status pill;
+   *  `"state"` (default) renders the MR-state badge (Open/Draft/Merged/Closed)
+   *  with a per-state icon — "running" CI on the right read as a confusing MR
+   *  status, so the state badge is the canonical right-edge meta everywhere. */
+  rightMeta?: "ci" | "state";
   onClick?: (pr: PullRequest) => void;
 }
+
+type MrStateTone = "open" | "merged" | "closed" | "draft";
+
+const STATE_TONE = {
+  open: StatusTone.SUCCESS,
+  merged: StatusTone.PRIMARY,
+  closed: StatusTone.ERROR,
+} as const satisfies Record<Exclude<MrStateTone, "draft">, StatusTone>;
+
+const STATE_ICON = {
+  open: GitPullRequest,
+  draft: GitPullRequestDraft,
+  merged: GitMerge,
+  closed: GitPullRequestClosed,
+} as const satisfies Record<MrStateTone, typeof GitMerge>;
 
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -180,11 +212,47 @@ const CiEmpty = styled(Typography)(({ theme }) => ({
   flexShrink: 0,
 })) as typeof Typography;
 
-export function MrRow({ pr, repoId, repoName, selected, onClick }: MrRowProps) {
+// eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed tone prop
+const StateBadge = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
+  tone: MrStateTone;
+}>(({ theme, tone }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  flexShrink: 0,
+  fontSize: 10.5,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  padding: "2px 8px",
+  borderRadius: 100,
+  // Draft isn't a backend state — it's an open MR flagged WIP, so it reads as a
+  // muted neutral badge rather than borrowing a status hue.
+  ...(tone === "draft"
+    ? {
+        color: theme.palette.text.informationLight,
+        backgroundColor: theme.palette.surface.interface.backElevation,
+      }
+    : toneChip(theme, STATE_TONE[tone])),
+}));
+
+export function MrRow({
+  pr,
+  repoId,
+  repoName,
+  selected,
+  rightMeta = "state",
+  onClick,
+}: MrRowProps) {
   const state = ciFor(pr.ciStatus);
   const navigate = useNavigate();
   const { t: tPrs } = useTranslation(I18nNamespace.PRS);
   const { t } = useTranslation();
+
+  const isDraft = pr.draft && pr.state === PrState.OPEN;
+  const stateTone: MrStateTone = isDraft ? "draft" : pr.state;
+  const stateLabel = tPrs(isDraft ? "state.draft" : `state.${pr.state}`);
+  const StateIcon = STATE_ICON[stateTone];
   const { position, onContextMenu, onClose } = useContextMenu();
 
   // Provider stats first; otherwise derive from the preloaded diff cache
@@ -309,7 +377,12 @@ export function MrRow({ pr, repoId, repoName, selected, onClick }: MrRowProps) {
           )}
         </MetaRow>
       </TextCol>
-      {state ? (
+      {rightMeta === "state" ? (
+        <StateBadge tone={stateTone} data-testid={TEST_IDS.mr.stateBadge} data-mr-state={pr.state}>
+          <StateIcon size={11} aria-hidden />
+          {stateLabel}
+        </StateBadge>
+      ) : state ? (
         <CiPill component="span" variant="caption">
           <CiDot state={state} />
           {state}

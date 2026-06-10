@@ -176,7 +176,7 @@ function Sidebar() {
     >
       <BrandRow>
         <BrandMark collapsed={collapsed} />
-        {!collapsed && <BrandName>Recrest</BrandName>}
+        {!collapsed && <BrandName>{t("app.name")}</BrandName>}
       </BrandRow>
 
       <Nav collapsed={collapsed}>

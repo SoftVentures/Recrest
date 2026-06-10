@@ -34,6 +34,11 @@ import {
 } from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
+// Stable empty-array reference so the `prs` selector returns the same value on
+// every render while a repo has no cached PRs — an inline `[]` literal makes
+// react-redux warn about an unstable selector result.
+const NO_PRS: readonly PullRequest[] = [];
+
 export default function MrDetailPage() {
   const { repoId, prNumber } = useParams<{ repoId: string; prNumber: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -69,7 +74,7 @@ export default function MrDetailPage() {
 
   const repos = useAppSelector((s) => s.repos.items);
   const repoName = repoId ? (repos[repoId]?.name ?? null) : null;
-  const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? []) : []));
+  const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? NO_PRS) : NO_PRS));
   const pr: PullRequest | undefined = useMemo(
     () => (parsedNumber != null ? prs.find((p) => p.number === parsedNumber) : undefined),
     [prs, parsedNumber],
@@ -121,9 +126,9 @@ export default function MrDetailPage() {
     setBusy("checkout");
     try {
       await invoke(TauriCommand.GIT_CHECKOUT, { repoId, branch: pr.sourceBranch });
-      toast.success(`Checked out ${pr.sourceBranch}`);
+      toast.success(tPrs("checkout.success", { branch: pr.sourceBranch }));
     } catch {
-      toast.error("Checkout failed");
+      toast.error(tPrs("checkout.failed"));
     } finally {
       setBusy(null);
     }

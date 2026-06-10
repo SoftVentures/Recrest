@@ -1,5 +1,7 @@
 import { type ReactNode } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Checkbox } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
@@ -23,6 +25,7 @@ import {
   Spin,
   StatusInline,
 } from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/ProvidersPanel.styles";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { formatDateShort } from "@/lib/utils/dateFormat.utils";
 import { timeAgo } from "@/lib/utils/timeAgo.utils";
@@ -49,6 +52,7 @@ export function RepoRowCard({
   progress,
   groupPrefix,
 }: RepoRowCardProps): ReactNode {
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const theme = useTheme();
   const updatedIso = repo.pushedAt ?? repo.updatedAt;
   const displayName =
@@ -69,12 +73,12 @@ export function RepoRowCard({
           <RepoTitle component="span" variant="caption" title={repo.fullName}>
             {displayName}
           </RepoTitle>
-          {repo.isPrivate && <MetaBadge tone="neutral">private</MetaBadge>}
-          {repo.isFork && <MetaBadge tone="neutral">fork</MetaBadge>}
-          {repo.isArchived && <MetaBadge tone="neutral">archived</MetaBadge>}
+          {repo.isPrivate && <MetaBadge tone="neutral">{t("add_modal.badge_private")}</MetaBadge>}
+          {repo.isFork && <MetaBadge tone="neutral">{t("add_modal.badge_fork")}</MetaBadge>}
+          {repo.isArchived && <MetaBadge tone="neutral">{t("add_modal.badge_archived")}</MetaBadge>}
           {alreadyLocal && (
             <MetaBadge tone="success">
-              <Check size={9} /> on system
+              <Check size={9} /> {t("add_modal.on_system")}
             </MetaBadge>
           )}
         </RepoTitleRow>
@@ -101,7 +105,7 @@ export function RepoRowCard({
       {progress === "cloning" && (
         <StatusInline component="span" variant="caption">
           <Spin size={11} />
-          cloning…
+          {t("add_modal.status_cloning")}
         </StatusInline>
       )}
       {progress === "done" && (
@@ -110,7 +114,7 @@ export function RepoRowCard({
           variant="caption"
           style={{ color: theme.palette.success.main }}
         >
-          <Check size={11} /> done
+          <Check size={11} /> {t("add_modal.status_done")}
         </StatusInline>
       )}
       {progress === "error" && (
@@ -119,7 +123,7 @@ export function RepoRowCard({
           variant="caption"
           style={{ color: theme.palette.error.main }}
         >
-          <X size={11} /> failed
+          <X size={11} /> {t("add_modal.status_failed")}
         </StatusInline>
       )}
     </RepoRow>

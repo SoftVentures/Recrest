@@ -1,8 +1,14 @@
+import { useState } from "react";
+
+import { useTranslation } from "react-i18next";
+
 import { type AppSettings, POLLING_INTERVAL_DEFAULT_MS } from "@recrest/shared";
 
 import { toast } from "sonner";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
@@ -12,10 +18,31 @@ import { saveSettings } from "@/store/actions/settings.actions";
 import { setOnboardingOverride } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
+// A pending destructive action awaiting confirmation. We funnel every confirm
+// through the app's `ConfirmationModal` instead of `window.confirm` because the
+// latter is rerouted to the Tauri dialog plugin (async + ACL-gated) inside the
+// desktop shell — there it throws "dialog.confirm not allowed" and, even when
+// permitted, returns a Promise so `if (!window.confirm(...))` never blocks.
+interface PendingAction {
+  title: string;
+  description?: string;
+  confirmLabel: string;
+  run: () => void | Promise<void>;
+}
+
 export function StorageSection() {
+  const { t } = useTranslation(I18nNamespace.SETTINGS);
   const dispatch = useAppDispatch();
   const providers = useAppSelector((s) => s.providers.connections);
   const scanPaths = useAppSelector((s) => s.repos.scanPaths);
+
+  const [pending, setPending] = useState<PendingAction | null>(null);
+
+  const confirmPending = async () => {
+    const action = pending;
+    setPending(null);
+    if (action) await action.run();
+  };
 
   const copyState = async () => {
     try {
@@ -27,24 +54,22 @@ export function StorageSection() {
         ),
       );
       await navigator.clipboard?.writeText(JSON.stringify(redacted, null, 2));
-      toast.success("Redux state copied");
+      toast.success(t("developer.storage.copy_state_done"));
     } catch {
-      toast.error("Could not copy state");
+      toast.error(t("developer.storage.copy_state_error"));
     }
   };
 
   const wipeLocal = () => {
-    if (!window.confirm("Wipe localStorage? Type-to-confirm replaced by browser prompt.")) return;
     try {
       localStorage.removeItem(StorageKey.UI_STATE);
-      toast.success("localStorage wiped");
+      toast.success(t("developer.storage.wipe_local_done"));
     } catch {
-      toast.error("Could not access localStorage");
+      toast.error(t("developer.storage.localstorage_error"));
     }
   };
 
   const resetSettings = async () => {
-    if (!window.confirm("Reset all settings to defaults?")) return;
     const defaults: Partial<AppSettings> = {
       pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,
       defaultIde: null,
@@ -59,20 +84,18 @@ export function StorageSection() {
       crashReporting: false,
     };
     await dispatch(saveSettings(defaults));
-    toast.success("Settings reset to defaults");
+    toast.success(t("developer.storage.reset_settings_done"));
   };
 
   const clearTokens = async () => {
-    if (!window.confirm("Clear ALL provider tokens from keychain?")) return;
     for (const conn of Object.values(providers)) {
       if (!conn) continue;
       await dispatch(clearProviderToken(conn.providerId));
     }
-    toast.success("Provider tokens cleared");
+    toast.success(t("developer.storage.clear_tokens_done"));
   };
 
   const retriggerOnboarding = () => {
-    if (!window.confirm("Re-trigger onboarding? Page will reload.")) return;
     try {
       localStorage.removeItem(StorageKey.ONBOARDING_DISMISSED);
       // Force-flag survives the reload via sessionStorage and tells
@@ -82,79 +105,117 @@ export function StorageSection() {
     } catch {
       /* ignore */
     }
-    toast.success("Onboarding re-triggered");
+    toast.success(t("developer.storage.retrigger_onboarding_done"));
     setTimeout(() => window.location.reload(), 250);
   };
 
   const rescanRepos = async () => {
     if (scanPaths.length === 0) {
-      toast.info("No scan paths configured");
+      toast.info(t("developer.storage.no_scan_paths"));
       return;
     }
     await dispatch(scanForRepos(scanPaths));
-    toast.success("Rescan complete");
+    toast.success(t("developer.storage.rescan_done"));
   };
 
   const openOnboarding = () => {
     dispatch(setOnboardingOverride(true));
-    toast.success("Onboarding wizard opened");
+    toast.success(t("developer.storage.open_onboarding_done"));
   };
 
   return (
-    <SettingsSection title="Storage" testId={TEST_IDS.settings.developer.sections.storage}>
-      <SettingsRow label="Copy Redux state" sub="Snapshot the store as JSON with secrets redacted.">
+    <SettingsSection
+      title={t("developer.sections.storage")}
+      testId={TEST_IDS.settings.developer.sections.storage}
+    >
+      <SettingsRow
+        label={t("developer.storage.copy_state")}
+        sub={t("developer.storage.copy_state_sub")}
+      >
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.copyState}
           onClick={() => void copyState()}
         >
-          Copy state
+          {t("developer.storage.copy_state_button")}
         </GeneralButton>
       </SettingsRow>
-      <SettingsRow label="Wipe localStorage" sub="Removes every `recrest:*` key.">
+      <SettingsRow
+        label={t("developer.storage.wipe_local")}
+        sub={t("developer.storage.wipe_local_sub")}
+      >
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.wipeLocal}
-          onClick={wipeLocal}
+          onClick={() =>
+            setPending({
+              title: t("developer.storage.wipe_local_confirm_title"),
+              description: t("developer.storage.wipe_local_sub"),
+              confirmLabel: t("developer.storage.wipe_local_button"),
+              run: wipeLocal,
+            })
+          }
         >
-          Wipe
+          {t("developer.storage.wipe_local_button")}
         </GeneralButton>
       </SettingsRow>
-      <SettingsRow label="Reset settings to defaults">
+      <SettingsRow label={t("developer.storage.reset_settings")}>
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.resetSettings}
-          onClick={() => void resetSettings()}
+          onClick={() =>
+            setPending({
+              title: t("developer.storage.reset_settings_confirm_title"),
+              confirmLabel: t("developer.storage.reset_settings_button"),
+              run: resetSettings,
+            })
+          }
         >
-          Reset
+          {t("developer.storage.reset_settings_button")}
         </GeneralButton>
       </SettingsRow>
-      <SettingsRow label="Clear all provider tokens" sub="Removes tokens from the keychain.">
+      <SettingsRow
+        label={t("developer.storage.clear_tokens")}
+        sub={t("developer.storage.clear_tokens_sub")}
+      >
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.clearTokens}
-          onClick={() => void clearTokens()}
+          onClick={() =>
+            setPending({
+              title: t("developer.storage.clear_tokens_confirm_title"),
+              confirmLabel: t("developer.storage.clear_tokens_button"),
+              run: clearTokens,
+            })
+          }
         >
-          Clear tokens
+          {t("developer.storage.clear_tokens_button")}
         </GeneralButton>
       </SettingsRow>
-      <SettingsRow label="Re-trigger onboarding">
+      <SettingsRow label={t("developer.storage.retrigger_onboarding")}>
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.retriggerOnboarding}
-          onClick={retriggerOnboarding}
+          onClick={() =>
+            setPending({
+              title: t("developer.storage.retrigger_onboarding_confirm_title"),
+              description: t("developer.storage.reload_note"),
+              confirmLabel: t("developer.storage.retrigger_onboarding_button"),
+              run: retriggerOnboarding,
+            })
+          }
         >
-          Re-trigger
+          {t("developer.storage.retrigger_onboarding_button")}
         </GeneralButton>
       </SettingsRow>
       <SettingsRow
-        label="Open onboarding wizard"
-        sub="Show the first-run wizard now — does not touch saved settings."
+        label={t("developer.storage.open_onboarding")}
+        sub={t("developer.storage.open_onboarding_sub")}
       >
         <GeneralButton
           size="sm"
@@ -162,19 +223,29 @@ export function StorageSection() {
           data-testid={TEST_IDS.settings.developer.storage.openOnboarding}
           onClick={openOnboarding}
         >
-          Open
+          {t("developer.storage.open_onboarding_button")}
         </GeneralButton>
       </SettingsRow>
-      <SettingsRow label="Rescan repositories">
+      <SettingsRow label={t("developer.storage.rescan_repos")}>
         <GeneralButton
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.rescan}
           onClick={() => void rescanRepos()}
         >
-          Rescan
+          {t("developer.storage.rescan_button")}
         </GeneralButton>
       </SettingsRow>
+
+      <ConfirmationModal
+        open={pending !== null}
+        title={pending?.title ?? ""}
+        description={pending?.description}
+        confirmLabel={pending?.confirmLabel ?? t("developer.storage.confirm_fallback")}
+        destructive
+        onCancel={() => setPending(null)}
+        onConfirm={() => void confirmPending()}
+      />
     </SettingsSection>
   );
 }

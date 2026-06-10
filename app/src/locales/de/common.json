@@ -15,7 +15,18 @@
     "quote": "Zitat",
     "link": "Link einfügen",
     "link_prompt": "Link-URL",
-    "unlink": "Link entfernen"
+    "link_placeholder": "https://example.com",
+    "link_apply": "Übernehmen",
+    "link_cancel": "Abbrechen",
+    "unlink": "Link entfernen",
+    "toolbar_aria": "Formatierung"
+  },
+  "updater": {
+    "available": "Eine neue Version ist verfügbar:",
+    "current": "(aktuell {{version}})",
+    "install": "Installieren & neu starten",
+    "download": "Herunterladen",
+    "dismiss": "Schließen"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -64,7 +75,9 @@
     "search_group_mrs": "Merge Requests",
     "search_group_nav": "Gehe zu",
     "search_group_repos": "Repositories",
-    "clear_search": "Suche zurücksetzen"
+    "clear_search": "Suche zurücksetzen",
+    "go_back": "Zurück",
+    "confirm": "Bestätigen"
   },
   "context_menu": {
     "open_in_terminal": "Im Terminal öffnen",
@@ -195,6 +208,8 @@
     "activity": {
       "title": "Aktivität · letzte {{days}} Tage",
       "meta": "{{total}} Commits in {{repos}} Repos",
+      "commits_one": "{{count}} Commit",
+      "commits_other": "{{count}} Commits",
       "span": {
         "day": { "now": "heute", "prev": "gestern", "ago": "vor {{count}} Tagen" },
         "week": { "now": "diese Woche", "prev": "letzte Woche", "ago": "vor {{count}} Wochen" },
@@ -203,7 +218,10 @@
     },
     "attention": {
       "title": "Braucht deine Aufmerksamkeit",
-      "empty": "Alles sauber und synchron."
+      "empty": "Alles sauber und synchron.",
+      "changed": "{{count}} geändert",
+      "behind_one": "{{count}} Commit hinterher",
+      "behind_other": "{{count}} Commits hinterher"
     },
     "empty": {
       "title": "Noch keine Repositories",
@@ -237,7 +255,10 @@
       "recent_commits": "Letzte Commits",
       "create_branch": "Branch erstellen",
       "pull_all": "Alle pullen",
-      "coming_soon": "Demnächst verfügbar"
+      "coming_soon": "Demnächst verfügbar",
+      "fetched_one": "{{count}} Repo gefetcht",
+      "fetched_other": "{{count}} Repos gefetcht",
+      "fetch_all_error": "Fetch fehlgeschlagen"
     }
   },
   "titlebar": {
@@ -431,6 +452,7 @@
       "ci_trend_sub_repos_one": "über {{count}} Repo",
       "ci_trend_sub_repos_other": "über {{count}} Repos",
       "ci_trend_sub_runs": "{{count}} Läufe",
+      "ci_trend_avg": "Ø Pass",
       "flaky_title": "Instabilste Repos",
       "flaky_sub": "Fehlerquote · letzte {{days}} Tage",
       "flaky_empty": "Noch keine Check-Run-Daten.",
@@ -439,6 +461,7 @@
       "peak_label": "Haupt-Zeiten",
       "age_days_one": "{{count}} Tag alt",
       "age_days_other": "{{count}} Tage alt",
+      "age_short": "{{count}}d",
       "ci_trend_sub_window": "letzte {{days}} Tage",
       "stacked_axis_days_ago": "vor {{count}} T.",
       "stacked_axis_today": "heute",
@@ -451,6 +474,12 @@
     },
     "tooltip": {
       "ci_passed": "{{passed}}/{{total}} bestanden"
+    },
+    "feed": {
+      "no_remote": "Kein Remote-URL für diesen Commit",
+      "failing_checks_one": "{{count}} fehlgeschlagener Check",
+      "failing_checks_other": "{{count}} fehlgeschlagene Checks",
+      "passing": "{{count}} bestanden"
     },
     "insights": {
       "section_title": "Insights",
@@ -839,7 +868,10 @@
       "checking": "Wird geprüft…",
       "current_version_label": "Aktuelle Version",
       "mode": "Update-Modus",
-      "mode_hint": "Automatisch lädt + installiert im Hintergrund. Manuell zeigt einen Banner. Aus deaktiviert die Prüfung."
+      "mode_hint": "Automatisch lädt + installiert im Hintergrund. Manuell zeigt einen Banner. Aus deaktiviert die Prüfung.",
+      "mode_auto": "Automatisch",
+      "mode_manual": "Manuell",
+      "mode_off": "Aus"
     }
   },
   "notifications": {

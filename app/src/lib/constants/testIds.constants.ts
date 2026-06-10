@@ -117,7 +117,6 @@ export const TEST_IDS = {
     back: "repo-detail-back",
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
-    sparkCell: "repo-detail-spark-cell",
     mrRow: "repo-detail-mr-row",
     mrDrawer: "repo-detail-mr-drawer",
     ssh: {
@@ -197,6 +196,7 @@ export const TEST_IDS = {
     contextMenu: "mr-row-context-menu",
     drawer: "mr-drawer",
     row: "mr-row",
+    stateBadge: "mr-row-state-badge",
     detailPanel: "mr-detail-panel",
     detailPage: "mr-detail-page",
     openFullView: "mr-detail-open-full",
@@ -274,7 +274,6 @@ export const TEST_IDS = {
     },
     stacked: {
       chart: "activity-stacked-chart",
-      col: "activity-stacked-col",
       card: "activity-stacked-card",
     },
     chartTooltip: "activity-chart-tooltip",
@@ -467,6 +466,15 @@ export const TEST_IDS = {
     confirm: "confirm-dialog-confirm",
   },
 
+  editor: {
+    linkModal: {
+      root: "editor-link-modal",
+      input: "editor-link-modal-input",
+      apply: "editor-link-modal-apply",
+      cancel: "editor-link-modal-cancel",
+    },
+  },
+
   createBranchDialog: {
     root: "create-branch-dialog",
     name: "create-branch-name",
@@ -615,8 +623,15 @@ export const TEST_IDS = {
     providerNext: "onboarding-provider-next",
     providerBack: "onboarding-provider-back",
     providerSkip: "onboarding-provider-skip",
+    providerPick: <T extends string>(id: T) => `onboarding-provider-pick-${id}` as const,
     providerToken: "onboarding-provider-token",
+    providerUsername: "onboarding-provider-username",
+    providerTokenHelp: "onboarding-provider-token-help",
+    providerSelfHosted: "onboarding-provider-self-hosted",
+    providerBaseUrl: "onboarding-provider-base-url",
+    providerBaseUrlSave: "onboarding-provider-base-url-save",
     providerConnect: "onboarding-provider-connect",
+    providerConnected: "onboarding-provider-connected",
     scanNext: "onboarding-scan-next",
     scanBack: "onboarding-scan-back",
     doneFinish: "onboarding-done-finish",

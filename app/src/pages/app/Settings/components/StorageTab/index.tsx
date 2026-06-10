@@ -81,12 +81,16 @@ export function StorageSection() {
 
       <FactsBox>
         <FactRow>
-          <Box component="strong">Operating system:</Box>
-          <Box component="span">macos 15.0 (x86_64)</Box>
+          <Box component="strong">
+            {t("storage_facts.os_label", { ns: I18nNamespace.SETTINGS })}
+          </Box>
+          <Box component="span">{t("storage_facts.os_value", { ns: I18nNamespace.SETTINGS })}</Box>
         </FactRow>
         <FactRow>
-          <Box component="strong">Git:</Box>
-          <Box component="span">2.44.0</Box>
+          <Box component="strong">
+            {t("storage_facts.git_label", { ns: I18nNamespace.SETTINGS })}
+          </Box>
+          <Box component="span">{t("storage_facts.git_value", { ns: I18nNamespace.SETTINGS })}</Box>
           <GeneralIconButton
             size={IconButtonSize.XS}
             variant={IconButtonVariant.GHOST}

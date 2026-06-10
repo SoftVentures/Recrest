@@ -20,7 +20,7 @@ export default function MrDiffCard({ diff, diffLoading, comments, onComment }: P
   return (
     <GeneralCard
       title={tPrs("detail.section_diff")}
-      sub={`${count} ${count === 1 ? "file" : "files"}`}
+      sub={tPrs("detail.files", { count })}
       flushHeight
     >
       {diffLoading && !diff ? (

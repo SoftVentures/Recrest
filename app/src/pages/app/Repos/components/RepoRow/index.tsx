@@ -51,6 +51,7 @@ export interface RepoRowProps {
 
 export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const dispatch = useAppDispatch();
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
@@ -125,12 +126,12 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
               </Box>
             </Diff>
             <FilesMeta component="span" variant="caption">
-              {repo.filesChanged} file{repo.filesChanged === 1 ? "" : "s"}
+              {t("list.files_meta", { count: repo.filesChanged })}
             </FilesMeta>
           </>
         ) : (
           <StatusText component="span" variant="caption">
-            clean
+            {t("list.clean")}
           </StatusText>
         )}
       </StatusCell>

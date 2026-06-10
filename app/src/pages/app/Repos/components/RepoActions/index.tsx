@@ -50,6 +50,7 @@ export interface RepoActionsProps {
  *  design stay in sync. */
 export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
+  const { t } = useTranslation(I18nNamespace.REPOS);
   const dispatch = useAppDispatch();
   const brand = brandFromUrl(repo.remoteUrl);
   const px = ICON_BUTTON_ICON_SIZES[iconSize];
@@ -64,13 +65,13 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
     try {
       await invoke(cmd, { repoId: repo.id });
     } catch {
-      toast.error(`${label} failed`);
+      toast.error(t("row_actions.toast_command_failed", { label }));
     }
   };
 
   const onOpenRemote = () => {
     if (repo.remoteUrl) void openExternal(repo.remoteUrl);
-    else toast.error("No remote configured");
+    else toast.error(t("row_actions.toast_no_remote"));
   };
 
   const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
@@ -83,9 +84,9 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
     closeMenu();
     try {
       await navigator.clipboard.writeText(repo.path);
-      toast.success("Path copied");
+      toast.success(t("row_actions.toast_path_copied"));
     } catch {
-      toast.error("Couldn't copy");
+      toast.error(t("row_actions.toast_copy_failed"));
     }
   };
 
@@ -98,19 +99,19 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
     setConfirmKind(null);
     try {
       await dispatch(removeRepo(repo.id)).unwrap();
-      toast.success(`${repo.name} removed`);
+      toast.success(t("row_actions.toast_removed", { name: repo.name }));
     } catch {
-      toast.error("Forget failed");
+      toast.error(t("row_actions.toast_forget_failed"));
     }
   };
   const onConfirmDelete = async () => {
     setConfirmKind(null);
     try {
       await dispatch(deleteRepo(repo.id)).unwrap();
-      toast.success(`${repo.name} moved to trash`);
+      toast.success(t("row_actions.toast_trashed", { name: repo.name }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Delete failed: ${msg}`);
+      toast.error(t("row_actions.toast_delete_failed", { message: msg }));
     }
   };
 
@@ -120,14 +121,14 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.open_in_terminal")}
-        tooltip="Open in Terminal"
-        onClick={() => void run(TauriCommand.OPEN_TERMINAL, "Terminal")}
+        tooltip={t("row_actions.open_in_terminal")}
+        onClick={() => void run(TauriCommand.OPEN_TERMINAL, t("row_actions.open_in_terminal"))}
         icon={<TerminalLucide size={px} />}
       />
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.open_remote")}
-        tooltip={repo.remoteUrl ? "Open on host" : "No remote configured"}
+        tooltip={repo.remoteUrl ? t("row_actions.open_on_host") : t("row_actions.no_remote")}
         onClick={onOpenRemote}
         disabled={!repo.remoteUrl}
         icon={brand ? <BrandIcon slug={brand} size={px} /> : <ExternalLink size={px} />}
@@ -135,14 +136,14 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.open_in_explorer")}
-        tooltip="Open in Explorer"
+        tooltip={t("row_actions.open_in_explorer")}
         onClick={() => void revealPathInSystem(repo.path)}
         icon={<Folder size={px} />}
       />
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.more_actions")}
-        tooltip="More"
+        tooltip={t("row_actions.more")}
         onClick={openMenu}
         icon={<MoreHorizontal size={px} />}
       />
@@ -159,13 +160,13 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
           <ListItemIcon>
             <Pin size={13} />
           </ListItemIcon>
-          <ListItemText>{repo.pinned ? "Unpin" : "Pin"}</ListItemText>
+          <ListItemText>{repo.pinned ? t("row_actions.unpin") : t("row_actions.pin")}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => void onCopyPath()}>
           <ListItemIcon>
             <Copy size={13} />
           </ListItemIcon>
-          <ListItemText>Copy path</ListItemText>
+          <ListItemText>{t("row_actions.copy_path")}</ListItemText>
         </MenuItem>
         <DangerMenuItem
           onClick={() => {
@@ -176,7 +177,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
           <DangerMenuIcon>
             <X size={13} />
           </DangerMenuIcon>
-          <ListItemText>Forget (keeps folder)</ListItemText>
+          <ListItemText>{t("row_actions.forget")}</ListItemText>
         </DangerMenuItem>
         <DangerMenuItem
           onClick={() => {
@@ -188,24 +189,24 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
           <DangerMenuIcon>
             <Trash2 size={13} />
           </DangerMenuIcon>
-          <ListItemText>Delete from disk</ListItemText>
+          <ListItemText>{t("row_actions.delete_from_disk")}</ListItemText>
         </DangerMenuItem>
       </Menu>
 
       <ConfirmationModal
         open={confirmKind === "forget"}
-        title={`Forget "${repo.name}"?`}
-        description="Recrest stops tracking this repository. The folder stays on disk — you can re-add it any time."
-        confirmLabel="Forget"
+        title={t("row_actions.forget_title", { name: repo.name })}
+        description={t("row_actions.forget_desc")}
+        confirmLabel={t("row_actions.forget_action")}
         destructive
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmForget()}
       />
       <ConfirmationModal
         open={confirmKind === "delete"}
-        title={`Delete "${repo.name}" from disk?`}
-        description={`Moves "${repo.path}" to your system trash and stops Recrest from tracking it. You can restore from trash.`}
-        confirmLabel="Move to Trash"
+        title={t("row_actions.delete_title", { name: repo.name })}
+        description={t("row_actions.delete_desc", { path: repo.path })}
+        confirmLabel={t("row_actions.delete_action")}
         destructive
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmDelete()}

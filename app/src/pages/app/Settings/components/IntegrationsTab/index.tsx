@@ -240,7 +240,7 @@ export function IntegrationsSection() {
       >
         <InputRow>
           <TextInput
-            placeholder="/path/to/repos"
+            placeholder={t("integrations.scan_placeholder", { ns: I18nNamespace.SETTINGS })}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -255,7 +255,7 @@ export function IntegrationsSection() {
             data-testid={TEST_IDS.settings.integrations.scanBrowse}
           >
             <FolderOpen size={13} />
-            Browse…
+            {t("integrations.browse", { ns: I18nNamespace.SETTINGS })}
           </BrowseBtn>
           <AddBtn
             type="button"
@@ -263,7 +263,7 @@ export function IntegrationsSection() {
             data-testid={TEST_IDS.settings.integrations.scanAdd}
           >
             <Plus size={13} />
-            Add
+            {t("integrations.add_button", { ns: I18nNamespace.SETTINGS })}
           </AddBtn>
         </InputRow>
       </AddRepoCard>

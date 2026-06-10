@@ -86,6 +86,11 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
     case "check_git":
       return { installed: true, version: "2.44.0" };
 
+    // ThemeWrapper queries the OS truth on mount; null means "no override", so
+    // the browser keeps trusting matchMedia (no real OS bridge under dev:web).
+    case "get_system_dark_mode":
+      return null;
+
     case "update_tray_badge":
       return undefined;
 

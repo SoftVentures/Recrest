@@ -15,6 +15,28 @@
   },
   "empty": "Keine offenen Merge Requests",
   "empty_desc": "Verbinde einen Provider in den Einstellungen, dann erscheinen hier die Merge Requests deiner Repositories.",
+  "info": {
+    "branch": "Branch",
+    "changes": "Änderungen"
+  },
+  "actions": {
+    "merge": "Mergen",
+    "merging": "Wird gemerged…",
+    "checkout": "Auschecken",
+    "checkout_busy": "…",
+    "open_on_host": "Beim Anbieter öffnen",
+    "close": "Schließen"
+  },
+  "checkout": {
+    "success": "{{branch}} ausgecheckt",
+    "failed": "Auschecken fehlgeschlagen"
+  },
+  "empty_states": {
+    "none_title": "Keine offenen Merge Requests",
+    "none_description": "Die verbundenen Anbieter haben noch keine offenen PRs zurückgegeben.",
+    "no_match_title": "Keine passenden Merge Requests",
+    "no_match_description": "Versuche, die Suche zu leeren oder die Filter zu lockern."
+  },
   "diff": {
     "title": "Diff",
     "loading": "Diff wird geladen…",
@@ -36,6 +58,8 @@
     "section_description": "Beschreibung",
     "section_reviewers": "Reviewer",
     "section_files": "Dateien",
+    "files_one": "{{count}} Datei",
+    "files_other": "{{count}} Dateien",
     "section_diff": "Diff",
     "section_timeline": "Verlauf",
     "section_metadata": "Metadaten",
@@ -116,11 +140,12 @@
     "ref_placeholder": "main",
     "no_inputs": "Dieser Workflow nimmt keine Eingaben.",
     "required": "erforderlich",
-    "run_number": "#{{n}}"
+    "run_number": "#{{n}}",
+    "open_run": "Lauf #{{n}} öffnen"
   },
   "deployments": {
     "title": "Deployments",
-    "visit": "Seite öffnen",
+    "visit_aria": "Deployment {{url}} öffnen",
     "status_building": "Wird gebaut",
     "status_built": "Live",
     "status_errored": "Fehler",

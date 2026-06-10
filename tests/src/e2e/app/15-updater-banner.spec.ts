@@ -17,7 +17,9 @@ test.describe("app / updater banner variants", () => {
 
     const canAuto = page.getByTestId(TEST_IDS.settings.developer.updater.simCanAutoInstall);
     await expect(canAuto).toBeVisible();
-    if ((await canAuto.getAttribute("aria-checked")) !== "true") {
+    // MUI's switch is a native <input type="checkbox"> behind the styled track —
+    // it has no aria-checked, so read the real checked state off the input.
+    if (!(await canAuto.locator("input").isChecked())) {
       await canAuto.click();
     }
     await page.getByTestId(TEST_IDS.settings.developer.updater.emit).click();
@@ -33,7 +35,9 @@ test.describe("app / updater banner variants", () => {
 
     const canAuto = page.getByTestId(TEST_IDS.settings.developer.updater.simCanAutoInstall);
     await expect(canAuto).toBeVisible();
-    if ((await canAuto.getAttribute("aria-checked")) === "true") {
+    // MUI's switch is a native <input type="checkbox"> behind the styled track —
+    // it has no aria-checked, so read the real checked state off the input.
+    if (await canAuto.locator("input").isChecked()) {
       await canAuto.click();
     }
     await page.getByTestId(TEST_IDS.settings.developer.updater.emit).click();

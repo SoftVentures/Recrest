@@ -283,32 +283,6 @@ export const CardMeta = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
-export const ActivityBars = styled(Box)({
-  height: 120,
-  display: "flex",
-  alignItems: "flex-end",
-  gap: 6,
-}) as typeof Box;
-
-export const ActivityBar = styled(Box, {
-  shouldForwardProp: (p) => p !== "heightPct" && p !== "hot",
-})<{ heightPct: number; hot: boolean }>(({ theme, heightPct, hot }) => ({
-  flex: 1,
-  minWidth: 6,
-  height: `${heightPct}%`,
-  borderRadius: 8,
-  backgroundColor: hot
-    ? theme.palette.primary.main
-    : `color-mix(in srgb, ${theme.palette.primary.main} 35%, transparent)`,
-}));
-
-export const ActivityAxis = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  fontSize: 10,
-  color: theme.palette.text.information,
-})) as typeof Box;
-
 export const CommitsList = styled(Box)({
   display: "flex",
   flexDirection: "column",

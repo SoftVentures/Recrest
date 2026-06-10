@@ -131,7 +131,7 @@ function ReviewQueueCard({ entries, loading }: Props) {
                   </Meta>
                 </Body>
                 <GeneralTooltip arrow placement="top" title={ageLabel}>
-                  <Age old={age >= 7}>{age}d</Age>
+                  <Age old={age >= 7}>{t("activity.cards.age_short", { count: age })}</Age>
                 </GeneralTooltip>
               </Item>
             );

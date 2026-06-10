@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -20,6 +20,7 @@ import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import {
   Empty,
   Head,
+  OpenHint,
   RunList,
   RunMain,
   RunMeta,
@@ -30,6 +31,7 @@ import {
 } from "@/components/organisms/repos/CiCard/CiCard.styles";
 import RunForm from "@/components/organisms/repos/CiCard/parts/RunForm";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { timeAgo } from "@/lib/utils/timeAgo.utils";
@@ -168,35 +170,56 @@ export default function CiCard({ repoId }: Props) {
           <Empty>{t("ci.runs_empty")}</Empty>
         ) : (
           <RunList>
-            {runs.map((run) => (
-              <RunRow key={run.id} data-testid={TEST_IDS.ci.run}>
-                <StatusDot tone={runTone(run)} />
-                <RunMain>
-                  <RunTitle>{t("ci.run_number", { n: run.runNumber })}</RunTitle>
-                  <RunMeta>
-                    {run.conclusion ?? run.status}
-                    {run.actor ? ` · ${run.actor}` : ""} · {timeAgo(run.createdAt)}
-                  </RunMeta>
-                </RunMain>
-                {run.htmlUrl && (
-                  <GeneralIconButton
-                    size={IconButtonSize.SM}
-                    aria-label={t("ci.run_number", { n: run.runNumber })}
-                    onClick={() => void openExternal(run.htmlUrl)}
-                    icon={<ExternalLink size={12} />}
-                  />
-                )}
-                {isCancelable(run) && (
-                  <GeneralIconButton
-                    size={IconButtonSize.SM}
-                    aria-label={t("ci.cancel")}
-                    onClick={() => void onCancelRun(run)}
-                    icon={<Square size={12} />}
-                    data-testid={TEST_IDS.ci.cancelRun}
-                  />
-                )}
-              </RunRow>
-            ))}
+            {runs.map((run) => {
+              const openRun = run.htmlUrl ? () => void openExternal(run.htmlUrl) : undefined;
+              return (
+                <RunRow
+                  key={run.id}
+                  data-testid={TEST_IDS.ci.run}
+                  clickable={!!openRun}
+                  role={openRun ? "button" : undefined}
+                  tabIndex={openRun ? 0 : undefined}
+                  aria-label={openRun ? t("ci.open_run", { n: run.runNumber }) : undefined}
+                  onClick={openRun}
+                  onKeyDown={
+                    openRun
+                      ? (e: KeyboardEvent) => {
+                          if (e.key === KEYBOARD_KEYS.ENTER || e.key === KEYBOARD_KEYS.SPACE) {
+                            e.preventDefault();
+                            openRun();
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  <StatusDot tone={runTone(run)} />
+                  <RunMain>
+                    <RunTitle>{t("ci.run_number", { n: run.runNumber })}</RunTitle>
+                    <RunMeta>
+                      {run.conclusion ?? run.status}
+                      {run.actor ? ` · ${run.actor}` : ""} · {timeAgo(run.createdAt)}
+                    </RunMeta>
+                  </RunMain>
+                  {isCancelable(run) && (
+                    <GeneralIconButton
+                      size={IconButtonSize.SM}
+                      aria-label={t("ci.cancel")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onCancelRun(run);
+                      }}
+                      icon={<Square size={12} />}
+                      data-testid={TEST_IDS.ci.cancelRun}
+                    />
+                  )}
+                  {openRun && (
+                    <OpenHint data-row-open>
+                      <ExternalLink size={13} />
+                    </OpenHint>
+                  )}
+                </RunRow>
+              );
+            })}
           </RunList>
         )}
       </Box>

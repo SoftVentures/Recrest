@@ -24,7 +24,6 @@ use tauri::{
 // `show_menu_on_left_click(true)`), so it never reads click events.
 #[cfg(not(target_os = "macos"))]
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
-use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use tracing_subscriber::EnvFilter;
 use zeroize::Zeroizing;
@@ -887,29 +886,21 @@ pub fn run() {
             // macOS dock-icon updates instead.
 
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Persist window geometry before hiding, so it survives a force-quit.
-                // Values are stored in LOGICAL pixels so the TS side (which
-                // applies state via `LogicalSize`) sees a consistent space —
-                // mixing physical/logical caused startup-time size jitter on
-                // HiDPI displays.
-                if let (Ok(position), Ok(size), Ok(scale)) = (
-                    window.outer_position(),
-                    window.outer_size(),
-                    window.scale_factor(),
-                ) {
-                    let state = commands::window::WindowState {
-                        width: size.width as f64 / scale,
-                        height: size.height as f64 / scale,
-                        x: position.x as f64 / scale,
-                        y: position.y as f64 / scale,
-                        is_maximized: window.is_maximized().unwrap_or(false),
-                    };
-                    if let Ok(store) = window.app_handle().store(commands::window::STORE_FILENAME) {
-                        if let Ok(value) = serde_json::to_value(&state) {
-                            store.set(commands::window::STORE_KEY, value);
-                            let _ = store.save();
-                        }
-                    }
+                // Persist window geometry before a possible hide-to-tray below.
+                // `tauri-plugin-window-state` otherwise only saves on a real
+                // close, so saving explicitly here means the last on-screen
+                // size/position/maximized/fullscreen survives a later force-quit
+                // while the app sits in the tray. VISIBLE is deliberately
+                // excluded so we never persist the hidden state and restore the
+                // window invisible on next launch.
+                {
+                    use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+                    let _ = window.app_handle().save_window_state(
+                        StateFlags::SIZE
+                            | StateFlags::POSITION
+                            | StateFlags::MAXIMIZED
+                            | StateFlags::FULLSCREEN,
+                    );
                 }
 
                 let app_handle = window.app_handle();

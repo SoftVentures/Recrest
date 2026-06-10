@@ -18,6 +18,7 @@ import {
   PrimaryBtn,
   SecondaryBtn,
 } from "@/components/molecules/modals/AddRepoModal/panels/_shared";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
@@ -54,7 +55,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
           subFolder: subFolder.trim() || null,
         }),
       ).unwrap();
-      toast.success(`Cloned ${repo.name}`);
+      toast.success(t("add_modal.toast_cloned", { ns: I18nNamespace.REPOS, name: repo.name }));
       void dispatch(loadRepos());
       setUrl("");
       setDestination("");
@@ -62,7 +63,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Clone failed: ${msg}`);
+      toast.error(t("add_modal.toast_clone_failed", { ns: I18nNamespace.REPOS, message: msg }));
     } finally {
       setBusy(false);
     }
@@ -78,7 +79,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo.git"
+            placeholder={t("add_modal.clone_url_placeholder", { ns: I18nNamespace.REPOS })}
             autoFocus
             data-testid={TEST_IDS.addRepoDialog.url}
           />
@@ -92,7 +93,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
               type="text"
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
-              placeholder="/Users/you/Code"
+              placeholder={t("add_modal.clone_dest_placeholder", { ns: I18nNamespace.REPOS })}
               data-testid={TEST_IDS.addRepoDialog.dest}
             />
             <BrowseBtn
@@ -114,7 +115,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
             type="text"
             value={subFolder}
             onChange={(e) => setSubFolder(e.target.value)}
-            placeholder="e.g. my-fork"
+            placeholder={t("add_modal.clone_sub_placeholder", { ns: I18nNamespace.REPOS })}
             data-testid={TEST_IDS.addRepoDialog.sub}
           />
         </Field>

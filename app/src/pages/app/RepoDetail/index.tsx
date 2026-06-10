@@ -25,6 +25,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
@@ -43,11 +44,9 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import {
-  ActivityAxis,
-  ActivityBar,
-  ActivityBars,
   BackBar,
   BackButton,
   Card,
@@ -86,7 +85,7 @@ import {
   TitleRow,
   WorkingCopyScroll,
 } from "@/pages/app/RepoDetail/RepoDetail.styles";
-import { fetchPullRequests } from "@/store/actions/prs.actions";
+import { detailKey, fetchPullRequests, loadPrDiff } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
 import { bumpRefreshNonce } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -99,6 +98,11 @@ const CARD_TRANSITION = {
   damping: 36,
   mass: 0.7,
 };
+
+// Stable empty-array reference so the `prs` selector keeps the same value when
+// a repo has no cached PRs — an inline `[]` makes react-redux warn about an
+// unstable selector result.
+const NO_PRS: readonly PullRequest[] = [];
 
 export default function RepoDetailPage() {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
@@ -113,11 +117,13 @@ export default function RepoDetailPage() {
   const repos = useEnrichedRepos();
   const repo = useMemo(() => repos.find((r) => r.id === repoId), [repos, repoId]);
 
-  const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? []) : []));
+  const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? NO_PRS) : NO_PRS));
+  const cachedDiffs = useAppSelector((s) => s.prs.diff);
+  const diffsLoading = useAppSelector((s) => s.prs.diffLoading);
   const connections = useAppSelector((s) => s.providers.connections);
   const repoProviderConnected = !!repo?.providerId && !!connections[repo.providerId]?.connected;
 
-  const { commits: rangeCommits, byRepo, windowDays } = useRangeActivity();
+  const { commits: rangeCommits, byRepo, windowDays, unit } = useRangeActivity();
   const commits = useMemo(
     () => rangeCommits.filter((c) => c.repoId === repoId).slice(0, 8),
     [rangeCommits, repoId],
@@ -136,6 +142,19 @@ export default function RepoDetailPage() {
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
   }, [dispatch, repoId, repoProviderConnected]);
+
+  // Preload each MR's diff so the row can show real +/− stats even when the
+  // provider's PR-list endpoint omits them (GitLab, fork PRs). Mirrors the
+  // MergeRequests page; dispatch is idempotent so we guard on cache + in-flight.
+  useEffect(() => {
+    if (!isTauri() || !repoId || !repoProviderConnected) return;
+    for (const pr of prs) {
+      const key = detailKey(repoId, pr.number);
+      if (!cachedDiffs[key] && !diffsLoading[key]) {
+        void dispatch(loadPrDiff({ repoId, prNumber: pr.number }));
+      }
+    }
+  }, [dispatch, repoId, repoProviderConnected, prs, cachedDiffs, diffsLoading]);
 
   useEffect(() => {
     if (repo) document.title = `${repo.name} — Recrest`;
@@ -163,53 +182,62 @@ export default function RepoDetailPage() {
     setBusy("fetch");
     try {
       await invoke(TauriCommand.GIT_FETCH, { repoId: repo.id });
-      toast.success("Fetched");
+      toast.success(t("detail.toast_fetched", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Fetch failed");
+      toast.error(
+        (err as { message?: string })?.message ??
+          t("detail.toast_fetch_failed", { ns: I18nNamespace.REPOS }),
+      );
     } finally {
       setBusy(null);
     }
-  }, [dispatch, repo]);
+  }, [dispatch, repo, t]);
 
   const doPull = useCallback(async () => {
     if (!repo) return;
     setBusy("pull");
     try {
       await invoke(TauriCommand.GIT_PULL, { repoId: repo.id });
-      toast.success("Pulled");
+      toast.success(t("detail.toast_pulled", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Pull failed");
+      toast.error(
+        (err as { message?: string })?.message ??
+          t("detail.toast_pull_failed", { ns: I18nNamespace.REPOS }),
+      );
     } finally {
       setBusy(null);
     }
-  }, [dispatch, repo]);
+  }, [dispatch, repo, t]);
 
   const doPush = useCallback(async () => {
     if (!repo) return;
     setBusy("push");
     try {
       await invoke(TauriCommand.GIT_PUSH, { repoId: repo.id });
-      toast.success("Pushed");
+      toast.success(t("detail.toast_pushed", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? "Push failed");
+      toast.error(
+        (err as { message?: string })?.message ??
+          t("detail.toast_push_failed", { ns: I18nNamespace.REPOS }),
+      );
     } finally {
       setBusy(null);
     }
-  }, [dispatch, repo]);
+  }, [dispatch, repo, t]);
 
   if (!repo) {
     return (
       <MissingRoot data-testid={TEST_IDS.repoDetail.page}>
         <EmptyState
           mascot="shrugging"
-          title="Repository not found"
-          description={`No repo with id "${repoId}".`}
+          title={t("detail.not_found_title", { ns: I18nNamespace.REPOS })}
+          description={t("detail.not_found_desc", { ns: I18nNamespace.REPOS, id: repoId })}
         />
       </MissingRoot>
     );
@@ -224,11 +252,19 @@ export default function RepoDetailPage() {
   const workingTreeCard = (
     <Card>
       <CardHead>
-        <CardTitle>{repo.status.dirty ? "Uncommitted changes" : "Working tree"}</CardTitle>
+        <CardTitle>
+          {repo.status.dirty
+            ? t("status.dirty", { ns: I18nNamespace.REPOS })
+            : t("detail.changes_title", { ns: I18nNamespace.REPOS })}
+        </CardTitle>
         {repo.status.dirty && (
           <CardMeta>
-            +{repo.added} −{repo.removed} · {repo.filesChanged} file
-            {repo.filesChanged === 1 ? "" : "s"}
+            {t("detail.working_meta", {
+              ns: I18nNamespace.REPOS,
+              added: repo.added,
+              removed: repo.removed,
+              count: repo.filesChanged,
+            })}
           </CardMeta>
         )}
       </CardHead>
@@ -238,9 +274,17 @@ export default function RepoDetailPage() {
         </WorkingCopyScroll>
       ) : (
         <CleanState>
-          <Mascot variant="celebrating" size={96} title="Nothing to commit" />
-          <CleanStateText>Nothing to commit.</CleanStateText>
-          <CleanStateSub>Working tree is clean.</CleanStateSub>
+          <Mascot
+            variant="celebrating"
+            size={96}
+            title={t("detail.nothing_to_commit", { ns: I18nNamespace.REPOS })}
+          />
+          <CleanStateText>
+            {t("detail.nothing_to_commit", { ns: I18nNamespace.REPOS })}
+          </CleanStateText>
+          <CleanStateSub>
+            {t("detail.working_tree_clean", { ns: I18nNamespace.REPOS })}
+          </CleanStateSub>
         </CleanState>
       )}
     </Card>
@@ -249,17 +293,17 @@ export default function RepoDetailPage() {
   const mergeRequestsCard = (
     <Card>
       <CardHead>
-        <CardTitle>Merge requests</CardTitle>
+        <CardTitle>{t("detail.merge_requests", { ns: I18nNamespace.REPOS })}</CardTitle>
         <SecondaryBtn type="button" onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
-          Open MRs view
+          {t("detail.open_mrs_view", { ns: I18nNamespace.REPOS })}
         </SecondaryBtn>
       </CardHead>
       {prs.length === 0 ? (
         <EmptyState
           mascot="snoozing"
           mascotSize={88}
-          title="No merge requests"
-          description="This repository has no open merge requests."
+          title={t("detail.no_mrs_title", { ns: I18nNamespace.REPOS })}
+          description={t("detail.no_mrs_desc", { ns: I18nNamespace.REPOS })}
         />
       ) : (
         <PrScroller>
@@ -272,7 +316,7 @@ export default function RepoDetailPage() {
               data-mr-author={pr.author || undefined}
               onClick={() => setSelectedPr(pr)}
             >
-              <MrRow pr={pr} onClick={() => setSelectedPr(pr)} />
+              <MrRow pr={pr} repoId={repo.id} rightMeta="state" onClick={() => setSelectedPr(pr)} />
             </PrRowSlot>
           ))}
         </PrScroller>
@@ -290,41 +334,17 @@ export default function RepoDetailPage() {
   );
 
   const activityCard = (
-    <Card>
-      <CardHead>
-        <CardTitle>
-          {t("detail.activity_title", { ns: I18nNamespace.REPOS, days: windowDays })}
-        </CardTitle>
-        <CardMeta>
-          {t("detail.activity_meta", {
-            ns: I18nNamespace.REPOS,
-            count: totalCommits,
-            peak: maxBucket,
-          })}
-        </CardMeta>
-      </CardHead>
-      <ActivityBars>
-        {activitySeries.map((v, i) => {
-          const heightPct = v > 0 ? Math.max(6, (v / maxBucket) * 100) : 4;
-          return (
-            <ActivityBar
-              key={i}
-              heightPct={heightPct}
-              hot={v >= maxBucket * 0.66}
-              aria-label={tAria("repo.heatmap_commits", { count: v })}
-              data-testid={TEST_IDS.repoDetail.sparkCell}
-              data-index={i}
-            />
-          );
-        })}
-      </ActivityBars>
-      <ActivityAxis>
-        <Box component="span">
-          {t("detail.activity_axis_start", { ns: I18nNamespace.REPOS, days: windowDays })}
-        </Box>
-        <Box component="span">{t("detail.activity_axis_end", { ns: I18nNamespace.REPOS })}</Box>
-      </ActivityAxis>
-    </Card>
+    <ActivityChart
+      agg={activitySeries}
+      maxDay={maxBucket}
+      unit={unit}
+      title={t("detail.activity_title", { ns: I18nNamespace.REPOS, days: windowDays })}
+      meta={t("detail.activity_meta", {
+        ns: I18nNamespace.REPOS,
+        count: totalCommits,
+        peak: maxBucket,
+      })}
+    />
   );
 
   const recentCommitsCard = (
@@ -337,8 +357,8 @@ export default function RepoDetailPage() {
         <EmptyState
           mascot="snoozing"
           mascotSize={88}
-          title="No recent commits"
-          description="Nothing landed in this window."
+          title={t("detail.no_commits_title", { ns: I18nNamespace.REPOS })}
+          description={t("detail.no_commits_desc", { ns: I18nNamespace.REPOS })}
         />
       ) : (
         <CommitsList>
@@ -385,7 +405,7 @@ export default function RepoDetailPage() {
       <BackBar>
         <BackButton type="button" onClick={goBack} data-testid={TEST_IDS.repoDetail.back}>
           <ArrowLeft size={14} />
-          <Box component="span">Back to repositories</Box>
+          <Box component="span">{t("detail.back_to_repos", { ns: I18nNamespace.REPOS })}</Box>
         </BackButton>
       </BackBar>
 
@@ -406,9 +426,14 @@ export default function RepoDetailPage() {
               {repo.status.ahead > 0 && <Chip tone="ahead">↑{repo.status.ahead}</Chip>}
               {repo.status.behind > 0 && <Chip tone="behind">↓{repo.status.behind}</Chip>}
               {repo.status.dirty ? (
-                <Chip tone="dirty">{repo.filesChanged} uncommitted</Chip>
+                <Chip tone="dirty">
+                  {t("detail.uncommitted_count", {
+                    ns: I18nNamespace.REPOS,
+                    count: repo.filesChanged,
+                  })}
+                </Chip>
               ) : (
-                <Chip tone="clean">clean</Chip>
+                <Chip tone="clean">{t("detail.clean", { ns: I18nNamespace.REPOS })}</Chip>
               )}
               {repo.remoteUrl && <RemoteUrlText component="span">{repo.remoteUrl}</RemoteUrlText>}
             </MetaRow>
@@ -421,51 +446,69 @@ export default function RepoDetailPage() {
               <IdeIcon id={ide.iconId} size={14} color="currentColor" style={{ opacity: 1 }} />
               <Box component="span">{ideLabel}</Box>
             </PrimaryBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.open_terminal")}
-              onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
-            >
-              <TerminalIcon size={14} />
-            </IconOnlyBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.open_folder")}
-              onClick={() => void revealPathInSystem(repo.path)}
-            >
-              <Folder size={14} />
-            </IconOnlyBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.open_on_host")}
-              disabled={!repo.remoteUrl}
-              onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
-            >
-              {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
-            </IconOnlyBtn>
-            <IconOnlyBtn
-              type="button"
-              aria-label={tAria("repo.ssh_key")}
-              data-testid={TEST_IDS.repoDetail.ssh.trigger}
-              onClick={() => setSshOpen(true)}
-            >
-              <KeyRound size={14} />
-            </IconOnlyBtn>
+            <GeneralTooltip title={tAria("repo.open_terminal")}>
+              <IconOnlyBtn
+                type="button"
+                aria-label={tAria("repo.open_terminal")}
+                onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
+              >
+                <TerminalIcon size={14} />
+              </IconOnlyBtn>
+            </GeneralTooltip>
+            <GeneralTooltip title={tAria("repo.open_folder")}>
+              <IconOnlyBtn
+                type="button"
+                aria-label={tAria("repo.open_folder")}
+                onClick={() => void revealPathInSystem(repo.path)}
+              >
+                <Folder size={14} />
+              </IconOnlyBtn>
+            </GeneralTooltip>
+            <GeneralTooltip title={tAria("repo.open_on_host")}>
+              {/* span wrapper: a disabled <button> swallows pointer events, so
+                  MUI needs an enabled element to anchor the tooltip on. */}
+              <Box component="span">
+                <IconOnlyBtn
+                  type="button"
+                  aria-label={tAria("repo.open_on_host")}
+                  disabled={!repo.remoteUrl}
+                  onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
+                >
+                  {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
+                </IconOnlyBtn>
+              </Box>
+            </GeneralTooltip>
+            <GeneralTooltip title={tAria("repo.ssh_key")}>
+              <IconOnlyBtn
+                type="button"
+                aria-label={tAria("repo.ssh_key")}
+                data-testid={TEST_IDS.repoDetail.ssh.trigger}
+                onClick={() => setSshOpen(true)}
+              >
+                <KeyRound size={14} />
+              </IconOnlyBtn>
+            </GeneralTooltip>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
               <ArrowDown size={13} />
-              {busy === "pull" ? "Pulling…" : "Pull"}
+              {busy === "pull"
+                ? t("detail.pulling", { ns: I18nNamespace.REPOS })
+                : t("detail.pull", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPush()}>
               <ArrowUp size={13} />
-              {busy === "push" ? "Pushing…" : "Push"}
+              {busy === "push"
+                ? t("detail.pushing", { ns: I18nNamespace.REPOS })
+                : t("detail.push", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doFetch()}>
               <RefreshCw size={13} />
-              {busy === "fetch" ? "Fetching…" : "Fetch"}
+              {busy === "fetch"
+                ? t("detail.fetching", { ns: I18nNamespace.REPOS })
+                : t("detail.fetch", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" onClick={() => setBranchDialogOpen(true)}>
               <Plus size={13} />
-              Branch
+              {t("detail.branch", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
           </HeaderActions>
         </Header>

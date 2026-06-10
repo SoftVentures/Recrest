@@ -155,6 +155,10 @@ function LanguageDonutCard({ mix, loading }: Props) {
           <ResponsivePie
             data={data}
             theme={nivoTheme}
+            // Decorative: the focusable legend <ul> beside it carries the same
+            // language breakdown for assistive tech. Without this the Nivo SVG
+            // defaults to role="img" with no accessible name → axe svg-img-alt.
+            role="presentation"
             colors={{ datum: "data.color" }}
             margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
             innerRadius={0.7}

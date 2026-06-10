@@ -45,7 +45,7 @@ export default function MrMetadataCard({ pr }: Props) {
           <MetaLabel>{tPrs("detail.meta_state")}</MetaLabel>
           <MetaValue>
             <MrChip state={pr.state} draft={pr.draft}>
-              {pr.draft ? "draft" : pr.state}
+              {tPrs(`state.${pr.draft ? "draft" : pr.state}`)}
             </MrChip>
           </MetaValue>
         </MetaCell>

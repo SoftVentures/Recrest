@@ -71,7 +71,9 @@ export function ActivityChart({ agg, maxDay, title, meta, unit }: ActivityChartP
               title={
                 <TooltipBody>
                   <TooltipMain>
-                    {v} commit{v === 1 ? "" : "s"}
+                    {v === 1
+                      ? t("dash.activity.commits_one", { count: v })
+                      : t("dash.activity.commits_other", { count: v })}
                   </TooltipMain>
                   <TooltipSub>{dayLabel}</TooltipSub>
                 </TooltipBody>

@@ -40,6 +40,17 @@ interface CiLinePoint {
   data: { x?: unknown; passed?: number; total?: number };
 }
 
+type CiTone = "ok" | "warn" | "fail";
+
+// Maps a pass-rate percentage to a RepoBarFill style token. Kept as a
+// module-scope helper so the tone tokens aren't inline literals in the render
+// body (they're style identifiers, not user-facing copy).
+function ciTone(pct: number): CiTone {
+  if (pct >= 95) return "ok";
+  if (pct >= 80) return "warn";
+  return "fail";
+}
+
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
 export interface Props {
@@ -119,7 +130,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
         headlineText && (
           <Headline>
             <Box component="strong">{headlineText}</Box>
-            <Box component="span">avg pass</Box>
+            <Box component="span">{t("activity.cards.ci_trend_avg")}</Box>
           </Headline>
         )
       }
@@ -171,7 +182,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
         <Breakdown>
           {breakdown.map((r) => {
             const pct = Math.round(r.rate * 100);
-            const tone: "ok" | "warn" | "fail" = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "fail";
+            const tone = ciTone(pct);
             return (
               <RepoRow key={r.repoId}>
                 <RepoName component="span" variant="caption">

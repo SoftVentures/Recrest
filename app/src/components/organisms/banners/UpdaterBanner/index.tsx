@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -24,6 +26,7 @@ const Message = styled(Typography)({
 });
 
 function UpdaterBanner() {
+  const { t } = useTranslation();
   const banner = useAppSelector((s) => s.ui.updaterBanner);
   const dispatch = useAppDispatch();
   if (!banner) return null;
@@ -31,16 +34,18 @@ function UpdaterBanner() {
   return (
     <Bar data-testid={TEST_IDS.updaterBanner.root}>
       <Message variant="body2">
-        A new version is available: <Box component="strong">{banner.version}</Box>
-        {banner.currentVersion ? ` (current ${banner.currentVersion})` : ""}
+        {t("updater.available")} <Box component="strong">{banner.version}</Box>
+        {banner.currentVersion
+          ? ` ${t("updater.current", { version: banner.currentVersion })}`
+          : ""}
       </Message>
       {banner.canAutoInstall ? (
         <GeneralButton size="sm" variant="default" data-testid={TEST_IDS.updaterBanner.install}>
-          Install &amp; restart
+          {t("updater.install")}
         </GeneralButton>
       ) : (
         <GeneralButton size="sm" variant="outline" data-testid={TEST_IDS.updaterBanner.download}>
-          Download
+          {t("updater.download")}
         </GeneralButton>
       )}
       <GeneralButton
@@ -49,7 +54,7 @@ function UpdaterBanner() {
         onClick={() => dispatch(setUpdaterBanner(null))}
         data-testid={TEST_IDS.updaterBanner.dismiss}
       >
-        Dismiss
+        {t("updater.dismiss")}
       </GeneralButton>
     </Bar>
   );

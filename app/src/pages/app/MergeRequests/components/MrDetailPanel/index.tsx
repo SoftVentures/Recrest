@@ -63,6 +63,11 @@ import Section from "@/pages/app/MergeRequests/components/MrDetailPanel/parts/Se
 import { detailKey, loadPrDetail, loadPrDiff, mergePr, setPrs } from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
+// Stable empty-array reference so the `repoPrs` selector keeps the same value
+// when a repo has no cached PRs — an inline `[]` makes react-redux warn about
+// an unstable selector result.
+const NO_PRS: readonly PullRequest[] = [];
+
 export interface MrDetailPanelProps {
   pr: PullRequest;
   repoId: string;
@@ -82,7 +87,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
   const detailLoading = useAppSelector((s) => s.prs.detailLoading[key] ?? false);
   const diff = useAppSelector((s) => s.prs.diff[key]);
   const providerId = useAppSelector((s) => s.repos.items[repoId]?.providerId ?? null);
-  const repoPrs = useAppSelector((s) => s.prs.items[repoId] ?? []);
+  const repoPrs = useAppSelector((s) => s.prs.items[repoId] ?? NO_PRS);
 
   useEffect(() => {
     if (isTauri()) {
@@ -99,9 +104,9 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
     setBusy("checkout");
     try {
       await invoke(TauriCommand.GIT_CHECKOUT, { repoId, branch: pr.sourceBranch });
-      toast.success(`Checked out ${pr.sourceBranch}`);
+      toast.success(tPrs("checkout.success", { branch: pr.sourceBranch }));
     } catch {
-      toast.error("Checkout failed");
+      toast.error(tPrs("checkout.failed"));
     } finally {
       setBusy(null);
     }
@@ -231,7 +236,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
                     ·
                   </Sep>
                   <MrChip state={pr.state} draft>
-                    draft
+                    {tPrs("state.draft")}
                   </MrChip>
                 </>
               )}
@@ -241,7 +246,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
             <GeneralIconButton
               size={IconButtonSize.MD}
               aria-label={tAria("repo.open_on_host")}
-              tooltip="Open on host"
+              tooltip={tPrs("actions.open_on_host")}
               onClick={() => void openExternal(pr.url)}
               icon={brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
             />
@@ -249,7 +254,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
               <GeneralIconButton
                 size={IconButtonSize.MD}
                 aria-label={tAria("drawer.close")}
-                tooltip="Close"
+                tooltip={tPrs("actions.close")}
                 onClick={onClose}
                 icon={<X size={14} />}
               />
@@ -264,18 +269,22 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
             disabled={busy !== null || pr.draft}
           >
             <GitMerge size={13} />
-            <Box component="span">{busy === "merge" ? "Merging…" : "Merge"}</Box>
+            <Box component="span">
+              {busy === "merge" ? tPrs("actions.merging") : tPrs("actions.merge")}
+            </Box>
           </PrimaryAction>
           <GhostBtn type="button" onClick={() => void onCheckout()} disabled={busy !== null}>
             <Code size={13} />
-            <Box component="span">{busy === "checkout" ? "…" : "Checkout"}</Box>
+            <Box component="span">
+              {busy === "checkout" ? tPrs("actions.checkout_busy") : tPrs("actions.checkout")}
+            </Box>
           </GhostBtn>
         </ActionRow>
       </Header>
 
       <InfoStrip>
         <InfoCell>
-          <InfoLabel>Branch</InfoLabel>
+          <InfoLabel>{tPrs("info.branch")}</InfoLabel>
           <InfoValue>
             <BranchChip component="span">
               <BranchGlyph component="span" variant="caption">
@@ -299,7 +308,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
           </InfoValue>
         </InfoCell>
         <InfoCell>
-          <InfoLabel>Changes</InfoLabel>
+          <InfoLabel>{tPrs("info.changes")}</InfoLabel>
           <InfoValue>
             {hasChangeStats ? (
               <Diff component="span">

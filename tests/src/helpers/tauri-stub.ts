@@ -332,6 +332,17 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "get_git_config":
       case "set_git_config":
         return { scope: args && args.repoId == null ? "global" : "repo", entries: {} };
+      // Layered git-config (RepoGitConfigCard + GitConfigTab). Empty layers /
+      // origins are a valid "nothing configured yet" shape; the include
+      // add/remove commands are fire-and-forget.
+      case "list_git_config_layers":
+        return [];
+      case "get_git_config_with_origins":
+      case "set_git_config_in_layer":
+        return {};
+      case "add_git_config_include":
+      case "remove_git_config_include":
+        return undefined;
       case "get_pr_diff":
         // loadPrDiff resolves this value AS the FileDiff[] diff array directly.
         // Returning the Rust PrDiff wrapper object made the diff a non-array,
@@ -380,6 +391,11 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return resolveCheckRuns(args);
       case "detect_ides":
         return ["vscode"];
+      // OS probes degrade to the renderer's stub maps on an empty result, so
+      // [] is the correct no-detection signal outside a real OS scan.
+      case "detect_terminals":
+      case "detect_shells":
+        return [];
       case "load_logo_bytes":
         return null;
       case "open_in_ide":
@@ -500,6 +516,17 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         if (!base) return null;
         return { ...base, body: "", mergeable: true, reviewers: [], files: [], timeline: [] };
       }
+      case "merge_pull_request": {
+        // The frontend optimistically flips the row's state after this resolves;
+        // mirror the dev:web stub's MergeResult shape.
+        const input = (args && args.input) || {};
+        return {
+          merged: true,
+          mergeSha: "stubmerge" + ((args && args.prNumber) ?? "0"),
+          sourceBranchDeleted: !!input.deleteSourceBranch,
+          message: "stub merge (" + (input.strategy || "merge") + ")",
+        };
+      }
 
       // --- custom fonts (Tauri-only filesystem upload; empty under the stub)
       case "list_custom_fonts":
@@ -547,6 +574,10 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       }
       case "get_platform_info":
         return { platform: "windows", osVersion: "10.0.22000", arch: "x86_64", tauriVersion: "2.0.0" };
+      // ThemeWrapper queries the OS truth on mount; null means "no override",
+      // so the app keeps trusting matchMedia (the stub's seeded theme).
+      case "get_system_dark_mode":
+        return null;
       case "check_git":
         return { installed: true, version: "2.44.0" };
       case "update_tray_badge":

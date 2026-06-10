@@ -75,7 +75,7 @@ export default function MrDetailHeader({
         <TitleRow>
           <Title>{pr.title}</Title>
           <MrChip state={pr.state} draft={pr.draft}>
-            {pr.draft ? "draft" : pr.state}
+            {tPrs(`state.${pr.draft ? "draft" : pr.state}`)}
           </MrChip>
         </TitleRow>
         <Subtitle>
@@ -144,15 +144,19 @@ export default function MrDetailHeader({
           data-testid={TEST_IDS.mr.mergeBtn}
         >
           <GitMerge size={13} />
-          <Box component="span">{busy === "merge" ? "Merging…" : "Merge"}</Box>
+          <Box component="span">
+            {busy === "merge" ? tPrs("actions.merging") : tPrs("actions.merge")}
+          </Box>
         </PrimaryBtn>
         <SecondaryBtn type="button" onClick={onCheckout} disabled={busy !== null}>
           <Code size={13} />
-          <Box component="span">{busy === "checkout" ? "…" : "Checkout"}</Box>
+          <Box component="span">
+            {busy === "checkout" ? tPrs("actions.checkout_busy") : tPrs("actions.checkout")}
+          </Box>
         </SecondaryBtn>
         <SecondaryBtn type="button" onClick={onOpenExternal}>
           {brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
-          <Box component="span">Open on host</Box>
+          <Box component="span">{tPrs("actions.open_on_host")}</Box>
         </SecondaryBtn>
       </HeaderActions>
     </Header>

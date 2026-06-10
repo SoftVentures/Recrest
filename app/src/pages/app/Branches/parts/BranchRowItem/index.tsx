@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -13,6 +15,7 @@ import {
   prefersReducedMotionGuard,
   staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
@@ -27,6 +30,7 @@ export interface BranchRowItemProps {
 }
 
 export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowItemProps) {
+  const { t: tRepos } = useTranslation(I18nNamespace.REPOS);
   const keyPrefix = `${repo.id}:${b.isRemote ? `${b.remote}/${b.name}` : b.name}`;
   const dotTone: "current" | "clean" | "remote" | "neutral" = b.isCurrent
     ? "current"
@@ -139,7 +143,9 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
         <Track>
           {b.ahead > 0 && <Trk tone="ahead">↑{b.ahead}</Trk>}
           {b.behind > 0 && <Trk tone="behind">↓{b.behind}</Trk>}
-          {b.ahead === 0 && b.behind === 0 && !b.isRemote && <Trk tone="even">even</Trk>}
+          {b.ahead === 0 && b.behind === 0 && !b.isRemote && (
+            <Trk tone="even">{tRepos("branches.track_even")}</Trk>
+          )}
         </Track>
       </Tail>
     </Row>

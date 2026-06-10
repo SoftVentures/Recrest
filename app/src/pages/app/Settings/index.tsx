@@ -30,6 +30,7 @@ import {
   pgSlideL,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { SETTINGS_TAB_QUERY_PARAM, SettingsTab } from "@/lib/constants/settings.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
@@ -290,11 +291,11 @@ function SettingsPage() {
         })}
         <NavFooter data-testid={TEST_IDS.settings.navFooter}>
           <FooterName component="span" variant="caption">
-            Recrest
+            {t("brand_name", { ns: I18nNamespace.SETTINGS })}
           </FooterName>
           <FooterDot component="span" variant="caption" aria-hidden />
           <FooterVersion component="span" variant="caption">
-            v{APP_VERSION}
+            {t("version_prefix", { ns: I18nNamespace.SETTINGS, version: APP_VERSION })}
           </FooterVersion>
         </NavFooter>
       </Nav>
@@ -346,7 +347,11 @@ function SettingsPage() {
             <PageHead>
               <PageH2 component="h2">{t("settings.shortcuts.title")}</PageH2>
               <PageIntro>
-                {t("settings.shortcuts.intro")} · Detected: {platformLabel(platform)}
+                {t("settings.shortcuts.intro")}{" "}
+                {t("shortcuts_detected", {
+                  ns: I18nNamespace.SETTINGS,
+                  platform: platformLabel(platform),
+                })}
               </PageIntro>
             </PageHead>
             <ShortcutsSection />

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 
-import { type RemoteRepository } from "@recrest/shared";
+import { type Organization, type RemoteRepository } from "@recrest/shared";
 
 import { ArrowDown, Check, ChevronRight, FolderGit2, FolderOpen, Inbox } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +64,11 @@ interface ProvidersPanelProps {
   onClose: () => void;
 }
 
+// Stable empty-array reference so the `orgs` selector returns the same value
+// on every render while a provider has no cached organizations — an inline
+// `[]` literal makes react-redux warn about an unstable selector result.
+const NO_ORGS: readonly Organization[] = [];
+
 // Stable two-stop gradients for org chips when the provider didn't supply
 // an `avatarUrl`. Matches the look of `RepoAvatar`/`AuthorAvatar`.
 const ORG_GRADIENTS: ReadonlyArray<readonly [string, string]> = [
@@ -116,7 +121,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
   }, [dispatch, activeProvider, activeOrg]);
 
   const orgs = useAppSelector((s) =>
-    activeProvider ? (s.remoteImport.organizations[activeProvider] ?? []) : [],
+    activeProvider ? (s.remoteImport.organizations[activeProvider] ?? NO_ORGS) : NO_ORGS,
   );
 
   // GitLab returns groups with path-style slugs (`benova/infrastructure`).
@@ -224,12 +229,14 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
       const ok = outcomes.filter((o) => o.ok).length;
       const fail = outcomes.length - ok;
       if (ok > 0) {
-        toast.success(`Cloned ${ok} ${ok === 1 ? "repository" : "repositories"}`);
+        toast.success(t("add_modal.toast_cloned_count", { ns: I18nNamespace.REPOS, count: ok }));
         void dispatch(loadRepos());
       }
       if (fail > 0) {
         const firstErr = outcomes.find((o) => !o.ok)?.error;
-        toast.error(firstErr ?? "Some clones failed");
+        toast.error(
+          firstErr ?? t("add_modal.toast_some_clones_failed", { ns: I18nNamespace.REPOS }),
+        );
       } else {
         onClose();
       }
@@ -352,7 +359,8 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
           />
           {selected.size > 0 && (
             <SelectedPill component="span" variant="caption">
-              <Check size={11} /> {selected.size} selected
+              <Check size={11} />{" "}
+              {t("add_modal.selected", { ns: I18nNamespace.REPOS, count: selected.size })}
             </SelectedPill>
           )}
         </SearchBar>
@@ -449,7 +457,9 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             data-testid={TEST_IDS.addRepoDialog.import}
           >
             {cloning ? <Spin size={13} /> : <ArrowDown size={13} />}
-            {cloning ? t("actions.importing") : t("import.submit", `Import ${selected.size}`)}
+            {cloning
+              ? t("actions.importing")
+              : t("add_modal.import_submit", { ns: I18nNamespace.REPOS, count: selected.size })}
           </PrimaryBtn>
         </Footer>
       </ProvidersMain>

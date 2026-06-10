@@ -272,7 +272,7 @@ export function AppearanceSection() {
             </Box>
           )}
         >
-          <FontGroupLabel>Sans</FontGroupLabel>
+          <FontGroupLabel>{t("font_groups.sans", { ns: I18nNamespace.SETTINGS })}</FontGroupLabel>
           {SANS_FONT_IDS.map((f) => (
             <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.fontOption(f)}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
@@ -280,7 +280,9 @@ export function AppearanceSection() {
               </Box>
             </MenuItem>
           ))}
-          <FontGroupLabel withDivider>Monospace</FontGroupLabel>
+          <FontGroupLabel withDivider>
+            {t("font_groups.monospace", { ns: I18nNamespace.SETTINGS })}
+          </FontGroupLabel>
           {MONO_FONT_IDS.map((f) => (
             <MenuItem key={f} value={f} data-testid={TEST_IDS.settings.general.fontOption(f)}>
               <Box component="span" style={{ fontFamily: fontCssFamily(f) }}>
@@ -288,7 +290,11 @@ export function AppearanceSection() {
               </Box>
             </MenuItem>
           ))}
-          {customFonts.length > 0 && <FontGroupLabel withDivider>Custom</FontGroupLabel>}
+          {customFonts.length > 0 && (
+            <FontGroupLabel withDivider>
+              {t("font_groups.custom", { ns: I18nNamespace.SETTINGS })}
+            </FontGroupLabel>
+          )}
           {customFonts.map((cf) => {
             const value = `${CUSTOM_FONT_PREFIX}${cf.family}`;
             return (
@@ -340,7 +346,11 @@ export function AppearanceSection() {
               </Box>
             </MenuItem>
           ))}
-          {customFonts.length > 0 && <FontGroupLabel withDivider>Custom</FontGroupLabel>}
+          {customFonts.length > 0 && (
+            <FontGroupLabel withDivider>
+              {t("font_groups.custom", { ns: I18nNamespace.SETTINGS })}
+            </FontGroupLabel>
+          )}
           {customFonts.map((cf) => {
             const value = `${CUSTOM_FONT_PREFIX}${cf.family}`;
             return (

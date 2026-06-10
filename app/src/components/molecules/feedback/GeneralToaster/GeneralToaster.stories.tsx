@@ -26,6 +26,7 @@ export const Default: Story = {
     <>
       <GeneralToaster />
       <ButtonRow>
+        {/* eslint-disable no-restricted-syntax -- Storybook demo copy is English-only, not shipped to users */}
         <GeneralButton onClick={() => toast.success("Saved")}>Success</GeneralButton>
         <GeneralButton variant="destructive" onClick={() => toast.error("Failed to save")}>
           Error
@@ -33,6 +34,7 @@ export const Default: Story = {
         <GeneralButton variant="outline" onClick={() => toast("Heads up")}>
           Neutral
         </GeneralButton>
+        {/* eslint-enable no-restricted-syntax */}
       </ButtonRow>
     </>
   ),

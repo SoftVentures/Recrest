@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 
 import { type PlatformInfo, TauriCommand } from "@recrest/shared";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import {
@@ -27,6 +30,7 @@ interface DevPaths {
 }
 
 export function BuildSection() {
+  const { t } = useTranslation(I18nNamespace.SETTINGS);
   const [platform, setPlatform] = useState<PlatformInfo | null>(null);
   const [tauriVersion, setTauriVersion] = useState<string | null>(null);
   const [buildTriple, setBuildTriple] = useState<string | null>(null);
@@ -72,27 +76,37 @@ export function BuildSection() {
   const buildTime =
     typeof __BUILD_TIME__ === "string" && __BUILD_TIME__.length > 0 ? __BUILD_TIME__ : dash;
 
-  const rows: { key: string; value: string; copyable?: boolean }[] = [
-    { key: "Git SHA", value: buildSha, copyable: true },
-    { key: "Build time", value: buildTime },
-    { key: "Mode", value: import.meta.env.MODE },
+  const rows: { key: string; label: string; value: string; copyable?: boolean }[] = [
+    { key: "git_sha", label: t("developer.build.git_sha"), value: buildSha, copyable: true },
+    { key: "build_time", label: t("developer.build.build_time"), value: buildTime },
+    { key: "mode", label: t("developer.build.mode"), value: import.meta.env.MODE },
     {
-      key: "Debug assertions",
+      key: "debug_assertions",
+      label: t("developer.build.debug_assertions"),
       value: platform?.debugAssertions == null ? dash : String(platform.debugAssertions),
     },
-    { key: "Tauri runtime", value: tauriVersion ?? dash },
-    { key: "Build triple", value: buildTriple ?? dash },
-    { key: "App identifier", value: "eu.softventures.recrest", copyable: true },
+    {
+      key: "tauri_runtime",
+      label: t("developer.build.tauri_runtime"),
+      value: tauriVersion ?? dash,
+    },
+    { key: "build_triple", label: t("developer.build.build_triple"), value: buildTriple ?? dash },
+    {
+      key: "app_identifier",
+      label: t("developer.build.app_identifier"),
+      value: "eu.softventures.recrest",
+      copyable: true,
+    },
   ];
 
   return (
     <>
       <SectionWrap component="section" data-testid={TEST_IDS.settings.developer.sections.build}>
-        <SectionHeading component="h3">Build</SectionHeading>
+        <SectionHeading component="h3">{t("developer.sections.build")}</SectionHeading>
         <Card>
           {rows.map((r) => (
             <FactRow key={r.key}>
-              <FactKey>{r.key}</FactKey>
+              <FactKey>{r.label}</FactKey>
               <FactVal>
                 <Box component="span">{r.value}</Box>
                 {r.copyable && r.value !== dash && (
@@ -101,7 +115,7 @@ export function BuildSection() {
                     variant="outline"
                     onClick={() => navigator.clipboard?.writeText(r.value)}
                   >
-                    Copy
+                    {t("developer.build.copy")}
                   </GeneralButton>
                 )}
               </FactVal>
@@ -111,14 +125,17 @@ export function BuildSection() {
       </SectionWrap>
 
       <SectionWrap component="section">
-        <SectionHeading component="h3">Paths</SectionHeading>
+        <SectionHeading component="h3">{t("developer.build.paths_title")}</SectionHeading>
         <Card>
-          <PathRow label="Config dir" path={paths?.configDir ?? null} />
-          <PathRow label="Data dir" path={paths?.dataDir ?? null} />
-          <PathRow label="Cache dir" path={paths?.cacheDir ?? null} />
-          <PathRow label="Log dir" path={paths?.logDir ?? null} />
-          <PathRow label="Binary dir" path={paths?.binaryDir ?? null} />
-          <PathRow label="Workspace root" path={paths?.workspaceRoot ?? null} />
+          <PathRow label={t("developer.build.path_config")} path={paths?.configDir ?? null} />
+          <PathRow label={t("developer.build.path_data")} path={paths?.dataDir ?? null} />
+          <PathRow label={t("developer.build.path_cache")} path={paths?.cacheDir ?? null} />
+          <PathRow label={t("developer.build.path_log")} path={paths?.logDir ?? null} />
+          <PathRow label={t("developer.build.path_binary")} path={paths?.binaryDir ?? null} />
+          <PathRow
+            label={t("developer.build.path_workspace")}
+            path={paths?.workspaceRoot ?? null}
+          />
         </Card>
       </SectionWrap>
     </>

@@ -25,6 +25,7 @@
     "more_info": "More info",
     "send_test_notification": "Send test notification",
     "remove_path": "Remove {{path}}",
+    "remove_integration": "Remove {{provider}}",
     "theme_swatch": "{{label}} theme"
   },
   "repo": {

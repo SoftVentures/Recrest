@@ -55,11 +55,15 @@ function QuickActionsCard() {
     setFetching(true);
     try {
       const ok = await invoke<number>(TauriCommand.GIT_FETCH_ALL);
-      toast.success(`Fetched ${ok} repo${ok === 1 ? "" : "s"}`);
+      toast.success(
+        ok === 1
+          ? t("dash.quick.fetched_one", { count: ok })
+          : t("dash.quick.fetched_other", { count: ok }),
+      );
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch {
-      toast.error("Fetch all failed");
+      toast.error(t("dash.quick.fetch_all_error"));
     } finally {
       setFetching(false);
     }

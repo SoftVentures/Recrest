@@ -25,7 +25,9 @@ export const RunList = styled(Box)({
   gap: 6,
 }) as typeof Box;
 
-export const RunRow = styled(Box)(({ theme }) => ({
+export const RunRow = styled(Box, { shouldForwardProp: (p) => p !== "clickable" })<{
+  clickable?: boolean;
+}>(({ theme, clickable }) => ({
   display: "flex",
   alignItems: "center",
   gap: 10,
@@ -33,6 +35,31 @@ export const RunRow = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
+  transition: "background-color 120ms ease, border-color 120ms ease",
+  ...(clickable && {
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: theme.palette.surface.interface.active,
+      borderColor: theme.palette.border.hover,
+    },
+    // The open-affordance icon stays hidden until the row is hovered/focused —
+    // keeps the resting row calm, surfaces the "opens externally" hint on intent.
+    "&:hover [data-row-open], &:focus-visible [data-row-open]": { opacity: 1 },
+    "&:focus-visible": {
+      outline: `2px solid ${theme.palette.primary.main}`,
+      outlineOffset: -2,
+    },
+  }),
+  'html[data-reduced-motion="true"] &': { transition: "none" },
+}));
+
+export const OpenHint = styled(Box)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  color: theme.palette.text.information,
+  opacity: 0,
+  transition: "opacity 120ms ease",
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed tone prop on the run-status dot

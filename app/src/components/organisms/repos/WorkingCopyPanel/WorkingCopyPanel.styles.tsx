@@ -10,6 +10,7 @@ export const Root = styled(Box)({
   gap: 12,
   fontFamily: MONO_STACK,
   fontSize: 12,
+  paddingRight: 4,
 }) as typeof Box;
 
 export const SectionBox = styled(Box)(({ theme }) => ({

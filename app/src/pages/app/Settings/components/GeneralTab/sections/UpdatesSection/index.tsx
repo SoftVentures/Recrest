@@ -5,11 +5,12 @@ import { useTranslation } from "react-i18next";
 import { Box, MenuItem, type SelectChangeEvent, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { AutoUpdateMode, TauriCommand } from "@recrest/shared";
+import { APP_VERSION, AutoUpdateMode, TauriCommand } from "@recrest/shared";
 
 import { Ban, BellRing, DownloadCloud } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
@@ -18,10 +19,10 @@ import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/Se
 import { setUpdateMode } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-const UPDATE_MODES: { value: AutoUpdateMode; label: string; icon: typeof DownloadCloud }[] = [
-  { value: AutoUpdateMode.AUTO, label: "Automatic", icon: DownloadCloud },
-  { value: AutoUpdateMode.MANUAL, label: "Manual", icon: BellRing },
-  { value: AutoUpdateMode.OFF, label: "Off", icon: Ban },
+const UPDATE_MODES: { value: AutoUpdateMode; labelKey: string; icon: typeof DownloadCloud }[] = [
+  { value: AutoUpdateMode.AUTO, labelKey: "settings.updates.mode_auto", icon: DownloadCloud },
+  { value: AutoUpdateMode.MANUAL, labelKey: "settings.updates.mode_manual", icon: BellRing },
+  { value: AutoUpdateMode.OFF, labelKey: "settings.updates.mode_off", icon: Ban },
 ];
 
 const VersionText = styled(Typography)(({ theme }) => ({
@@ -47,7 +48,7 @@ export function UpdatesSection() {
     <SettingsSection title={t("settings.sections.updates")}>
       <SettingsRow label={t("settings.updates.current_version_label")}>
         <VersionText component="span" variant="caption">
-          v0.7.0
+          {t("version_prefix", { ns: I18nNamespace.SETTINGS, version: APP_VERSION })}
         </VersionText>
       </SettingsRow>
       <SettingsRow label={t("settings.updates.mode")} sub={t("settings.updates.mode_hint")}>
@@ -65,7 +66,7 @@ export function UpdatesSection() {
             return (
               <MenuItem key={m.value} value={m.value}>
                 <I size={13} />
-                <MenuLabel>{m.label}</MenuLabel>
+                <MenuLabel>{t(m.labelKey)}</MenuLabel>
               </MenuItem>
             );
           })}

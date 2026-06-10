@@ -1,26 +1,29 @@
 import { useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { TauriCommand } from "@recrest/shared";
 
 import { toast } from "sonner";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { STORAGE_PREFIX } from "@/lib/constants/storage.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { safeInvoke } from "@/lib/tauri";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 export function FactoryResetSection() {
+  const { t } = useTranslation(I18nNamespace.SETTINGS);
   const [running, setRunning] = useState(false);
+  // Confirm via the app's modal, not `window.confirm` — the latter is rerouted
+  // to the Tauri dialog plugin (ACL-gated, async) in the desktop shell and
+  // throws "dialog.confirm not allowed" there.
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const runReset = async () => {
-    if (
-      !window.confirm(
-        "Reset Recrest to factory defaults? This wipes settings, tokens, localStorage, and re-runs onboarding. The page will reload.",
-      )
-    ) {
-      return;
-    }
+    setConfirmOpen(false);
     setRunning(true);
     try {
       try {
@@ -36,7 +39,7 @@ export function FactoryResetSection() {
       } catch {
         /* ignore */
       }
-      toast.success("Factory reset complete. Reloading…");
+      toast.success(t("developer.factoryReset.done"));
       setTimeout(() => window.location.reload(), 250);
     } finally {
       setRunning(false);
@@ -45,23 +48,33 @@ export function FactoryResetSection() {
 
   return (
     <SettingsSection
-      title="Factory reset"
+      title={t("developer.sections.factory_reset")}
       testId={TEST_IDS.settings.developer.sections.factoryReset}
     >
       <SettingsRow
-        label="Reset to factory defaults"
-        sub="Wipes settings, tokens, localStorage, and re-runs onboarding."
+        label={t("developer.factoryReset.title")}
+        sub={t("developer.factoryReset.row_sub")}
       >
         <GeneralButton
           size="sm"
           variant="destructive"
           data-testid={TEST_IDS.settings.developer.factoryResetButton}
           disabled={running}
-          onClick={() => void runReset()}
+          onClick={() => setConfirmOpen(true)}
         >
-          Reset
+          {t("developer.factoryReset.button")}
         </GeneralButton>
       </SettingsRow>
+
+      <ConfirmationModal
+        open={confirmOpen}
+        title={t("developer.factoryReset.confirmTitle")}
+        description={t("developer.factoryReset.confirmBody")}
+        confirmLabel={t("developer.factoryReset.button")}
+        destructive
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => void runReset()}
+      />
     </SettingsSection>
   );
 }

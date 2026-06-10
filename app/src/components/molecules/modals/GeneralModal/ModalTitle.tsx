@@ -50,7 +50,11 @@ interface TitleTextProps {
   capitalize: boolean;
 }
 
-const TitleText = styled(Typography, {
+// Box (renders a <div>), not Typography: the heading semantics come from the
+// surrounding DialogTitle (<h2>), and the title is a flex container that may
+// hold block children (badges, icons, status pills). A <p> here would nest
+// <div>/<p> inside <p> and trip React's DOM nesting validator.
+const TitleText = styled(Box, {
   shouldForwardProp: (p) => p !== "capitalize",
 })<TitleTextProps>(({ theme, capitalize }) => ({
   margin: 0,

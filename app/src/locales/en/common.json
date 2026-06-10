@@ -15,7 +15,18 @@
     "quote": "Quote",
     "link": "Insert link",
     "link_prompt": "Link URL",
-    "unlink": "Remove link"
+    "link_placeholder": "https://example.com",
+    "link_apply": "Apply",
+    "link_cancel": "Cancel",
+    "unlink": "Remove link",
+    "toolbar_aria": "Formatting"
+  },
+  "updater": {
+    "available": "A new version is available:",
+    "current": "(current {{version}})",
+    "install": "Install & restart",
+    "download": "Download",
+    "dismiss": "Dismiss"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -64,7 +75,9 @@
     "search_group_mrs": "Merge requests",
     "search_group_nav": "Go to",
     "search_group_repos": "Repositories",
-    "clear_search": "Clear search"
+    "clear_search": "Clear search",
+    "go_back": "Back",
+    "confirm": "Confirm"
   },
   "context_menu": {
     "open_in_terminal": "Open in Terminal",
@@ -195,6 +208,8 @@
     "activity": {
       "title": "Activity · last {{days}} days",
       "meta": "{{total}} commits across {{repos}} repos",
+      "commits_one": "{{count}} commit",
+      "commits_other": "{{count}} commits",
       "span": {
         "day": { "now": "today", "prev": "yesterday", "ago": "{{count}} days ago" },
         "week": { "now": "this week", "prev": "last week", "ago": "{{count}} weeks ago" },
@@ -203,7 +218,10 @@
     },
     "attention": {
       "title": "Needs your attention",
-      "empty": "Everything is clean and in sync."
+      "empty": "Everything is clean and in sync.",
+      "changed": "{{count}} changed",
+      "behind_one": "{{count}} commit behind",
+      "behind_other": "{{count}} commits behind"
     },
     "empty": {
       "title": "No repositories yet",
@@ -237,7 +255,10 @@
       "recent_commits": "Recent commits",
       "create_branch": "Create branch",
       "pull_all": "Pull all",
-      "coming_soon": "Coming soon"
+      "coming_soon": "Coming soon",
+      "fetched_one": "Fetched {{count}} repo",
+      "fetched_other": "Fetched {{count}} repos",
+      "fetch_all_error": "Fetch all failed"
     }
   },
   "titlebar": {
@@ -431,6 +452,7 @@
       "ci_trend_sub_repos_one": "across {{count}} repo",
       "ci_trend_sub_repos_other": "across {{count}} repos",
       "ci_trend_sub_runs": "{{count}} runs",
+      "ci_trend_avg": "avg pass",
       "flaky_title": "Flakiest repos",
       "flaky_sub": "failure rate · last {{days}} days",
       "flaky_empty": "No check-run data yet.",
@@ -439,6 +461,7 @@
       "peak_label": "Peak hours",
       "age_days_one": "{{count}} day old",
       "age_days_other": "{{count}} days old",
+      "age_short": "{{count}}d",
       "ci_trend_sub_window": "last {{days}} days",
       "stacked_axis_days_ago": "{{count}}d ago",
       "stacked_axis_today": "today",
@@ -451,6 +474,12 @@
     },
     "tooltip": {
       "ci_passed": "{{passed}}/{{total}} passed"
+    },
+    "feed": {
+      "no_remote": "No remote URL for this commit",
+      "failing_checks_one": "{{count}} failing check",
+      "failing_checks_other": "{{count}} failing checks",
+      "passing": "{{count}} passing"
     },
     "insights": {
       "section_title": "Insights",
@@ -839,7 +868,10 @@
       "checking": "Checking…",
       "current_version_label": "Current version",
       "mode": "Update mode",
-      "mode_hint": "Automatic downloads + installs silently. Manual prompts a banner. Off disables checks."
+      "mode_hint": "Automatic downloads + installs silently. Manual prompts a banner. Off disables checks.",
+      "mode_auto": "Automatic",
+      "mode_manual": "Manual",
+      "mode_off": "Off"
     }
   },
   "notifications": {
