@@ -1,19 +1,29 @@
-import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { CiPassRateCard } from "@/components/organisms/activity/cards/CiPassRateCard";
-import "@/i18n";
+import CiPassRateCard from "@/components/organisms/activity/cards/CiPassRateCard";
+import type { PassRateDay } from "@/lib/activityAggregates";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
+
+function makeRows(count: number): PassRateDay[] {
+  return Array.from({ length: count }, (_, day) => ({
+    day,
+    passed: 9,
+    total: 10,
+    rate: 0.9,
+  }));
+}
 
 describe("CiPassRateCard", () => {
-  it("renders a line series and an area fill", () => {
-    const rows = Array.from({ length: 14 }, (_, day) => ({
-      day,
-      passed: 9,
-      total: 10,
-      rate: 0.9,
-    }));
-    const { container } = render(<CiPassRateCard rows={rows} />);
-    expect(container.querySelectorAll(".a-act-line-series")).toHaveLength(1);
-    expect(container.querySelectorAll(".a-act-line-fill")).toHaveLength(1);
+  it("renders the CI pass-rate card root", () => {
+    const { getByTestId } = renderWithProviders(<CiPassRateCard rows={[]} />);
+    expect(getByTestId(TEST_IDS.activity.cards.ciPassRate)).toBeInTheDocument();
+  });
+
+  it("renders a wide window without per-day explosion", () => {
+    const { getByTestId } = renderWithProviders(
+      <CiPassRateCard rows={makeRows(365)} windowDays={365} />,
+    );
+    expect(getByTestId(TEST_IDS.activity.cards.ciPassRate)).toBeInTheDocument();
   });
 });

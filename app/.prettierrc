@@ -8,14 +8,22 @@
   "arrowParens": "always",
   "endOfLine": "lf",
   "plugins": ["@trivago/prettier-plugin-sort-imports"],
+  "importOrderParserPlugins": ["typescript", "jsx"],
   "importOrder": [
-    "^react(-dom)?$",
+    "^react$",
+    "^react-dom",
+    "^react-redux$",
     "^react-router",
+    "^react-",
+    "^@mui/",
+    "^@reduxjs/toolkit",
+    "^redux",
     "^@tauri-apps/",
-    "<THIRD_PARTY_MODULES>",
     "^@recrest/(.*)$",
-    "^@/(.*)$",
-    "^[./]"
+    "<THIRD_PARTY_MODULES>",
+    "^@/",
+    "^\\.",
+    "^.+\\.css$"
   ],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true

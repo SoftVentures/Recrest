@@ -1,60 +1,52 @@
-# Recrest 0.7.0 — Auto-updater, Developer tab, native notifications
+# Recrest 0.9.0 — Git actions, GitLab + Bitbucket parity, rebuilt Activity, Material UI
 
-Third beta of Recrest. The headline additions are a working **in-app auto-updater**, a new **Developer** tab for power users, **native OS notifications**, and a page-transition animation pass that makes the whole shell feel less static. Under the hood, stylesheets migrated from flat CSS to SCSS and the dev build now carries its own icon so you can tell `yarn dev` apart from the installed app.
+Fourth beta of Recrest, and the biggest release yet. Four planned phases shipped together: a sweep of platform and UI bug fixes, a full migration of the styling layer to **Material UI**, a real **repository-management and Git-actions** surface, and a **rebuilt Activity / Statistics** stack. `0.8.0` was burned internally and never tagged, so this goes straight from `0.7.0` to `0.9.0`.
 
-Still a beta — treat it as "use it, tell us what's broken" rather than "rely on it in your daily loop".
+The headline for users: **GitLab and Bitbucket are no longer "not yet implemented."** Both now back PR diffs, inline comments, CI/pipeline runs, deployment status, and org/group/workspace browsing — the same surface GitHub has had.
+
+Still a beta — treat it as "use it, tell us what's broken" rather than "rely on it in your daily loop."
 
 ## What's new
 
-### In-app auto-updater
+### Repository management & Git actions
 
-Recrest now checks GitHub Releases on startup (after a short delay) and again every four hours:
+Recrest is no longer read-only over your working tree:
 
-- An `UpdaterBanner` appears when a newer tag is available, with install / dismiss / remind-me states persisted across sessions.
-- Manual "check for updates" action lives in Settings → Updates.
-- Version comparison handles pre-release tags correctly (`0.7.0-beta.1` > `0.6.9`), so shipping betas alongside stable doesn't confuse users running either channel.
-- `useLastSeenVersion` remembers the version the user last opened, so "what's new" cues can appear after an update.
+- **Working-copy panel** in repo detail — stage / unstage individual files, "stage all" / "unstage all", and a full stash lifecycle (save / list / pop / drop).
+- **Commit dialog** with a `{author}: {date}` template button and **pre-commit hook detection** — when a hook is present the commit runs through `git commit` so the hook actually fires (with a "hooks active" badge); otherwise it takes the fast libgit2 path.
+- **Discard guard** — discarding sensitive files (`.env`, `id_*`, `*.pem`, …) asks for confirmation instead of silently deleting them.
+- **Git config tab** — view and edit `user.name` / `user.email` / `core.editor`, layer-aware (global vs. repo-local), with per-repo overrides.
+- **Per-repo SSH key picker** — override the credential for a single repo; passphrases stay in memory only.
+- **"Open in Terminal"** honors the terminal you pick in Settings and resolves the right launch command per OS (macOS Terminal/iTerm/Warp, Linux kitty/foot/wezterm/alacritty/gnome-terminal/konsole, Windows Terminal/PowerShell/cmd).
 
-### Developer tab
+### GitLab & Bitbucket reach parity
 
-A new Settings tab for people who want to poke at the app:
+The provider layer grew real depth across all three hosts:
 
-- Feature-flag toggles persisted in a dedicated Redux slice (`uiDevFlagsSlice`) — separate from user settings so toggling doesn't pollute your real preferences.
-- In-app inspectors for Redux state, IPC traffic, and environment details.
-- Diagnostics dump for bug reports.
+- **PR diffs** with a line-anchored **inline-comment composer**.
+- **CI / workflows** — list GitHub Actions / GitLab Pipelines / Bitbucket Pipelines, browse run history, and trigger a run with a dynamic inputs form.
+- **Deployments** — GitHub Pages / GitLab Pages status (URL, state, custom domain); Bitbucket shows a best-effort "pipeline-based deploy detected".
+- **Orgs / groups / workspaces** browsing during import, and GitLab/Bitbucket PRs now show the author's avatar and display name.
 
-The tab is gated by `useDevFlag`, so the surface area is zero for regular users.
+### Rebuilt Activity & statistics
 
-### Native OS notifications
+- **Configurable date range** — preset chips (7d / 30d / 90d / 1y / all) plus a date picker, mirrored into the URL.
+- **Full-history loading** — "all" streams a repo's complete history in chunks, with a truncation banner past 5,000 commits per repo; ranges are cached so re-selecting one doesn't refetch.
+- **Insights block** — current + longest streak, trend, top authors, most-active weekday, average commits/week, longest gap (timezone-aware).
+- **Activity source toggle** — provider-connected repos only, or every local repo.
+- Charts re-platformed onto **Nivo** for smoother, more consistent visuals.
 
-System-level notifications for the events that matter:
+### Material UI migration
 
-- PR events, update availability, scan completion.
-- Per-trigger toggles in the new `NotificationSettings` tab — nothing is on by default that you didn't ask for.
-- Backed by `commands/notifications.rs` on the Rust side with a full test suite on `useNotificationTriggers`.
+The whole styling layer moved to **Material UI v9 + Emotion**. Tailwind, Radix, and the hand-rolled SCSS were removed in favor of one MUI theme. Day-to-day it looks and behaves the same — light/dark mode, accent palettes, and font scaling are all preserved — but the foundation is now consistent and far easier to extend. New: **custom font upload** (Settings → Appearance), and **UI-scale hotkeys** (`Ctrl/Cmd` + `+` / `-` / `0`).
 
-### Page transitions
+### UI & platform polish
 
-Dashboard, Repositories, Branches, Merge Requests, and Repo Detail now animate on mount and on route change. Timing and easing are documented in `docs/plans/page-mount-animations.md`.
-
-### Mascot & empty states
-
-New `Mascot` atom (animated brand character) appears on onboarding and empty-state screens. `EmptyState` itself got a friendlier layout.
-
-### Dev-build icon
-
-`yarn dev` and the installed app no longer share a taskbar icon. The dev build renders with a white-chevron + orange `</>` badge variant. `tauri:dev` loads a minimal `tauri.dev.conf.json` overlay that swaps `bundle.icon` to `icons-dev/`; `tauri:build` ignores the overlay.
-
-### Stylesheets moved to SCSS
-
-`tokens`, `layout`, `page-anim`, and `views` now live as `.scss` in both `app/` and `landingpage/`. No new dependencies — Vite handles SCSS natively. Day-to-day usage is identical; nesting and mixins are now available to contributors.
-
-### Under-the-hood polish
-
-- `ImportFromProviderDialog` rewritten — clearer provider/org/repo flow, inline validation, full keyboard navigation.
-- `DetailPane`, `Sidebar`, `Titlebar`, `RepoRow`, and `RepoList` refactored for faster initial render.
-- `TruncatedTooltip` shows full text on hover only when the content is actually truncated.
-- `notify` → 8.2 and `notify-debouncer-full` → 0.7 for more reliable filesystem event coalescing on Windows.
+- **Pinned repositories** in a dedicated section at the top of the list (persistent).
+- **Repo-list view modes** (Grouped / Flat / Card) with a sortable Flat header; narrow viewports auto-switch to Card.
+- **Branch view** with collapsible sections, search, and status filters.
+- **Confirmation dialogs** for destructive actions, **swipe gestures**, and **scroll-position memory** per page.
+- **Dev / prod identity split** — `yarn dev` runs under its own identity (`…​.recrest.dev`) with isolated data, tokens, and locks, so it can't clobber your installed copy.
 
 ## Install
 
@@ -72,15 +64,15 @@ shasum -a 256 -c SHA256SUMS.txt       # macOS
 Get-FileHash <file> -Algorithm SHA256 # Windows PowerShell
 ```
 
-## Upgrading from 0.6.0
+## Upgrading from 0.7.0
 
-If you already run 0.6.0, the new updater will pick up this release automatically on next launch. No manual migration needed — settings and the keychain-stored tokens are preserved.
+If you already run 0.7.0, the in-app updater picks this release up automatically on next launch (or via **Settings → Updates → Check for updates**). The updater signing key and endpoint are unchanged from 0.7.0, so the prompt verifies and installs without a manual reinstall. Settings and keychain-stored tokens are preserved.
 
 ## Known limitations
 
-- GitLab and Bitbucket providers still return "not yet implemented" — arriving in a later release.
-- Auth is PAT-only; OAuth is scaffolded but not user-facing yet.
-- Installers remain **unsigned** — macOS Gatekeeper / Windows SmartScreen will warn on first launch. Verify via the `SHA256SUMS.txt` above.
+- Auth is PAT / app-password only; OAuth is scaffolded but not user-facing yet.
+- Installers remain **unsigned** — macOS Gatekeeper / Windows SmartScreen will warn on first launch. Verify via `SHA256SUMS.txt` above.
+- A few platform-specific items still need on-device smoke testing: Windows Snap-Layouts flyout on the maximize button, Windows autostart-after-reboot, and Linux notification-icon display across dunst / Plasma / GNOME.
 
 ## Why unsigned?
 

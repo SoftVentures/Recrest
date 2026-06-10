@@ -1,42 +1,41 @@
-import type { ReactElement } from "react";
+import type { ChangedFile } from "@recrest/shared";
+import { ChangedFileKind, ChangedFileStatus } from "@recrest/shared";
 
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { ChangedFile } from "@recrest/shared";
+import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
-import { TooltipProvider } from "@/components/molecules/compounds/Tooltip";
-import { ChangedFilesList } from "@/components/organisms/repos/ChangedFilesList";
-import "@/i18n";
-
-function file(path: string, status: ChangedFile["status"]): ChangedFile {
-  return { path, status, kind: "modified", hasUnstagedChanges: false };
-}
-
-function renderWithTooltip(ui: ReactElement) {
-  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
-}
+const FILES: ChangedFile[] = [
+  {
+    path: "src/foo.ts",
+    status: ChangedFileStatus.UNSTAGED,
+    kind: ChangedFileKind.MODIFIED,
+    hasUnstagedChanges: false,
+  },
+  {
+    path: "src/bar.ts",
+    status: ChangedFileStatus.UNSTAGED,
+    kind: ChangedFileKind.ADDED,
+    hasUnstagedChanges: false,
+  },
+];
 
 describe("ChangedFilesList", () => {
-  it("shows the clean-state message when no files are passed", () => {
-    renderWithTooltip(<ChangedFilesList files={[]} truncated={false} />);
-    expect(screen.getByText(/clean/i)).toBeInTheDocument();
+  it("renders one row per file", () => {
+    const { getAllByTestId, getByTestId } = renderWithProviders(<ChangedFilesList files={FILES} />);
+    expect(getByTestId(TEST_IDS.changedFilesList.root)).toBeTruthy();
+    expect(getAllByTestId(TEST_IDS.changedFilesList.row)).toHaveLength(2);
   });
 
-  it("renders one row per file with its status marker", () => {
-    renderWithTooltip(
-      <ChangedFilesList
-        files={[file("src/a.ts", "staged"), file("src/b.ts", "unstaged")]}
-        truncated={false}
-      />,
-    );
-    expect(screen.getByText("src/a.ts")).toBeInTheDocument();
-    expect(screen.getByText("src/b.ts")).toBeInTheDocument();
+  it("shows the truncated marker when requested", () => {
+    const { getByTestId } = renderWithProviders(<ChangedFilesList files={FILES} truncated />);
+    expect(getByTestId(TEST_IDS.changedFilesList.truncated)).toBeTruthy();
   });
 
-  it("shows a truncation banner when the list was capped", () => {
-    renderWithTooltip(<ChangedFilesList files={[file("x", "staged")]} truncated />);
-    // "More files changed — showing the first entries."
-    expect(screen.getByText(/more files changed/i)).toBeInTheDocument();
+  it("omits the truncated marker by default", () => {
+    const { queryByTestId } = renderWithProviders(<ChangedFilesList files={FILES} />);
+    expect(queryByTestId(TEST_IDS.changedFilesList.truncated)).toBeNull();
   });
 });

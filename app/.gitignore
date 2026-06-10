@@ -27,7 +27,7 @@ dist-ssr
 ._*
 .Spotlight-V100
 .Trashes
-.VolumeIcon.icns  
+.VolumeIcon.icns
 
 # build output
 build/

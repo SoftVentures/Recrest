@@ -1,0 +1,18 @@
+[
+  {
+    "old_path": "src/lib.rs",
+    "new_path": "src/lib.rs",
+    "new_file": false,
+    "deleted_file": false,
+    "renamed_file": false,
+    "diff": "@@ -1,3 +1,4 @@\n use foo;\n-use bar;\n+use bar2;\n+use baz;\n pub fn x() {}"
+  },
+  {
+    "old_path": "OLD-README.md",
+    "new_path": "README.md",
+    "new_file": false,
+    "deleted_file": false,
+    "renamed_file": true,
+    "diff": "@@ -10,1 +10,1 @@\n-old line\n+new line"
+  }
+]

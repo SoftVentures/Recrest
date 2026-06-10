@@ -1,70 +1,88 @@
+import { memo } from "react";
+
 import { useTranslation } from "react-i18next";
 
-import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
+import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import {
+  Bar,
+  BarFill,
+  Body,
+  Count,
+  Empty,
+  List,
+  Name,
+  Rank,
+  Row,
+  Spark,
+  SparkBar,
+  Top,
+} from "@/components/organisms/activity/cards/LeaderboardCard/LeaderboardCard.styles";
 import type { AuthorBucket } from "@/lib/activityStats";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
-interface Props {
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   buckets: AuthorBucket[];
+  windowDays?: number;
   loading?: boolean;
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
-function MiniSpark({ values }: { values: number[] }) {
-  const peak = Math.max(1, ...values);
+function LeaderboardCard({ buckets, windowDays = 14, loading }: Props) {
+  const { t } = useTranslation();
   return (
-    <div className="a-act-lb-spark" aria-hidden>
-      {[...values].reverse().map((v, i) => (
-        <span
-          key={i}
-          className="a-act-lb-spark-bar"
-          style={{ height: `${Math.max(8, (v / peak) * 100)}%`, opacity: v === 0 ? 0.2 : 1 }}
-        />
-      ))}
-    </div>
+    <GeneralCard
+      title={t("activity.leaders.title")}
+      sub={t("activity.leaders.sub", { count: buckets.length, days: windowDays })}
+      loading={loading}
+      skeleton="rows"
+      testId={TEST_IDS.activity.cards.leaderboard}
+    >
+      {buckets.length === 0 ? (
+        <Empty>{t("activity.leaders.empty")}</Empty>
+      ) : (
+        <List component="ol">
+          {buckets.map((b, idx) => {
+            // Cap to the most recent 14 days — `sparkline` is windowDays long,
+            // so a 1-year range would otherwise render 365 bars and overflow
+            // the row. Newest-first slice, reversed below to read left→right.
+            const spark = b.sparkline.slice(0, 14);
+            const peakSpark = Math.max(1, ...spark);
+            return (
+              <Row key={b.author + (b.email ?? "")} component="li">
+                <Rank component="span" variant="caption">
+                  {MEDALS[idx] ?? idx + 1}
+                </Rank>
+                <AuthorAvatar name={b.author} email={b.email ?? undefined} size={22} />
+                <Body>
+                  <Top>
+                    <Name component="span" variant="caption">
+                      {b.author}
+                    </Name>
+                    <Count component="span" variant="caption">
+                      {b.count} · {Math.round(b.share * 100)}%
+                    </Count>
+                  </Top>
+                  <Bar>
+                    <BarFill width={b.share * 100} />
+                  </Bar>
+                  <Spark>
+                    {[...spark].reverse().map((v, i) => (
+                      <SparkBar key={i} h={v / peakSpark} />
+                    ))}
+                  </Spark>
+                </Body>
+              </Row>
+            );
+          })}
+        </List>
+      )}
+    </GeneralCard>
   );
 }
 
-export function LeaderboardCard({ buckets, loading }: Props) {
-  const { t } = useTranslation();
-  return (
-    <CardShell
-      title={t("activity.leaders.title")}
-      sub={t("activity.leaders.sub", { count: buckets.length })}
-      loading={loading}
-      skeleton="rows"
-    >
-      {buckets.length === 0 ? (
-        <div className="a-act-card-empty">{t("activity.leaders.empty")}</div>
-      ) : (
-        <ol className="a-act-lb">
-          {buckets.map((b, idx) => (
-            <li key={b.author} className="a-act-lb-row">
-              <span className="a-act-lb-rank">{MEDALS[idx] ?? idx + 1}</span>
-              <AuthorAvatar name={b.author} email={b.email} size={22} />
-              <div className="a-act-lb-body">
-                <div className="a-act-lb-top">
-                  <span className="a-act-lb-name">{b.author}</span>
-                  <span className="a-act-lb-count">
-                    {b.count} · {Math.round(b.share * 100)}%
-                  </span>
-                </div>
-                <div className="a-act-lb-bar">
-                  <div
-                    className="a-act-lb-bar-fill a-act-anim-barh"
-                    style={{
-                      width: `${Math.max(4, b.share * 100)}%`,
-                      animationDelay: `${300 + idx * 80}ms`,
-                    }}
-                  />
-                </div>
-                <MiniSpark values={b.sparkline} />
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-    </CardShell>
-  );
-}
+// memo: urgent page re-renders during chunk streaming must not re-layout the chart rows.
+export default memo(LeaderboardCard);

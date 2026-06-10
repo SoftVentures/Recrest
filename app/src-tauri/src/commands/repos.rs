@@ -4,7 +4,7 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::Serialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::config::settings::RepoRecord;
 use crate::git::logo;
@@ -24,15 +24,38 @@ pub struct RepoDto {
     pub remote_url: Option<String>,
     pub provider_id: Option<String>,
     pub status: status::RepoStatusDto,
-    /// Filesystem path of the auto-detected light-theme logo (if any).
-    /// The frontend fetches its bytes on demand via `load_logo_bytes`.
+    /// Resolved light-theme logo path. When the user uploaded a custom
+    /// avatar this points into `<app_data>/repo-logos/`; otherwise it's the
+    /// path of the best in-repo match from `detect_repo_logo`.
     pub logo_path: Option<String>,
     pub logo_dark_path: Option<String>,
+    /// `true` when `logo_path` is the user-uploaded override (so the UI can
+    /// surface a "reset to auto-detected" affordance).
+    pub logo_is_custom: bool,
+    /// Per-repo SSH private key path, or `None` for ssh-agent / global config.
+    pub ssh_key_path: Option<String>,
 }
 
 impl RepoDto {
     pub fn from_record(record: &RepoRecord, status: status::RepoStatusDto) -> Self {
-        let logos = logo::detect_repo_logo(&record.path);
+        // Custom upload wins over the in-repo auto-detect. We still pass the
+        // detected dark variant through — the override is a single image, not
+        // a paired light/dark set; if the user wanted both, they'd commit the
+        // pair into the repo itself.
+        let (logo_path, logo_is_custom) = match record.custom_logo_path.as_ref() {
+            Some(p) if p.exists() => (Some(p.to_string_lossy().to_string()), true),
+            _ => {
+                let logos = logo::detect_repo_logo(&record.path);
+                (logos.light.map(|p| p.to_string_lossy().to_string()), false)
+            }
+        };
+        let logo_dark_path = if logo_is_custom {
+            None
+        } else {
+            logo::detect_repo_logo(&record.path)
+                .dark
+                .map(|p| p.to_string_lossy().to_string())
+        };
         Self {
             id: record.id.clone(),
             name: record.name.clone(),
@@ -41,8 +64,10 @@ impl RepoDto {
             remote_url: record.remote_url.clone(),
             provider_id: record.provider_id.clone(),
             status,
-            logo_path: logos.light.map(|p| p.to_string_lossy().to_string()),
-            logo_dark_path: logos.dark.map(|p| p.to_string_lossy().to_string()),
+            logo_path,
+            logo_dark_path,
+            logo_is_custom,
+            ssh_key_path: record.ssh_key_path.clone(),
         }
     }
 }
@@ -56,26 +81,54 @@ pub async fn scan_repos(
     let options = ScanOptions::default();
     let discovered = crate::git::scanner::scan_many(&paths, &options)?;
 
-    let mut config = state.config.lock().await;
-    config.settings_mut().scan_paths = paths;
+    // Upsert everything discovered under the new paths, then reconcile: drop
+    // auto-discovered repos that no longer sit under any scan root (a removed
+    // path, or junk from an earlier too-broad scan). The returned set is the
+    // FULL authoritative repo list (discovered + surviving manual adds), so the
+    // renderer can replace its store wholesale instead of merging stale rows.
+    let (records, new_records, orphans) = {
+        let mut config = state.config.lock().await;
+        config.settings_mut().scan_paths = paths;
 
-    let mut out = Vec::with_capacity(discovered.len());
-    let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
-    for repo_path in discovered {
-        let record = config.upsert_scanned_repo(&repo_path)?;
-        let status = status::read_status(&record.path)?;
-        new_records.push((record.id.clone(), record.path.clone()));
-        out.push(RepoDto::from_record(&record, status));
-    }
+        let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
+        for repo_path in discovered {
+            let record = config.upsert_scanned_repo(&repo_path)?;
+            new_records.push((record.id.clone(), record.path.clone()));
+        }
 
-    config.save(&app)?;
-    drop(config);
+        let orphans = config.prune_orphan_scanned_repos();
+        config.save(&app)?;
 
-    // Subscribe the filesystem watcher to every scanned repo (best-effort).
+        let records: Vec<RepoRecord> = config.settings().repos.values().cloned().collect();
+        (records, new_records, orphans)
+    };
+
+    // Watcher: subscribe freshly-discovered repos, unwatch pruned orphans.
     if let Some(watcher) = state.watcher.lock().await.as_mut() {
         for (id, path) in new_records {
             let _ = watcher.watch_repo(&id, &path).await;
         }
+        for (_, path) in &orphans {
+            let _ = watcher.unwatch_repo(path.as_path()).await;
+        }
+    }
+
+    // Statuses for the full set, computed concurrently (mirrors `list_repos`).
+    let handles: Vec<_> = records
+        .iter()
+        .map(|r| {
+            let path = r.path.clone();
+            tokio::task::spawn_blocking(move || {
+                status::read_status(&path).unwrap_or_else(|_| status::RepoStatusDto::unknown())
+            })
+        })
+        .collect();
+    let mut out = Vec::with_capacity(records.len());
+    for (record, handle) in records.iter().zip(handles) {
+        let status = handle
+            .await
+            .unwrap_or_else(|_| status::RepoStatusDto::unknown());
+        out.push(RepoDto::from_record(record, status));
     }
     Ok(out)
 }
@@ -139,6 +192,9 @@ pub async fn add_repo(
     let mut config = state.config.lock().await;
     let mut record = config.upsert_scanned_repo(std::path::Path::new(&path))?;
     record.group_id = group_id.clone();
+    // Explicit user add — flag it so a later scan's orphan-prune never removes
+    // it, even when it lives outside every configured scan root.
+    record.manual = true;
     config
         .settings_mut()
         .repos
@@ -164,6 +220,11 @@ pub struct RecentCommitDto {
     /// Commit author email. Optional because signed-off commits sometimes
     /// redact the original author and git2 returns an empty string there.
     pub author_email: Option<String>,
+    /// Plan 1 §A.4: Unicode-folded dedup key. The frontend can re-derive
+    /// this from `author`/`authorEmail` for legacy commits but agreeing
+    /// with the backend means there's a single canonical answer per
+    /// commit. Computed via `git::author_normalize::signature_key`.
+    pub signature_key: String,
     pub timestamp: DateTime<Utc>,
     pub repo_id: String,
     pub repo_name: String,
@@ -246,17 +307,257 @@ fn collect_recent_commits(
             .email()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
+        let display_name = author.name().unwrap_or("unknown").to_string();
+        let signature_key =
+            crate::git::author_normalize::signature_key(&display_name, email.as_deref());
         out.push(RecentCommitDto {
             sha: commit.id().to_string(),
             summary: commit.summary().unwrap_or("").to_string(),
-            author: author.name().unwrap_or("unknown").to_string(),
+            author: display_name,
             author_email: email,
+            signature_key,
             timestamp: utc_ts,
             repo_id: id.to_string(),
             repo_name: name.to_string(),
         });
     }
     Ok(())
+}
+
+/// Hard default cap per repo per request; the UI may raise it explicitly.
+pub const MAX_COMMITS_PER_REPO_DEFAULT: u32 = 5_000;
+/// Streamed batch size for `activity://commits-chunk`.
+pub const COMMITS_CHUNK_SIZE: usize = 1_000;
+
+/// Walks `repo` newest-first, collecting commits with `since <= ts <= until`
+/// into batches of `chunk_size` handed to `on_chunk(batch, done)`. Returns
+/// whether the walk was truncated by `cap`. Pure w.r.t. Tauri so tests don't
+/// need an `AppHandle`.
+#[allow(clippy::too_many_arguments)]
+pub fn collect_commits_range(
+    id: &str,
+    name: &str,
+    repo: &git2::Repository,
+    since: DateTime<Utc>,
+    until: DateTime<Utc>,
+    cap: u32,
+    chunk_size: usize,
+    on_chunk: &mut dyn FnMut(Vec<RecentCommitDto>, bool),
+) -> Result<bool, git2::Error> {
+    let head = match repo.head() {
+        Ok(h) => h,
+        Err(_) => {
+            on_chunk(Vec::new(), true);
+            return Ok(false);
+        }
+    };
+    let Some(head_oid) = head.target() else {
+        on_chunk(Vec::new(), true);
+        return Ok(false);
+    };
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(git2::Sort::TIME)?;
+    revwalk.push(head_oid)?;
+
+    let mut batch: Vec<RecentCommitDto> = Vec::with_capacity(chunk_size);
+    let mut emitted: u32 = 0;
+    let mut truncated = false;
+    for oid in revwalk {
+        let Ok(oid) = oid else { continue };
+        let Ok(commit) = repo.find_commit(oid) else {
+            continue;
+        };
+        let ts = commit.time().seconds();
+        let Some(utc_ts) = Utc.timestamp_opt(ts, 0).single() else {
+            continue;
+        };
+        if utc_ts > until {
+            continue; // newer than the window — keep walking
+        }
+        if utc_ts < since {
+            break; // TIME-sorted: the rest is older
+        }
+        if emitted >= cap {
+            truncated = true;
+            break;
+        }
+        let author = commit.author();
+        let email = author
+            .email()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        let display_name = author.name().unwrap_or("unknown").to_string();
+        let signature_key =
+            crate::git::author_normalize::signature_key(&display_name, email.as_deref());
+        batch.push(RecentCommitDto {
+            sha: commit.id().to_string(),
+            summary: commit.summary().unwrap_or("").to_string(),
+            author: display_name,
+            author_email: email,
+            signature_key,
+            timestamp: utc_ts,
+            repo_id: id.to_string(),
+            repo_name: name.to_string(),
+        });
+        emitted += 1;
+        if batch.len() >= chunk_size {
+            on_chunk(std::mem::take(&mut batch), false);
+        }
+    }
+    on_chunk(batch, true); // final flush, may be empty — carries `done`
+    Ok(truncated)
+}
+
+/// Timestamp of the root (oldest) commit reachable from HEAD, if any.
+pub fn oldest_commit_date(repo: &git2::Repository) -> Option<DateTime<Utc>> {
+    let head_oid = repo.head().ok()?.target()?;
+    let mut revwalk = repo.revwalk().ok()?;
+    revwalk
+        .set_sorting(git2::Sort::TIME | git2::Sort::REVERSE)
+        .ok()?;
+    revwalk.push(head_oid).ok()?;
+    let oldest = revwalk.flatten().next()?;
+    let commit = repo.find_commit(oldest).ok()?;
+    Utc.timestamp_opt(commit.time().seconds(), 0).single()
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitsChunkPayload {
+    pub request_id: String,
+    pub repo_id: String,
+    pub commits: Vec<RecentCommitDto>,
+    pub done: bool,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListCommitsSummaryDto {
+    pub request_id: String,
+    pub totals: std::collections::HashMap<String, u32>,
+    pub truncated: std::collections::HashMap<String, bool>,
+}
+
+/// Range-based replacement for `list_recent_commits` (Plan 04/01 §C.1).
+/// Commit data is streamed via `activity://commits-chunk`; the return value
+/// only carries per-repo totals + truncation flags.
+#[tauri::command]
+pub async fn list_commits(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    request_id: String,
+    repo_ids: Option<Vec<String>>,
+    since: String,
+    until: String,
+    max_commits_per_repo: Option<u32>,
+) -> Result<ListCommitsSummaryDto, CommandError> {
+    use tauri::Emitter;
+    let since: DateTime<Utc> = since
+        .parse()
+        .map_err(|e| CommandError::bad_request(format!("invalid since: {e}")))?;
+    let until: DateTime<Utc> = until
+        .parse()
+        .map_err(|e| CommandError::bad_request(format!("invalid until: {e}")))?;
+    if since > until {
+        return Err(CommandError::bad_request("since must be <= until"));
+    }
+    let cap = max_commits_per_repo.unwrap_or(MAX_COMMITS_PER_REPO_DEFAULT);
+
+    let config = state.config.lock().await;
+    let records: Vec<(String, String, PathBuf)> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|r| repo_ids.as_ref().map_or(true, |ids| ids.contains(&r.id)))
+        .map(|r| (r.id.clone(), r.name.clone(), r.path.clone()))
+        .collect();
+    drop(config);
+
+    // git2 revwalks are synchronous and the `all` preset can walk full
+    // history (cap 5000/repo × N repos) — running this inline would block the
+    // Tokio runtime and stall every other IPC call. Push the whole per-repo
+    // loop onto the blocking pool; `AppHandle` is `Clone + Send` and `emit`
+    // works from a blocking thread, so chunks still stream as they're walked.
+    let app = app.clone();
+    let request_id_for_walk = request_id.clone();
+    let (totals, truncated_map) = tokio::task::spawn_blocking(move || {
+        let mut totals = std::collections::HashMap::new();
+        let mut truncated_map = std::collections::HashMap::new();
+        for (id, name, path) in records {
+            let Ok(repo) = git2::Repository::open(&path) else {
+                tracing::debug!("list_commits: skipped {id}: open failed");
+                continue;
+            };
+            let mut total: u32 = 0;
+            let truncated = collect_commits_range(
+                &id,
+                &name,
+                &repo,
+                since,
+                until,
+                cap,
+                COMMITS_CHUNK_SIZE,
+                &mut |commits, done| {
+                    total += commits.len() as u32;
+                    // Event name mirrors `ACTIVITY_COMMITS_CHUNK_EVENT` in
+                    // `shared/src/constants/events.ts`. The chunk-level
+                    // `truncated` stays false — the summary carries the real flag.
+                    let _ = app.emit(
+                        "activity://commits-chunk",
+                        CommitsChunkPayload {
+                            request_id: request_id_for_walk.clone(),
+                            repo_id: id.clone(),
+                            commits,
+                            done,
+                            truncated: false,
+                        },
+                    );
+                },
+            )
+            .map_err(|e| CommandError::internal(format!("walk failed for {id}: {e}")))?;
+            totals.insert(id.clone(), total);
+            truncated_map.insert(id, truncated);
+        }
+        Ok::<_, CommandError>((totals, truncated_map))
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("list_commits task failed: {e}")))??;
+
+    Ok(ListCommitsSummaryDto {
+        request_id,
+        totals,
+        truncated: truncated_map,
+    })
+}
+
+/// Oldest commit timestamp across the given repos — feeds the `all` preset.
+#[tauri::command]
+pub async fn get_oldest_commit_date(
+    state: State<'_, AppState>,
+    repo_ids: Option<Vec<String>>,
+) -> Result<Option<DateTime<Utc>>, CommandError> {
+    let config = state.config.lock().await;
+    let paths: Vec<PathBuf> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|r| repo_ids.as_ref().map_or(true, |ids| ids.contains(&r.id)))
+        .map(|r| r.path.clone())
+        .collect();
+    drop(config);
+    // Each `oldest_commit_date` runs a synchronous git2 revwalk to the root
+    // commit; across N repos this would block the Tokio runtime, so do the
+    // walk on the blocking pool.
+    tokio::task::spawn_blocking(move || {
+        paths
+            .iter()
+            .filter_map(|p| git2::Repository::open(p).ok())
+            .filter_map(|repo| oldest_commit_date(&repo))
+            .min()
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("get_oldest_commit_date task failed: {e}")))
 }
 
 /// Base64-encoded image bytes + MIME, returned to the renderer as a data URI.
@@ -273,6 +574,7 @@ pub struct LogoBlobDto {
 /// files via this command).
 #[tauri::command]
 pub async fn load_logo_bytes(
+    app: AppHandle,
     state: State<'_, AppState>,
     path: String,
 ) -> Result<LogoBlobDto, CommandError> {
@@ -280,17 +582,24 @@ pub async fn load_logo_bytes(
     let canonical = std::fs::canonicalize(&requested)
         .map_err(|e| CommandError::not_found(format!("logo not found: {e}")))?;
 
-    // Authorise: the resolved path must live under at least one registered repo.
+    // Authorise: the resolved path must live either under at least one
+    // registered repo (auto-detected logos) or under our managed
+    // `<app_data>/repo-logos/` directory (user-uploaded overrides).
     let config = state.config.lock().await;
-    let allowed = config.settings().repos.values().any(|r| {
+    let under_repo = config.settings().repos.values().any(|r| {
         std::fs::canonicalize(&r.path)
             .map(|root| canonical.starts_with(root))
             .unwrap_or(false)
     });
     drop(config);
-    if !allowed {
+    let under_uploads = custom_logo_dir(&app)
+        .ok()
+        .and_then(|d| std::fs::canonicalize(&d).ok())
+        .map(|root| canonical.starts_with(root))
+        .unwrap_or(false);
+    if !under_repo && !under_uploads {
         return Err(CommandError::bad_request(
-            "logo path outside any registered repo",
+            "logo path outside any registered repo or uploads dir",
         ));
     }
 
@@ -316,6 +625,125 @@ pub async fn load_logo_bytes(
     })
 }
 
+/// Allowed image extensions for user uploads. Mirrors `logo::EXTENSIONS`
+/// minus the favicon-only `ico` since users uploading their own avatar are
+/// always picking a real graphic, not a browser shortcut.
+const UPLOAD_EXTENSIONS: &[&str] = &["svg", "png", "webp", "jpg", "jpeg", "gif"];
+
+fn custom_logo_dir(app: &AppHandle) -> Result<PathBuf, CommandError> {
+    if let Some(root) = crate::identity::test_profile_root() {
+        return Ok(root.join("repo-logos"));
+    }
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::internal(format!("app data dir unavailable: {e}")))?;
+    Ok(base.join("repo-logos"))
+}
+
+/// Copies the picked image into `<app_data>/repo-logos/<repo_id>.<ext>` and
+/// records the path on the repo. Replaces any previous override (different
+/// extensions are cleaned up so we don't accumulate stale files).
+#[tauri::command]
+pub async fn set_repo_logo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+    source_path: String,
+) -> Result<RepoDto, CommandError> {
+    let source = PathBuf::from(&source_path);
+    let source_canon = std::fs::canonicalize(&source)
+        .map_err(|e| CommandError::not_found(format!("source image not found: {e}")))?;
+    let ext = source_canon
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_ascii_lowercase())
+        .ok_or_else(|| CommandError::bad_request("image has no extension"))?;
+    if !UPLOAD_EXTENSIONS.iter().any(|e| *e == ext) {
+        return Err(CommandError::bad_request(format!(
+            "unsupported image format `.{ext}` — use one of {}",
+            UPLOAD_EXTENSIONS.join(", ")
+        )));
+    }
+    let meta = std::fs::metadata(&source_canon)
+        .map_err(|e| CommandError::not_found(format!("image stat failed: {e}")))?;
+    if !meta.is_file() {
+        return Err(CommandError::bad_request("source is not a file"));
+    }
+    if meta.len() == 0 {
+        return Err(CommandError::bad_request("source image is empty"));
+    }
+    if meta.len() > logo::MAX_LOGO_BYTES {
+        return Err(CommandError::bad_request(format!(
+            "image too large ({} bytes, max {})",
+            meta.len(),
+            logo::MAX_LOGO_BYTES
+        )));
+    }
+
+    let dest_dir = custom_logo_dir(&app)?;
+    std::fs::create_dir_all(&dest_dir)
+        .map_err(|e| CommandError::internal(format!("create repo-logos dir failed: {e}")))?;
+
+    // Wipe stale extensions for this repo so a `.png` upload after a `.svg`
+    // doesn't leave the old SVG sitting next to the new file.
+    for stale_ext in UPLOAD_EXTENSIONS {
+        if *stale_ext == ext {
+            continue;
+        }
+        let stale = dest_dir.join(format!("{repo_id}.{stale_ext}"));
+        if stale.exists() {
+            let _ = std::fs::remove_file(&stale);
+        }
+    }
+
+    let dest = dest_dir.join(format!("{repo_id}.{ext}"));
+    std::fs::copy(&source_canon, &dest)
+        .map_err(|e| CommandError::internal(format!("copy image failed: {e}")))?;
+
+    let mut config = state.config.lock().await;
+    let record = config
+        .settings_mut()
+        .repos
+        .get_mut(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+    record.custom_logo_path = Some(dest.clone());
+    let record_snapshot = record.clone();
+    config.save(&app)?;
+    drop(config);
+
+    let status = status::read_status(&record_snapshot.path)?;
+    Ok(RepoDto::from_record(&record_snapshot, status))
+}
+
+/// Removes the per-repo avatar override. The file on disk is best-effort
+/// deleted; even when it fails the record is cleared so the UI falls back to
+/// auto-detection.
+#[tauri::command]
+pub async fn clear_repo_logo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<RepoDto, CommandError> {
+    let mut config = state.config.lock().await;
+    let record = config
+        .settings_mut()
+        .repos
+        .get_mut(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+    let stale = record.custom_logo_path.take();
+    let record_snapshot = record.clone();
+    config.save(&app)?;
+    drop(config);
+
+    if let Some(p) = stale {
+        let _ = std::fs::remove_file(&p);
+    }
+
+    let status = status::read_status(&record_snapshot.path)?;
+    Ok(RepoDto::from_record(&record_snapshot, status))
+}
+
 #[tauri::command]
 pub async fn remove_repo(
     app: AppHandle,
@@ -328,13 +756,200 @@ pub async fn remove_repo(
         .repos
         .get(&repo_id)
         .map(|r| r.path.clone());
-    config.settings_mut().repos.remove(&repo_id);
+    let settings = config.settings_mut();
+    settings.repos.remove(&repo_id);
+    settings.pinned_repo_ids.retain(|id| id != &repo_id);
     config.save(&app)?;
     drop(config);
 
     if let (Some(path), Some(watcher)) = (removed_path, state.watcher.lock().await.as_mut()) {
         let _ = watcher.unwatch_repo(&path).await;
     }
+    Ok(())
+}
+
+/// Unregister every repo discovered under `removed_path` that is **not** also
+/// covered by one of `remaining_paths`. Invoked when the user deletes a scan
+/// root in Settings → Integrations so the repositories that root surfaced drop
+/// out of the dashboard immediately — while repos still reached by an
+/// overlapping root (e.g. `D:\` when `D:\Projects` is removed), and repos added
+/// manually outside every scan root, survive untouched.
+///
+/// Containment is a component-wise `Path::starts_with` on the **raw** stored
+/// paths (after `normalize_scan_root` folds the bare drive form `D:` to `D:\`),
+/// so `D:\Projects` never swallows `D:\ProjectsX`. We deliberately do NOT
+/// canonicalise: discovered repo paths are the verbatim result of walking the
+/// scan root, so matching that same raw form mirrors discovery exactly — and it
+/// also prunes a repo whose folder was deleted on disk while still registered
+/// (the very stale state this command should clean). `std::fs::canonicalize`
+/// would defeat that — it only resolves paths that still exist and returns the
+/// Windows verbatim (`\\?\`) form, so a missing repo path would fall back to
+/// its raw form and never prefix-match a canonicalised root. Returns the ids
+/// that were forgotten so the renderer can prune its store without a full
+/// reload, and best-effort unwatches each (mirrors `remove_repo`).
+#[tauri::command]
+pub async fn forget_repos_under_path(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    removed_path: String,
+    remaining_paths: Vec<String>,
+) -> Result<Vec<String>, CommandError> {
+    use crate::git::scanner::normalize_scan_root;
+
+    let removed = normalize_scan_root(std::path::Path::new(&removed_path));
+    let remaining: Vec<PathBuf> = remaining_paths
+        .iter()
+        .map(|p| normalize_scan_root(std::path::Path::new(p)))
+        .collect();
+
+    let mut config = state.config.lock().await;
+
+    // Snapshot victims under an immutable borrow first; the mutable borrow for
+    // removal can't overlap the iteration.
+    let victims: Vec<(String, PathBuf)> = config
+        .settings()
+        .repos
+        .values()
+        .filter(|record| {
+            record.path.starts_with(&removed)
+                && !remaining.iter().any(|root| record.path.starts_with(root))
+        })
+        .map(|record| (record.id.clone(), record.path.clone()))
+        .collect();
+
+    if victims.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let settings = config.settings_mut();
+    for (id, _) in &victims {
+        settings.repos.remove(id);
+        settings.pinned_repo_ids.retain(|pinned| pinned != id);
+    }
+    config.save(&app)?;
+    drop(config);
+
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        for (_, path) in &victims {
+            let _ = watcher.unwatch_repo(path.as_path()).await;
+        }
+    }
+
+    Ok(victims.into_iter().map(|(id, _)| id).collect())
+}
+
+/// Refuse to send "obviously dangerous" paths to the trash. The user can
+/// still pick *any* folder as a scan root, so a typo'd or hand-edited
+/// settings.json could point at `/`, `~`, or a top-level drive — those
+/// would be catastrophic to move to trash even though trash is reversible.
+///
+/// Rules (defense in depth, all must pass):
+///   1. Path must be absolute (canonicalize is best-effort; relative paths
+///      fail outright).
+///   2. Path must have at least 3 components after the root — protects
+///      `/`, `/Users`, `/Users/<name>`, `/home`, `/home/<name>`, and
+///      Windows drive roots like `C:\` / `C:\Users`.
+///   3. Path must not match the user's home directory.
+///   4. Path must currently exist and be a directory (deleting a file is
+///      not what the user clicked "Delete repo" for).
+///   5. Path must contain a `.git` entry — anything that doesn't look like
+///      a git repo right now is either already half-deleted or was never a
+///      repo, and we refuse to trash it from a UI labeled "delete repo".
+fn validate_trash_path(path: &std::path::Path) -> Result<(), CommandError> {
+    if !path.is_absolute() {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash non-absolute path {}",
+            path.display()
+        )));
+    }
+    let components: Vec<_> = path.components().collect();
+    // `Path::components` emits the root prefix as one component on every
+    // OS, so a safe interior path has at least 1 (root) + 3 (interior)
+    // entries. e.g. `/Users/x/projects/myrepo` → 4, `/Users/x` → 2.
+    if components.len() < 4 {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash near-root path {}",
+            path.display()
+        )));
+    }
+    if let Some(home) = dirs::home_dir() {
+        if path == home {
+            return Err(CommandError::bad_request(format!(
+                "refusing to trash home directory {}",
+                path.display()
+            )));
+        }
+    }
+    let meta = std::fs::metadata(path).map_err(|e| {
+        CommandError::not_found(format!(
+            "repo path {} cannot be read: {}",
+            path.display(),
+            e
+        ))
+    })?;
+    if !meta.is_dir() {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash non-directory {}",
+            path.display()
+        )));
+    }
+    if !path.join(".git").exists() {
+        return Err(CommandError::bad_request(format!(
+            "refusing to trash {} — no .git entry, doesn't look like a repository",
+            path.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Move a repository's folder to the OS trash (macOS Trash, Windows
+/// Recycle Bin, freedesktop Trash on Linux) and unregister it from
+/// settings. Sequencing matters:
+///   1. Validate the path (defensive — see `validate_trash_path`).
+///   2. Unsubscribe the watcher first, so the impending delete doesn't
+///      produce a flurry of spurious `repo://status` events.
+///   3. Move the folder to trash. If this fails we abort and leave the
+///      settings entry intact — the user shouldn't end up with a
+///      half-deleted state.
+///   4. Remove from settings + persist.
+///
+/// The operation is reversible from the OS file manager — we never
+/// permanently delete from this command. A separate "purge" affordance
+/// would have to be added explicitly if irrecoverable deletion is ever
+/// needed.
+#[tauri::command]
+pub async fn delete_repo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<(), CommandError> {
+    let config = state.config.lock().await;
+    let path = config
+        .settings()
+        .repos
+        .get(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
+        .path
+        .clone();
+    drop(config);
+
+    validate_trash_path(&path)?;
+
+    // Unwatch before deleting so the impending FS churn doesn't fan out
+    // through the debouncer as bogus status updates.
+    if let Some(watcher) = state.watcher.lock().await.as_mut() {
+        let _ = watcher.unwatch_repo(&path).await;
+    }
+
+    trash::delete(&path).map_err(|e| {
+        CommandError::internal(format!("failed to move {} to trash: {}", path.display(), e))
+    })?;
+
+    let mut config = state.config.lock().await;
+    let settings = config.settings_mut();
+    settings.repos.remove(&repo_id);
+    settings.pinned_repo_ids.retain(|id| id != &repo_id);
+    config.save(&app)?;
     Ok(())
 }
 
@@ -361,6 +976,34 @@ pub async fn open_in_ide(
     Ok(())
 }
 
+/// Opens a single file at `line`/`column` in the user's IDE — drives the
+/// cross-repo search's "jump to match" row click. `path` is absolute (the
+/// search emits `absolutePath`); the IDE selection falls back to the configured
+/// `default_ide`, then to the first IDE detected on the machine.
+#[tauri::command]
+pub async fn open_file_in_ide(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    line: Option<u32>,
+    column: Option<u32>,
+    ide: Option<String>,
+) -> Result<(), CommandError> {
+    let default_ide = {
+        let config = state.config.lock().await;
+        config.settings().default_ide.clone()
+    };
+    let selected = ide.or(default_ide);
+    crate::commands::ide::open_file(
+        &app,
+        std::path::Path::new(&path),
+        line.unwrap_or(1).max(1),
+        column.unwrap_or(1).max(1),
+        selected.as_deref(),
+    )?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn open_terminal(
     state: State<'_, AppState>,
@@ -374,6 +1017,183 @@ pub async fn open_terminal(
         .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
         .path
         .clone();
+    let terminal = config.settings().terminal.clone();
     drop(config);
-    crate::commands::terminal::open_at(&record_path)
+    crate::commands::terminal::open_at(&record_path, &terminal)
+}
+
+#[cfg(test)]
+mod range_tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+
+    /// Commits `entries.len()` empty-tree commits onto HEAD, one per entry,
+    /// at the given UTC timestamp. Entries are committed oldest-first so the
+    /// resulting revwalk TIME order matches chronological reality.
+    fn commit_at_times(repo: &git2::Repository, timestamps: &[chrono::DateTime<Utc>]) {
+        let mut parent: Option<git2::Oid> = None;
+        let tree_id = {
+            let mut index = repo.index().expect("index");
+            index.write_tree().expect("tree")
+        };
+        for (i, ts) in timestamps.iter().enumerate() {
+            let sig = git2::Signature::new(
+                "Test Author",
+                "test@example.com",
+                &git2::Time::new(ts.timestamp(), 0),
+            )
+            .expect("sig");
+            let tree = repo.find_tree(tree_id).expect("find tree");
+            let parents: Vec<git2::Commit> = parent
+                .map(|oid| vec![repo.find_commit(oid).expect("parent")])
+                .unwrap_or_default();
+            let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
+            let oid = repo
+                .commit(
+                    Some("HEAD"),
+                    &sig,
+                    &sig,
+                    &format!("commit {i}"),
+                    &tree,
+                    &parent_refs,
+                )
+                .expect("commit");
+            parent = Some(oid);
+        }
+    }
+
+    /// Builds a throwaway repo with one commit per entry in `days_ago`,
+    /// committed at `n` days before `anchor`.
+    fn fixture_repo(
+        days_ago: &[i64],
+        anchor: chrono::DateTime<Utc>,
+    ) -> (tempfile::TempDir, git2::Repository) {
+        let dir = tempfile::tempdir().expect("tmpdir");
+        let repo = git2::Repository::init(dir.path()).expect("init");
+        let mut sorted: Vec<i64> = days_ago.to_vec();
+        sorted.sort_unstable_by(|a, b| b.cmp(a)); // oldest first
+        let timestamps: Vec<chrono::DateTime<Utc>> = sorted
+            .iter()
+            .map(|d| anchor - chrono::Duration::days(*d))
+            .collect();
+        commit_at_times(&repo, &timestamps);
+        (dir, repo)
+    }
+
+    /// Like `fixture_repo` but one commit per entry, `n` minutes before anchor.
+    fn fixture_repo_minutes(
+        minutes_ago: &[i64],
+        anchor: chrono::DateTime<Utc>,
+    ) -> (tempfile::TempDir, git2::Repository) {
+        let dir = tempfile::tempdir().expect("tmpdir");
+        let repo = git2::Repository::init(dir.path()).expect("init");
+        let mut sorted: Vec<i64> = minutes_ago.to_vec();
+        sorted.sort_unstable_by(|a, b| b.cmp(a)); // oldest first
+        let timestamps: Vec<chrono::DateTime<Utc>> = sorted
+            .iter()
+            .map(|m| anchor - chrono::Duration::minutes(*m))
+            .collect();
+        commit_at_times(&repo, &timestamps);
+        (dir, repo)
+    }
+
+    #[test]
+    fn range_filter_takes_only_commits_inside_window() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        // 10 commits spread over ~6 months; 5 of them inside the last 30 days.
+        let (_dir, repo) = fixture_repo(&[1, 5, 10, 20, 29, 45, 80, 120, 150, 170], anchor);
+        let since = anchor - chrono::Duration::days(30);
+        let mut collected: Vec<RecentCommitDto> = Vec::new();
+        let truncated = collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |chunk: Vec<RecentCommitDto>, _done| collected.extend(chunk),
+        )
+        .expect("collect");
+        assert_eq!(collected.len(), 5);
+        assert!(!truncated);
+        assert!(collected
+            .iter()
+            .all(|c| c.timestamp >= since && c.timestamp <= anchor));
+    }
+
+    #[test]
+    fn chunking_emits_thousand_sized_batches() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        // 2500 commits on consecutive minutes — small enough for CI, still 3 chunks.
+        let minutes: Vec<i64> = (0..2_500).collect();
+        let (_dir, repo) = fixture_repo_minutes(&minutes, anchor);
+        let since = anchor - chrono::Duration::days(30);
+        let mut chunks: Vec<(usize, bool)> = Vec::new();
+        collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |chunk, done| chunks.push((chunk.len(), done)),
+        )
+        .expect("collect");
+        // The final 500-batch IS the final flush, so it carries done=true.
+        assert_eq!(chunks, vec![(1_000, false), (1_000, false), (500, true)]);
+    }
+
+    #[test]
+    fn cap_truncates_and_reports() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let minutes: Vec<i64> = (0..1_200).collect();
+        let (_dir, repo) = fixture_repo_minutes(&minutes, anchor);
+        let since = anchor - chrono::Duration::days(30);
+        let mut total = 0usize;
+        let truncated = collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            1_000,
+            1_000,
+            &mut |chunk, _done| total += chunk.len(),
+        )
+        .expect("collect");
+        assert_eq!(total, 1_000);
+        assert!(truncated);
+    }
+
+    #[test]
+    fn oldest_commit_date_finds_root() {
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let (_dir, repo) = fixture_repo(&[1, 100, 200], anchor);
+        let oldest = oldest_commit_date(&repo).expect("some");
+        assert_eq!(oldest, anchor - chrono::Duration::days(200));
+    }
+
+    #[test]
+    fn unborn_head_yields_empty_done_chunk() {
+        let dir = tempfile::tempdir().expect("tmpdir");
+        let repo = git2::Repository::init(dir.path()).expect("init");
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let since = anchor - chrono::Duration::days(30);
+        let mut chunks: Vec<(usize, bool)> = Vec::new();
+        let truncated = collect_commits_range(
+            "id",
+            "name",
+            &repo,
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |chunk, done| chunks.push((chunk.len(), done)),
+        )
+        .expect("collect");
+        assert!(!truncated);
+        assert_eq!(chunks, vec![(0, true)]);
+    }
 }

@@ -8,22 +8,23 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / developer tab gating", () => {
   test("is reachable in dev mode", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
-    await expect(page.getByTestId("settings-tab-developer")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.tab("developer"))).toBeVisible();
   });
 
   test("contains all six section testids", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
-    await page.getByTestId("settings-tab-developer").click();
+    await page.getByTestId(TEST_IDS.settings.tab("developer")).click();
 
-    await expect(page.getByTestId("dev-section-build")).toBeVisible();
-    await expect(page.getByTestId("dev-section-updater")).toBeVisible();
-    await expect(page.getByTestId("dev-section-storage")).toBeVisible();
-    await expect(page.getByTestId("dev-section-ipc")).toBeVisible();
-    await expect(page.getByTestId("dev-section-i18n")).toBeVisible();
-    await expect(page.getByTestId("dev-section-flags")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.developer.sections.build)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.developer.sections.updater)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.developer.sections.storage)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.developer.sections.ipc)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.developer.sections.i18n)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.settings.developer.sections.flags)).toBeVisible();
   });
 });

@@ -1,83 +1,61 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import {
-  DEFAULT_ACCENT,
-  DEFAULT_FONT,
-  DEFAULT_FONT_SIZE,
-  POLLING_INTERVAL_DEFAULT_MS,
-} from "@recrest/shared";
+  activityRangePersistMiddleware,
+  loadPersistedRange,
+} from "@/store/activityRangePersistence";
+import { settingsBackendSync } from "@/store/backendSync";
+import { activityReducer, initialActivityState } from "@/store/reducers/activityReducer";
+import { providersReducer } from "@/store/reducers/providersReducer";
+import { prsReducer } from "@/store/reducers/prsReducer";
+import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
+import { reposReducer } from "@/store/reducers/reposReducer";
+import { settingsReducer } from "@/store/reducers/settingsReducer";
+import { uiReducer } from "@/store/reducers/uiReducer";
+import type { RootState } from "@/store/rootState";
 
-import { loadPersisted, persistenceMiddleware } from "@/store/persistence";
-import { providersReducer } from "@/store/slices/providersSlice";
-import { prsReducer } from "@/store/slices/prsSlice";
-import { remoteImportReducer } from "@/store/slices/remoteImportSlice";
-import { reposReducer } from "@/store/slices/reposSlice";
-import type { SettingsState } from "@/store/slices/settingsSlice";
-import { settingsReducer } from "@/store/slices/settingsSlice";
-import { uiDevFlagsReducer } from "@/store/slices/uiDevFlagsSlice";
-import { uiReducer } from "@/store/slices/uiSlice";
-
-const persisted = loadPersisted();
+/**
+ * Phase 2: Redux is the only renderer-side source of truth for app state.
+ * Cross-session persistence is owned exclusively by the Tauri backend
+ * (`settings.json`), so there's no `preloadedState` hydration from
+ * `localStorage` here — `useAppBootstrap` dispatches `loadSettings()` on
+ * mount and both `settingsReducer` + `uiReducer` listen to the
+ * `loadSettings.fulfilled` / `saveSettings.fulfilled` action to hydrate
+ * theme, sidebar, pinned repos, accessibility flags, etc. from the backend
+ * payload. The renderer-side persistence that survives is intentional and
+ * narrow: i18next's own locale detector (predates Redux in the boot order),
+ * and the global activity time-range (`activity.selectedRange`) — both are
+ * pure renderer UI preferences that must be available *synchronously* at store
+ * construction, before the async backend `loadSettings` resolves, to avoid a
+ * flash of the default value. The range is hydrated from `localStorage` here
+ * and mirrored back by `activityRangePersistMiddleware`.
+ */
+const persistedRange = loadPersistedRange();
 
 export const store = configureStore({
   reducer: {
+    ui: uiReducer,
+    settings: settingsReducer,
+    providers: providersReducer,
     repos: reposReducer,
     prs: prsReducer,
-    providers: providersReducer,
     remoteImport: remoteImportReducer,
-    settings: settingsReducer,
-    ui: uiReducer,
-    // Developer-only flags slice — conditionally registered behind
-    // `import.meta.env.DEV` so production bundles don't ship the reducer.
-    // `useDevFlag` returns the default inline when not in dev, so attempts
-    // to access `state.uiDevFlags` in prod are never reached.
-    ...(import.meta.env.DEV ? { uiDevFlags: uiDevFlagsReducer } : {}),
+    activity: activityReducer,
   },
-  preloadedState: persisted
-    ? {
-        ui: {
-          sidebarCollapsed: persisted.sidebarCollapsed ?? false,
-          searchOpen: false,
-          activeView: "dashboard" as const,
-          selectedRepoId: null,
-          pinnedRepoIds: [],
-          refreshNonce: 0,
-          importDialogOpen: false,
-          findDialogOpen: false,
-          updaterBanner: null,
-          updaterProgress: null,
-        },
-        settings: {
-          pollingIntervalMs: POLLING_INTERVAL_DEFAULT_MS,
-          defaultIde: null,
-          theme: persisted.theme ?? "system",
-          locale: "en",
-          scanPaths: [],
-          autoStart: false,
-          autoUpdate: "manual",
-          startMinimized: false,
-          closeToTray: true,
-          notifications: {
-            enabled: false,
-            newPr: true,
-            ciFailed: true,
-            mergeReady: true,
-          },
-          crashReporting: false,
-          accent: persisted.accent ?? DEFAULT_ACCENT,
-          font: persisted.font ?? DEFAULT_FONT,
-          fontSize: persisted.fontSize ?? DEFAULT_FONT_SIZE,
-          highContrast: persisted.highContrast ?? false,
-          reducedMotion: persisted.reducedMotion ?? false,
-          underlineLinks: persisted.underlineLinks ?? false,
-          loading: false,
-          error: null,
-          detectedIdes: [],
-        } satisfies SettingsState,
-      }
+  preloadedState: persistedRange
+    ? { activity: { ...initialActivityState, selectedRange: persistedRange } }
     : undefined,
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistenceMiddleware),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(settingsBackendSync, activityRangePersistMiddleware),
 });
 
-export type RootState = ReturnType<typeof store.getState>;
+export type { RootState };
 export type AppDispatch = typeof store.dispatch;
+
+// Compile-time guarantee that the hand-written `RootState` (store/rootState.ts)
+// stays in lockstep with the real store shape. Passing the real state to a
+// `RootState`-typed parameter fails to type-check if the reducer map above
+// adds, removes, or retypes a slice without `store/rootState.ts` following —
+// `tsc` then errors right here instead of letting the two drift apart.
+function assertRootStateShape(_state: RootState): void {}
+assertRootStateShape(store.getState());

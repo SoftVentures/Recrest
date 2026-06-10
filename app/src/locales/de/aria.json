@@ -1,0 +1,62 @@
+{
+  "modal": {
+    "copy": "Kopieren",
+    "open_in_browser": "Im Browser öffnen",
+    "close": "Schließen"
+  },
+  "drawer": {
+    "close": "Schublade schließen"
+  },
+  "search": {
+    "input": "Suche",
+    "clear": "Suche löschen"
+  },
+  "sidebar": {
+    "primary": "Hauptnavigation",
+    "expand": "Seitenleiste ausklappen",
+    "collapse": "Seitenleiste einklappen"
+  },
+  "header": {
+    "search": "Suche",
+    "refresh": "Aktualisieren",
+    "add_repo": "Repository hinzufügen"
+  },
+  "settings": {
+    "more_info": "Weitere Informationen",
+    "send_test_notification": "Testbenachrichtigung senden",
+    "remove_integration": "{{provider}} entfernen",
+    "remove_path": "{{path}} entfernen",
+    "theme_swatch": "Design {{label}}"
+  },
+  "repo": {
+    "open_in_ide": "In IDE öffnen",
+    "ssh_key": "SSH-Key",
+    "pin": "Repository anheften",
+    "unpin": "Repository lösen",
+    "open_in_terminal": "Im Terminal öffnen",
+    "open_in_explorer": "Im Explorer öffnen",
+    "open_remote": "Remote öffnen",
+    "open_on_host": "Auf Host öffnen",
+    "open_folder": "Ordner öffnen",
+    "open_terminal": "Terminal öffnen",
+    "more_actions": "Weitere Aktionen",
+    "close_detail_pane": "Detailbereich schließen",
+    "view_toggle": "Repository-Ansicht",
+    "heatmap": "Aktivitäts-Heatmap",
+    "heatmap_commits_one": "{{count}} Commit",
+    "heatmap_commits_other": "{{count}} Commits",
+    "heatmap_days_ago_one": "vor {{count}} Tag",
+    "heatmap_days_ago_other": "vor {{count}} Tagen"
+  },
+  "branches": {
+    "search": "Branches nach Namen filtern"
+  },
+  "activity": {
+    "timeline_filter": "Event-Typ",
+    "source": "Aktivitätsquelle",
+    "range": "Zeitraum"
+  },
+  "dashboard": {
+    "main": "Dashboard-Inhalt"
+  }
+}

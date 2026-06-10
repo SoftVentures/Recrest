@@ -25,8 +25,159 @@ impl Default for NotificationSettings {
     }
 }
 
+/// Renderer-scoped appearance + accessibility tokens that the React shell
+/// owns end-to-end. Phase-2 moves these out of `localStorage` and onto the
+/// Tauri backend so every Recrest surface (web preview included) reads them
+/// from a single source of truth.
+///
+/// All fields are `#[serde(default)]` so existing `settings.json` files
+/// migrate cleanly: missing fields fall back to the renderer's defaults.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AppearanceSettings {
+    /// Renderer-side theme variant — extends the legacy `theme` (light/dark/system)
+    /// with "oled" and "glassy" without breaking the older field. When the
+    /// renderer dispatches `setThemeId`, this slot wins over `theme`.
+    pub theme_id: String,
+    /// True ⇔ the renderer should track `prefers-color-scheme`. Mirrors the
+    /// legacy `theme === "system"` semantic but kept explicit so the renderer
+    /// can persist "user picked Light" vs. "user is on Light because OS says so".
+    pub follows_system: bool,
+    /// Accent / brand color (named scheme, not hex). One of: default, blue,
+    /// green, purple, pink, orange.
+    pub primary_color: String,
+    /// Renderer font slot — "inter" | "opendyslexic" | future additions.
+    pub font: String,
+    /// Monospace font for code surfaces, separate from the UI `font`. New in the
+    /// code-font split, so `#[serde(default)]` keeps pre-split settings loading.
+    #[serde(default = "default_code_font")]
+    pub code_font: String,
+    /// Ligature mode for code surfaces — "off" | "standard" | "stylistic".
+    /// Separate from `code_font`; `#[serde(default)]` keeps older files loading.
+    #[serde(default = "default_code_ligatures")]
+    pub code_ligatures: String,
+    /// Renderer font size token — "sm" | "md" | "lg".
+    pub font_size: String,
+}
+
+fn default_code_font() -> String {
+    "jetbrains-mono".into()
+}
+
+fn default_code_ligatures() -> String {
+    "standard".into()
+}
+
+impl Default for AppearanceSettings {
+    fn default() -> Self {
+        Self {
+            theme_id: "light".into(),
+            follows_system: true,
+            primary_color: "default".into(),
+            font: "inter".into(),
+            code_font: default_code_font(),
+            code_ligatures: default_code_ligatures(),
+            font_size: "md".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessibilitySettings {
+    /// Legacy boolean kept in sync with `appearance.font === "opendyslexic"`.
+    /// Tests written against the pre-Phase-2 shape keep working.
+    #[serde(default)]
+    pub dyslexia_font: bool,
+    #[serde(default)]
+    pub high_contrast: bool,
+    #[serde(default)]
+    pub reduced_motion: bool,
+    #[serde(default)]
+    pub underline_links: bool,
+}
+
+/// Tiny window-state slice persisted alongside settings (the sidebar lives
+/// here because it survives across sessions exactly like an appearance
+/// preference). Future window-state bits (panel splits, last-active route)
+/// land in the same struct.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowStateSettings {
+    #[serde(default)]
+    pub sidebar_collapsed: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrivacySettings {
+    /// Whether the app may fetch favicons from remote hosts as a fallback
+    /// when no local logo is found. Off by default — privacy-conscious users
+    /// can opt in.
+    #[serde(default)]
+    pub fetch_favicons: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoImportDefaults {
+    #[serde(default)]
+    pub group_id: Option<String>,
+    #[serde(default)]
+    pub provider_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GitConfigOverride {
+    pub user_name: Option<String>,
+    pub user_email: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalSettings {
+    /// Stable id of the chosen terminal (e.g. `iterm`, `wezterm`, `wt`).
+    /// `None` means "auto-detect at runtime".
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Optional profile name passed to terminals that support `--profile`.
+    #[serde(default)]
+    pub profile: Option<String>,
+    /// Free-form override command (overrides id+profile if set).
+    #[serde(default)]
+    pub custom_command: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RepoListViewMode {
+    #[default]
+    Grouped,
+    Flat,
+    Card,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SortDirection {
+    #[default]
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoListSort {
+    /// Sort field key. Empty string means "default ordering".
+    #[serde(default)]
+    pub field: String,
+    #[serde(default)]
+    pub direction: SortDirection,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct AppSettings {
     pub polling_interval_ms: u64,
     pub default_ide: Option<String>,
@@ -53,6 +204,50 @@ pub struct AppSettings {
     /// self-hosted instances). Tokens still live in the OS keychain.
     #[serde(default)]
     pub provider_settings: BTreeMap<String, ProviderSettings>,
+
+    // ---- Plan 1 / Plan 3 / Plan 4 additive fields (Phase 0.1) ----
+    #[serde(default)]
+    pub pinned_repo_ids: Vec<String>,
+    /// Manual author merges. Keys and values are `signatureKey`s as produced
+    /// by `git::author_normalize::signature_key`. A mapping `K → V` means
+    /// "treat author with key K as canonical key V".
+    #[serde(default)]
+    pub author_aliases: BTreeMap<String, String>,
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: f32,
+    #[serde(default)]
+    pub repo_list_view_mode: RepoListViewMode,
+    #[serde(default)]
+    pub repo_list_sort: RepoListSort,
+    #[serde(default)]
+    pub repo_import_defaults: RepoImportDefaults,
+    #[serde(default)]
+    pub default_scan_path: Option<String>,
+    #[serde(default)]
+    pub terminal: TerminalSettings,
+    /// Stable id of the preferred shell (e.g. `zsh`, `fish`) launched inside the
+    /// terminal. `None` = auto / system default. See `shared` `SHELL_IDS`.
+    #[serde(default)]
+    pub shell: Option<String>,
+    #[serde(default = "default_commit_message_template")]
+    pub commit_message_template: String,
+    #[serde(default)]
+    pub privacy: PrivacySettings,
+    #[serde(default)]
+    pub git_config_override: GitConfigOverride,
+    /// Global default SSH private key path used for all SSH remotes. A repo's
+    /// own `ssh_key_path` overrides it; otherwise this is tried before
+    /// ssh-agent. `None` = rely on ssh-agent / global config.
+    #[serde(default)]
+    pub default_ssh_key_path: Option<String>,
+
+    // ---- Phase 2: renderer-scoped preferences moved off localStorage ----
+    #[serde(default)]
+    pub appearance: AppearanceSettings,
+    #[serde(default)]
+    pub accessibility: AccessibilitySettings,
+    #[serde(default)]
+    pub window_state: WindowStateSettings,
 }
 
 fn default_auto_update() -> String {
@@ -60,7 +255,15 @@ fn default_auto_update() -> String {
 }
 
 fn default_close_to_tray() -> bool {
-    true
+    false
+}
+
+fn default_ui_scale() -> f32 {
+    1.0
+}
+
+fn default_commit_message_template() -> String {
+    "{{author}}: {{date}}".into()
 }
 
 impl Default for AppSettings {
@@ -80,6 +283,22 @@ impl Default for AppSettings {
             repos: BTreeMap::new(),
             groups: BTreeMap::new(),
             provider_settings: BTreeMap::new(),
+            pinned_repo_ids: Vec::new(),
+            author_aliases: BTreeMap::new(),
+            ui_scale: default_ui_scale(),
+            repo_list_view_mode: RepoListViewMode::default(),
+            repo_list_sort: RepoListSort::default(),
+            repo_import_defaults: RepoImportDefaults::default(),
+            default_scan_path: None,
+            terminal: TerminalSettings::default(),
+            shell: None,
+            commit_message_template: default_commit_message_template(),
+            privacy: PrivacySettings::default(),
+            git_config_override: GitConfigOverride::default(),
+            default_ssh_key_path: None,
+            appearance: AppearanceSettings::default(),
+            accessibility: AccessibilitySettings::default(),
+            window_state: WindowStateSettings::default(),
         }
     }
 }
@@ -103,6 +322,22 @@ pub struct RepoRecord {
     pub group_id: Option<String>,
     pub remote_url: Option<String>,
     pub provider_id: Option<String>,
+    /// Optional path to an SSH private key used when fetching/pushing this
+    /// specific repo. `None` means "use ssh-agent / global config".
+    #[serde(default)]
+    pub ssh_key_path: Option<String>,
+    /// User-uploaded logo override (absolute path under
+    /// `<app_data>/repo-logos/`). Takes precedence over the in-repo
+    /// auto-detection when set. Cleared by `clear_repo_logo`.
+    #[serde(default)]
+    pub custom_logo_path: Option<PathBuf>,
+    /// `true` when the user added this repo explicitly (Add-repo / clone),
+    /// `false` when it was auto-discovered by a scan. Scanned repos that no
+    /// longer sit under any configured scan root are pruned on the next
+    /// scan/boot; manual ones are kept wherever they live. Legacy records
+    /// (no field) default to `false` — i.e. treated as scanned.
+    #[serde(default)]
+    pub manual: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,4 +346,105 @@ pub struct RepoGroup {
     pub id: String,
     pub name: String,
     pub color: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Settings persisted before Phase 0.1 must keep deserialising — every
+    /// new field has `serde(default)` and the legacy file lacks them all.
+    #[test]
+    fn legacy_settings_json_loads_with_defaults() {
+        let legacy = r#"{
+            "pollingIntervalMs": 300000,
+            "defaultIde": null,
+            "theme": "dark",
+            "locale": "en",
+            "scanPaths": ["/Users/x/code"]
+        }"#;
+        let parsed: AppSettings = serde_json::from_str(legacy).expect("legacy json must parse");
+        assert_eq!(parsed.theme, "dark");
+        assert_eq!(parsed.scan_paths, vec!["/Users/x/code".to_string()]);
+        // Phase 0.1 fields fall back to their defaults.
+        assert!(parsed.pinned_repo_ids.is_empty());
+        assert!(parsed.author_aliases.is_empty());
+        assert!((parsed.ui_scale - 1.0).abs() < f32::EPSILON);
+        assert_eq!(parsed.repo_list_view_mode, RepoListViewMode::Grouped);
+        assert!(parsed.repo_list_sort.field.is_empty());
+        assert_eq!(parsed.repo_list_sort.direction, SortDirection::Asc);
+        assert!(parsed.default_scan_path.is_none());
+        assert!(parsed.terminal.id.is_none());
+        assert!(parsed.terminal.profile.is_none());
+        assert!(parsed.terminal.custom_command.is_none());
+        assert_eq!(parsed.commit_message_template, "{{author}}: {{date}}");
+        assert!(!parsed.privacy.fetch_favicons);
+        // Appearance code-font fields were added after the split; legacy JSON
+        // without them must fall back to the renderer defaults rather than
+        // silently regressing.
+        assert_eq!(parsed.appearance.code_font, "jetbrains-mono");
+        assert_eq!(parsed.appearance.code_ligatures, "standard");
+    }
+
+    /// Settings JSON that carries an `appearance` block but predates the
+    /// code-font split (no `codeFont` / `codeLigatures` keys) must still
+    /// migrate those two fields to their `serde(default)` values.
+    #[test]
+    fn legacy_appearance_without_code_font_loads_defaults() {
+        let legacy = r#"{
+            "appearance": {
+                "themeId": "dark",
+                "followsSystem": false,
+                "primaryColor": "blue",
+                "font": "inter",
+                "fontSize": "md"
+            }
+        }"#;
+        let parsed: AppSettings = serde_json::from_str(legacy).expect("legacy appearance json");
+        assert_eq!(parsed.appearance.theme_id, "dark");
+        assert_eq!(parsed.appearance.code_font, "jetbrains-mono");
+        assert_eq!(parsed.appearance.code_ligatures, "standard");
+    }
+
+    /// Round-tripping the default value preserves all fields, so we don't
+    /// silently lose data on save → load.
+    #[test]
+    fn default_round_trips_through_json() {
+        let original = AppSettings::default();
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: AppSettings = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(original.theme, parsed.theme);
+        assert_eq!(
+            original.commit_message_template,
+            parsed.commit_message_template
+        );
+    }
+
+    #[test]
+    fn git_config_override_round_trips_and_defaults_empty() {
+        let s = AppSettings::default();
+        assert!(s.git_config_override.user_name.is_none());
+        assert!(s.git_config_override.user_email.is_none());
+
+        let json = serde_json::to_string(&s).expect("serialize");
+        assert!(json.contains("gitConfigOverride"));
+        let back: AppSettings = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.git_config_override.user_name, None);
+    }
+
+    /// Legacy `RepoRecord` (no `sshKeyPath`) still loads.
+    #[test]
+    fn legacy_repo_record_loads_without_ssh_key_path() {
+        let legacy = r#"{
+            "id": "abc",
+            "name": "demo",
+            "path": "/tmp/demo",
+            "groupId": null,
+            "remoteUrl": null,
+            "providerId": null
+        }"#;
+        let parsed: RepoRecord = serde_json::from_str(legacy).expect("legacy record");
+        assert_eq!(parsed.id, "abc");
+        assert!(parsed.ssh_key_path.is_none());
+    }
 }

@@ -1,190 +1,210 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 import { useTranslation } from "react-i18next";
 
+import { Box } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+
 import type { CheckRunSummary } from "@recrest/shared";
 
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
-import type { PassRateDay } from "@/lib/activityAggregates";
+import { ResponsiveLine } from "@nivo/line";
 
-interface Props {
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import {
+  Breakdown,
+  ChartWrap,
+  Headline,
+  RepoBar,
+  RepoBarFill,
+  RepoName,
+  RepoPct,
+  RepoRow,
+  RepoRuns,
+} from "@/components/organisms/activity/cards/CiPassRateCard/CiPassRateCard.styles";
+import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
+import {
+  type CiRepoBreakdown,
+  type PassRateDay,
+  computeCiRepoBreakdown,
+} from "@/lib/activityAggregates";
+import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+
+// nivo's line point carries the original datum on `.data`. Typed here so the
+// `onMouseMove` handler references a named shape instead of an inline
+// double-cast — a nivo version bump that changes the point shape then surfaces
+// as a single type error here rather than silently spreading.
+interface CiLinePoint {
+  data: { x?: unknown; passed?: number; total?: number };
+}
+
+type CiTone = "ok" | "warn" | "fail";
+
+// Maps a pass-rate percentage to a RepoBarFill style token. Kept as a
+// module-scope helper so the tone tokens aren't inline literals in the render
+// body (they're style identifiers, not user-facing copy).
+function ciTone(pct: number): CiTone {
+  if (pct >= 95) return "ok";
+  if (pct >= 80) return "warn";
+  return "fail";
+}
+
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   rows: PassRateDay[];
-  /** Raw per-repo/day summaries — used for the per-repo breakdown below the
-   *  chart so users can actually see *which* repos were green (or red). */
   summaries?: readonly CheckRunSummary[];
+  windowDays?: number;
   loading?: boolean;
 }
 
-interface RepoBreakdown {
-  repoId: string;
-  repoName: string;
-  passed: number;
-  total: number;
-  rate: number;
-}
+function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
+  const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const nivoTheme = useNivoTheme();
+  const { show, hide, portal } = useChartTooltip();
+  const greenColor = theme.palette.success.main;
 
-function buildRepoBreakdown(summaries: readonly CheckRunSummary[]): RepoBreakdown[] {
-  const byRepo = new Map<string, RepoBreakdown>();
-  for (const s of summaries) {
-    const existing = byRepo.get(s.repoId);
-    if (existing) {
-      existing.passed += s.passed;
-      existing.total += s.total;
-    } else {
-      byRepo.set(s.repoId, {
-        repoId: s.repoId,
-        repoName: s.repoName,
-        passed: s.passed,
-        total: s.total,
-        rate: 0,
-      });
-    }
-  }
-  const out: RepoBreakdown[] = [];
-  for (const r of byRepo.values()) {
-    r.rate = r.total === 0 ? 1 : r.passed / r.total;
-    out.push(r);
-  }
-  out.sort((a, b) => b.total - a.total);
-  return out;
-}
-
-export function CiPassRateCard({ rows, summaries, loading }: Props) {
-  const { t } = useTranslation();
-  const chronological = [...rows].reverse();
-
-  // SVG plot uses `preserveAspectRatio="none"` because we want the line to
-  // stretch across whatever width the card ends up at. That stretching
-  // distorts any in-SVG `<text>`, so axis labels live in an HTML gutter
-  // next to the plot instead.
-  const w = 320;
-  const h = 140;
-  const padT = 10;
-  const padB = 10;
-  const padX = 6;
-  const plotW = w - padX * 2;
-  const plotH = h - padT - padB;
-  const points = chronological.map((r, i) => {
-    const x = padX + (i / Math.max(1, chronological.length - 1)) * plotW;
-    const y = padT + (1 - r.rate) * plotH;
-    return { x, y };
+  const size = bucketSizeForWindow(windowDays);
+  // Newest-first buckets → reverse for chronological left-to-right. Each bucket
+  // re-sums passed/total and recomputes rate (1 when total 0 — mirrors the
+  // day-level convention in computeCiPassRate).
+  const buckets = bucketDays(rows, (r) => r.day, size).reverse();
+  const points = buckets.map((b) => {
+    const passed = b.rows.reduce((a, r) => a + r.passed, 0);
+    const total = b.rows.reduce((a, r) => a + r.total, 0);
+    return {
+      x: dayLabel(b.newestDay, i18n.language),
+      y: total === 0 ? 1 : passed / total,
+      passed,
+      total,
+    };
   });
-  const line = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(" ");
-  const area =
-    points.length > 0
-      ? `${line} L ${points[points.length - 1]!.x.toFixed(1)} ${padT + plotH} L ${points[0]!.x.toFixed(1)} ${padT + plotH} Z`
-      : "";
+  const data = [{ id: "rate", data: points }];
+
+  const labels = points.map((p) => p.x);
+  const every = Math.max(1, Math.ceil(labels.length / 5));
+  const tickValues = labels.filter((_, i) => i % every === 0);
+
+  // Pass rates cluster near the top (80–100%), so a fixed 0–100% axis flattens
+  // the trend into a line glued to the ceiling. Zoom the y-domain to just below
+  // the lowest point (rounded down to 5%, with 5% headroom) so the variation
+  // fills the chart. A real dip toward 0% widens the domain back out.
+  const ys = points.map((p) => p.y);
+  const dataMin = ys.length > 0 ? Math.min(...ys) : 1;
+  const yMin = Math.max(0, Math.min(0.9, Math.floor(dataMin * 20) / 20 - 0.05));
+  const yTicks = [yMin, (yMin + 1) / 2, 1];
 
   const totalPassed = rows.reduce((a, r) => a + r.passed, 0);
   const totalRuns = rows.reduce((a, r) => a + r.total, 0);
   const avgRate = totalRuns === 0 ? null : totalPassed / totalRuns;
 
-  const breakdown = useMemo<RepoBreakdown[]>(
-    () => (summaries ? buildRepoBreakdown(summaries) : []),
+  const breakdown = useMemo<CiRepoBreakdown[]>(
+    () => (summaries ? computeCiRepoBreakdown(summaries) : []),
     [summaries],
   );
   const repoCount = breakdown.length;
 
-  // Headline: use the exact fraction (2 decimals) so 97.5% ≠ 97.9% ≠ 98.1%
-  // don't all collapse to "98%". Trim trailing zeros so whole numbers read
-  // cleanly ("100%" rather than "100.00%").
   const exactPct = avgRate == null ? null : avgRate * 100;
   const headlineText =
     exactPct == null
       ? null
       : `${(Math.round(exactPct * 100) / 100).toFixed(2).replace(/\.?0+$/, "")}%`;
-  const headline =
-    headlineText == null ? null : (
-      <div className="a-act-ci-headline">
-        <span className="a-act-line-headline">{headlineText}</span>
-        <span className="a-act-ci-headline-label">avg pass</span>
-      </div>
-    );
 
   const subBits: string[] = [];
-  if (repoCount > 0) {
-    subBits.push(`across ${repoCount} ${repoCount === 1 ? "repo" : "repos"}`);
-  }
-  if (totalRuns > 0) subBits.push(`${totalRuns} runs`);
-  subBits.push(t("activity.cards.ci_trend_sub_window", "last 14 days"));
+  if (repoCount > 0) subBits.push(t("activity.cards.ci_trend_sub_repos", { count: repoCount }));
+  if (totalRuns > 0) subBits.push(t("activity.cards.ci_trend_sub_runs", { count: totalRuns }));
+  subBits.push(t("activity.cards.ci_trend_sub_window", { days: windowDays }));
   const sub = subBits.join(" · ");
 
   return (
-    <CardShell
-      title={t("activity.cards.ci_trend_title")}
+    <GeneralCard
+      title={t("activity.cards.ci_trend_title", { days: windowDays })}
       sub={sub}
-      right={headline}
       loading={loading}
       skeleton="line"
+      testId={TEST_IDS.activity.cards.ciPassRate}
+      right={
+        headlineText && (
+          <Headline>
+            <Box component="strong">{headlineText}</Box>
+            <Box component="span">{t("activity.cards.ci_trend_avg")}</Box>
+          </Headline>
+        )
+      }
     >
-      <div className="a-act-ci-chart">
-        {/* HTML axis gutter — text stays crisp at its declared font-size
-         * regardless of how the SVG stretches. */}
-        <div className="a-act-ci-axis" aria-hidden>
-          <span>100%</span>
-          <span>50%</span>
-          <span>0%</span>
-        </div>
-        <div className="a-act-ci-plot">
-          <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-            <line
-              x1={padX}
-              x2={w - padX}
-              y1={padT + plotH}
-              y2={padT + plotH}
-              className="a-act-line-axis"
-            />
-            <line
-              x1={padX}
-              x2={w - padX}
-              y1={padT}
-              y2={padT}
-              className="a-act-line-axis"
-              strokeDasharray="2 3"
-            />
-            <line
-              x1={padX}
-              x2={w - padX}
-              y1={padT + plotH / 2}
-              y2={padT + plotH / 2}
-              className="a-act-line-axis"
-              strokeDasharray="2 3"
-              opacity={0.5}
-            />
-            <path d={area} className="a-act-line-fill a-act-anim-area" fill="var(--green)" />
-            <path
-              d={line}
-              className="a-act-line-series a-act-anim-line"
-              style={{ ["--line-len" as string]: 600 }}
-              stroke="var(--green)"
-            />
-          </svg>
-        </div>
-      </div>
+      <ChartWrap>
+        <ResponsiveLine
+          data={data}
+          theme={nivoTheme}
+          colors={[greenColor]}
+          margin={{ top: 8, right: 8, bottom: 24, left: 44 }}
+          xScale={{ type: "point" }}
+          yScale={{ type: "linear", min: yMin, max: 1 }}
+          curve="monotoneX"
+          enablePoints={false}
+          enableGridX={false}
+          enableArea
+          areaBaselineValue={yMin}
+          areaOpacity={0.12}
+          axisBottom={{ tickValues, tickRotation: 0 }}
+          axisLeft={{ tickValues: yTicks, format: ">-.0%" }}
+          useMesh
+          tooltip={() => <></>}
+          onMouseMove={(point, e) => {
+            const datum = (point as unknown as CiLinePoint).data;
+            const passed = datum.passed ?? 0;
+            const total = datum.total ?? 0;
+            const pct = Math.round((total === 0 ? 1 : passed / total) * 100);
+            show(
+              e.clientX,
+              e.clientY,
+              <ChartTooltip
+                title={String(datum.x ?? "")}
+                rows={[
+                  {
+                    color: greenColor,
+                    label: `${pct}%`,
+                    value: t("activity.tooltip.ci_passed", { passed, total }),
+                  },
+                ]}
+              />,
+            );
+          }}
+          onMouseLeave={hide}
+        />
+      </ChartWrap>
+      {portal}
 
       {breakdown.length > 0 && (
-        <div className="a-act-ci-repos">
+        <Breakdown>
           {breakdown.map((r) => {
             const pct = Math.round(r.rate * 100);
-            const tone = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "fail";
+            const tone = ciTone(pct);
             return (
-              <div key={r.repoId} className={`a-act-ci-repo tone-${tone}`}>
-                <span className="a-act-ci-repo-name">{r.repoName}</span>
-                <span className="a-act-ci-repo-bar">
-                  <span
-                    className="a-act-ci-repo-bar-fill a-act-anim-barh"
-                    style={{ width: `${pct}%` }}
-                  />
-                </span>
-                <span className="a-act-ci-repo-pct">{pct}%</span>
-                <span className="a-act-ci-repo-runs">{r.total}</span>
-              </div>
+              <RepoRow key={r.repoId}>
+                <RepoName component="span" variant="caption">
+                  {r.repoName}
+                </RepoName>
+                <RepoBar>
+                  <RepoBarFill width={pct} tone={tone} />
+                </RepoBar>
+                <RepoPct component="span" variant="caption">
+                  {pct}%
+                </RepoPct>
+                <RepoRuns component="span" variant="caption">
+                  {r.total}
+                </RepoRuns>
+              </RepoRow>
             );
           })}
-        </div>
+        </Breakdown>
       )}
-    </CardShell>
+    </GeneralCard>
   );
 }
+
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(CiPassRateCard);

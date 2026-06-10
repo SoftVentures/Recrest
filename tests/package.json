@@ -1,16 +1,18 @@
 {
   "name": "@recrest/tests",
-  "version": "0.7.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test:ts": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:landing": "playwright test --project=landing-desktop --project=landing-mobile",
-    "test:e2e:app": "playwright test --project=app-desktop --project=app-mobile",
+    "test:e2e:app": "playwright test --project=app-desktop --project=app-firefox --project=app-webkit",
+    "test:e2e:visual": "playwright test --project=app-desktop --project=landing-desktop",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "test:e2e:update-snapshots": "playwright test --update-snapshots",
+    "test:e2e:tauri": "wdio run wdio.conf.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
     "lint": "eslint .",
@@ -22,12 +24,19 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.48.0",
+    "@types/express": "^5.0.0",
     "@types/node": "^25.6.0",
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.59.0",
+    "@wdio/cli": "^9.4.0",
+    "@wdio/local-runner": "^9.4.0",
+    "@wdio/mocha-framework": "^9.4.0",
+    "@wdio/spec-reporter": "^9.4.0",
     "eslint": "^9.12.0",
+    "express": "^5.0.0",
     "playwright": "^1.48.0",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.59.0"
+    "typescript-eslint": "^8.59.0",
+    "webdriverio": "^9.4.0"
   }
 }

@@ -1,21 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { OnboardingStepHarness } from "@/components/organisms/onboarding/_test-helpers";
-import { PickFolderStep } from "@/components/organisms/onboarding/steps/PickFolderStep";
+import PickFolderStep from "@/components/organisms/onboarding/steps/PickFolderStep";
 
 const meta: Meta<typeof PickFolderStep> = {
-  title: "Organisms/Onboarding/Steps/PickFolderStep",
+  title: "Organisms/Onboarding/PickFolderStep",
   component: PickFolderStep,
-  decorators: [
-    (Story) => (
-      <OnboardingStepHarness>
-        <Story />
-      </OnboardingStepHarness>
-    ),
-  ],
+  parameters: { layout: "centered" },
+  args: { onBack: () => undefined, onNext: () => undefined },
 };
 export default meta;
 
-export const Default: StoryObj<typeof PickFolderStep> = {
-  args: { onBack: () => {}, onNext: () => {} },
-};
+type Story = StoryObj<typeof PickFolderStep>;
+export const Default: Story = {};

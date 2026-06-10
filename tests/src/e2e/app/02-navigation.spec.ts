@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 const ROUTES = [
   AppRoute.DASHBOARD,
@@ -16,8 +17,8 @@ test.describe("app / navigation", () => {
   for (const route of ROUTES) {
     test(`loads ${route} without crashing`, async ({ page }) => {
       await page.goto(route);
-      await expect(page.getByTestId("app")).toBeVisible();
-      await expect(page.getByTestId("error-boundary-fallback")).toHaveCount(0);
+      await expect(page.getByTestId(TEST_IDS.app)).toBeVisible();
+      await expect(page.getByTestId(TEST_IDS.errorBoundaryFallback)).toHaveCount(0);
       await expect(page).toHaveURL(new RegExp(`${route.replace(/\//g, "\\/")}(\\?|$)`));
     });
   }

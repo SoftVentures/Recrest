@@ -1,19 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { OnboardingStepHarness } from "@/components/organisms/onboarding/_test-helpers";
-import { DoneStep } from "@/components/organisms/onboarding/steps/DoneStep";
+import DoneStep from "@/components/organisms/onboarding/steps/DoneStep";
 
 const meta: Meta<typeof DoneStep> = {
-  title: "Organisms/Onboarding/Steps/DoneStep",
+  title: "Organisms/Onboarding/DoneStep",
   component: DoneStep,
-  decorators: [
-    (Story) => (
-      <OnboardingStepHarness>
-        <Story />
-      </OnboardingStepHarness>
-    ),
-  ],
+  parameters: { layout: "centered" },
+  args: { onFinish: () => undefined },
 };
 export default meta;
 
-export const Default: StoryObj<typeof DoneStep> = { args: { onFinish: () => {} } };
+type Story = StoryObj<typeof DoneStep>;
+export const Default: Story = {};

@@ -1,29 +1,64 @@
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import type { CheckRunSummary, PrEvent, RecentCommit } from "@recrest/shared";
+import { Box } from "@mui/material";
 
-import { Icon, type IconName } from "@/components/atoms/Icon";
-import { AuthorAvatar } from "@/components/molecules/AuthorAvatar";
-import { RepoAvatar } from "@/components/molecules/RepoAvatar";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
-import { ACTIVITY_DAYS, dayLabel, daysAgo, relativeWhen } from "@/lib/activityStats";
+import {
+  type CheckRunSummary,
+  type PrEvent,
+  PrEventKind,
+  type RecentCommit,
+} from "@recrest/shared";
+
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralButtonGroup, {
+  GeneralButtonGroupItem,
+} from "@/components/atoms/buttons/GeneralButtonGroup";
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import {
+  Chip,
+  ChipRow,
+  DayCard,
+  DayHead,
+  DayTitle,
+  Empty,
+  Feed,
+  PillCount,
+  ShowMore,
+  Wrap,
+} from "@/components/organisms/activity/Timeline/Timeline.styles";
+import { FeedEventRow } from "@/components/organisms/activity/Timeline/parts/FeedEventRow";
+import { type FeedEvent } from "@/components/organisms/activity/Timeline/parts/_shared";
+import { ACTIVITY_DAYS, dayLabel, daysAgo } from "@/lib/activityStats";
+import { FeedEventKind, FeedFilterKind } from "@/lib/constants/feedEventKinds.constants";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { openExternal } from "@/lib/tauri";
-import { toast } from "@/lib/toast";
 
-type FeedEvent =
-  | { kind: "commit"; at: string; repo: EnrichedRepo | undefined; data: RecentCommit }
-  | { kind: "pr"; at: string; repo: EnrichedRepo | undefined; data: PrEvent }
-  | {
-      kind: "check";
-      at: string;
-      repo: EnrichedRepo | undefined;
-      data: CheckRunSummary;
-    };
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
+  commits: readonly RecentCommit[];
+  prEvents: readonly PrEvent[];
+  checkRuns: readonly CheckRunSummary[];
+  today: Date;
+  reposById: Map<string, EnrichedRepo>;
+}
 
-type FilterKind = "all" | "commits" | "prs" | "checks";
+type FilterKind = FeedFilterKind;
+
+// UI-only render budget: a year+ of history can produce thousands of events,
+// and rendering every row at once freezes the page. We render whole day-groups
+// until the cumulative rendered-row count exceeds this cap, then offer a
+// "Show more" button that raises it by another step. Lives locally (not in the
+// constants registry) because it is a single render-tuning knob scoped to this
+// component with no Rust/domain counterpart.
+const TIMELINE_RENDER_CAP = 150;
+
+// Max rows actually painted per day (mirrors the per-day slice below); used so
+// the cap counts real DOM rows rather than the full unsliced event totals.
+const MAX_ROWS_PER_DAY = 12;
 
 interface DayGroup {
   day: number;
@@ -34,23 +69,10 @@ interface DayGroup {
   events: FeedEvent[];
 }
 
-interface Props {
-  commits: readonly RecentCommit[];
-  prEvents: readonly PrEvent[];
-  checkRuns: readonly CheckRunSummary[];
-  today: Date;
-  reposById: Map<string, EnrichedRepo>;
-}
-
-function commitUrl(remote: string | null | undefined, sha: string): string | null {
-  if (!remote) return null;
-  const https = remote.replace(/^git@([^:]+):/, "https://$1/").replace(/\.git$/, "");
-  return `${https}/commit/${sha}`;
-}
-
-export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
+function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<FilterKind>("all");
+  const [filter, setFilter] = useState<FilterKind>(FeedFilterKind.ALL);
+  const [cap, setCap] = useState(TIMELINE_RENDER_CAP);
 
   const groups = useMemo<DayGroup[]>(() => {
     const buckets: DayGroup[] = Array.from({ length: ACTIVITY_DAYS }, (_, day) => ({
@@ -69,7 +91,7 @@ export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Pro
       if (!g) continue;
       g.commits += 1;
       g.events.push({
-        kind: "commit",
+        kind: FeedEventKind.COMMIT,
         at: c.timestamp,
         repo: reposById.get(c.repoId),
         data: c,
@@ -81,14 +103,16 @@ export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Pro
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
-      if (e.kind === "opened") g.prsOpened += 1;
-      else if (e.kind === "merged") g.prsMerged += 1;
-      g.events.push({ kind: "pr", at: e.timestamp, repo: reposById.get(e.repoId), data: e });
+      if (e.kind === PrEventKind.OPENED) g.prsOpened += 1;
+      else if (e.kind === PrEventKind.MERGED) g.prsMerged += 1;
+      g.events.push({
+        kind: FeedEventKind.PR,
+        at: e.timestamp,
+        repo: reposById.get(e.repoId),
+        data: e,
+      });
     }
 
-    // Collapse check-run failures to at most one feed row per (repo, day).
-    // Multiple failing runs on the same repo/day add to the count but don't
-    // spam the feed with duplicate rows.
     const mergedChecks = new Map<string, CheckRunSummary>();
     for (const s of checkRuns) {
       if (s.failed === 0) continue;
@@ -112,7 +136,12 @@ export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Pro
       const g = buckets[d];
       if (!g) continue;
       g.checksFailed += s.failed;
-      g.events.push({ kind: "check", at: noonIso, repo: reposById.get(s.repoId), data: s });
+      g.events.push({
+        kind: FeedEventKind.CHECK,
+        at: noonIso,
+        repo: reposById.get(s.repoId),
+        data: s,
+      });
     }
 
     for (const g of buckets) {
@@ -134,256 +163,158 @@ export function Timeline({ commits, prEvents, checkRuns, today, reposById }: Pro
   }, [groups]);
 
   const filteredGroups = useMemo<DayGroup[]>(() => {
-    if (filter === "all") return groups;
+    if (filter === FeedFilterKind.ALL) return groups;
     return groups
       .map((g) => ({
         ...g,
         events: g.events.filter((ev) => {
-          if (filter === "commits") return ev.kind === "commit";
-          if (filter === "prs") return ev.kind === "pr";
-          return ev.kind === "check";
+          if (filter === FeedFilterKind.COMMITS) return ev.kind === FeedEventKind.COMMIT;
+          if (filter === FeedFilterKind.PRS) return ev.kind === FeedEventKind.PR;
+          return ev.kind === FeedEventKind.CHECK;
         }),
       }))
       .filter((g) => g.events.length > 0);
   }, [groups, filter]);
 
-  const sub = t("activity.timeline.sub", {
-    count: totals.all,
-    days: groups.length,
-  });
+  // Reset the render budget whenever the filter changes — a fresh filter view
+  // should start from the initial cap rather than inheriting an expanded one.
+  useEffect(() => {
+    setCap(TIMELINE_RENDER_CAP);
+  }, [filter]);
+
+  // Render whole day-groups while the cumulative painted-row count stays within
+  // the cap; always render at least one group. The grouping/totals memos above
+  // stay over the full event set so counts and filters remain correct — only
+  // the rows committed to the DOM are bounded.
+  const { visibleGroups, hiddenCount } = useMemo(() => {
+    const visible: DayGroup[] = [];
+    let rendered = 0;
+    let total = 0;
+    let capped = false;
+    for (const g of filteredGroups) {
+      const rows = Math.min(g.events.length, MAX_ROWS_PER_DAY);
+      total += rows;
+      // Keep groups contiguous: once a group overflows the cap, stop adding
+      // (but keep tallying `total` so hiddenCount stays accurate).
+      if (!capped && (visible.length === 0 || rendered + rows <= cap)) {
+        visible.push(g);
+        rendered += rows;
+      } else {
+        capped = true;
+      }
+    }
+    return { visibleGroups: visible, hiddenCount: Math.max(0, total - rendered) };
+  }, [filteredGroups, cap]);
+
+  const sub = t("activity.timeline.sub", { count: totals.all, days: groups.length });
 
   const filterChips = (
-    <div
-      className="a-act-tl-filter"
-      role="tablist"
-      aria-label={t("activity.timeline.filter_label")}
+    <GeneralButtonGroup
+      value={filter}
+      exclusive
+      density="sm"
+      onChange={(_, next: FilterKind | null) => next && setFilter(next)}
+      aria-label={t("activity.timeline_filter", { ns: I18nNamespace.ARIA })}
     >
-      <FilterPill
-        active={filter === "all"}
-        label={t("activity.timeline.filter_all")}
-        count={totals.all}
-        onClick={() => setFilter("all")}
-      />
-      <FilterPill
-        active={filter === "commits"}
-        label={t("activity.timeline.filter_commits")}
-        count={totals.commits}
-        onClick={() => setFilter("commits")}
-      />
-      <FilterPill
-        active={filter === "prs"}
-        label={t("activity.timeline.filter_prs")}
-        count={totals.prs}
-        onClick={() => setFilter("prs")}
-      />
-      <FilterPill
-        active={filter === "checks"}
-        label={t("activity.timeline.filter_checks")}
-        count={totals.checks}
-        onClick={() => setFilter("checks")}
-      />
-    </div>
+      <GeneralButtonGroupItem value={FeedFilterKind.ALL}>
+        <Box component="span">{t("activity.timeline.filter_all")}</Box>
+        <PillCount component="span">{totals.all}</PillCount>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.COMMITS}>
+        <Box component="span">{t("activity.timeline.filter_commits")}</Box>
+        <PillCount component="span">{totals.commits}</PillCount>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.PRS}>
+        <Box component="span">{t("activity.timeline.filter_prs")}</Box>
+        <PillCount component="span">{totals.prs}</PillCount>
+      </GeneralButtonGroupItem>
+      <GeneralButtonGroupItem value={FeedFilterKind.CHECKS}>
+        <Box component="span">{t("activity.timeline.filter_checks")}</Box>
+        <PillCount component="span">{totals.checks}</PillCount>
+      </GeneralButtonGroupItem>
+    </GeneralButtonGroup>
   );
 
   return (
-    <CardShell
+    <GeneralCard
       title={t("activity.timeline.title")}
       sub={sub}
-      className="a-act-tl-card"
       right={filterChips}
+      testId={TEST_IDS.activity.timeline.card}
     >
       {filteredGroups.length === 0 ? (
-        <div className="a-act-card-empty" data-testid="activity-timeline-empty">
+        <Empty data-testid={TEST_IDS.activity.timeline.empty}>
           {t("activity.timeline.empty_filter")}
-        </div>
+        </Empty>
       ) : (
-        <div className="a-act-timeline">
-          {filteredGroups.map((g) => (
-            <div key={g.day} className="a-act-day-card" data-testid="activity-timeline-day">
-              <div className="a-act-day-card-h">
-                <div className="a-act-day-card-title">{dayLabel(g.day)}</div>
-                <div className="a-act-day-card-chips">
-                  {g.commits > 0 && filter !== "prs" && filter !== "checks" && (
-                    <span className="a-act-day-chip">
-                      {g.commits === 1
-                        ? t("activity.timeline.chip_commits_one", { count: g.commits })
-                        : t("activity.timeline.chip_commits_other", { count: g.commits })}
-                    </span>
-                  )}
-                  {g.prsMerged > 0 && filter !== "commits" && filter !== "checks" && (
-                    <span className="a-act-day-chip ok">
-                      {g.prsMerged === 1
-                        ? t("activity.timeline.chip_prs_merged_one", { count: g.prsMerged })
-                        : t("activity.timeline.chip_prs_merged_other", { count: g.prsMerged })}
-                    </span>
-                  )}
-                  {g.prsOpened > 0 && filter !== "commits" && filter !== "checks" && (
-                    <span className="a-act-day-chip info">
-                      {g.prsOpened === 1
-                        ? t("activity.timeline.chip_prs_opened_one", { count: g.prsOpened })
-                        : t("activity.timeline.chip_prs_opened_other", { count: g.prsOpened })}
-                    </span>
-                  )}
-                  {g.checksFailed > 0 && filter !== "commits" && filter !== "prs" && (
-                    <span className="a-act-day-chip err">
-                      {g.checksFailed === 1
-                        ? t("activity.timeline.chip_checks_failed_one", { count: g.checksFailed })
-                        : t("activity.timeline.chip_checks_failed_other", {
-                            count: g.checksFailed,
-                          })}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="a-act-feed">
-                {g.events.slice(0, 12).map((ev, idx) => (
-                  <FeedRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
+        <Wrap>
+          {visibleGroups.map((g) => (
+            <DayCard key={g.day} data-testid={TEST_IDS.activity.timeline.day}>
+              <DayHead>
+                <DayTitle>{dayLabel(g.day)}</DayTitle>
+                <ChipRow>
+                  {g.commits > 0 &&
+                    filter !== FeedFilterKind.PRS &&
+                    filter !== FeedFilterKind.CHECKS && (
+                      <Chip tone="neutral">
+                        {g.commits === 1
+                          ? t("activity.timeline.chip_commits_one", { count: g.commits })
+                          : t("activity.timeline.chip_commits_other", { count: g.commits })}
+                      </Chip>
+                    )}
+                  {g.prsMerged > 0 &&
+                    filter !== FeedFilterKind.COMMITS &&
+                    filter !== FeedFilterKind.CHECKS && (
+                      <Chip tone="ok">
+                        {g.prsMerged === 1
+                          ? t("activity.timeline.chip_prs_merged_one", { count: g.prsMerged })
+                          : t("activity.timeline.chip_prs_merged_other", { count: g.prsMerged })}
+                      </Chip>
+                    )}
+                  {g.prsOpened > 0 &&
+                    filter !== FeedFilterKind.COMMITS &&
+                    filter !== FeedFilterKind.CHECKS && (
+                      <Chip tone="info">
+                        {g.prsOpened === 1
+                          ? t("activity.timeline.chip_prs_opened_one", { count: g.prsOpened })
+                          : t("activity.timeline.chip_prs_opened_other", { count: g.prsOpened })}
+                      </Chip>
+                    )}
+                  {g.checksFailed > 0 &&
+                    filter !== FeedFilterKind.COMMITS &&
+                    filter !== FeedFilterKind.PRS && (
+                      <Chip tone="err">
+                        {g.checksFailed === 1
+                          ? `${g.checksFailed} check failed`
+                          : `${g.checksFailed} checks failed`}
+                      </Chip>
+                    )}
+                </ChipRow>
+              </DayHead>
+              <Feed>
+                {g.events.slice(0, MAX_ROWS_PER_DAY).map((ev, idx) => (
+                  <FeedEventRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
                 ))}
-              </div>
-            </div>
+              </Feed>
+            </DayCard>
           ))}
-        </div>
+          {hiddenCount > 0 && (
+            <ShowMore>
+              <GeneralButton
+                variant="outline"
+                size="sm"
+                data-testid={TEST_IDS.activity.timeline.showMore}
+                onClick={() => setCap((c) => c + TIMELINE_RENDER_CAP)}
+              >
+                {t("activity.timeline.show_more", { count: hiddenCount })}
+              </GeneralButton>
+            </ShowMore>
+          )}
+        </Wrap>
       )}
-    </CardShell>
+    </GeneralCard>
   );
 }
 
-interface FilterPillProps {
-  active: boolean;
-  label: string;
-  count: number;
-  onClick: () => void;
-}
-
-function FilterPill({ active, label, count, onClick }: FilterPillProps) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active ? "true" : "false"}
-      className={`a-act-tl-pill${active ? " active" : ""}`}
-      onClick={onClick}
-    >
-      <span>{label}</span>
-      <span className="a-act-tl-pill-count">{count}</span>
-    </button>
-  );
-}
-
-function FeedRow({ event, today }: { event: FeedEvent; today: Date }) {
-  const day = daysAgo(event.at, today);
-  const when = day >= 0 ? relativeWhen(event.at, day) : "";
-
-  if (event.kind === "commit") {
-    const url = commitUrl(event.repo?.remoteUrl, event.data.sha);
-    const open = () => {
-      if (url) void openExternal(url);
-      else toast.info("No remote URL for this commit");
-    };
-    return (
-      <Row
-        iconName="git"
-        iconClass="commit"
-        onOpen={open}
-        cursor={url ? "pointer" : "default"}
-        avatar={<AuthorAvatar name={event.data.author} email={event.data.authorEmail} size={20} />}
-        message={event.data.summary}
-        repo={event.repo}
-        repoName={event.data.repoName}
-        extra={event.data.sha.slice(0, 7)}
-        when={when}
-      />
-    );
-  }
-
-  if (event.kind === "pr") {
-    const e = event.data;
-    const open = () => void openExternal(e.url);
-    return (
-      <Row
-        iconName="pr"
-        iconClass={e.kind}
-        onOpen={open}
-        cursor="pointer"
-        avatar={<AuthorAvatar name={e.author} size={20} />}
-        message={`${e.kind.toUpperCase()} · ${e.title}`}
-        repo={event.repo}
-        repoName={e.repoName}
-        extra={`#${e.number}`}
-        when={when}
-      />
-    );
-  }
-
-  const s = event.data;
-  const failedLabel = s.failed === 1 ? "1 failing check" : `${s.failed} failing checks`;
-  return (
-    <Row
-      iconName="ci"
-      iconClass={s.failed > 0 ? "check-fail" : "check-ok"}
-      onOpen={null}
-      cursor="default"
-      avatar={null}
-      message={`${failedLabel} · ${s.passed} passing`}
-      repo={event.repo}
-      repoName={s.repoName}
-      extra=""
-      when={when}
-    />
-  );
-}
-
-interface RowProps {
-  iconName: IconName;
-  iconClass: string;
-  onOpen: (() => void) | null;
-  cursor: "pointer" | "default";
-  avatar: React.ReactNode;
-  message: string;
-  repo: EnrichedRepo | undefined;
-  repoName: string;
-  extra: string;
-  when: string;
-}
-
-function Row({
-  iconName,
-  iconClass,
-  onOpen,
-  cursor,
-  avatar,
-  message,
-  repo,
-  repoName,
-  extra,
-  when,
-}: RowProps) {
-  return (
-    <div
-      className="a-act-feed-item"
-      role={onOpen ? "button" : undefined}
-      tabIndex={onOpen ? 0 : -1}
-      onClick={onOpen ?? undefined}
-      onKeyDown={(e) => {
-        if (!onOpen) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-      style={{ cursor }}
-    >
-      <span className={`a-act-feed-kind ${iconClass}`}>
-        <Icon name={iconName} size={14} />
-      </span>
-      <span>{avatar}</span>
-      <span className="a-act-feed-msg">{message}</span>
-      <span className="a-act-feed-meta">
-        {repo && <RepoAvatar repo={repo} size={14} radius={3} />}
-        <span>{repoName}</span>
-        {extra && <span>· {extra}</span>}
-        <span className="a-act-feed-when">· {when}</span>
-      </span>
-    </div>
-  );
-}
+// memo: urgent page re-renders during chunk streaming must not re-layout the timeline.
+export default memo(Timeline);

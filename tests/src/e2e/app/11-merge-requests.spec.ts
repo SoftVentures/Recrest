@@ -2,15 +2,12 @@ import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
 import { SEED_PRS, SEED_REPOS } from "../../helpers/seed/index.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / merge requests", () => {
-  test("lists PR rows from connected-provider repos", async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name === "app-mobile",
-      "mobile MR layout hides the list view behind a filter drawer",
-    );
+  test("lists PR rows from connected-provider repos", async ({ page }) => {
     await page.goto(AppRoute.MERGE_REQUESTS);
-    await expect(page.getByTestId("merge-requests-page")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.mr.page)).toBeVisible();
 
     // Only the GitHub provider is connected in the default seed — GitLab /
     // Bitbucket-backed repos won't fetch PRs, so their PRs don't show up.
@@ -25,7 +22,9 @@ test.describe("app / merge requests", () => {
       .map((p) => p.number);
 
     for (const n of sampleNumbers) {
-      await expect(page.locator(`[data-testid="mr-row"][data-mr-number="${n}"]`)).toBeVisible({
+      await expect(
+        page.locator(`[data-testid="${TEST_IDS.mr.row}"][data-mr-number="${n}"]`),
+      ).toBeVisible({
         timeout: 10_000,
       });
     }

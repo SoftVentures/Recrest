@@ -60,12 +60,21 @@ pub async fn clone_and_register(
     let provider_hint = provider_for_url(url);
     let url_owned = url.to_string();
     let final_path_clone = final_path.clone();
-    tokio::task::spawn_blocking(move || clone_blocking(&url_owned, &final_path_clone, provider_hint))
-        .await
-        .map_err(|e| CommandError::internal(format!("clone task failed: {e}")))??;
+    tokio::task::spawn_blocking(move || {
+        clone_blocking(&url_owned, &final_path_clone, provider_hint)
+    })
+    .await
+    .map_err(|e| CommandError::internal(format!("clone task failed: {e}")))??;
 
     let mut config = state.config.lock().await;
-    let record = config.upsert_scanned_repo(&final_path)?;
+    let mut record = config.upsert_scanned_repo(&final_path)?;
+    // A clone is an explicit user action — mark it manual so the orphan-prune
+    // keeps it even when the clone destination sits outside every scan root.
+    record.manual = true;
+    config
+        .settings_mut()
+        .repos
+        .insert(record.id.clone(), record.clone());
     config.save(app)?;
     drop(config);
 

@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 // Ad-hoc capture spec — produces screenshots of the Activity page at several
 // viewport widths into `.screenshots/activity/` so design iteration has real
@@ -32,9 +33,11 @@ test.describe("activity capture", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(AppRoute.ACTIVITY);
     await page.waitForTimeout(2800);
-    // Hover the first stacked-chart column to trigger its tooltip.
-    const col = page.locator('[data-testid="activity-stacked-col"]').first();
-    await col.hover();
+    // Hover the stacked chart to trigger its tooltip. The Nivo bars carry no
+    // per-column testid, so hover the chart area itself — its onMouseMove plus
+    // Nivo's per-bar onMouseEnter surface the portalled tooltip at the cursor.
+    const chart = page.getByTestId(TEST_IDS.activity.stacked.chart);
+    await chart.hover();
     await page.waitForTimeout(400);
     await page.screenshot({
       path: "../.screenshots/activity/hover-tooltip.png",
@@ -47,10 +50,13 @@ test.describe("activity capture", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(AppRoute.ACTIVITY);
     await page.waitForTimeout(2800);
+    // The timeline lives in a LazyMount that only renders once its slot scrolls
+    // near the viewport, so scroll the activity container to the bottom to mount
+    // it, then wait for its card before capturing.
     await page
-      .locator(".a-act-tl-card")
-      .scrollIntoViewIfNeeded()
-      .catch(() => {});
+      .getByTestId(TEST_IDS.activity.page)
+      .evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await page.getByTestId(TEST_IDS.activity.timeline.card).scrollIntoViewIfNeeded();
     await page.waitForTimeout(400);
     await page.screenshot({
       path: "../.screenshots/activity/timeline-all.png",

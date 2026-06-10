@@ -1,85 +1,152 @@
 import { useState } from "react";
 
-import { FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/atoms/Button";
-import { Input } from "@/components/atoms/Input";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/molecules/compounds/Dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
-import { TruncatedTooltip } from "@/components/molecules/compounds/TruncatedTooltip";
-import { isTauri } from "@/lib/tauri";
-import { toast } from "@/lib/toast";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { saveSettings } from "@/store/slices/settingsSlice";
+import { Box, TextField, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-interface Props {
+import { FolderOpen, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import {
+  StepBody,
+  StepContent,
+  StepFooter,
+  StepHead,
+  StepRoot,
+  StepTitle,
+} from "@/components/organisms/onboarding/steps/_shared";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { OnboardingStep } from "@/lib/constants/onboarding.constants";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { isTauri } from "@/lib/tauri";
+import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { pickFolder } from "@/lib/utils/pickFolder.utils";
+import { setScanPaths } from "@/store/actions/repos.actions";
+import { saveSettings } from "@/store/actions/settings.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+
+export interface PickFolderStepProps {
   onBack: () => void;
   onNext: () => void;
 }
 
-export function PickFolderStep({ onBack, onNext }: Props) {
-  const { t } = useTranslation("onboarding");
+const InputRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+}));
+
+const Input = styled(TextField)({
+  flex: 1,
+});
+
+const PathList = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  maxHeight: 200,
+  overflowY: "auto",
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 8,
+  backgroundColor: theme.palette.surface.interface.base,
+}));
+
+const PathRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: theme.spacing(1),
+  padding: "8px 12px",
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  fontSize: 12,
+  "&:last-child": { borderBottom: 0 },
+  "&:hover": { background: theme.palette.surface.interface.active },
+}));
+
+const PathText = styled(Box)(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  fontFamily: MONO_STACK,
+  color: theme.palette.text.secondary,
+})) as typeof Box;
+
+const Empty = styled(Typography)(({ theme }) => ({
+  borderRadius: 8,
+  border: `1px dashed ${theme.palette.divider}`,
+  padding: `${theme.spacing(3)} ${theme.spacing(2)}`,
+  textAlign: "center",
+  fontSize: 12,
+  color: theme.palette.text.information,
+})) as typeof Typography;
+
+function PickFolderStep({ onBack, onNext }: PickFolderStepProps) {
+  const { t } = useTranslation(I18nNamespace.ONBOARDING);
   const dispatch = useAppDispatch();
-  const scanPaths = useAppSelector((s) => s.settings.scanPaths);
+  const scanPaths = useAppSelector((s) => s.repos.scanPaths);
   const [draft, setDraft] = useState("");
-  const [browsing, setBrowsing] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const persist = async (next: string[]) => {
+    // Mirror to repos slice immediately so the list reflects the change
+    // without waiting on the backend round-trip; saveSettings then persists
+    // the value (and in dev:web feeds the in-memory stub).
+    dispatch(setScanPaths(next));
     try {
       await dispatch(saveSettings({ scanPaths: next })).unwrap();
     } catch {
-      toast.error(t("errors.internal", { ns: "errors" }));
+      toast.error(t("internal", { ns: I18nNamespace.ERRORS }));
     }
   };
 
   const addPath = async (path: string) => {
     const trimmed = path.trim();
     if (!trimmed || scanPaths.includes(trimmed)) return;
-    await persist([...scanPaths, trimmed]);
-    setDraft("");
+    setBusy(true);
+    try {
+      await persist([...scanPaths, trimmed]);
+      setDraft("");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const removePath = async (path: string) => {
-    await persist(scanPaths.filter((p) => p !== path));
+    await persist(scanPaths.filter((p: string) => p !== path));
   };
 
   const browse = async () => {
     if (!isTauri()) return;
-    setBrowsing(true);
+    setBusy(true);
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: t("pickFolder.title"),
-      });
-      if (typeof selected === "string") {
-        await addPath(selected);
-      }
-    } catch (err) {
-      console.warn("[onboarding] folder picker failed:", err);
+      // Browse adds the picked folder immediately — saves a click compared to
+      // the older "fill input, then Add" two-step flow.
+      const selected = await pickFolder(draft.trim() || undefined);
+      if (selected) await addPath(selected);
     } finally {
-      setBrowsing(false);
+      setBusy(false);
     }
   };
 
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{t("pickFolder.title")}</DialogTitle>
-        <DialogDescription>{t("pickFolder.body")}</DialogDescription>
-      </DialogHeader>
+  const empty = scanPaths.length === 0;
 
-      <div className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row">
+  return (
+    <StepRoot data-testid={TEST_IDS.onboarding.step(OnboardingStep.FOLDERS)}>
+      <StepHead>
+        <StepTitle component="h1">{t("pickFolder.title")}</StepTitle>
+        <StepBody component="p">{t("pickFolder.body")}</StepBody>
+      </StepHead>
+      <StepContent>
+        <InputRow>
           <Input
+            size="small"
             value={draft}
+            placeholder={t("pickFolder.browse_placeholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -87,73 +154,66 @@ export function PickFolderStep({ onBack, onNext }: Props) {
                 void addPath(draft);
               }
             }}
-            placeholder={t("pickFolder.browse_placeholder")}
-            className="flex-1"
+            slotProps={{
+              htmlInput: { "data-testid": TEST_IDS.onboarding.pickFolderInput },
+            }}
           />
-          {isTauri() ? (
-            <Button variant="outline" onClick={() => void browse()} loading={browsing}>
-              <FolderOpen aria-hidden />
-              {t("pickFolder.browse")}
-            </Button>
-          ) : (
-            <Button onClick={() => void addPath(draft)} disabled={!draft.trim()}>
-              <Plus aria-hidden />
-              {t("pickFolder.add")}
-            </Button>
-          )}
-        </div>
+          <GeneralButton
+            variant="outline"
+            onClick={() => void browse()}
+            loading={busy}
+            disabled={!isTauri()}
+            startIcon={<FolderOpen size={14} />}
+            data-testid={TEST_IDS.onboarding.pickFolderBrowse}
+          >
+            {t("pickFolder.browse")}
+          </GeneralButton>
+        </InputRow>
 
-        {scanPaths.length === 0 ? (
-          <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-            {t("pickFolder.list_empty")}
-          </p>
+        {empty ? (
+          <Empty component="p">{t("pickFolder.list_empty")}</Empty>
         ) : (
-          <ul className="divide-y divide-border rounded-md border border-border">
-            {scanPaths.map((path) => (
-              <li key={path} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <TruncatedTooltip content={path}>
-                  <span className="flex-1 truncate font-mono text-xs text-muted-foreground">
-                    {path}
-                  </span>
-                </TruncatedTooltip>
-                <Button
+          <PathList>
+            {scanPaths.map((p: string) => (
+              <PathRow key={p}>
+                <PathText component="span">{p}</PathText>
+                <GeneralIconButton
+                  icon={<Trash2 size={12} />}
+                  size={IconButtonSize.XS}
                   variant="ghost"
-                  size="icon-sm"
-                  onClick={() => void removePath(path)}
-                  aria-label={t("actions.remove", { ns: "common" })}
-                >
-                  <Trash2 aria-hidden />
-                </Button>
-              </li>
+                  aria-label={`Remove ${p}`}
+                  onClick={() => void removePath(p)}
+                  data-testid={TEST_IDS.onboarding.pickFolderRemove(p)}
+                />
+              </PathRow>
             ))}
-          </ul>
+          </PathList>
         )}
-      </div>
-
-      <DialogFooter>
-        <Button variant="ghost" onClick={onBack}>
+      </StepContent>
+      <StepFooter>
+        <GeneralButton
+          variant="ghost"
+          onClick={onBack}
+          data-testid={TEST_IDS.onboarding.pickFolderBack}
+        >
           {t("pickFolder.back")}
-        </Button>
-        {scanPaths.length === 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={onNext}
-                disabled
-                aria-label={t("pickFolder.at_least_one")}
-                data-testid="onboarding-pick-folder-next"
-              >
+        </GeneralButton>
+        {empty ? (
+          <GeneralTooltip title={t("pickFolder.at_least_one")} arrow placement="top">
+            <Box component="span">
+              <GeneralButton disabled data-testid={TEST_IDS.onboarding.pickFolderNext}>
                 {t("pickFolder.next")}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("pickFolder.at_least_one")}</TooltipContent>
-          </Tooltip>
+              </GeneralButton>
+            </Box>
+          </GeneralTooltip>
         ) : (
-          <Button onClick={onNext} data-testid="onboarding-pick-folder-next">
+          <GeneralButton onClick={onNext} data-testid={TEST_IDS.onboarding.pickFolderNext}>
             {t("pickFolder.next")}
-          </Button>
+          </GeneralButton>
         )}
-      </DialogFooter>
-    </>
+      </StepFooter>
+    </StepRoot>
   );
 }
+
+export default PickFolderStep;

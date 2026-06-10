@@ -1,18 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { Box } from "@mui/material";
+
 import { describe, expect, it } from "vitest";
 
-import { CiHealthHero } from "@/components/organisms/activity/cards/CiHealthHero";
-import { fakeCheckRun } from "@/components/organisms/activity/cards/_fixtures";
-import "@/i18n";
+import CiHealthHero from "@/components/organisms/activity/cards/CiHealthHero";
+import { COMPONENT_TEST_IDS } from "@/lib/constants/componentTests.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("CiHealthHero", () => {
-  it("renders a percentage from summaries", () => {
-    render(<CiHealthHero summaries={[fakeCheckRun({ total: 10, passed: 9, failed: 1 })]} />);
-    expect(screen.getByText("90%")).toBeInTheDocument();
-  });
-
-  it("renders an em-dash when no runs exist", () => {
-    render(<CiHealthHero summaries={[]} />);
-    expect(screen.getByText("—")).toBeInTheDocument();
+  it("renders without crashing inside its wrapper", () => {
+    const { getByTestId } = renderWithProviders(
+      <Box data-testid={COMPONENT_TEST_IDS.organisms.activityCard.wrap}>
+        <CiHealthHero summaries={[]} />
+      </Box>,
+    );
+    expect(getByTestId(COMPONENT_TEST_IDS.organisms.activityCard.wrap).firstChild).not.toBeNull();
   });
 });

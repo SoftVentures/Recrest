@@ -15,7 +15,7 @@ export const SEED_PROVIDERS: Partial<Record<ProviderId, ProviderConnection>> = {
     providerId: "github",
     displayName: PROVIDER_NAMES.github,
     connected: true,
-    username: "valentin",
+    username: "demo-user",
     supportsOauth: true,
     baseUrl: PROVIDER_API_URLS.github,
   },

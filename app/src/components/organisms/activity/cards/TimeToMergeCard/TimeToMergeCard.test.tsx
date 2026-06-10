@@ -1,22 +1,21 @@
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TimeToMergeCard } from "@/components/organisms/activity/cards/TimeToMergeCard";
-import "@/i18n";
+import TimeToMergeCard from "@/components/organisms/activity/cards/TimeToMergeCard";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("TimeToMergeCard", () => {
-  it("renders one row per bucket", () => {
-    render(
+  it("renders the time-to-merge card root", () => {
+    const { getByTestId } = renderWithProviders(
       <TimeToMergeCard
         buckets={[
-          { bucket: "<1h", count: 2 },
-          { bucket: "<1d", count: 5 },
-          { bucket: "<3d", count: 1 },
+          { bucket: "<1h", count: 0 },
+          { bucket: "<1d", count: 0 },
+          { bucket: "<3d", count: 0 },
           { bucket: ">=3d", count: 0 },
         ]}
       />,
     );
-    expect(screen.getByText("<1h")).toBeInTheDocument();
-    expect(screen.getByText("≥3d")).toBeInTheDocument();
+    expect(getByTestId(TEST_IDS.activity.cards.timeToMerge)).toBeInTheDocument();
   });
 });

@@ -59,13 +59,14 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "f2e1d0c9b8a7",
       lastCommit: {
         sha: "f2e1d0c9b8a7",
         summary: "feat(landing): ship responsive hero demo",
-        author: "valentin",
+        author: "demo-user",
         timestamp: "2026-04-18T16:30:00Z",
       },
       commitActivity: commitActivity([2, 3, 4, 6, 5, 2, 3, 4, 7, 8, 5, 3, 4, 6]),
@@ -91,6 +92,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "feat/compose-v2",
       head: "e11f3a9c2b88",
@@ -103,7 +105,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "e11f3a9c2b88",
         summary: "refactor: split compose profiles per stack",
-        author: "valentin",
+        author: "demo-user",
         timestamp: "2026-04-17T21:04:00Z",
       },
       changedFiles: [
@@ -144,6 +146,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "77aa44bb11cc",
@@ -176,6 +179,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "gitlab",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "feat/home-v2",
       head: "4d5e6f7a8b9c",
@@ -257,6 +261,7 @@ export const SEED_REPOS: Repository[] = [
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "c0a7e2d5f9b1",
@@ -283,10 +288,11 @@ export const SEED_REPOS: Repository[] = [
     name: "octo-notes",
     path: "~/Code/experiments/octo-notes",
     groupId: "experiments",
-    remoteUrl: "https://github.com/valentin/octo-notes",
+    remoteUrl: "https://github.com/demo-user/octo-notes",
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "wip/markdown-editor",
       head: "887ab0112233",
@@ -297,7 +303,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "887ab0112233",
         summary: "wip: editor lane with frontmatter parser",
-        author: "valentin",
+        author: "demo-user",
         timestamp: "2026-04-18T22:40:00Z",
       },
       changedFiles: [
@@ -388,10 +394,11 @@ export const SEED_REPOS: Repository[] = [
     name: "glyph-sandbox",
     path: "~/Code/experiments/glyph-sandbox",
     groupId: "experiments",
-    remoteUrl: "https://github.com/valentin/glyph-sandbox",
+    remoteUrl: "https://github.com/demo-user/glyph-sandbox",
     providerId: "github",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "main",
       head: "55ee77ffaa22",
@@ -399,7 +406,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "55ee77ffaa22",
         summary: "ci(deps): migrate to vite 5",
-        author: "valentin",
+        author: "demo-user",
         timestamp: "2026-04-13T09:00:00Z",
       },
       commitActivity: commitActivity([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]),
@@ -418,10 +425,11 @@ export const SEED_REPOS: Repository[] = [
     name: "signal-lab",
     path: "~/Code/experiments/signal-lab",
     groupId: "experiments",
-    remoteUrl: "https://bitbucket.org/valentin/signal-lab",
+    remoteUrl: "https://bitbucket.org/demo-user/signal-lab",
     providerId: "bitbucket",
     logoPath: null,
     logoDarkPath: null,
+    sshKeyPath: null,
     status: makeStatus({
       branch: "ci/deps",
       head: "44bb66ddee99",
@@ -429,7 +437,7 @@ export const SEED_REPOS: Repository[] = [
       lastCommit: {
         sha: "44bb66ddee99",
         summary: "ci(deps): quarterly bump",
-        author: "valentin",
+        author: "demo-user",
         timestamp: "2026-04-10T12:00:00Z",
       },
       commitActivity: commitActivity([0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]),
@@ -448,7 +456,7 @@ export const SEED_REPOS: Repository[] = [
 /** Map author names to their commit email so Gravatar-based avatars work
  *  in the E2E stub the same way they do against real git data. */
 const AUTHOR_EMAILS: Record<string, string> = {
-  valentin: "valentin.roehle@benova.eu",
+  "demo-user": "demo-user@example.com",
   maren: "maren@example.com",
   tomi: "tomi@example.com",
   lea: "lea@example.com",
@@ -480,8 +488,8 @@ export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEn
       {
         sha: `${repo.id.slice(-6)}0a`,
         summary: "refactor: extract shared helpers",
-        author: lc?.author ?? "valentin",
-        authorEmail: emailFor(lc?.author ?? "valentin"),
+        author: lc?.author ?? "demo-user",
+        authorEmail: emailFor(lc?.author ?? "demo-user"),
         timestamp: "2026-04-11T08:12:00Z",
         repoId: repo.id,
         repoName: repo.name,
@@ -489,8 +497,8 @@ export const SEED_RECENT_COMMITS: Record<string, RecentCommit[]> = Object.fromEn
       {
         sha: `${repo.id.slice(-6)}1b`,
         summary: "docs: README polish",
-        author: lc?.author ?? "valentin",
-        authorEmail: emailFor(lc?.author ?? "valentin"),
+        author: lc?.author ?? "demo-user",
+        authorEmail: emailFor(lc?.author ?? "demo-user"),
         timestamp: "2026-04-09T14:40:00Z",
         repoId: repo.id,
         repoName: repo.name,

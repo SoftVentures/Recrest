@@ -1,5 +1,5 @@
 import type { CheckRunSummary, PrEvent, PullRequest, RecentCommit } from "@recrest/shared";
-import { languageByExtension, languageByName } from "@recrest/shared";
+import { PrState, languageByExtension, languageByName } from "@recrest/shared";
 
 import { ACTIVITY_DAYS, daysAgo } from "@/lib/activityStats";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -11,14 +11,18 @@ export interface VelocityDay {
   merged: number;
 }
 
-export function computePrVelocity(events: readonly PrEvent[], today: Date): VelocityDay[] {
-  const rows: VelocityDay[] = Array.from({ length: ACTIVITY_DAYS }, (_, i) => ({
+export function computePrVelocity(
+  events: readonly PrEvent[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): VelocityDay[] {
+  const rows: VelocityDay[] = Array.from({ length: windowDays }, (_, i) => ({
     day: i,
     opened: 0,
     merged: 0,
   }));
   for (const e of events) {
-    const d = daysAgo(e.timestamp, today);
+    const d = daysAgo(e.timestamp, today, windowDays);
     if (d < 0) continue;
     const row = rows[d];
     if (!row) continue;
@@ -83,7 +87,7 @@ export function computeReviewQueue(
   for (const [repoId, prs] of Object.entries(prsByRepo)) {
     const repoName = reposById.get(repoId)?.name ?? repoId;
     for (const pr of prs) {
-      if (pr.state !== "open") continue;
+      if (pr.state !== PrState.OPEN) continue;
       const openedAtMs = new Date(pr.createdAt).getTime();
       const ageDays = Math.max(0, (now.getTime() - openedAtMs) / 86_400_000);
       out.push({
@@ -112,15 +116,16 @@ export interface PassRateDay {
 export function computeCiPassRate(
   summaries: readonly CheckRunSummary[],
   today: Date,
+  windowDays: number = ACTIVITY_DAYS,
 ): PassRateDay[] {
-  const rows: PassRateDay[] = Array.from({ length: ACTIVITY_DAYS }, (_, i) => ({
+  const rows: PassRateDay[] = Array.from({ length: windowDays }, (_, i) => ({
     day: i,
     passed: 0,
     total: 0,
     rate: 1,
   }));
   for (const s of summaries) {
-    const d = daysAgo(`${s.day}T12:00:00Z`, today);
+    const d = daysAgo(`${s.day}T12:00:00Z`, today, windowDays);
     if (d < 0) continue;
     const row = rows[d];
     if (!row) continue;
@@ -129,6 +134,46 @@ export function computeCiPassRate(
   }
   for (const r of rows) r.rate = r.total === 0 ? 1 : r.passed / r.total;
   return rows;
+}
+
+export interface CiRepoBreakdown {
+  repoId: string;
+  repoName: string;
+  passed: number;
+  total: number;
+  /** `passed / total` — `1` when there have been no runs (treated as ideal). */
+  rate: number;
+}
+
+/**
+ * Folds check-run summaries into one row per repo, sorted by total runs.
+ * Each row's `rate` is recomputed from the summed counts; a repo with no runs
+ * is reported as `rate: 1` so it doesn't drag the chart's average down.
+ */
+export function computeCiRepoBreakdown(summaries: readonly CheckRunSummary[]): CiRepoBreakdown[] {
+  const byRepo = new Map<string, CiRepoBreakdown>();
+  for (const s of summaries) {
+    const existing = byRepo.get(s.repoId);
+    if (existing) {
+      existing.passed += s.passed;
+      existing.total += s.total;
+    } else {
+      byRepo.set(s.repoId, {
+        repoId: s.repoId,
+        repoName: s.repoName,
+        passed: s.passed,
+        total: s.total,
+        rate: 0,
+      });
+    }
+  }
+  const out: CiRepoBreakdown[] = [];
+  for (const r of byRepo.values()) {
+    r.rate = r.total === 0 ? 1 : r.passed / r.total;
+    out.push(r);
+  }
+  out.sort((a, b) => b.total - a.total);
+  return out;
 }
 
 export interface FlakyRepo {
@@ -173,12 +218,16 @@ export function computeFlakyRepos(
 /** Weekday (0=Mon..6=Sun) × hour (0..23) commit counts. */
 export type HeatmapMatrix = number[][];
 
-export function computeHeatmap(commits: readonly RecentCommit[], today: Date): HeatmapMatrix {
+export function computeHeatmap(
+  commits: readonly RecentCommit[],
+  today: Date,
+  windowDays: number = ACTIVITY_DAYS,
+): HeatmapMatrix {
   const matrix: HeatmapMatrix = Array.from({ length: 7 }, () =>
     Array.from({ length: 24 }, () => 0),
   );
   for (const c of commits) {
-    if (daysAgo(c.timestamp, today) < 0) continue;
+    if (daysAgo(c.timestamp, today, windowDays) < 0) continue;
     const dt = new Date(c.timestamp);
     // Convert JS `getDay()` (0=Sun..6=Sat) to Mon-first (0=Mon..6=Sun).
     const weekday = (dt.getDay() + 6) % 7;

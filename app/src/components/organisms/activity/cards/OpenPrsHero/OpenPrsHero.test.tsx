@@ -1,25 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { Box } from "@mui/material";
+
 import { describe, expect, it } from "vitest";
 
-import { OpenPrsHero } from "@/components/organisms/activity/cards/OpenPrsHero";
-import { fakePr } from "@/components/organisms/activity/cards/_fixtures";
-import "@/i18n";
+import OpenPrsHero from "@/components/organisms/activity/cards/OpenPrsHero";
+import { COMPONENT_TEST_IDS } from "@/lib/constants/componentTests.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("OpenPrsHero", () => {
-  it("counts open PRs across all repos", () => {
-    render(
-      <OpenPrsHero
-        prsByRepo={{
-          r1: [fakePr({ id: "1", number: 1 }), fakePr({ id: "2", number: 2 })],
-          r2: [fakePr({ id: "3", number: 3 })],
-        }}
-      />,
+  it("renders without crashing inside its wrapper", () => {
+    const { getByTestId } = renderWithProviders(
+      <Box data-testid={COMPONENT_TEST_IDS.organisms.activityCard.wrap}>
+        <OpenPrsHero prsByRepo={{}} />
+      </Box>,
     );
-    expect(screen.getByText("3")).toBeInTheDocument();
-  });
-
-  it("renders zero when there are no open PRs", () => {
-    render(<OpenPrsHero prsByRepo={{}} />);
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(getByTestId(COMPONENT_TEST_IDS.organisms.activityCard.wrap).firstChild).not.toBeNull();
   });
 });

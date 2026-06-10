@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -39,7 +40,9 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
             PathBuf::from(vscode_bundle),
             PathBuf::from(vscode_insiders_bundle),
             PathBuf::from(cursor_bundle),
-            dirs::home_dir().map(|h| h.join(".local/bin")).unwrap_or_default(),
+            dirs::home_dir()
+                .map(|h| h.join(".local/bin"))
+                .unwrap_or_default(),
         ]
     }
     #[cfg(target_os = "linux")]
@@ -49,7 +52,9 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
             PathBuf::from("/usr/local/bin"),
             PathBuf::from("/usr/bin"),
             PathBuf::from("/snap/bin"),
-            dirs::home_dir().map(|h| h.join(".local/bin")).unwrap_or_default(),
+            dirs::home_dir()
+                .map(|h| h.join(".local/bin"))
+                .unwrap_or_default(),
         ]
     }
     #[cfg(windows)]
@@ -61,7 +66,12 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
         let mut paths = vec![];
         if let Some(local) = dirs::data_local_dir() {
             paths.push(local.join("Programs").join("Microsoft VS Code").join("bin"));
-            paths.push(local.join("Programs").join("Microsoft VS Code Insiders").join("bin"));
+            paths.push(
+                local
+                    .join("Programs")
+                    .join("Microsoft VS Code Insiders")
+                    .join("bin"),
+            );
             paths.push(local.join("Programs").join("cursor").join("bin"));
             paths.push(local.join("Programs").join("cursor"));
             paths.push(local.join("JetBrains").join("Toolbox").join("scripts"));
@@ -137,18 +147,73 @@ pub fn open_repo(_app: &AppHandle, path: &Path, ide: Option<&str>) -> Result<(),
         }
     };
 
-    spawn_detached(&binary, path).map_err(|e| {
-        CommandError::internal(format!("failed to spawn {}: {e}", bin_name))
-    })?;
+    spawn_detached(&binary, path)
+        .map_err(|e| CommandError::internal(format!("failed to spawn {}: {e}", bin_name)))?;
     Ok(())
+}
+
+/// Opens a single `file` at `line`/`column` in the resolved IDE. Used by the
+/// cross-repo search so a result row jumps straight to the matching line.
+pub fn open_file(
+    _app: &AppHandle,
+    file: &Path,
+    line: u32,
+    column: u32,
+    ide: Option<&str>,
+) -> Result<(), CommandError> {
+    let (binary, id): (PathBuf, String) = match ide {
+        Some(id) => {
+            let (p, _bin) = resolve_by_id(id).ok_or_else(|| {
+                CommandError::bad_request(format!(
+                    "selected IDE '{id}' is not installed or its CLI isn't on PATH"
+                ))
+            })?;
+            (p, id.to_string())
+        }
+        None => {
+            let (p, id, _bin) = first_available().ok_or_else(|| {
+                CommandError::bad_request("no supported IDE detected on this machine")
+            })?;
+            (p, id.to_string())
+        }
+    };
+
+    let args = file_args(&id, file, line, column);
+    spawn_detached_args(&binary, &args)
+        .map_err(|e| CommandError::internal(format!("failed to spawn {id}: {e}")))?;
+    Ok(())
+}
+
+/// Per-IDE CLI arguments to open `file` at a position. VS Code-family takes
+/// `--goto path:line:col`; JetBrains takes `--line N path` (column support is
+/// inconsistent across versions, so we settle on the line); everything else
+/// just opens the file and lets the editor land at its default position.
+fn file_args(ide_id: &str, file: &Path, line: u32, column: u32) -> Vec<OsString> {
+    match ide_id {
+        "vscode" | "vscode-insiders" | "cursor" => {
+            let mut goto = file.as_os_str().to_owned();
+            goto.push(format!(":{line}:{column}"));
+            vec![OsString::from("--goto"), goto]
+        }
+        "webstorm" | "idea" => vec![
+            OsString::from("--line"),
+            OsString::from(line.to_string()),
+            file.as_os_str().to_owned(),
+        ],
+        _ => vec![file.as_os_str().to_owned()],
+    }
 }
 
 /// Startet den IDE-Prozess so, dass er die Recrest-App **nicht** als
 /// Eltern-Prozess festhält — unter Windows sonst flackert ein Konsolen-Fenster
 /// auf, unter macOS/Linux ist es für Subprozess-Cleanup sauberer.
 fn spawn_detached(binary: &Path, repo_path: &Path) -> std::io::Result<()> {
+    spawn_detached_args(binary, &[repo_path.as_os_str().to_owned()])
+}
+
+fn spawn_detached_args(binary: &Path, args: &[OsString]) -> std::io::Result<()> {
     let mut cmd = Command::new(binary);
-    cmd.arg(repo_path);
+    cmd.args(args);
 
     #[cfg(windows)]
     {

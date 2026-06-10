@@ -1,37 +1,49 @@
-import { act, render } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { afterEach, describe, expect, it } from "vitest";
+import type { SearchHit } from "@recrest/shared";
 
-import { FindAcrossReposDialog } from "@/components/organisms/repos/FindAcrossReposDialog";
-import "@/i18n";
-import { store } from "@/store";
-import { setFindDialogOpen } from "@/store/slices/uiSlice";
+import { act, fireEvent, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-afterEach(() => {
-  act(() => {
-    store.dispatch(setFindDialogOpen(false));
-  });
-});
+import FindAcrossReposDialog from "@/components/organisms/repos/FindAcrossReposDialog";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { renderWithProviders } from "@/test/utils";
 
 describe("FindAcrossReposDialog", () => {
-  it("renders nothing while closed", () => {
-    render(
-      <Provider store={store}>
-        <FindAcrossReposDialog />
-      </Provider>,
+  it("renders root + input when open", () => {
+    const { getByTestId } = renderWithProviders(
+      <FindAcrossReposDialog open onClose={() => {}} search={async () => []} />,
     );
-    expect(document.querySelector("[role='dialog']")).toBeNull();
+    expect(getByTestId(TEST_IDS.findAcrossDialog.root)).toBeTruthy();
+    expect(getByTestId(TEST_IDS.findAcrossDialog.input)).toBeTruthy();
   });
 
-  it("opens when the UI slice flips `findDialogOpen`", () => {
-    render(
-      <Provider store={store}>
-        <FindAcrossReposDialog />
-      </Provider>,
+  it("does not render the result list below the min-query threshold", () => {
+    const { queryByTestId } = renderWithProviders(
+      <FindAcrossReposDialog open onClose={() => {}} search={async () => []} />,
     );
-    act(() => {
-      store.dispatch(setFindDialogOpen(true));
+    expect(queryByTestId(TEST_IDS.findAcrossDialog.list)).toBeNull();
+  });
+
+  it("renders matching rows after typing a query", async () => {
+    const hit: SearchHit = {
+      repoId: "r1",
+      repoName: "demo",
+      path: "src/foo.ts",
+      absolutePath: "/repos/demo/src/foo.ts",
+      line: 7,
+      column: 1,
+      snippet: "hello world",
+    };
+    const search = vi.fn(async () => [hit]);
+    const { getByTestId } = renderWithProviders(
+      <FindAcrossReposDialog open onClose={() => {}} search={search} />,
+    );
+    const input = getByTestId(TEST_IDS.findAcrossDialog.input) as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "hello" } });
     });
-    expect(document.querySelector("[role='dialog']")).not.toBeNull();
+    await waitFor(() => expect(search).toHaveBeenCalledWith("hello", undefined), { timeout: 2000 });
+    await waitFor(() => expect(getByTestId(TEST_IDS.findAcrossDialog.row("0"))).toBeTruthy(), {
+      timeout: 2000,
+    });
   });
 });

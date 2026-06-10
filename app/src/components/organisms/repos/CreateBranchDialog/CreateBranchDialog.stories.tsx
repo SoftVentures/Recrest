@@ -1,27 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Provider } from "react-redux";
 
-import { CreateBranchDialog } from "@/components/organisms/repos/CreateBranchDialog";
-import { store } from "@/store";
+import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
 
 const meta: Meta<typeof CreateBranchDialog> = {
   title: "Organisms/Repos/CreateBranchDialog",
   component: CreateBranchDialog,
-  parameters: { layout: "fullscreen" },
-  decorators: [
-    (Story) => (
-      <Provider store={store}>
-        <Story />
-      </Provider>
-    ),
-  ],
+  parameters: { layout: "centered" },
+  args: { open: true, repoId: "demo-repo" as never, onClose: () => undefined },
 };
 export default meta;
 
-export const Open: StoryObj<typeof CreateBranchDialog> = {
-  args: { open: true, repoId: "repo-1", onClose: () => {} },
-};
-
-export const Closed: StoryObj<typeof CreateBranchDialog> = {
-  args: { open: false, repoId: null, onClose: () => {} },
-};
+type Story = StoryObj<typeof CreateBranchDialog>;
+export const Open: Story = {};
+export const Closed: Story = { args: { open: false } };

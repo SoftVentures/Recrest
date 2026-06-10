@@ -15,6 +15,12 @@ export interface Repository {
    *  Null when the repo doesn't ship one. Fetch its bytes via `load_logo_bytes`. */
   logoPath: string | null;
   logoDarkPath: string | null;
+  /** True when `logoPath` is the user-uploaded override (stored under
+   *  `<app_data>/repo-logos/`) rather than the in-repo auto-detected file.
+   *  Lets the UI show a "Reset to auto-detected" affordance. */
+  logoIsCustom?: boolean;
+  /** Per-repo SSH private key path, or null for ssh-agent / global config. */
+  sshKeyPath: string | null;
 }
 
 export interface LogoBlob {
@@ -63,16 +69,34 @@ export interface RecentCommit {
    *  Null when git2 couldn't read an email (e.g. for signed-off commits
    *  with a redacted author). */
   authorEmail: string | null;
+  /** Plan 1 §A.4: Unicode-folded dedup key produced by Rust
+   *  `git::author_normalize::signature_key`. Optional so existing test
+   *  fixtures don't need migration; consumers fall back to recomputing it
+   *  client-side from `author` + `authorEmail` when missing. */
+  signatureKey?: string;
   timestamp: string; // ISO-8601
   repoId: RepositoryId;
   repoName: string;
 }
 
-export type ChangedFileStatus = "staged" | "unstaged" | "untracked" | "conflicted";
+export const ChangedFileStatus = {
+  STAGED: "staged",
+  UNSTAGED: "unstaged",
+  UNTRACKED: "untracked",
+  CONFLICTED: "conflicted",
+} as const;
+export type ChangedFileStatus = (typeof ChangedFileStatus)[keyof typeof ChangedFileStatus];
 
 /** Art der Änderung (unabhängig vom Staging-State) — treibt die Farbgebung
  *  der Working-Tree-Liste im Frontend. */
-export type ChangedFileKind = "added" | "modified" | "deleted" | "renamed" | "typechange";
+export const ChangedFileKind = {
+  ADDED: "added",
+  MODIFIED: "modified",
+  DELETED: "deleted",
+  RENAMED: "renamed",
+  TYPECHANGE: "typechange",
+} as const;
+export type ChangedFileKind = (typeof ChangedFileKind)[keyof typeof ChangedFileKind];
 
 export interface ChangedFile {
   path: string;

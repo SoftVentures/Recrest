@@ -1,13 +1,15 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 const srcDir = fileURLToPath(new URL("./src", import.meta.url));
+const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 function gitShortSha(): string {
   try {
@@ -25,12 +27,48 @@ const host = process.env.TAURI_DEV_HOST;
 // process. When it's missing we're in pure-web mode (`yarn dev:web`) — pick a
 // different port so both can run side-by-side without a `strictPort` clash.
 const isTauriDev = !!process.env.TAURI_ENV_PLATFORM;
-const devPort = isTauriDev ? 1420 : 3000;
+
+// Ports are overridable from the repo-root `.env` (DEV_PORT_WEB /
+// DEV_PORT_TAURI). The third arg of loadEnv is `""` so non-VITE_-prefixed
+// keys are returned too; these never reach client code because they're only
+// consumed here in the config layer.
+const envMode = process.env.NODE_ENV || "development";
+const rootEnv = loadEnv(envMode, repoRoot, "");
+const webPort = Number(rootEnv.DEV_PORT_WEB || 3000);
+const tauriPort = Number(rootEnv.DEV_PORT_TAURI || 1420);
+const devPort = isTauriDev ? tauriPort : webPort;
+
+// `tauri.conf.json::build.devUrl` is the URL the Tauri webview loads. If the
+// user overrode DEV_PORT_TAURI but didn't sync that file, the window would
+// boot blank with no error. Fail fast with a clear, actionable message.
+if (isTauriDev) {
+  const tauriConfPath = path.resolve(repoRoot, "app", "src-tauri", "tauri.conf.json");
+  try {
+    const conf = JSON.parse(readFileSync(tauriConfPath, "utf8")) as {
+      build?: { devUrl?: string };
+    };
+    const devUrl = conf.build?.devUrl;
+    const match = devUrl ? /:(\d+)(?:\/|$)/.exec(devUrl) : null;
+    const confPort = match ? Number(match[1]) : NaN;
+    if (Number.isFinite(confPort) && confPort !== tauriPort) {
+      throw new Error(
+        `[recrest] DEV_PORT_TAURI=${tauriPort} but tauri.conf.json::build.devUrl=${devUrl}. ` +
+          "Update either .env or app/src-tauri/tauri.conf.json so both agree, otherwise the " +
+          "Tauri window will load a port nothing is listening on.",
+      );
+    }
+  } catch (err) {
+    // Re-throw our own mismatch error; swallow JSON-parse / fs errors so a
+    // missing or broken tauri.conf.json doesn't shadow the original failure
+    // mode the dev would otherwise see from Tauri itself.
+    if (err instanceof Error && err.message.startsWith("[recrest]")) throw err;
+  }
+}
 
 export default defineConfig({
+  envDir: repoRoot,
   plugins: [
     react(),
-    tailwindcss(),
     tsconfigPaths(),
     svgr({
       // Only transform imports that explicitly opt in with `?react`, so plain
@@ -49,6 +87,13 @@ export default defineConfig({
     alias: {
       "@": srcDir,
     },
+    // framer-motion ships `@emotion/styled` as a sub-dep, which makes Vite's
+    // dev-mode pre-bundler load a second @emotion/react instance — the second
+    // instance has its own ThemeContext, so MUI's ThemeProvider fills one
+    // instance and `styled()` calls read from the other and explode with
+    // `theme.palette.surface is undefined`. Forcing a single resolved copy
+    // keeps both ends on the same React Context.
+    dedupe: ["@emotion/react", "@emotion/styled", "react", "react-dom"],
   },
   define: {
     // Some npm packages still reference Node's `global`; alias it to `globalThis`

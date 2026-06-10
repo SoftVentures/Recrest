@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM"],
-    "types": ["node"],
+    "types": ["node", "@wdio/globals/types", "expect-webdriverio", "mocha"],
     "baseUrl": ".",
     "paths": {
       "@recrest/shared": ["../shared/src/index.ts"],
@@ -12,5 +12,5 @@
     },
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "playwright.config.ts"]
+  "include": ["src/**/*.ts", "playwright.config.ts", "wdio.conf.ts"]
 }

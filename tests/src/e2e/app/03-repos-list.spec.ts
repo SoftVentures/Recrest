@@ -2,14 +2,15 @@ import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
 import { EMPTY_SEED, SEED_REPOS } from "../../helpers/seed/index.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 test.describe("app / repos list", () => {
   test("renders all seeded repo rows", async ({ page }) => {
     await page.goto(AppRoute.REPOS);
-    await expect(page.getByTestId("repo-list")).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.repos.list)).toBeVisible();
     for (const repo of SEED_REPOS) {
       await expect(
-        page.locator(`[data-testid="repo-row"][data-repo-id="${repo.id}"]`),
+        page.locator(`[data-testid="${TEST_IDS.repos.row}"][data-repo-id="${repo.id}"]`),
       ).toBeVisible();
     }
   });
@@ -20,7 +21,9 @@ test.describe("app / repos list", () => {
     expect(dirtyIds.length).toBeGreaterThan(0);
     for (const id of dirtyIds) {
       await expect(
-        page.locator(`[data-testid="repo-row"][data-repo-id="${id}"][data-dirty="true"]`),
+        page.locator(
+          `[data-testid="${TEST_IDS.repos.row}"][data-repo-id="${id}"][data-dirty="true"]`,
+        ),
       ).toBeVisible();
     }
   });
@@ -29,8 +32,8 @@ test.describe("app / repos list", () => {
     test.use({ seed: EMPTY_SEED });
     test("shows an empty state and no repo rows", async ({ page }) => {
       await page.goto(AppRoute.REPOS);
-      await expect(page.getByTestId("repo-row")).toHaveCount(0);
-      await expect(page.getByTestId("repo-list-empty")).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId(TEST_IDS.repos.row)).toHaveCount(0);
+      await expect(page.getByTestId(TEST_IDS.repos.listEmpty)).toBeVisible({ timeout: 10_000 });
     });
   });
 });

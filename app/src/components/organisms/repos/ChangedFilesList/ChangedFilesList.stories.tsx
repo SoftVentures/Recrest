@@ -1,58 +1,46 @@
+import { type ChangedFile, ChangedFileKind, ChangedFileStatus } from "@recrest/shared";
+
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { ChangedFilesList } from "@/components/organisms/repos/ChangedFilesList";
+import ChangedFilesList from "@/components/organisms/repos/ChangedFilesList";
+
+const mk = (path: string, kind: ChangedFile["kind"]): ChangedFile => ({
+  path,
+  kind,
+  status: ChangedFileStatus.UNSTAGED,
+  hasUnstagedChanges: true,
+});
+
+const sample: ChangedFile[] = [
+  mk("src/components/atoms/inputs/Kbd/index.tsx", ChangedFileKind.ADDED),
+  mk("src/pages/app/Repos/components/RepoRow/index.tsx", ChangedFileKind.MODIFIED),
+  mk("src/pages/app/Dashboard/parts/Kpi/index.tsx", ChangedFileKind.DELETED),
+  mk("docs/plans/02-material-ui-migration.md", ChangedFileKind.MODIFIED),
+  mk("shared/src/types/ide.ts", ChangedFileKind.RENAMED),
+];
 
 const meta: Meta<typeof ChangedFilesList> = {
   title: "Organisms/Repos/ChangedFilesList",
   component: ChangedFilesList,
   parameters: { layout: "padded" },
+  args: { files: sample },
 };
 export default meta;
 
-export const Clean: StoryObj<typeof ChangedFilesList> = {
-  args: { files: [], truncated: false },
-};
-
-export const Mixed: StoryObj<typeof ChangedFilesList> = {
+type Story = StoryObj<typeof ChangedFilesList>;
+export const Default: Story = {};
+export const Truncated: Story = { args: { truncated: true } };
+export const Scrolling: Story = {
   args: {
-    files: [
-      {
-        path: "src/pages/ActivityPage.tsx",
-        status: "staged",
-        kind: "modified",
-        hasUnstagedChanges: true,
-      },
-      {
-        path: "src/lib/activityAggregates.ts",
-        status: "unstaged",
-        kind: "modified",
-        hasUnstagedChanges: false,
-      },
-      {
-        path: "shared/src/types/activity.ts",
-        status: "untracked",
-        kind: "added",
-        hasUnstagedChanges: false,
-      },
-      {
-        path: "app/src-tauri/src/providers/github.rs",
-        status: "conflicted",
-        kind: "modified",
-        hasUnstagedChanges: false,
-      },
-    ],
-    truncated: false,
-  },
-};
-
-export const Truncated: StoryObj<typeof ChangedFilesList> = {
-  args: {
-    files: Array.from({ length: 8 }, (_, i) => ({
-      path: `src/file-${i}.ts`,
-      status: "unstaged" as const,
-      kind: "modified" as const,
-      hasUnstagedChanges: false,
-    })),
-    truncated: true,
+    files: Array.from({ length: 24 }, (_, i) =>
+      mk(
+        `src/feature/file-${i}.ts`,
+        i % 4 === 0
+          ? ChangedFileKind.DELETED
+          : i % 3 === 0
+            ? ChangedFileKind.ADDED
+            : ChangedFileKind.MODIFIED,
+      ),
+    ),
   },
 };

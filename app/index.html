@@ -2,9 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
+    <!--
+      Favicon is owned at runtime by `useFaviconSync` (theme + dev/prod aware).
+      We declare only the SVG slot here so the hook has a stable element to
+      mutate, and Apple-touch is left for home-screen pinning. PNG / ICO
+      fallbacks were removed because every browser the dev/web preview
+      targets (Chrome, FF, Safari 17+, Edge) supports SVG favicons and would
+      otherwise out-prioritise the SVG when both are present with explicit
+      `sizes` — that's what caused the dev badge to silently lose to the
+      production PNG on the tab.
+    -->
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
@@ -19,6 +27,60 @@
       rel="stylesheet"
     />
     <title>Recrest</title>
+    <script>
+      // Anti-flash bootstrap. Runs synchronously before React mounts so the
+      // first paint already has the correct `data-theme` on <html> and a
+      // matching background colour on <body>. Without this the app renders
+      // with the reducer's "light" initial state and flips to dark a tick
+      // later, which the user perceives as a jarring flash on every reload.
+      //
+      // Order of preference:
+      //   1. `recrest:theme-follows-system === "true"` → resolve via matchMedia
+      //   2. explicit `recrest:theme` ∈ {light,dark,oled,glassy} → use it
+      //   3. fall back to matchMedia (first run / no localStorage)
+      (function () {
+        try {
+          var stored = null;
+          var follows = null;
+          try {
+            stored = localStorage.getItem("recrest:theme");
+            follows = localStorage.getItem("recrest:theme-follows-system");
+          } catch (_) {}
+          var prefersDark =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var themeId;
+          if (follows === "true") {
+            themeId = prefersDark ? "dark" : "light";
+          } else if (
+            stored === "light" ||
+            stored === "dark" ||
+            stored === "oled" ||
+            stored === "glassy"
+          ) {
+            themeId = stored;
+          } else {
+            themeId = prefersDark ? "dark" : "light";
+          }
+          var isDark = themeId === "dark" || themeId === "oled" || themeId === "glassy";
+          var root = document.documentElement;
+          root.setAttribute("data-theme", isDark ? "dark" : "light");
+          root.setAttribute("data-theme-id", themeId);
+          root.setAttribute("data-boot-theme", themeId);
+          // Paint the body in the correct surface immediately so the first
+          // frame doesn't show the browser's default white before MUI's
+          // CssBaseline applies the palette. Values match `theme/palette`
+          // defaults for `background.default` (light/dark). Glassy stays
+          // transparent so the native window vibrancy/acrylic shows through
+          // from the very first paint instead of being covered by an opaque
+          // bootstrap colour.
+          root.style.backgroundColor =
+            themeId === "glassy" ? "transparent" : isDark ? "#0b0d12" : "#ffffff";
+        } catch (e) {
+          /* swallow — defaults stand */
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

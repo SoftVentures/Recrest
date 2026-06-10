@@ -10,9 +10,9 @@ Playwright end-to-end tests that drive the real built UI. Unit and component tes
 
 From the repo root:
 
-- `yarn test:e2e` — runs the full Playwright suite (all 4 projects).
+- `yarn test:e2e` — runs the full Playwright suite (all projects).
 - `yarn workspace @recrest/tests test:e2e:landing` — only `landing-desktop` + `landing-mobile`.
-- `yarn workspace @recrest/tests test:e2e:app` — only `app-desktop` + `app-mobile`.
+- `yarn workspace @recrest/tests test:e2e:app` — the app projects (`app-desktop` + `app-firefox` + `app-webkit`). Recrest is a desktop-only app (min 1100×720) — there is intentionally **no** `app-mobile` project; only the landing page is tested at mobile viewports.
 - `yarn workspace @recrest/tests test:e2e:ui` — Playwright UI runner.
 - `yarn workspace @recrest/tests test:e2e:report` — open the last HTML report.
 - `yarn workspace @recrest/tests test:e2e src/e2e/app/01-shell.spec.ts` — run one spec.
@@ -33,7 +33,6 @@ The config launches both dev servers (`yarn dev:web` on `:3000` for the app, `ya
 | `app-desktop`     | Desktop Chrome  | 1440×900 | `$APP_URL` (`:3000`)     | `src/e2e/app/**`                                        |
 | `app-firefox`     | Desktop Firefox | 1440×900 | `$APP_URL`               | `src/e2e/app/**` (skips `13-a11y`)                      |
 | `app-webkit`      | Desktop Safari  | 1440×900 | `$APP_URL`               | `src/e2e/app/**` (skips `13-a11y`)                      |
-| `app-mobile`      | Pixel 7         | preset   | `$APP_URL`               | `src/e2e/app/**`                                        |
 
 `testMatch` uses a path regex so cross-project leakage is impossible. The WebKit + Firefox variants exist to catch browser-engine regressions (CSS, event models, JIT quirks); visual-regression and a11y specs stay Chromium-only because their baselines are pinned to that engine.
 

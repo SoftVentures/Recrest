@@ -1,10 +1,28 @@
 use serde::Deserialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
-use crate::config::settings::{AppSettings, NotificationSettings};
+use std::collections::BTreeMap;
+
+use crate::auth::token::TokenStore;
+use crate::config::settings::{
+    AccessibilitySettings, AppSettings, AppearanceSettings, NotificationSettings, PrivacySettings,
+    RepoImportDefaults, RepoListSort, RepoListViewMode, TerminalSettings, WindowStateSettings,
+};
 use crate::AppState;
 
 use super::error::CommandError;
+
+/// Defensive fallback for the provider-id list used during a factory reset.
+/// In normal operation we ask the live `ProviderRegistry` (`known_ids()`)
+/// so future plugin-installed providers also get their keychain entries
+/// wiped. The hardcoded list is only used if the registry returns empty —
+/// e.g. a panic during startup that left `AppState.providers` half-built.
+const FALLBACK_PROVIDER_IDS: &[&str] = &["github", "gitlab", "bitbucket"];
+
+/// Event emitted on the renderer right after the on-disk settings have been
+/// wiped, so the frontend can clear `localStorage`/`sessionStorage` and
+/// remount the onboarding wizard.
+const SETTINGS_RESET_EVENT: &str = "settings://reset";
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +38,39 @@ pub struct SettingsPatch {
     pub close_to_tray: Option<bool>,
     pub notifications: Option<NotificationSettings>,
     pub crash_reporting: Option<bool>,
+    // Phase 0.1 additive fields. Each frontend dispatch of `saveSettings`
+    // that touches one of these used to be a silent no-op because the patch
+    // deserializer dropped unknown keys — view-mode toggle, sort dropdown,
+    // pin/unpin and the UI-scale hotkeys all bounced off the backend.
+    pub pinned_repo_ids: Option<Vec<String>>,
+    pub author_aliases: Option<BTreeMap<String, String>>,
+    pub ui_scale: Option<f32>,
+    pub repo_list_view_mode: Option<RepoListViewMode>,
+    pub repo_list_sort: Option<RepoListSort>,
+    pub repo_import_defaults: Option<RepoImportDefaults>,
+    // Mirror `default_ide`'s explicit-null pattern so the renderer can clear
+    // the scan path back to "no default" by sending `null`.
+    pub default_scan_path: Option<Option<String>>,
+    pub terminal: Option<TerminalSettings>,
+    // Explicit-null pattern: `Some(None)` clears the shell back to auto.
+    pub shell: Option<Option<String>>,
+    pub commit_message_template: Option<String>,
+    pub privacy: Option<PrivacySettings>,
+    // Explicit-null pattern: `Some(None)` clears back to ssh-agent.
+    pub default_ssh_key_path: Option<Option<String>>,
+    // Phase 2 fields: the renderer now sends the full appearance / accessibility
+    // sub-structs (themeId, followsSystem, primaryColor, font, fontSize, etc.).
+    // These used to be dropped silently because the patch struct had no slot
+    // for them — every `setThemeId` round-trip then overwrote the optimistic
+    // update with the stale on-disk values, which was the cause of the
+    // "theme always reverts to system" regression in the Tauri build.
+    pub appearance: Option<AppearanceSettings>,
+    pub accessibility: Option<AccessibilitySettings>,
+    // Sidebar collapse + future window-state slots. Without this slot every
+    // `toggleSidebar` round-trip dropped the patch and the renderer's
+    // `hydrateUiFromBackend` rewound the optimistic update — visible in Tauri
+    // as the sidebar toggle "doing nothing" after one frame.
+    pub window_state: Option<WindowStateSettings>,
 }
 
 #[tauri::command]
@@ -70,7 +121,124 @@ pub async fn update_settings(
         if let Some(value) = patch.crash_reporting {
             settings.crash_reporting = value;
         }
+        if let Some(value) = patch.pinned_repo_ids {
+            settings.pinned_repo_ids = value;
+        }
+        if let Some(value) = patch.author_aliases {
+            settings.author_aliases = value;
+        }
+        if let Some(value) = patch.ui_scale {
+            settings.ui_scale = value;
+        }
+        if let Some(value) = patch.repo_list_view_mode {
+            settings.repo_list_view_mode = value;
+        }
+        if let Some(value) = patch.repo_list_sort {
+            settings.repo_list_sort = value;
+        }
+        if let Some(value) = patch.repo_import_defaults {
+            settings.repo_import_defaults = value;
+        }
+        if let Some(value) = patch.default_scan_path {
+            settings.default_scan_path = value;
+        }
+        if let Some(value) = patch.terminal {
+            settings.terminal = value;
+        }
+        if let Some(value) = patch.shell {
+            settings.shell = value;
+        }
+        if let Some(value) = patch.commit_message_template {
+            settings.commit_message_template = value;
+        }
+        if let Some(value) = patch.privacy {
+            settings.privacy = value;
+        }
+        if let Some(value) = patch.default_ssh_key_path {
+            settings.default_ssh_key_path = value;
+        }
+        if let Some(value) = patch.appearance {
+            settings.appearance = value;
+        }
+        if let Some(value) = patch.accessibility {
+            settings.accessibility = value;
+        }
+        if let Some(value) = patch.window_state {
+            settings.window_state = value;
+        }
     }
     config.save(&app)?;
     Ok(config.settings().clone())
+}
+
+/// Wipe every piece of persisted state we own:
+///   1. Delete every known provider's token from the OS keychain.
+///   2. Reset the in-memory settings to defaults and remove `settings.json`.
+///   3. Tear down the `RepoWatcher` subscription map so we don't keep
+///      emitting `repo://status` events for repos that no longer live in
+///      the (now wiped) settings.
+///   4. Reset every `ProviderRegistry` entry — clears hydrated
+///      self-hosted base-URL overrides so the next API call uses the
+///      cloud default until the user re-configures.
+///   5. Emit `settings://reset` so the renderer can clear localStorage /
+///      sessionStorage and remount the onboarding wizard.
+///
+/// The order matters: tokens before settings (so a keyring failure doesn't
+/// strand the user with a wiped settings.json but a still-authenticated
+/// provider), watcher/providers before the emit (so the renderer reload
+/// sees a fully clean backend instead of a half-state).
+///
+/// Missing files / missing keychain entries are not errors — a fresh
+/// install has nothing to delete and we still want the renderer half of
+/// the reset to run.
+#[tauri::command]
+pub async fn factory_reset(app: AppHandle, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let store = TokenStore::new();
+    // I9: query the live `ProviderRegistry` for its id list so plugin-
+    // installed providers also get wiped. Fall back to the hardcoded set
+    // only if the registry is empty (e.g. an init panic that left the
+    // providers slot half-built — better to delete the known-default
+    // tokens than skip them entirely).
+    let registry_ids = state.providers.known_ids();
+    let provider_ids: Vec<String> = if registry_ids.is_empty() {
+        FALLBACK_PROVIDER_IDS
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    } else {
+        registry_ids
+    };
+    for provider_id in &provider_ids {
+        // `TokenStore::delete` already swallows `NoEntry` so a never-set
+        // token is a no-op. Other keyring errors (locked, unavailable) are
+        // logged but not bubbled up: we still want the rest of the reset
+        // (settings wipe, event emission) to take effect, so the user can
+        // retry through the onboarding wizard rather than land in a
+        // half-reset state.
+        if let Err(err) = store.delete(provider_id) {
+            tracing::warn!("factory_reset: failed to clear token for {provider_id}: {err}");
+        }
+    }
+
+    {
+        let mut config = state.config.lock().await;
+        config
+            .reset_to_defaults()
+            .map_err(|e| CommandError::internal(format!("reset settings: {e}")))?;
+    }
+
+    {
+        let mut watcher_slot = state.watcher.lock().await;
+        if let Some(watcher) = watcher_slot.as_mut() {
+            watcher.unsubscribe_all().await;
+        }
+    }
+
+    state.providers.clear().await;
+
+    if let Err(err) = app.emit(SETTINGS_RESET_EVENT, ()) {
+        tracing::warn!("factory_reset: failed to emit {SETTINGS_RESET_EVENT}: {err}");
+    }
+
+    Ok(())
 }

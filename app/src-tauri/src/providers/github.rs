@@ -5,13 +5,17 @@ use chrono::{DateTime, Duration, FixedOffset, Utc};
 use serde::Deserialize;
 
 use super::api::{
-    parse_owner_repo, CheckRunSummaryDto, CiStatus, FileChangeDto, FileChangeStatus,
-    OrganizationDto, PrEventDto, PrEventKind, PrState, PullRequestDetailDto, PullRequestDto,
-    RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto,
+    parse_owner_repo, CheckRunSummaryDto, CiStatus, CommentDto, CommentPosition, CommentSide,
+    FileChangeDto, FileChangeStatus, FileDiffDto, MergePullRequestInput, MergePullRequestResult,
+    MergeStrategy, OrganizationDto, PrEventDto, PrEventKind, PrState, PullRequestDetailDto,
+    PullRequestDto, RemoteRepositoryDto, ReviewState, ReviewerDto, TimelineEventDto, WorkflowDto,
+    WorkflowInputDef, WorkflowInputType, WorkflowInputs, WorkflowRunDto,
 };
+use super::diff_parse::parse_hunks;
 use super::r#trait::GitProvider;
 use crate::auth::token::TokenStore;
 use crate::commands::error::CommandError;
+use base64::Engine;
 
 pub const PROVIDER_ID: &str = "github";
 const API_BASE: &str = "https://api.github.com";
@@ -48,9 +52,16 @@ impl GithubProvider {
         }
     }
 
-    /// Effective API base URL: the user override (e.g. GitHub Enterprise) if
-    /// set, otherwise the public cloud endpoint.
+    /// Effective API base URL. Layering, highest-to-lowest:
+    ///   1. `RECREST_PROVIDER_BASE_URLS` env (Plan-8 E2E harness) — wins over
+    ///      everything so a test can point at its mock server even if the user
+    ///      has a self-hosted override configured.
+    ///   2. `set_base_url` runtime override (self-hosted GitHub Enterprise).
+    ///   3. `API_BASE` cloud default.
     fn api_base(&self) -> String {
+        if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
+            return url;
+        }
         self.base_url_override
             .read()
             .ok()
@@ -66,6 +77,124 @@ impl GithubProvider {
         self.token()
             .await?
             .ok_or_else(|| CommandError::Unauthorized("github token not configured".into()))
+    }
+
+    /// Fetches a workflow's YAML via the contents API and extracts its
+    /// `on.workflow_dispatch.inputs` schema. Returns an empty vec when the
+    /// workflow has no dispatch inputs.
+    async fn fetch_workflow_inputs(
+        &self,
+        token: &str,
+        base: &str,
+        owner: &str,
+        repo: &str,
+        path: &str,
+    ) -> Result<Vec<WorkflowInputDef>, CommandError> {
+        let url = format!("{base}/repos/{owner}/{repo}/contents/{path}");
+        let file: GhContentFile = gh_json(&self.http, token, &url, None).await?;
+        if file.encoding.as_deref() != Some("base64") {
+            return Ok(Vec::new());
+        }
+        // GitHub wraps the base64 payload at 60 cols — strip whitespace first.
+        let cleaned: String = file
+            .content
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(cleaned.as_bytes())
+            .map_err(|e| CommandError::internal(format!("github: workflow base64: {e}")))?;
+        let yaml = String::from_utf8_lossy(&bytes);
+        Ok(parse_workflow_dispatch_inputs(&yaml))
+    }
+}
+
+/// Extracts `on.workflow_dispatch.inputs` from a GitHub Actions workflow YAML
+/// into `WorkflowInputDef`s. Tolerant of the two `on:` shapes (mapping and
+/// the rarely-used sequence form); returns empty when dispatch isn't declared.
+fn parse_workflow_dispatch_inputs(yaml: &str) -> Vec<WorkflowInputDef> {
+    let Ok(doc) = serde_yaml::from_str::<serde_yaml::Value>(yaml) else {
+        return Vec::new();
+    };
+    // `on` is a YAML 1.1 reserved word that some parsers fold to the boolean
+    // `true`. serde_yaml 0.9 usually keeps it as the string "on", but guard
+    // both so a folded key still resolves.
+    let on = doc
+        .get("on")
+        .or_else(|| doc.get(serde_yaml::Value::Bool(true)));
+    let Some(on) = on else {
+        return Vec::new();
+    };
+    let dispatch = match on {
+        serde_yaml::Value::Mapping(_) => on.get("workflow_dispatch"),
+        _ => None,
+    };
+    let Some(dispatch) = dispatch else {
+        return Vec::new();
+    };
+    let Some(inputs) = dispatch.get("inputs").and_then(|v| v.as_mapping()) else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::new();
+    for (key, spec) in inputs {
+        let Some(key) = key.as_str() else { continue };
+        let input_type = match spec.get("type").and_then(|v| v.as_str()) {
+            Some("number") => WorkflowInputType::Number,
+            Some("choice") => WorkflowInputType::Choice,
+            Some("boolean") => WorkflowInputType::Boolean,
+            _ => WorkflowInputType::String,
+        };
+        let label = spec
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| key.to_string());
+        let required = spec
+            .get("required")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let default = spec.get("default").and_then(yaml_scalar_to_string);
+        let choices = spec
+            .get("options")
+            .and_then(|v| v.as_sequence())
+            .map(|seq| {
+                seq.iter()
+                    .filter_map(|o| o.as_str().map(str::to_string))
+                    .collect::<Vec<_>>()
+            });
+        out.push(WorkflowInputDef {
+            key: key.to_string(),
+            label,
+            input_type,
+            required,
+            default,
+            choices,
+        });
+    }
+    out
+}
+
+/// YAML scalar → display string (numbers/bools become their text form).
+fn yaml_scalar_to_string(v: &serde_yaml::Value) -> Option<String> {
+    match v {
+        serde_yaml::Value::String(s) => Some(s.clone()),
+        serde_yaml::Value::Bool(b) => Some(b.to_string()),
+        serde_yaml::Value::Number(n) => Some(n.to_string()),
+        _ => None,
+    }
+}
+
+fn map_workflow_run(r: GhWorkflowRun) -> WorkflowRunDto {
+    WorkflowRunDto {
+        id: r.id.to_string(),
+        run_number: r.run_number,
+        status: r.status,
+        conclusion: r.conclusion,
+        head_sha: r.head_sha,
+        created_at: r.created_at,
+        html_url: r.html_url,
+        actor: r.actor.map(|a| a.login),
     }
 }
 
@@ -217,21 +346,36 @@ impl GitProvider for GithubProvider {
             })
             .collect();
 
-        let mut reviewers: Vec<ReviewerDto> = reviews_res
-            .into_iter()
-            .map(|r| ReviewerDto {
-                login: r.user.as_ref().map(|u| u.login.clone()).unwrap_or_default(),
-                name: None,
-                avatar_url: r.user.and_then(|u| u.avatar_url),
-                state: match r.state.as_str() {
-                    "APPROVED" => ReviewState::Approved,
-                    "CHANGES_REQUESTED" => ReviewState::ChangesRequested,
-                    "COMMENTED" => ReviewState::Commented,
-                    "DISMISSED" => ReviewState::Dismissed,
-                    _ => ReviewState::Pending,
-                },
-            })
-            .collect();
+        // One entry per reviewer, not per review: GitHub returns a row for each
+        // review, so a person who reviewed more than once (e.g. commented then
+        // approved) would otherwise appear several times. Reviews come back in
+        // chronological order, so the last one for a login is their current
+        // state.
+        let mut reviewers: Vec<ReviewerDto> = Vec::new();
+        for r in reviews_res {
+            let login = r.user.as_ref().map(|u| u.login.clone()).unwrap_or_default();
+            let avatar_url = r.user.and_then(|u| u.avatar_url);
+            let state = match r.state.as_str() {
+                "APPROVED" => ReviewState::Approved,
+                "CHANGES_REQUESTED" => ReviewState::ChangesRequested,
+                "COMMENTED" => ReviewState::Commented,
+                "DISMISSED" => ReviewState::Dismissed,
+                _ => ReviewState::Pending,
+            };
+            if let Some(existing) = reviewers.iter_mut().find(|e| e.login == login) {
+                existing.state = state;
+                if existing.avatar_url.is_none() {
+                    existing.avatar_url = avatar_url;
+                }
+            } else {
+                reviewers.push(ReviewerDto {
+                    login,
+                    name: None,
+                    avatar_url,
+                    state,
+                });
+            }
+        }
         for r in pr_res.base_pull.requested_reviewers.unwrap_or_default() {
             if !reviewers.iter().any(|existing| existing.login == r.login) {
                 reviewers.push(ReviewerDto {
@@ -556,6 +700,438 @@ impl GitProvider for GithubProvider {
         }
         Ok(out)
     }
+
+    async fn get_pr_diff(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+    ) -> Result<Vec<FileDiffDto>, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}/files?per_page=300");
+        let files: Vec<GhFile> = gh_json(&self.http, &token, &url, None).await?;
+        Ok(files
+            .into_iter()
+            .map(|f| FileDiffDto {
+                path: f.filename,
+                old_path: f.previous_filename,
+                status: match f.status.as_str() {
+                    "added" => FileChangeStatus::Added,
+                    "removed" => FileChangeStatus::Removed,
+                    "renamed" => FileChangeStatus::Renamed,
+                    "copied" => FileChangeStatus::Copied,
+                    "changed" => FileChangeStatus::Changed,
+                    _ => FileChangeStatus::Modified,
+                },
+                hunks: f.patch.as_deref().map(parse_hunks).unwrap_or_default(),
+            })
+            .collect())
+    }
+
+    async fn post_pr_comment(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        body: &str,
+        path: Option<&str>,
+        position: Option<CommentPosition>,
+    ) -> Result<CommentDto, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+
+        // Inline comments anchor on a specific commit + path + line. A general
+        // comment skips the inline payload and uses the issues endpoint, which
+        // is the same surface "Conversation" tab uses.
+        if let (Some(path), Some(pos)) = (path, position) {
+            // Fetch the PR head SHA — GitHub requires it on every review
+            // comment to disambiguate against concurrent pushes.
+            let pr_url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}");
+            let pr: GhPullDetail = gh_json(&self.http, &token, &pr_url, None).await?;
+            let url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}/comments");
+            let line = pos.anchor_line().ok_or_else(|| {
+                CommandError::bad_request("github: inline comment is missing an anchor line")
+            })?;
+            let side_str = |s: CommentSide| match s {
+                CommentSide::Left => "LEFT",
+                CommentSide::Right => "RIGHT",
+            };
+            let mut payload = serde_json::json!({
+                "body": body,
+                "commit_id": pr.base_pull.head.sha,
+                "path": path,
+                "line": line,
+                "side": side_str(pos.end.side),
+            });
+            // Multi-line range: GitHub takes `start_line` + `start_side` per
+            // boundary, so a range can span sides (LEFT deletion → RIGHT
+            // addition). Only sent when the start actually differs from the end.
+            if let Some(start) = pos.start {
+                let start_line = start.line();
+                let differs = start.side != pos.end.side || start_line != Some(line);
+                if let (Some(sl), true) = (start_line, differs) {
+                    payload["start_line"] = sl.into();
+                    payload["start_side"] = side_str(start.side).into();
+                }
+            }
+            let res = self
+                .http
+                .post(&url)
+                .bearer_auth(&token)
+                .header("Accept", "application/vnd.github+json")
+                .json(&payload)
+                .send()
+                .await?;
+            if !res.status().is_success() {
+                return Err(CommandError::internal(format!(
+                    "github post review comment: {} ({url})",
+                    res.status()
+                )));
+            }
+            let raw: GhReviewComment = res.json().await?;
+            return Ok(CommentDto {
+                id: raw.id.to_string(),
+                author: raw
+                    .user
+                    .as_ref()
+                    .map(|u| u.login.clone())
+                    .unwrap_or_default(),
+                author_avatar_url: raw.user.as_ref().and_then(|u| u.avatar_url.clone()),
+                body: raw.body,
+                path: raw.path,
+                side: None,
+                line: None,
+                start_line: None,
+                start_side: None,
+                created_at: raw.created_at,
+            });
+        }
+
+        // General PR/MR comment — issues API, no position.
+        let url = format!("{base}/repos/{owner}/{repo}/issues/{pr_number}/comments");
+        let payload = serde_json::json!({ "body": body });
+        let res = self
+            .http
+            .post(&url)
+            .bearer_auth(&token)
+            .header("Accept", "application/vnd.github+json")
+            .json(&payload)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "github post issue comment: {} ({url})",
+                res.status()
+            )));
+        }
+        let raw: GhIssueComment = res.json().await?;
+        Ok(CommentDto {
+            id: raw.id.to_string(),
+            author: raw
+                .user
+                .as_ref()
+                .map(|u| u.login.clone())
+                .unwrap_or_default(),
+            author_avatar_url: raw.user.as_ref().and_then(|u| u.avatar_url.clone()),
+            body: raw.body,
+            path: None,
+            side: None,
+            line: None,
+            start_line: None,
+            start_side: None,
+            created_at: raw.created_at,
+        })
+    }
+
+    async fn list_workflows(&self, remote_url: &str) -> Result<Vec<WorkflowDto>, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let url = format!("{base}/repos/{owner}/{repo}/actions/workflows?per_page=100");
+        let res: GhWorkflowsResponse = gh_json(&self.http, &token, &url, None).await?;
+
+        // Fetch each workflow's YAML so the "Run workflow" form knows what
+        // inputs to render. Failures (private path, deleted file) degrade to
+        // an empty input schema rather than failing the whole list.
+        let mut out = Vec::with_capacity(res.workflows.len());
+        for wf in res.workflows {
+            let inputs_schema = self
+                .fetch_workflow_inputs(&token, &base, &owner, &repo, &wf.path)
+                .await
+                .unwrap_or_default();
+            out.push(WorkflowDto {
+                id: wf.id.to_string(),
+                name: wf.name,
+                path: wf.path,
+                state: wf.state,
+                inputs_schema,
+            });
+        }
+        Ok(out)
+    }
+
+    async fn list_workflow_runs(
+        &self,
+        remote_url: &str,
+        workflow_id: &str,
+        limit: u32,
+    ) -> Result<Vec<WorkflowRunDto>, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let per_page = limit.clamp(1, 100);
+        let url = format!(
+            "{base}/repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs?per_page={per_page}"
+        );
+        let res: GhWorkflowRunsResponse = gh_json(&self.http, &token, &url, None).await?;
+        Ok(res
+            .workflow_runs
+            .into_iter()
+            .map(map_workflow_run)
+            .collect())
+    }
+
+    async fn trigger_workflow(
+        &self,
+        remote_url: &str,
+        workflow_id: &str,
+        git_ref: &str,
+        inputs: WorkflowInputs,
+    ) -> Result<WorkflowRunDto, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let url = format!("{base}/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches");
+
+        // GitHub's dispatch endpoint takes only string-valued inputs, so
+        // stringify each JSON value (numbers/bools become their text form).
+        let string_inputs: std::collections::BTreeMap<String, String> = inputs
+            .into_iter()
+            .map(|(k, v)| {
+                let s = match v {
+                    serde_json::Value::String(s) => s,
+                    other => other.to_string(),
+                };
+                (k, s)
+            })
+            .collect();
+        let payload = serde_json::json!({ "ref": git_ref, "inputs": string_inputs });
+        let res = self
+            .http
+            .post(&url)
+            .bearer_auth(&token)
+            .header("Accept", "application/vnd.github+json")
+            .json(&payload)
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "github dispatch workflow: {} ({url})",
+                res.status()
+            )));
+        }
+
+        // The dispatch endpoint returns 204 No Content — there's no run id in
+        // the response. Poll the runs list once for the newest run on this
+        // ref so the UI gets an optimistic row to track.
+        let runs = self
+            .list_workflow_runs(remote_url, workflow_id, 1)
+            .await
+            .unwrap_or_default();
+        runs.into_iter().next().ok_or_else(|| {
+            CommandError::internal("github: workflow dispatched but no run surfaced yet")
+        })
+    }
+
+    async fn cancel_workflow_run(
+        &self,
+        remote_url: &str,
+        run_id: &str,
+    ) -> Result<(), CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+        let url = format!("{base}/repos/{owner}/{repo}/actions/runs/{run_id}/cancel");
+        let res = self
+            .http
+            .post(&url)
+            .bearer_auth(&token)
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "github cancel run: {} ({url})",
+                res.status()
+            )));
+        }
+        Ok(())
+    }
+
+    async fn get_pages_status(
+        &self,
+        remote_url: &str,
+    ) -> Result<Option<crate::providers::api::PagesStatusDto>, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+
+        // 404 here = Pages not enabled → None (not an error).
+        let pages_url = format!("{base}/repos/{owner}/{repo}/pages");
+        let pages_res = self
+            .http
+            .get(&pages_url)
+            .bearer_auth(&token)
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await?;
+        if pages_res.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !pages_res.status().is_success() {
+            return Err(CommandError::internal(format!(
+                "github pages: {} ({pages_url})",
+                pages_res.status()
+            )));
+        }
+        let pages: GhPages = pages_res.json().await?;
+
+        // Latest build gives us a deploy timestamp + finer status; best-effort.
+        let build_url = format!("{base}/repos/{owner}/{repo}/pages/builds/latest");
+        let last_deployed_at =
+            match gh_json::<GhPagesBuild>(&self.http, &token, &build_url, None).await {
+                Ok(b) => b.updated_at.or(b.created_at),
+                Err(_) => None,
+            };
+
+        Ok(Some(crate::providers::api::PagesStatusDto {
+            url: pages.html_url,
+            status: pages.status.unwrap_or_else(|| "built".into()),
+            last_deployed_at,
+            custom_domain: pages.cname,
+        }))
+    }
+
+    async fn merge_pull_request(
+        &self,
+        remote_url: &str,
+        pr_number: u64,
+        input: MergePullRequestInput,
+    ) -> Result<MergePullRequestResult, CommandError> {
+        let token = self.require_token().await?;
+        let (owner, repo) = parse_owner_repo(remote_url)
+            .ok_or_else(|| CommandError::bad_request("could not parse owner/repo from remote"))?;
+        let base = self.api_base();
+
+        let merge_method = match input.strategy {
+            MergeStrategy::Merge => "merge",
+            MergeStrategy::Squash => "squash",
+            MergeStrategy::Rebase => "rebase",
+        };
+
+        let mut body = serde_json::Map::new();
+        body.insert(
+            "merge_method".into(),
+            serde_json::Value::String(merge_method.into()),
+        );
+        if let Some(title) = input.commit_title.as_ref().filter(|s| !s.is_empty()) {
+            body.insert(
+                "commit_title".into(),
+                serde_json::Value::String(title.clone()),
+            );
+        }
+        if let Some(msg) = input.commit_message.as_ref().filter(|s| !s.is_empty()) {
+            body.insert(
+                "commit_message".into(),
+                serde_json::Value::String(msg.clone()),
+            );
+        }
+
+        let url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}/merge");
+        let res = self
+            .http
+            .put(&url)
+            .bearer_auth(&token)
+            .header("Accept", "application/vnd.github+json")
+            .json(&serde_json::Value::Object(body))
+            .send()
+            .await?;
+        let status = res.status();
+        if status == reqwest::StatusCode::METHOD_NOT_ALLOWED {
+            let msg = extract_github_message(res).await;
+            return Err(CommandError::bad_request(msg.unwrap_or_else(|| {
+                "GitHub refused the merge — PR is not mergeable (conflicts, branch protection, or review/CI gates).".into()
+            })));
+        }
+        if status == reqwest::StatusCode::CONFLICT {
+            let msg = extract_github_message(res).await;
+            return Err(CommandError::bad_request(msg.unwrap_or_else(|| {
+                "GitHub rejected the merge — head branch has new commits since this modal opened. Reload and try again.".into()
+            })));
+        }
+        if !status.is_success() {
+            return Err(CommandError::internal(format!(
+                "github merge: {status} ({url})"
+            )));
+        }
+        let result: GhMergeResult = res.json().await?;
+        if !result.merged {
+            return Err(CommandError::bad_request(result.message.unwrap_or_else(
+                || "GitHub returned merged=false without a message".into(),
+            )));
+        }
+
+        let mut source_branch_deleted = false;
+        if input.delete_source_branch {
+            let pr_url = format!("{base}/repos/{owner}/{repo}/pulls/{pr_number}");
+            let pr: GhPullDetail = gh_json(&self.http, &token, &pr_url, None).await?;
+            let head_ref = pr.base_pull.head.branch;
+            let del_url = format!("{base}/repos/{owner}/{repo}/git/refs/heads/{head_ref}");
+            let del = self
+                .http
+                .delete(&del_url)
+                .bearer_auth(&token)
+                .header("Accept", "application/vnd.github+json")
+                .send()
+                .await?;
+            if del.status().is_success()
+                || del.status() == reqwest::StatusCode::UNPROCESSABLE_ENTITY
+            {
+                source_branch_deleted = true;
+            }
+        }
+
+        Ok(MergePullRequestResult {
+            merged: true,
+            merge_sha: result.sha,
+            source_branch_deleted,
+            message: result.message,
+        })
+    }
+}
+
+async fn extract_github_message(res: reqwest::Response) -> Option<String> {
+    let raw: serde_json::Value = res.json().await.ok()?;
+    raw.get("message")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+#[derive(Deserialize)]
+struct GhMergeResult {
+    #[serde(default)]
+    sha: Option<String>,
+    merged: bool,
+    #[serde(default)]
+    message: Option<String>,
 }
 
 fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
@@ -563,6 +1139,18 @@ fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
         Some(u) => (u.login, u.avatar_url),
         None => (String::new(), None),
     };
+    let assignees = pr
+        .assignees
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| u.login)
+        .collect::<Vec<_>>();
+    let requested_reviewers = pr
+        .requested_reviewers
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| u.login)
+        .collect::<Vec<_>>();
     PullRequestDto {
         id: pr.id.to_string(),
         number: pr.number,
@@ -585,6 +1173,8 @@ fn map_pr(pr: GhPull, ci: Option<CiStatus>) -> PullRequestDto {
         additions: pr.additions,
         deletions: pr.deletions,
         ci_status: ci,
+        assignees,
+        requested_reviewers,
     }
 }
 
@@ -693,6 +1283,8 @@ struct GhPull {
     #[serde(default)]
     deletions: Option<u64>,
     #[serde(default)]
+    assignees: Option<Vec<GhUser>>,
+    #[serde(default)]
     requested_reviewers: Option<Vec<GhUser>>,
 }
 
@@ -726,6 +1318,14 @@ struct GhFile {
     deletions: u64,
     #[serde(default)]
     blob_url: Option<String>,
+    /// Unified-diff text for this file. Absent on binary changes, on files
+    /// over GitHub's per-file 1 MB limit, or on `removed` status.
+    #[serde(default)]
+    patch: Option<String>,
+    /// Original path for renamed/copied files. Used to surface "renamed from"
+    /// in the diff UI without comparing the pre-image inline.
+    #[serde(default)]
+    previous_filename: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -811,4 +1411,587 @@ struct GhCheckRun {
     started_at: Option<DateTime<Utc>>,
     #[serde(default)]
     completed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize)]
+struct GhReviewComment {
+    id: u64,
+    body: String,
+    #[serde(default)]
+    user: Option<GhUser>,
+    #[serde(default)]
+    path: Option<String>,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize)]
+struct GhIssueComment {
+    id: u64,
+    body: String,
+    #[serde(default)]
+    user: Option<GhUser>,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize)]
+struct GhWorkflowsResponse {
+    #[serde(default)]
+    workflows: Vec<GhWorkflow>,
+}
+
+#[derive(Deserialize)]
+struct GhWorkflow {
+    id: u64,
+    name: String,
+    path: String,
+    state: String,
+}
+
+#[derive(Deserialize)]
+struct GhContentFile {
+    #[serde(default)]
+    content: String,
+    #[serde(default)]
+    encoding: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct GhWorkflowRunsResponse {
+    #[serde(default)]
+    workflow_runs: Vec<GhWorkflowRun>,
+}
+
+#[derive(Deserialize)]
+struct GhWorkflowRun {
+    id: u64,
+    run_number: u64,
+    status: String,
+    #[serde(default)]
+    conclusion: Option<String>,
+    head_sha: String,
+    created_at: DateTime<Utc>,
+    html_url: String,
+    #[serde(default)]
+    actor: Option<GhUser>,
+}
+
+#[derive(Deserialize)]
+struct GhPages {
+    #[serde(default)]
+    html_url: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    cname: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct GhPagesBuild {
+    #[serde(default)]
+    created_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    updated_at: Option<DateTime<Utc>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::token::install_keyring_mock;
+    use crate::providers::api::CommentAnchor;
+    use wiremock::matchers::{method, path_regex};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    async fn provider_with_token(server: &MockServer) -> GithubProvider {
+        install_keyring_mock();
+        let p = GithubProvider::new();
+        p.set_base_url(Some(server.uri())).await.unwrap();
+        p.set_token("test-token", None).await.unwrap();
+        p
+    }
+
+    #[tokio::test]
+    async fn github_list_organizations_maps_orgs() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/github/orgs.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user/orgs$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let orgs = provider.list_organizations().await.unwrap();
+
+        assert_eq!(orgs.len(), 1);
+        assert_eq!(orgs[0].provider_id, PROVIDER_ID);
+        assert_eq!(orgs[0].id, "12345");
+        assert_eq!(orgs[0].slug, "acme");
+        assert_eq!(orgs[0].display_name, "acme");
+        assert!(orgs[0].avatar_url.is_some());
+    }
+
+    #[tokio::test]
+    async fn github_get_pr_diff_parses_hunks_per_file() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/github/pr_files.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+/files$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let diff = provider
+            .get_pr_diff("https://github.com/acme/widget.git", 7)
+            .await
+            .unwrap();
+
+        assert_eq!(diff.len(), 2);
+        assert_eq!(diff[0].path, "src/lib.rs");
+        assert_eq!(diff[0].status, FileChangeStatus::Modified);
+        assert_eq!(diff[0].hunks.len(), 1);
+        // 5 lines: ctx, -, +, +, ctx (matches the fixture patch above).
+        assert_eq!(diff[0].hunks[0].lines.len(), 5);
+
+        assert_eq!(diff[1].path, "README.md");
+        assert_eq!(diff[1].old_path.as_deref(), Some("OLD-README.md"));
+        assert_eq!(diff[1].status, FileChangeStatus::Renamed);
+    }
+
+    #[tokio::test]
+    async fn github_post_pr_comment_inline_uses_review_endpoint() {
+        let server = MockServer::start().await;
+        let pr_body = include_str!("../../tests/fixtures/github/pr_for_diff.json");
+        let created = include_str!("../../tests/fixtures/github/pr_comment_created.json");
+        // 1) PR fetch (for head sha).
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(pr_body))
+            .mount(&server)
+            .await;
+        // 2) Review comment POST.
+        Mock::given(method("POST"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+/comments$"))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://github.com/acme/widget.git",
+                7,
+                "looks good!",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    start: None,
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "998877");
+        assert_eq!(comment.author, "alice");
+        assert_eq!(comment.body, "looks good!");
+        assert_eq!(comment.path.as_deref(), Some("src/lib.rs"));
+    }
+
+    #[tokio::test]
+    async fn github_post_pr_comment_range_sends_start_line() {
+        use wiremock::matchers::body_string_contains;
+
+        let server = MockServer::start().await;
+        let pr_body = include_str!("../../tests/fixtures/github/pr_for_diff.json");
+        let created = include_str!("../../tests/fixtures/github/pr_comment_created.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(pr_body))
+            .mount(&server)
+            .await;
+        // A range comment must send `start_line` + `start_side` alongside the
+        // anchor `line` — the POST is only matched when it does.
+        Mock::given(method("POST"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+/comments$"))
+            .and(body_string_contains("\"start_line\":2"))
+            .and(body_string_contains("\"start_side\":\"RIGHT\""))
+            .and(body_string_contains("\"line\":4"))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://github.com/acme/widget.git",
+                7,
+                "spans three lines",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    start: Some(CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    }),
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(4),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "998877");
+    }
+
+    #[tokio::test]
+    async fn github_post_pr_comment_cross_side_range_keeps_each_boundary_side() {
+        use wiremock::matchers::body_string_contains;
+
+        let server = MockServer::start().await;
+        let pr_body = include_str!("../../tests/fixtures/github/pr_for_diff.json");
+        let created = include_str!("../../tests/fixtures/github/pr_comment_created.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(pr_body))
+            .mount(&server)
+            .await;
+        // A range that runs from a deleted (LEFT) line to an added (RIGHT) one
+        // must keep each boundary's own side: start_side LEFT, side RIGHT.
+        Mock::given(method("POST"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls/\d+/comments$"))
+            .and(body_string_contains("\"side\":\"RIGHT\""))
+            .and(body_string_contains("\"start_side\":\"LEFT\""))
+            .and(body_string_contains("\"start_line\":1"))
+            .and(body_string_contains("\"line\":2"))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://github.com/acme/widget.git",
+                7,
+                "from deletion to addition",
+                Some("src/lib.rs"),
+                Some(CommentPosition {
+                    start: Some(CommentAnchor {
+                        side: CommentSide::Left,
+                        old_line_no: Some(1),
+                        new_line_no: None,
+                    }),
+                    end: CommentAnchor {
+                        side: CommentSide::Right,
+                        old_line_no: None,
+                        new_line_no: Some(2),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, "998877");
+    }
+
+    #[tokio::test]
+    async fn github_post_pr_comment_general_uses_issue_endpoint() {
+        let server = MockServer::start().await;
+        // Use the review-comment fixture as the issue-comment payload — same
+        // shape (id/body/user/created_at), `path` defaults to None.
+        let created = include_str!("../../tests/fixtures/github/pr_comment_created.json");
+        Mock::given(method("POST"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/issues/\d+/comments$"))
+            .respond_with(ResponseTemplate::new(201).set_body_string(created))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let comment = provider
+            .post_pr_comment(
+                "https://github.com/acme/widget.git",
+                7,
+                "general comment",
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(comment.author, "alice");
+        // Issue comments never carry a path.
+        assert_eq!(comment.path, None);
+    }
+
+    #[test]
+    fn parse_workflow_dispatch_inputs_extracts_all_types() {
+        let yaml = r#"
+name: CI
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: "Version tag"
+        required: false
+        default: "latest"
+        type: string
+      dry_run:
+        required: false
+        default: true
+        type: boolean
+      retries:
+        type: number
+  push:
+    branches: [main]
+"#;
+        let inputs = parse_workflow_dispatch_inputs(yaml);
+        assert_eq!(inputs.len(), 4);
+
+        let env = inputs.iter().find(|i| i.key == "environment").unwrap();
+        assert_eq!(env.input_type, WorkflowInputType::Choice);
+        assert!(env.required);
+        assert_eq!(
+            env.choices.as_deref(),
+            Some(&["staging".to_string(), "production".to_string()][..])
+        );
+
+        let version = inputs.iter().find(|i| i.key == "version").unwrap();
+        assert_eq!(version.input_type, WorkflowInputType::String);
+        assert_eq!(version.default.as_deref(), Some("latest"));
+
+        let dry = inputs.iter().find(|i| i.key == "dry_run").unwrap();
+        assert_eq!(dry.input_type, WorkflowInputType::Boolean);
+        assert_eq!(dry.default.as_deref(), Some("true"));
+
+        let retries = inputs.iter().find(|i| i.key == "retries").unwrap();
+        assert_eq!(retries.input_type, WorkflowInputType::Number);
+    }
+
+    #[test]
+    fn parse_workflow_dispatch_inputs_empty_when_no_dispatch() {
+        let yaml = "name: CI\non:\n  push:\n    branches: [main]\n";
+        assert!(parse_workflow_dispatch_inputs(yaml).is_empty());
+    }
+
+    #[tokio::test]
+    async fn github_list_workflows_parses_inputs() {
+        let server = MockServer::start().await;
+        let list = include_str!("../../tests/fixtures/github/workflows/list.json");
+        let contents = include_str!("../../tests/fixtures/github/workflows/contents.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/actions/workflows$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(list))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/contents/.+$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(contents))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let workflows = provider
+            .list_workflows("https://github.com/acme/widget.git")
+            .await
+            .unwrap();
+
+        assert_eq!(workflows.len(), 1);
+        assert_eq!(workflows[0].id, "12345");
+        assert_eq!(workflows[0].name, "CI");
+        // The fixture YAML declares 4 dispatch inputs.
+        assert_eq!(workflows[0].inputs_schema.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn github_list_workflow_runs_maps_runs() {
+        let server = MockServer::start().await;
+        let runs = include_str!("../../tests/fixtures/github/workflows/runs.json");
+        Mock::given(method("GET"))
+            .and(path_regex(
+                r".*/repos/[^/]+/[^/]+/actions/workflows/[^/]+/runs$",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_string(runs))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let runs = provider
+            .list_workflow_runs("https://github.com/acme/widget.git", "12345", 10)
+            .await
+            .unwrap();
+
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].run_number, 42);
+        assert_eq!(runs[0].conclusion.as_deref(), Some("success"));
+        assert_eq!(runs[0].actor.as_deref(), Some("alice"));
+        assert_eq!(runs[1].conclusion.as_deref(), Some("failure"));
+    }
+
+    #[tokio::test]
+    async fn github_get_pages_status_404_is_none() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pages$"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let pages = provider
+            .get_pages_status("https://github.com/acme/widget.git")
+            .await
+            .unwrap();
+        assert!(pages.is_none());
+    }
+
+    #[tokio::test]
+    async fn github_get_pages_status_200_maps_fields() {
+        let server = MockServer::start().await;
+        let pages_body = r#"{"html_url":"https://acme.github.io/widget/","status":"built","cname":"docs.acme.dev"}"#;
+        let build_body =
+            r#"{"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-02T00:00:00Z"}"#;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pages$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(pages_body))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pages/builds/latest$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(build_body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let pages = provider
+            .get_pages_status("https://github.com/acme/widget.git")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(pages.status, "built");
+        assert_eq!(pages.custom_domain.as_deref(), Some("docs.acme.dev"));
+        assert!(pages.last_deployed_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn github_list_repositories_for_org_maps_repos() {
+        let server = MockServer::start().await;
+        let body = include_str!("../../tests/fixtures/github/org_repos.json");
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/orgs/[^/]+/repos$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let repos = provider.list_repositories_for_org("acme").await.unwrap();
+
+        assert_eq!(repos.len(), 1);
+        assert_eq!(repos[0].full_name, "acme/platform-api");
+        assert_eq!(repos[0].default_branch, "main");
+        assert!(repos[0].is_private);
+        assert_eq!(repos[0].language.as_deref(), Some("Rust"));
+        assert_eq!(
+            repos[0].clone_url_ssh.as_deref(),
+            Some("git@github.com:acme/platform-api.git")
+        );
+    }
+
+    #[tokio::test]
+    async fn github_merge_pr_squash_with_branch_delete() {
+        use wiremock::matchers::{body_string_contains, path};
+        let server = MockServer::start().await;
+
+        Mock::given(method("PUT"))
+            .and(path("/repos/acme/widget/pulls/1/merge"))
+            .and(body_string_contains("\"merge_method\":\"squash\""))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "sha": "abc123",
+                "merged": true,
+                "message": "Pull Request successfully merged"
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/acme/widget/pulls/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "id": 1, "number": 1, "title": "t", "html_url": "u",
+                "state": "open", "user": null,
+                "head": { "ref": "feature-x", "sha": "deadbeef" },
+                "base": { "ref": "main", "sha": "cafe" },
+                "merged_at": null,
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-01T00:00:00Z"
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/acme/widget/git/refs/heads/feature-x"))
+            .respond_with(ResponseTemplate::new(204))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let result = provider
+            .merge_pull_request(
+                "https://github.com/acme/widget",
+                1,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Squash,
+                    commit_title: Some("My title".into()),
+                    commit_message: Some("My body".into()),
+                    delete_source_branch: true,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(result.merged);
+        assert_eq!(result.merge_sha.as_deref(), Some("abc123"));
+        assert!(result.source_branch_deleted);
+    }
+
+    #[tokio::test]
+    async fn github_merge_pr_405_not_mergeable_surfaces_message() {
+        use wiremock::matchers::path;
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/repos/acme/widget/pulls/2/merge"))
+            .respond_with(ResponseTemplate::new(405).set_body_json(serde_json::json!({
+                "message": "Pull Request is not mergeable",
+            })))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let err = provider
+            .merge_pull_request(
+                "https://github.com/acme/widget",
+                2,
+                MergePullRequestInput {
+                    strategy: MergeStrategy::Merge,
+                    commit_title: None,
+                    commit_message: None,
+                    delete_source_branch: false,
+                },
+            )
+            .await
+            .unwrap_err();
+        let serialized = serde_json::to_string(&err).unwrap();
+        assert!(serialized.contains("not mergeable"), "{serialized}");
+    }
 }

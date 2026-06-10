@@ -1,0 +1,22 @@
+{
+  "values": [
+    {
+      "uuid": "{pipeline-uuid-1}",
+      "build_number": 42,
+      "state": { "name": "COMPLETED", "result": { "name": "SUCCESSFUL" } },
+      "target": { "commit": { "hash": "abc123def456abc123def456abc123def456abcd" } },
+      "creator": { "display_name": "Alice", "nickname": "alice" },
+      "created_on": "2025-01-04T10:00:00Z",
+      "links": { "html": { "href": "https://bitbucket.org/acme/widget/pipelines/results/42" } }
+    },
+    {
+      "uuid": "{pipeline-uuid-0}",
+      "build_number": 41,
+      "state": { "name": "COMPLETED", "result": { "name": "FAILED" } },
+      "target": { "commit": { "hash": "0000000000000000000000000000000000000000" } },
+      "creator": { "display_name": "Bob", "nickname": "bob" },
+      "created_on": "2025-01-03T10:00:00Z",
+      "links": { "html": { "href": "https://bitbucket.org/acme/widget/pipelines/results/41" } }
+    }
+  ]
+}

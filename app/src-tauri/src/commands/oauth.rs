@@ -72,7 +72,9 @@ pub async fn complete_oauth(
         return Err(CommandError::bad_request("no OAuth flow in progress"));
     };
     if expected_provider != provider_id || expected_state != oauth_state {
-        return Err(CommandError::bad_request("OAuth state mismatch (possible CSRF)"));
+        return Err(CommandError::bad_request(
+            "OAuth state mismatch (possible CSRF)",
+        ));
     }
 
     let provider = state

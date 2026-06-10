@@ -10,19 +10,46 @@ pub struct ScanOptions {
 
 impl Default for ScanOptions {
     fn default() -> Self {
-        Self { max_depth: 6, follow_links: false }
+        Self {
+            max_depth: 6,
+            follow_links: false,
+        }
     }
+}
+
+/// Normalises a user-supplied scan root. On Windows, a bare drive
+/// specifier like `"D:"` refers to the *current working directory* of
+/// drive D, not the drive root — users typing `D:` into the scan-path
+/// input expect drive-root scanning, so we append the separator to
+/// produce `D:\`. Other forms (`D:\`, `D:/`, regular paths) are left
+/// untouched. No-op on non-Windows targets.
+///
+/// Public so repo-pruning (`forget_repos_under_path`) normalises a removed
+/// scan root exactly the way discovery did, otherwise a path stored as `D:`
+/// would never prefix-match the `D:\…` repo paths the walker produced.
+pub fn normalize_scan_root(root: &Path) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let s = root.as_os_str().to_string_lossy();
+        if s.len() == 2 && s.ends_with(':') {
+            let mut bytes = s.into_owned();
+            bytes.push('\\');
+            return PathBuf::from(bytes);
+        }
+    }
+    root.to_path_buf()
 }
 
 /// Recursively scan `root` for directories containing a `.git` entry.
 /// Returns the *repository* directories (parents of `.git`), not `.git` itself.
 pub fn scan(root: &Path, options: &ScanOptions) -> Vec<PathBuf> {
     let mut found = Vec::new();
+    let root = normalize_scan_root(root);
     if !root.exists() {
         return found;
     }
 
-    let mut iter = WalkDir::new(root)
+    let mut iter = WalkDir::new(&root)
         .max_depth(options.max_depth)
         .follow_links(options.follow_links)
         .into_iter();

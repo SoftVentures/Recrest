@@ -54,18 +54,26 @@ jobs:
             exit 0
           fi
 
-          offenders="$(git log --format='%h %s' "$BASE_SHA..$HEAD_SHA" | grep -E '^[0-9a-f]+ dependabot(\([^)]*\))?!?:' || true)"
+          # Flag only commits that BOTH carry the reserved `dependabot:` prefix
+          # AND were authored by a human. Legitimate dependabot[bot] commits
+          # routinely flow through human-opened aggregation / release PRs; the
+          # author-email guard (%ae contains `dependabot[bot]`) lets those pass
+          # while still catching a human who squats the prefix. Tab-delimited
+          # so multi-word author names / subjects don't break field parsing.
+          offenders="$(git log --format='%H%x09%ae%x09%s' "$BASE_SHA..$HEAD_SHA" \
+            | awk -F'\t' '$2 !~ /dependabot\[bot\]/ && $3 ~ /^dependabot(\([^)]*\))?!?:/ { print substr($1, 1, 9) " " $3 }' \
+            || true)"
 
           if [ -n "$offenders" ]; then
             echo "::error::Commit type 'dependabot' is reserved for dependabot[bot]."
-            echo "The following commits use the prefix without authorisation:"
+            echo "The following human-authored commits use the prefix without authorisation:"
             printf '%s\n' "$offenders"
             echo ""
             echo "Fix: use a different allowed type (e.g. ci, patch, bugfix)."
             exit 1
           fi
 
-          echo "OK: no dependabot commits authored by non-bot users."
+          echo "OK: no dependabot-typed commits authored by non-bot users."
 
   tauri-devtools-guard:
     name: Guard tauri devtools feature
@@ -126,7 +134,16 @@ jobs:
           node-version-file: .nvmrc
           cache: yarn
       - uses: ./.github/actions/install-deps
-      - run: yarn test
+      # Runs the app suite with V8 coverage; the thresholds in
+      # app/vitest.config.ts (lines/branches) fail this job on regression.
+      - run: yarn test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-coverage
+          path: app/coverage
+          retention-days: 7
 
   e2e:
     name: Playwright E2E (optional)

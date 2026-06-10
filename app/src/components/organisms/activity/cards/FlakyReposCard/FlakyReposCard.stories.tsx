@@ -1,21 +1,21 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { FlakyReposCard } from "@/components/organisms/activity/cards/FlakyReposCard";
+import FlakyReposCard from "@/components/organisms/activity/cards/FlakyReposCard";
 
-const meta: Meta<typeof FlakyReposCard> = {
-  title: "Organisms/Activity/FlakyReposCard",
+const meta = {
+  title: "Organisms/Activity/Cards/FlakyReposCard",
   component: FlakyReposCard,
-};
-export default meta;
-
-export const Default: StoryObj<typeof FlakyReposCard> = {
   args: {
     rows: [
-      { repoId: "r1", repoName: "flaky-svc", failRate: 0.42, failed: 21, total: 50 },
-      { repoId: "r2", repoName: "edge-tests", failRate: 0.18, failed: 9, total: 50 },
-      { repoId: "r3", repoName: "smoke", failRate: 0.05, failed: 3, total: 60 },
+      { repoId: "r1", repoName: "recrest", failRate: 0.18, failed: 40, total: 220 },
+      { repoId: "r2", repoName: "shared", failRate: 0.07, failed: 4, total: 60 },
     ],
   },
-};
+} satisfies Meta<typeof FlakyReposCard>;
 
-export const Empty: StoryObj<typeof FlakyReposCard> = { args: { rows: [] } };
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
+export const Empty: Story = { args: { rows: [] } };

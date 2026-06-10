@@ -1,81 +1,113 @@
+import { memo } from "react";
+
 import { useTranslation } from "react-i18next";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/molecules/compounds/Tooltip";
-import { CardShell } from "@/components/organisms/activity/cards/CardShell";
-import { dayLabel } from "@/lib/activityStats";
-import type { StackedDay } from "@/lib/activityStats";
+import { useTheme } from "@mui/material/styles";
 
-interface Props {
+import { ResponsiveBar } from "@nivo/bar";
+
+import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import { ChartArea } from "@/components/organisms/activity/cards/StackedChartCard/StackedChartCard.styles";
+import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
+import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
+import type { StackedDay } from "@/lib/activityStats";
+import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
+import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+
+// Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
+// type through the memo() wrapper (TS4023 otherwise).
+export interface Props {
   stacked: StackedDay[];
   total: number;
+  windowDays: number;
   loading?: boolean;
 }
 
-export function StackedChartCard({ stacked, total, loading }: Props) {
-  const { t } = useTranslation();
-  const peak = Math.max(1, ...stacked.map((d) => d.total));
-  const reversed = [...stacked].reverse();
+function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
+  const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const nivoTheme = useNivoTheme();
+  const { show, move, hide, portal } = useChartTooltip();
+
+  const size = bucketSizeForWindow(windowDays);
+  const repoNames = Array.from(new Set(stacked.flatMap((d) => d.segments.map((s) => s.repoName))));
+  const colorByRepo = new Map(
+    stacked.flatMap((d) => d.segments.map((s) => [s.repoName, s.color] as const)),
+  );
+
+  // Aggregate per-day rows into renderable buckets (daily ≤90d, weekly, then
+  // monthly) — one bar per day freezes Nivo on year/all ranges. Buckets come
+  // back newest-first, so reverse to render oldest → newest left-to-right.
+  const buckets = bucketDays(stacked, (d) => d.day, size).reverse();
+  const labelByBucket = new Map(
+    buckets.map((b) => [b.bucket, dayLabel(b.newestDay, i18n.language)] as const),
+  );
+  const data = buckets.map((b) => {
+    const summed: Record<string, number> = {};
+    for (const day of b.rows) {
+      for (const s of day.segments) {
+        summed[s.repoName] = (summed[s.repoName] ?? 0) + s.count;
+      }
+    }
+    return { day: labelByBucket.get(b.bucket)!, ...summed };
+  });
+
+  const labels = data.map((d) => d.day);
+  const every = Math.max(1, Math.ceil(labels.length / 5));
+  const tickValues = labels.filter((_, i) => i % every === 0);
+
+  // Full-day breakdown (every repo with commits, not just the hovered segment).
+  const renderTip = (indexValue: string | number, rowData: Record<string, string | number>) => (
+    <ChartTooltip
+      title={String(indexValue)}
+      rows={repoNames
+        .map((name) => ({ name, count: Number(rowData[name] ?? 0) }))
+        .filter((r) => r.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .map((r) => ({
+          color: colorByRepo.get(r.name) ?? theme.palette.primary.main,
+          label: r.name,
+          value: t("activity.cards.commits_count", { count: r.count }),
+        }))}
+    />
+  );
+
   return (
-    <CardShell
-      title={t("activity.cards.chart_title")}
+    <GeneralCard
+      title={t("activity.cards.chart_title", { days: windowDays })}
       sub={t("activity.chart.sub", { total })}
       loading={loading}
       skeleton="bars"
+      testId={TEST_IDS.activity.stacked.card}
     >
-      <div className="a-act-chart" data-testid="activity-stacked-chart">
-        {reversed.map((d) => {
-          const h = Math.max(4, (d.total / peak) * 100);
-          return (
-            <Tooltip key={d.day}>
-              <TooltipTrigger asChild>
-                <div className="a-act-chart-col" data-testid="activity-stacked-col">
-                  {d.total === 0 ? (
-                    <div
-                      className="a-act-chart-bar a-act-chart-empty"
-                      style={{ height: `${h}%`, opacity: 0.25 }}
-                    />
-                  ) : (
-                    <div className="a-act-chart-stack" style={{ height: `${h}%` }}>
-                      {d.segments.map((s) => (
-                        <div
-                          key={s.repoId}
-                          className="a-act-chart-seg"
-                          style={{ flex: s.count, background: s.color }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="a-act-tt-title">
-                  {dayLabel(d.day)} · {d.total} {d.total === 1 ? "commit" : "commits"}
-                </div>
-                {d.segments.length > 0 && (
-                  <div className="a-act-tt-body">
-                    {d.segments.map((s) => (
-                      <div key={s.repoId} className="a-act-tt-row">
-                        <span
-                          className="a-act-tt-dot"
-                          style={{ background: s.color }}
-                          aria-hidden
-                        />
-                        <span className="a-act-tt-name">{s.repoName}</span>
-                        <span className="a-act-tt-num">{s.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
-      <div className="a-act-chart-axis">
-        <span>14d ago</span>
-        <span>7d</span>
-        <span>today</span>
-      </div>
-    </CardShell>
+      {/* @nivo/bar fires only onMouseEnter — wrapper mousemove keeps the
+          portalled tooltip tracking the cursor across the bar. */}
+      <ChartArea
+        data-testid={TEST_IDS.activity.stacked.chart}
+        onMouseMove={(e) => move(e.clientX, e.clientY)}
+      >
+        <ResponsiveBar
+          data={data}
+          keys={repoNames}
+          indexBy="day"
+          theme={nivoTheme}
+          colors={(bar) => colorByRepo.get(String(bar.id)) ?? theme.palette.primary.main}
+          margin={{ top: 8, right: 8, bottom: 28, left: 28 }}
+          padding={0.35}
+          borderRadius={2}
+          enableLabel={false}
+          axisBottom={{ tickValues, tickRotation: 0 }}
+          axisLeft={{ tickValues: 4 }}
+          tooltip={() => <></>}
+          onMouseEnter={(d, e) => show(e.clientX, e.clientY, renderTip(d.indexValue, d.data))}
+          onMouseLeave={hide}
+        />
+      </ChartArea>
+      {portal}
+    </GeneralCard>
   );
 }
+
+// memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
+export default memo(StackedChartCard);

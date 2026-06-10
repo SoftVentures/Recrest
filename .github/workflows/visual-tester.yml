@@ -87,11 +87,12 @@ jobs:
         run: yarn playwright install
 
       - name: Run Playwright tests
-        # Don't fail the workflow on assertion errors — visual diffs on
-        # Windows / macOS are expected (no pinned baselines for those OS).
-        # CI correctness gating lives in ci.yml::e2e (Linux-only).
+        # Assertion errors are non-blocking here — correctness gating lives
+        # in ci.yml::e2e. Scoped to desktop projects so the cross-OS render
+        # is comparable.
         continue-on-error: true
-        run: yarn test:e2e
+        working-directory: tests
+        run: yarn test:e2e:visual
 
       # Playwright nests each failure under .screenshots/playwright/<test-dir>/
       # with screenshot.png + trace.zip + video.webm + error-context.md side by

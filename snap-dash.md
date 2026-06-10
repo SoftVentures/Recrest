@@ -1,0 +1,518 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - complementary "Primary" [ref=e6]:
+      - generic [ref=e7]:
+        - img "Recrest" [ref=e8]:
+          - img [ref=e9]
+        - paragraph [ref=e19]: Recrest
+      - navigation [ref=e20]:
+        - link "Dashboard" [ref=e22] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e23]:
+            - img [ref=e24]
+            - generic [ref=e27]: Dashboard
+        - link "Repositories 8" [ref=e29] [cursor=pointer]:
+          - /url: /repos
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - generic [ref=e34]: Repositories
+            - generic [ref=e35]: "8"
+        - link "Merge Requests 5" [ref=e37] [cursor=pointer]:
+          - /url: /merge-requests
+          - generic [ref=e38]:
+            - img [ref=e39]
+            - generic [ref=e43]: Merge Requests
+            - generic [ref=e44]: "5"
+        - link "Changes 3" [ref=e46] [cursor=pointer]:
+          - /url: /changes
+          - generic [ref=e47]:
+            - img [ref=e48]
+            - generic [ref=e50]: Changes
+            - generic [ref=e51]: "3"
+        - link "Branches" [ref=e53] [cursor=pointer]:
+          - /url: /branches
+          - generic [ref=e54]:
+            - img [ref=e55]
+            - generic [ref=e59]: Branches
+        - link "Activity" [ref=e61] [cursor=pointer]:
+          - /url: /activity
+          - generic [ref=e62]:
+            - img [ref=e63]
+            - generic [ref=e65]: Activity
+      - button "Collapse" [ref=e66] [cursor=pointer]:
+        - img [ref=e67]
+      - generic [ref=e70]:
+        - group "Add scope" [ref=e72]:
+          - button "Local" [pressed] [ref=e73] [cursor=pointer]:
+            - img [ref=e74]
+            - generic [ref=e76]: Local
+          - button "Global" [ref=e77] [cursor=pointer]:
+            - img [ref=e78]
+            - generic [ref=e81]: Global
+        - link "Settings" [ref=e83] [cursor=pointer]:
+          - /url: /settings
+          - generic [ref=e84]:
+            - img [ref=e85]
+            - generic [ref=e88]: Settings
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - heading "Dashboard" [level=1] [ref=e92]
+        - generic [ref=e93]: 8 repos
+      - button "Search" [ref=e95] [cursor=pointer]:
+        - img [ref=e96]
+        - generic [ref=e99]: Search repositories, branches, MRs…
+        - generic [ref=e100]: ⌘K
+      - generic [ref=e101]:
+        - button "Find across repositories" [ref=e102] [cursor=pointer]:
+          - img [ref=e103]
+        - button "Refresh" [ref=e108] [cursor=pointer]:
+          - img [ref=e109]
+        - button "Add Repository" [ref=e114] [cursor=pointer]:
+          - img [ref=e115]
+          - generic [ref=e117]: Add Repository
+    - main [ref=e118]:
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - button "Repositories 8 3 with changes" [ref=e124] [cursor=pointer]:
+            - generic [ref=e125]: Repositories
+            - generic [ref=e126]: "8"
+            - generic [ref=e127]: 3 with changes
+          - button "Merge Requests 5 2 draft" [ref=e129] [cursor=pointer]:
+            - generic [ref=e130]: Merge Requests
+            - generic [ref=e131]: "5"
+            - generic [ref=e132]: 2 draft
+          - button "Ahead / behind ↑ 7 / ↓ 9 across all remotes" [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]: Ahead / behind
+            - generic [ref=e137]:
+              - generic [ref=e138]: ↑
+              - text: "7"
+              - generic [ref=e139]: /
+              - generic [ref=e140]: ↓
+              - text: "9"
+            - generic [ref=e141]: across all remotes
+          - button "Commits · 14d 194 peak day 20" [ref=e143] [cursor=pointer]:
+            - generic [ref=e144]: Commits · 14d
+            - generic [ref=e145]: "194"
+            - generic [ref=e146]: peak day 20
+        - generic [ref=e147]:
+          - generic [ref=e148]:
+            - generic [ref=e149]:
+              - heading "Activity · last 14 days" [level=3] [ref=e150]
+              - generic [ref=e151]: 194 commits across 8 repos
+            - generic [ref=e167]:
+              - generic [ref=e168]: 14d ago
+              - generic [ref=e169]: 7d
+              - generic [ref=e170]: today
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - heading "Needs your attention" [level=3] [ref=e174]
+              - generic [ref=e175]: 5 items
+            - generic [ref=e176]:
+              - button "local-dev-stacks local-dev-stacks 3 changed · +112 −48 dirty" [ref=e177] [cursor=pointer]:
+                - generic "local-dev-stacks" [ref=e178]: L
+                - generic [ref=e179]:
+                  - generic [ref=e180]: local-dev-stacks
+                  - generic [ref=e181]:
+                    - text: 3 changed ·
+                    - generic [ref=e182]: "+112"
+                    - generic [ref=e183]: −48
+                - generic [ref=e184]: dirty
+              - button "pulse-ios pulse-ios 7 changed · +398 −142 dirty" [ref=e185] [cursor=pointer]:
+                - generic "pulse-ios" [ref=e186]: P
+                - generic [ref=e187]:
+                  - generic [ref=e188]: pulse-ios
+                  - generic [ref=e189]:
+                    - text: 7 changed ·
+                    - generic [ref=e190]: "+398"
+                    - generic [ref=e191]: −142
+                - generic [ref=e192]: dirty
+              - button "octo-notes octo-notes 12 changed · +612 −211 dirty" [ref=e193] [cursor=pointer]:
+                - generic "octo-notes" [ref=e194]: O
+                - generic [ref=e195]:
+                  - generic [ref=e196]: octo-notes
+                  - generic [ref=e197]:
+                    - text: 12 changed ·
+                    - generic [ref=e198]: "+612"
+                    - generic [ref=e199]: −211
+                - generic [ref=e200]: dirty
+              - button "ledger-api ledger-api 3 commits behind behind" [ref=e201] [cursor=pointer]:
+                - generic "ledger-api" [ref=e202]: L
+                - generic [ref=e203]:
+                  - generic [ref=e204]: ledger-api
+                  - generic [ref=e205]: 3 commits behind
+                - generic [ref=e206]: behind
+              - button "pulse-ios pulse-ios 1 commit behind behind" [ref=e207] [cursor=pointer]:
+                - generic "pulse-ios" [ref=e208]: P
+                - generic [ref=e209]:
+                  - generic [ref=e210]: pulse-ios
+                  - generic [ref=e211]: 1 commit behind
+                - generic [ref=e212]: behind
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - heading "Open merge requests" [level=3] [ref=e216]
+              - button "View all →" [ref=e217] [cursor=pointer]
+            - generic [ref=e218]:
+              - 'button "feat(landing): realistic hero demo with DE/EN copy #41 · valentin passing" [ref=e219] [cursor=pointer]':
+                - img [ref=e220]
+                - generic [ref=e224]:
+                  - generic [ref=e225]: "feat(landing): realistic hero demo with DE/EN copy"
+                  - generic [ref=e226]: "#41 · valentin"
+                - generic [ref=e227]: passing
+              - 'button "ci(tests): bootstrap Playwright suite #38 · valentin —" [ref=e229] [cursor=pointer]':
+                - img [ref=e230]
+                - generic [ref=e234]:
+                  - generic [ref=e235]: "ci(tests): bootstrap Playwright suite"
+                  - generic [ref=e236]: "#38 · valentin"
+                - generic [ref=e237]: —
+              - 'button "compose-v2: split profiles #22 · valentin failing" [ref=e238] [cursor=pointer]':
+                - img [ref=e239]
+                - generic [ref=e243]:
+                  - generic [ref=e244]: "compose-v2: split profiles"
+                  - generic [ref=e245]: "#22 · valentin"
+                - generic [ref=e246]: failing
+              - 'button "fix(button): retain focus ring after click #204 · lea passing" [ref=e248] [cursor=pointer]':
+                - img [ref=e249]
+                - generic [ref=e253]:
+                  - generic [ref=e254]: "fix(button): retain focus ring after click"
+                  - generic [ref=e255]: "#204 · lea"
+                - generic [ref=e256]: passing
+          - generic [ref=e258]:
+            - generic [ref=e259]:
+              - heading "Recent commits" [level=3] [ref=e261]
+              - button "All activity →" [ref=e262] [cursor=pointer]
+            - generic [ref=e263]:
+              - 'button "lea fix(a11y): aria-label on icon button signal-lab · lea · r7c0-la" [ref=e264] [cursor=pointer]':
+                - generic "lea" [ref=e265]: L
+                - generic [ref=e267]:
+                  - generic [ref=e268]: "fix(a11y): aria-label on icon button"
+                  - generic [ref=e269]:
+                    - generic [ref=e270]: signal-lab
+                    - generic [ref=e271]: ·
+                    - generic [ref=e272]: lea
+                    - generic [ref=e273]: ·
+                    - generic [ref=e274]: r7c0-la
+              - 'button "tomi style: align spacing in header glyph-sandbox · tomi · r6c0dbo" [ref=e275] [cursor=pointer]':
+                - generic "tomi" [ref=e276]: T
+                - generic [ref=e278]:
+                  - generic [ref=e279]: "style: align spacing in header"
+                  - generic [ref=e280]:
+                    - generic [ref=e281]: glyph-sandbox
+                    - generic [ref=e282]: ·
+                    - generic [ref=e283]: tomi
+                    - generic [ref=e284]: ·
+                    - generic [ref=e285]: r6c0dbo
+              - 'button "maren feat: add keyboard shortcut octo-notes · maren · r5c0ote" [ref=e286] [cursor=pointer]':
+                - generic "maren" [ref=e287]: M
+                - generic [ref=e289]:
+                  - generic [ref=e290]: "feat: add keyboard shortcut"
+                  - generic [ref=e291]:
+                    - generic [ref=e292]: octo-notes
+                    - generic [ref=e293]: ·
+                    - generic [ref=e294]: maren
+                    - generic [ref=e295]: ·
+                    - generic [ref=e296]: r5c0ote
+              - 'button "valentin refactor: extract shared helpers starlight-ui · valentin · r4c0t-u" [ref=e297] [cursor=pointer]':
+                - generic "valentin" [ref=e298]: V
+                - generic [ref=e300]:
+                  - generic [ref=e301]: "refactor: extract shared helpers"
+                  - generic [ref=e302]:
+                    - generic [ref=e303]: starlight-ui
+                    - generic [ref=e304]: ·
+                    - generic [ref=e305]: valentin
+                    - generic [ref=e306]: ·
+                    - generic [ref=e307]: r4c0t-u
+              - 'button "lea fix(a11y): aria-label on icon button pulse-ios · lea · r3c0-io" [ref=e308] [cursor=pointer]':
+                - generic "lea" [ref=e309]: L
+                - generic [ref=e311]:
+                  - generic [ref=e312]: "fix(a11y): aria-label on icon button"
+                  - generic [ref=e313]:
+                    - generic [ref=e314]: pulse-ios
+                    - generic [ref=e315]: ·
+                    - generic [ref=e316]: lea
+                    - generic [ref=e317]: ·
+                    - generic [ref=e318]: r3c0-io
+              - 'button "tomi style: align spacing in header ledger-api · tomi · r2c0-ap" [ref=e319] [cursor=pointer]':
+                - generic "tomi" [ref=e320]: T
+                - generic [ref=e322]:
+                  - generic [ref=e323]: "style: align spacing in header"
+                  - generic [ref=e324]:
+                    - generic [ref=e325]: ledger-api
+                    - generic [ref=e326]: ·
+                    - generic [ref=e327]: tomi
+                    - generic [ref=e328]: ·
+                    - generic [ref=e329]: r2c0-ap
+          - generic [ref=e330]:
+            - generic [ref=e332]:
+              - heading "Language mix" [level=3] [ref=e333]
+              - generic [ref=e334]: weighted by commits
+            - generic [ref=e335]:
+              - img [ref=e336]:
+                - generic [ref=e353]: "104"
+                - generic [ref=e354]: commits
+              - list [ref=e355]:
+                - listitem [ref=e356]:
+                  - generic [ref=e358]: TypeScript
+                  - generic [ref=e359]: 25%
+                - listitem [ref=e360]:
+                  - generic [ref=e362]: Rust
+                  - generic [ref=e363]: 13%
+                - listitem [ref=e364]:
+                  - generic [ref=e366]: Swift
+                  - generic [ref=e367]: 10%
+                - listitem [ref=e368]:
+                  - generic [ref=e370]: JavaScript
+                  - generic [ref=e371]: 10%
+                - listitem [ref=e372]:
+                  - generic [ref=e374]: Python
+                  - generic [ref=e375]: 10%
+                - listitem [ref=e376]:
+                  - generic [ref=e378]: CSS
+                  - generic [ref=e379]: 7%
+                - listitem [ref=e380]:
+                  - generic [ref=e382]: Shell
+                  - generic [ref=e383]: 7%
+                - listitem [ref=e384]:
+                  - generic [ref=e386]: YAML
+                  - generic [ref=e387]: 4%
+                - listitem [ref=e388]:
+                  - generic [ref=e390]: Jupyter
+                  - generic [ref=e391]: 2%
+                - listitem [ref=e392]:
+                  - generic [ref=e394]: HTML
+                  - generic [ref=e395]: 2%
+                - listitem [ref=e396]:
+                  - generic [ref=e398]: Dockerfile
+                  - generic [ref=e399]: 2%
+                - listitem [ref=e400]:
+                  - generic [ref=e402]: Objective-C
+                  - generic [ref=e403]: 2%
+                - listitem [ref=e404]:
+                  - generic [ref=e406]: Markdown
+                  - generic [ref=e407]: 1%
+                - listitem [ref=e408]:
+                  - generic [ref=e410]: Vue
+                  - generic [ref=e411]: 1%
+                - listitem [ref=e412]:
+                  - generic [ref=e414]: Other (8)
+                  - generic [ref=e415]: 4%
+          - generic [ref=e416]:
+            - heading "Quick actions" [level=3] [ref=e419]
+            - generic [ref=e420]:
+              - button "Fetch all" [ref=e421] [cursor=pointer]:
+                - img [ref=e422]
+                - generic [ref=e427]: Fetch all
+              - button "Clone from a URL or import from GitHub / GitLab / Bitbucket" [ref=e428] [cursor=pointer]:
+                - img [ref=e429]
+                - generic [ref=e430]: Clone repo
+              - button "Find across repos" [ref=e431] [cursor=pointer]:
+                - img [ref=e432]
+                - generic [ref=e435]: Find across repos
+              - button "Open a multi-root IDE workspace with all scanned repos" [ref=e436] [cursor=pointer]:
+                - img [ref=e437]
+                - generic [ref=e439]: Open workspace
+              - button "Open the most recently active repo in your default IDE" [ref=e440] [cursor=pointer]:
+                - img [ref=e441]
+                - generic [ref=e445]: Open in IDE
+              - button "Recent commits" [ref=e446] [cursor=pointer]:
+                - img [ref=e447]
+                - generic [ref=e449]: Recent commits
+              - button "Create branch" [ref=e450] [cursor=pointer]:
+                - img [ref=e451]
+                - generic [ref=e455]: Create branch
+              - button "Coming soon" [disabled] [ref=e456]:
+                - img [ref=e457]
+                - generic [ref=e461]: Pull all
+          - generic [ref=e462]:
+            - generic [ref=e464]:
+              - heading "Weekday × hour heatmap" [level=3] [ref=e465]
+              - generic [ref=e466]: when the team commits
+            - img "Activity heatmap" [ref=e467]:
+              - generic [ref=e468]:
+                - generic [ref=e469]: Mo
+                - generic "Mo · 00:00 · 0" [ref=e470]
+                - generic "Mo · 01:00 · 0" [ref=e471]
+                - generic "Mo · 02:00 · 0" [ref=e472]
+                - generic "Mo · 03:00 · 0" [ref=e473]
+                - generic "Mo · 04:00 · 0" [ref=e474]
+                - generic "Mo · 05:00 · 0" [ref=e475]
+                - generic "Mo · 06:00 · 0" [ref=e476]
+                - generic "Mo · 07:00 · 0" [ref=e477]
+                - generic "Mo · 08:00 · 0" [ref=e478]
+                - generic "Mo · 09:00 · 0" [ref=e479]
+                - generic "Mo · 10:00 · 0" [ref=e480]
+                - generic "Mo · 11:00 · 8" [ref=e481]
+                - generic "Mo · 12:00 · 8" [ref=e482]
+                - generic "Mo · 13:00 · 0" [ref=e483]
+                - generic "Mo · 14:00 · 0" [ref=e484]
+                - generic "Mo · 15:00 · 0" [ref=e485]
+                - generic "Mo · 16:00 · 0" [ref=e486]
+                - generic "Mo · 17:00 · 0" [ref=e487]
+                - generic "Mo · 18:00 · 0" [ref=e488]
+                - generic "Mo · 19:00 · 0" [ref=e489]
+                - generic "Mo · 20:00 · 0" [ref=e490]
+                - generic "Mo · 21:00 · 0" [ref=e491]
+                - generic "Mo · 22:00 · 0" [ref=e492]
+                - generic "Mo · 23:00 · 0" [ref=e493]
+              - generic [ref=e494]:
+                - generic [ref=e495]: Tu
+                - generic "Tu · 00:00 · 0" [ref=e496]
+                - generic "Tu · 01:00 · 0" [ref=e497]
+                - generic "Tu · 02:00 · 0" [ref=e498]
+                - generic "Tu · 03:00 · 0" [ref=e499]
+                - generic "Tu · 04:00 · 0" [ref=e500]
+                - generic "Tu · 05:00 · 0" [ref=e501]
+                - generic "Tu · 06:00 · 0" [ref=e502]
+                - generic "Tu · 07:00 · 0" [ref=e503]
+                - generic "Tu · 08:00 · 0" [ref=e504]
+                - generic "Tu · 09:00 · 0" [ref=e505]
+                - generic "Tu · 10:00 · 0" [ref=e506]
+                - generic "Tu · 11:00 · 0" [ref=e507]
+                - generic "Tu · 12:00 · 0" [ref=e508]
+                - generic "Tu · 13:00 · 0" [ref=e509]
+                - generic "Tu · 14:00 · 0" [ref=e510]
+                - generic "Tu · 15:00 · 8" [ref=e511]
+                - generic "Tu · 16:00 · 9" [ref=e512]
+                - generic "Tu · 17:00 · 0" [ref=e513]
+                - generic "Tu · 18:00 · 0" [ref=e514]
+                - generic "Tu · 19:00 · 0" [ref=e515]
+                - generic "Tu · 20:00 · 0" [ref=e516]
+                - generic "Tu · 21:00 · 0" [ref=e517]
+                - generic "Tu · 22:00 · 0" [ref=e518]
+                - generic "Tu · 23:00 · 0" [ref=e519]
+              - generic [ref=e520]:
+                - generic [ref=e521]: We
+                - generic "We · 00:00 · 0" [ref=e522]
+                - generic "We · 01:00 · 0" [ref=e523]
+                - generic "We · 02:00 · 0" [ref=e524]
+                - generic "We · 03:00 · 0" [ref=e525]
+                - generic "We · 04:00 · 0" [ref=e526]
+                - generic "We · 05:00 · 0" [ref=e527]
+                - generic "We · 06:00 · 0" [ref=e528]
+                - generic "We · 07:00 · 0" [ref=e529]
+                - generic "We · 08:00 · 0" [ref=e530]
+                - generic "We · 09:00 · 8" [ref=e531]
+                - generic "We · 10:00 · 0" [ref=e532]
+                - generic "We · 11:00 · 0" [ref=e533]
+                - generic "We · 12:00 · 0" [ref=e534]
+                - generic "We · 13:00 · 0" [ref=e535]
+                - generic "We · 14:00 · 0" [ref=e536]
+                - generic "We · 15:00 · 0" [ref=e537]
+                - generic "We · 16:00 · 2" [ref=e538]
+                - generic "We · 17:00 · 0" [ref=e539]
+                - generic "We · 18:00 · 0" [ref=e540]
+                - generic "We · 19:00 · 0" [ref=e541]
+                - generic "We · 20:00 · 0" [ref=e542]
+                - generic "We · 21:00 · 0" [ref=e543]
+                - generic "We · 22:00 · 0" [ref=e544]
+                - generic "We · 23:00 · 0" [ref=e545]
+              - generic [ref=e546]:
+                - generic [ref=e547]: Th
+                - generic "Th · 00:00 · 0" [ref=e548]
+                - generic "Th · 01:00 · 0" [ref=e549]
+                - generic "Th · 02:00 · 0" [ref=e550]
+                - generic "Th · 03:00 · 0" [ref=e551]
+                - generic "Th · 04:00 · 0" [ref=e552]
+                - generic "Th · 05:00 · 0" [ref=e553]
+                - generic "Th · 06:00 · 0" [ref=e554]
+                - generic "Th · 07:00 · 0" [ref=e555]
+                - generic "Th · 08:00 · 8" [ref=e556]
+                - generic "Th · 09:00 · 0" [ref=e557]
+                - generic "Th · 10:00 · 0" [ref=e558]
+                - generic "Th · 11:00 · 0" [ref=e559]
+                - generic "Th · 12:00 · 0" [ref=e560]
+                - generic "Th · 13:00 · 0" [ref=e561]
+                - generic "Th · 14:00 · 8" [ref=e562]
+                - generic "Th · 15:00 · 0" [ref=e563]
+                - generic "Th · 16:00 · 3" [ref=e564]
+                - generic "Th · 17:00 · 0" [ref=e565]
+                - generic "Th · 18:00 · 0" [ref=e566]
+                - generic "Th · 19:00 · 0" [ref=e567]
+                - generic "Th · 20:00 · 0" [ref=e568]
+                - generic "Th · 21:00 · 0" [ref=e569]
+                - generic "Th · 22:00 · 0" [ref=e570]
+                - generic "Th · 23:00 · 0" [ref=e571]
+              - generic [ref=e572]:
+                - generic [ref=e573]: Fr
+                - generic "Fr · 00:00 · 0" [ref=e574]
+                - generic "Fr · 01:00 · 0" [ref=e575]
+                - generic "Fr · 02:00 · 0" [ref=e576]
+                - generic "Fr · 03:00 · 0" [ref=e577]
+                - generic "Fr · 04:00 · 0" [ref=e578]
+                - generic "Fr · 05:00 · 0" [ref=e579]
+                - generic "Fr · 06:00 · 0" [ref=e580]
+                - generic "Fr · 07:00 · 0" [ref=e581]
+                - generic "Fr · 08:00 · 0" [ref=e582]
+                - generic "Fr · 09:00 · 0" [ref=e583]
+                - generic "Fr · 10:00 · 8" [ref=e584]
+                - generic "Fr · 11:00 · 0" [ref=e585]
+                - generic "Fr · 12:00 · 0" [ref=e586]
+                - generic "Fr · 13:00 · 0" [ref=e587]
+                - generic "Fr · 14:00 · 0" [ref=e588]
+                - generic "Fr · 15:00 · 0" [ref=e589]
+                - generic "Fr · 16:00 · 0" [ref=e590]
+                - generic "Fr · 17:00 · 0" [ref=e591]
+                - generic "Fr · 18:00 · 0" [ref=e592]
+                - generic "Fr · 19:00 · 0" [ref=e593]
+                - generic "Fr · 20:00 · 8" [ref=e594]
+                - generic "Fr · 21:00 · 0" [ref=e595]
+                - generic "Fr · 22:00 · 0" [ref=e596]
+                - generic "Fr · 23:00 · 0" [ref=e597]
+              - generic [ref=e598]:
+                - generic [ref=e599]: Sa
+                - generic "Sa · 00:00 · 0" [ref=e600]
+                - generic "Sa · 01:00 · 0" [ref=e601]
+                - generic "Sa · 02:00 · 0" [ref=e602]
+                - generic "Sa · 03:00 · 0" [ref=e603]
+                - generic "Sa · 04:00 · 0" [ref=e604]
+                - generic "Sa · 05:00 · 0" [ref=e605]
+                - generic "Sa · 06:00 · 0" [ref=e606]
+                - generic "Sa · 07:00 · 0" [ref=e607]
+                - generic "Sa · 08:00 · 0" [ref=e608]
+                - generic "Sa · 09:00 · 0" [ref=e609]
+                - generic "Sa · 10:00 · 0" [ref=e610]
+                - generic "Sa · 11:00 · 0" [ref=e611]
+                - generic "Sa · 12:00 · 0" [ref=e612]
+                - generic "Sa · 13:00 · 8" [ref=e613]
+                - generic "Sa · 14:00 · 0" [ref=e614]
+                - generic "Sa · 15:00 · 0" [ref=e615]
+                - generic "Sa · 16:00 · 1" [ref=e616]
+                - generic "Sa · 17:00 · 0" [ref=e617]
+                - generic "Sa · 18:00 · 8" [ref=e618]
+                - generic "Sa · 19:00 · 0" [ref=e619]
+                - generic "Sa · 20:00 · 0" [ref=e620]
+                - generic "Sa · 21:00 · 0" [ref=e621]
+                - generic "Sa · 22:00 · 0" [ref=e622]
+                - generic "Sa · 23:00 · 0" [ref=e623]
+              - generic [ref=e624]:
+                - generic [ref=e625]: Su
+                - generic "Su · 00:00 · 0" [ref=e626]
+                - generic "Su · 01:00 · 0" [ref=e627]
+                - generic "Su · 02:00 · 0" [ref=e628]
+                - generic "Su · 03:00 · 0" [ref=e629]
+                - generic "Su · 04:00 · 0" [ref=e630]
+                - generic "Su · 05:00 · 0" [ref=e631]
+                - generic "Su · 06:00 · 0" [ref=e632]
+                - generic "Su · 07:00 · 0" [ref=e633]
+                - generic "Su · 08:00 · 0" [ref=e634]
+                - generic "Su · 09:00 · 0" [ref=e635]
+                - generic "Su · 10:00 · 0" [ref=e636]
+                - generic "Su · 11:00 · 0" [ref=e637]
+                - generic "Su · 12:00 · 0" [ref=e638]
+                - generic "Su · 13:00 · 0" [ref=e639]
+                - generic "Su · 14:00 · 0" [ref=e640]
+                - generic "Su · 15:00 · 0" [ref=e641]
+                - generic "Su · 16:00 · 1" [ref=e642]
+                - generic "Su · 17:00 · 8" [ref=e643]
+                - generic "Su · 18:00 · 0" [ref=e644]
+                - generic "Su · 19:00 · 0" [ref=e645]
+                - generic "Su · 20:00 · 0" [ref=e646]
+                - generic "Su · 21:00 · 0" [ref=e647]
+                - generic "Su · 22:00 · 0" [ref=e648]
+                - generic "Su · 23:00 · 0" [ref=e649]
+            - generic [ref=e650]:
+              - generic [ref=e651]: "00"
+              - generic [ref=e652]: "06"
+              - generic [ref=e653]: "12"
+              - generic [ref=e654]: "18"
+              - generic [ref=e655]: "23"
+  - region "Notifications alt+T"

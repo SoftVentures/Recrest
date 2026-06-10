@@ -2,6 +2,8 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { type EventCallback, type UnlistenFn, listen as tauriListen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
+import { isIpcTraceEnabled } from "@/lib/tauri/ipcTrace";
+
 /**
  * True when the page is running inside a Tauri webview. When false (plain
  * `vite dev` in a browser) the IPC bridge is unavailable and calls would
@@ -17,23 +19,20 @@ export function isTauri(): boolean {
  *
  * In dev builds, when the Developer tab's "IPC trace" flag is on, every call
  * is logged with its args + duration. The `import.meta.env.DEV` gate is
- * compile-time so this is zero-cost in production. Store is loaded via a
- * dynamic import so this module can be imported by slices without a cycle.
+ * compile-time so this is zero-cost in production. The flag lives in a tiny
+ * module-level store ({@link isIpcTraceEnabled}) rather than Redux so this
+ * module never imports `@/store` — that would form a dependency cycle.
  */
 export async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) {
     throw new Error(`tauri-ipc-unavailable: ${command} (running outside Tauri runtime)`);
   }
-  if (import.meta.env.DEV) {
-    let tracing = false;
-    try {
-      const { store } = await import("@/store");
-      const s = store.getState() as unknown as { uiDevFlags?: { ipcTrace?: boolean } };
-      tracing = s.uiDevFlags?.ipcTrace === true;
-    } catch {
-      /* store not yet ready or missing — fall through to untraced invoke */
-    }
-    if (tracing) {
+  // `dev_log` is the sink the devLog forwarder uses to mirror console.*
+  // calls to disk. Tracing its own invocation would push every trace line
+  // back through the same forwarder → infinite recursion. Skip the trace
+  // for that one command (the message payload is in the log line itself).
+  if (import.meta.env.DEV && command !== "dev_log") {
+    if (isIpcTraceEnabled()) {
       const t0 = performance.now();
       try {
         const result = await tauriInvoke<T>(command, args);
@@ -59,7 +58,7 @@ export async function invoke<T>(command: string, args?: Record<string, unknown>)
  * Swallows `tauri-ipc-unavailable` and any command-side failure, returning
  * `null`. Use for fire-and-forget calls (tray badge, window state persist)
  * where a failure should not propagate to UI code. Delegates to {@link invoke}
- * so the developer-tab IPC trace (`uiDevFlags.ipcTrace`) is inherited.
+ * so the developer-tab IPC trace is inherited.
  */
 export async function safeInvoke<T>(
   command: string,

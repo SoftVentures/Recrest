@@ -30,7 +30,11 @@ fn detect() -> GitInfo {
     };
     let path = version.as_ref().and_then(|_| locate_git());
     let installed = version.is_some();
-    GitInfo { installed, version, path }
+    GitInfo {
+        installed,
+        version,
+        path,
+    }
 }
 
 fn parse_version(stdout: &str) -> Option<String> {
