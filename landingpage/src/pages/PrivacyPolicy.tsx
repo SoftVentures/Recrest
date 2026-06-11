@@ -2,8 +2,10 @@ import { Trans, useTranslation } from "react-i18next";
 
 import { loadImprint } from "@recrest/shared";
 
+import { LEGAL_LAST_REVIEWED, formatLegalDate } from "../lib/legal";
+
 export function PrivacyPolicy() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const result = loadImprint(import.meta.env as unknown as Record<string, string | undefined>);
   const imprint = result.ok ? result.imprint : null;
 
@@ -57,8 +59,23 @@ export function PrivacyPolicy() {
       </section>
 
       <section>
+        <h2>{t("legal.privacy.sections.fonts")}</h2>
+        <p>{t("legal.privacy.fontsBody")}</p>
+      </section>
+
+      <section>
+        <h2>{t("legal.privacy.sections.storage")}</h2>
+        <p>{t("legal.privacy.storageBody")}</p>
+      </section>
+
+      <section>
         <h2>{t("legal.privacy.sections.logs")}</h2>
         <p>{t("legal.privacy.logsBody")}</p>
+      </section>
+
+      <section>
+        <h2>{t("legal.privacy.sections.crashReporting")}</h2>
+        <p>{t("legal.privacy.crashReportingBody")}</p>
       </section>
 
       <section>
@@ -75,6 +92,12 @@ export function PrivacyPolicy() {
         <h2>{t("legal.privacy.sections.changes")}</h2>
         <p>{t("legal.privacy.changesBody")}</p>
       </section>
+
+      <p className="legal-updated">
+        {t("legal.lastUpdated", {
+          date: formatLegalDate(LEGAL_LAST_REVIEWED, i18n.language),
+        })}
+      </p>
     </>
   );
 }

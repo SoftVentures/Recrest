@@ -17,6 +17,8 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@recrest/shared": "*",
     "device-type-detection": "^2.1.3",
     "i18next": "^23.16.0",

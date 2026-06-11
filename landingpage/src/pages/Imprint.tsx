@@ -85,6 +85,11 @@ export function Imprint() {
         <p>{t("legal.imprint.disclaimerBody")}</p>
       </section>
 
+      <section>
+        <h2>{t("legal.imprint.sections.copyright")}</h2>
+        <p>{t("legal.imprint.copyrightBody")}</p>
+      </section>
+
       <p className="legal-note" aria-hidden="true" hidden>
         {IMPRINT_ENV_KEYS.name /* keep type reference for tree-shaking */}
       </p>

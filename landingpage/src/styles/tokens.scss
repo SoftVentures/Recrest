@@ -48,8 +48,11 @@
   --radius-2xl: 22px;
   --radius-pill: 100px;
 
-  --font-sans: "Inter", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Menlo", "Consolas", monospace;
+  --font-sans:
+    "Inter Variable", "Inter", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", "SF Mono", ui-monospace, "Menlo", "Consolas",
+    monospace;
 }
 
 [data-theme="dark"] {
