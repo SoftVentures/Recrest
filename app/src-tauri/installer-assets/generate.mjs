@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Rasterisiert die SVG-Master-Dateien unter `sources/` in die vom Tauri-Bundler
  * erwarteten Installer-Branding-Assets:
@@ -16,7 +17,7 @@
  */
 import { Resvg } from "@resvg/resvg-js";
 import { Jimp } from "jimp";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

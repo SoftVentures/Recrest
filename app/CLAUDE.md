@@ -56,7 +56,7 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 
 Two icon trees live under `src-tauri/`, each split into four platform subfolders:
 
-```
+```text
 src-tauri/icons/                 (production)
 ├── mac/      icon.icns, icon-light.icns, icon-dark.icns
 ├── windows/  icon.ico, icon-light.png, icon-dark.png, Square*Logo.png, StoreLogo.png
@@ -90,6 +90,7 @@ All three call the same script with `--prod` / `--dev` filters; the only-flagged
 **Runtime icon swapping** — both macOS (`set_macos_app_icon`) and Windows (`apply_windows_theme_icon`) swap between the light/dark variants when the OS theme flips. **Windows** hooks Tauri's `WindowEvent::ThemeChanged` (dispatched on the main thread by the event loop) and re-applies window + tray icons from there. **macOS** uses a 1.5s polling task spawned in `spawn_macos_appearance_poller` instead — both notification paths were tried and discarded as unreliable for system-wide appearance flips: `WindowEvent::ThemeChanged` on macOS only fires for explicit per-window theme overrides (a known tao behaviour), and an `NSDistributedNotificationCenter` observer for `AppleInterfaceThemeChangedNotification` registered cleanly but its block never fired against the Tauri dev/release binary (likely because the dev binary isn't a proper `.app` bundle and lacks the LSUIElement/sandbox plumbing needed to receive system-wide distributed notifications). The poller reads `NSApp.effectiveAppearance` on the main thread via `app_handle.run_on_main_thread(...)` and calls `set_macos_app_icon()` only when the dark-mode bit actually flips. The dock/taskbar icon is bundle-icon based, the tray uses `tray_icon_bytes()`.
 
 **Tray click behavior** — platform-conditional in `TrayIconBuilder`:
+
 - macOS: `.show_menu_on_left_click(true)` + `.icon_as_template(true)` — single left-click opens the menu (like Wi-Fi, Battery, Spotlight). No `on_tray_icon_event` handler.
 - Windows + Linux: `.show_menu_on_left_click(false)` + `on_tray_icon_event` left-click → `show_main_window`. Right-click opens the menu.
 
@@ -116,7 +117,7 @@ Full reorganisation plan: `docs/plans/PLAN_COMPONENTS_REFACTOR.md`. The rules be
 
 ### Folder layout
 
-```
+```text
 ComponentName/
 ├── index.tsx                  ← component, props interface, default export
 ├── ComponentName.styles.tsx   ← when styled-blocks exceed ~200 LOC
@@ -142,7 +143,7 @@ Card chrome lives in `molecules/cards/GeneralCard`, never in `organisms/cards/*`
 
 `GeneralX` is reserved for cross-cutting primitives every page composes — `GeneralButton`, `GeneralButtonGroup`, `GeneralIconButton`, `GeneralCard`, `GeneralTooltip`, `GeneralSparkline`, `GeneralSwitchInput`, `GeneralSearchInput`, `GeneralAvatar`, `GeneralDrawer`, `GeneralModal`, `GeneralLoader`, `GeneralCircularLoader`, `GeneralLinearLoader`, `GeneralSkeletonLoader`. Domain specialisations of those primitives drop the prefix: `AuthorAvatar` and `RepoAvatar` compose `GeneralAvatar`, `ConfirmationModal` composes `GeneralModal`, `MrDetailDrawer` composes `GeneralDrawer`, etc. Brand atoms (`Logo`, `Mascot`) and tag/icon helpers (`BrandIcon`, `IdeIcon`, `ShellIcon`, `TerminalIcon`) don't carry the prefix because they aren't substitutable primitives.
 
-**Modal vs. drawer vs. dialog naming:** there is no `dialogs/` folder, and modals/drawers each live in one folder regardless of complexity. Every full-screen overlay that asks for input or confirmation is a *modal* — all of them live in `molecules/modals/` (`GeneralModal`, `ConfirmationModal`, `AddRepoModal`, etc.); no separate `organisms/modals/`. Side-pane overlays are *drawers*; specialisations sit under `molecules/drawers/` alongside `GeneralDrawer`.
+**Modal vs. drawer vs. dialog naming:** there is no `dialogs/` folder, and modals/drawers each live in one folder regardless of complexity. Every full-screen overlay that asks for input or confirmation is a _modal_ — all of them live in `molecules/modals/` (`GeneralModal`, `ConfirmationModal`, `AddRepoModal`, etc.); no separate `organisms/modals/`. Side-pane overlays are _drawers_; specialisations sit under `molecules/drawers/` alongside `GeneralDrawer`.
 
 **Buttons & button groups** live in `atoms/buttons/`. `ScopeButtonGroup` (formerly the `ScopeToggle` "molecule") sits next to `GeneralButton`/`GeneralButtonGroup`/`GeneralIconButton` because it is, structurally, a `GeneralButtonGroup` composition with two scope items — not a separate molecule kind. There is no `molecules/toggles/` folder.
 

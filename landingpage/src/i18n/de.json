@@ -161,11 +161,13 @@
         "provider": "Anbieter",
         "contact": "Kontakt",
         "responsible": "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV",
-        "liability": "Haftungsausschluss",
-        "disclaimer": "Haftung für Links"
+        "liability": "Haftung für Inhalte",
+        "disclaimer": "Haftung für Links",
+        "copyright": "Urheberrecht"
       },
-      "liabilityBody": "Die Inhalte dieser Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Recrest ist ein Open-Source-Projekt; die Software wird unter der MIT-Lizenz ohne jegliche Gewährleistung bereitgestellt.",
-      "disclaimerBody": "Diese Website enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.",
+      "liabilityBody": "Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 DDG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen. Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen. Recrest ist ein quelloffenes Projekt; die Software selbst wird unter der MIT-Lizenz ohne jegliche Gewährleistung bereitgestellt.",
+      "disclaimerBody": "Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich. Die verlinkten Seiten wurden zum Zeitpunkt der Verlinkung auf mögliche Rechtsverstöße überprüft; rechtswidrige Inhalte waren zum Zeitpunkt der Verlinkung nicht erkennbar. Eine permanente inhaltliche Kontrolle der verlinkten Seiten ist jedoch ohne konkrete Anhaltspunkte einer Rechtsverletzung nicht zumutbar. Bei Bekanntwerden von Rechtsverletzungen werden wir derartige Links umgehend entfernen.",
+      "copyrightBody": "Die durch die Seitenbetreiber erstellten Inhalte dieser Website – insbesondere Texte, Grafiken und das Recrest-Logo – unterliegen dem deutschen Urheberrecht. Der Quellcode der Anwendung Recrest hingegen ist quelloffen und steht unter der MIT-Lizenz; er darf im Rahmen dieser Lizenz frei genutzt, verändert und weitergegeben werden, auch zu kommerziellen Zwecken. Soweit Inhalte dieser Website nicht vom Betreiber erstellt wurden, werden die Urheberrechte Dritter beachtet und entsprechend gekennzeichnet. Bei Bekanntwerden von Rechtsverletzungen werden wir entsprechende Inhalte umgehend entfernen.",
       "missing": {
         "title": "Impressum nicht konfiguriert",
         "body": "Für dieses Deployment wurde kein Impressum hinterlegt. Bitte folgende Umgebungsvariablen zur Build-Zeit setzen: {{keys}}."
@@ -174,34 +176,50 @@
     "privacy": {
       "title": "Datenschutzerklärung",
       "subtitle": "Informationen gemäß Art. 13 DSGVO.",
-      "intro": "Diese Datenschutzerklärung informiert darüber, wie das Recrest-Projekt beim Besuch dieser Website mit personenbezogenen Daten umgeht. Die Desktop-Anwendung Recrest selbst überträgt keine personenbezogenen Daten an uns; Details dazu findest du im Privacy-Abschnitt auf der Startseite.",
+      "intro": "Diese Datenschutzerklärung informiert darüber, wie das Recrest-Projekt beim Besuch dieser Website mit personenbezogenen Daten umgeht. Die Nutzung dieser Website ist grundsätzlich ohne Angabe personenbezogener Daten möglich. Die Desktop-Anwendung Recrest überträgt standardmäßig keine personenbezogenen Daten an uns; optionale Absturzberichte lassen sich in den Einstellungen der Anwendung aktivieren (siehe Abschnitt „Fehlerberichte der Desktop-Anwendung“).",
       "sections": {
         "controller": "Verantwortlicher",
         "hosting": "Hosting",
-        "logs": "Server-Logfiles",
+        "fonts": "Schriftarten",
+        "storage": "Lokaler Speicher",
+        "logs": "Datenerhebung",
+        "crashReporting": "Fehlerberichte der Desktop-Anwendung",
         "external": "Externe Links",
         "rights": "Deine Rechte",
         "changes": "Änderungen dieser Erklärung"
       },
       "hostingBody": "Diese Website wird auf GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA) gehostet. GitHub kann dabei Metadaten wie deine IP-Adresse, den User-Agent deines Browsers und den Zeitpunkt der Anfrage verarbeiten, um den Dienst bereitzustellen und vor Missbrauch zu schützen. Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren und stabilen Bereitstellung). Weitere Informationen findest du in der <1>Datenschutzerklärung von GitHub</1>.",
-      "logsBody": "Wir selbst betreiben keine Analyse-Tools, Tracker oder Cookies. Es werden durch uns über diese Website keine personenbezogenen Daten direkt erhoben.",
+      "fontsBody": "Die auf dieser Website verwendeten Schriftarten (Inter und JetBrains Mono) werden direkt von unserem eigenen Server ausgeliefert. Es werden keine externen Schrift-Dienste wie Google Fonts eingebunden; beim Laden der Schriften wird daher keine IP-Adresse und werden keine sonstigen personenbezogenen Daten an Dritte übertragen.",
+      "storageBody": "Diese Website speichert deine Anzeige-Einstellungen im lokalen Speicher (localStorage) deines Browsers, damit sie bei deinem nächsten Besuch erhalten bleiben – konkret deine Sprachpräferenz (Schlüssel „recrest-landing-locale“) und dein Farbschema (Schlüssel „recrest-landing-theme“). Diese Speicherung ist technisch notwendig für den zweisprachigen Betrieb und die Designauswahl und bedarf gemäß § 25 Abs. 2 TDDDG keiner Einwilligung. Die Daten verbleiben ausschließlich auf deinem Gerät, werden nicht an uns übermittelt und dienen nicht der Nachverfolgung. Cookies setzen wir nicht ein.",
+      "logsBody": "Wir selbst betreiben keine Analyse-Tools, Tracker oder vergleichbare Dienste. Es werden durch uns über diese Website keine personenbezogenen Daten zu Analyse- oder Marketingzwecken erhoben.",
+      "crashReportingBody": "Die separat installierbare Desktop-Anwendung Recrest kann optionale Absturzberichte über den Dienst Sentry (Functional Software, Inc.) versenden. Diese Funktion ist standardmäßig deaktiviert und muss in den Einstellungen der Anwendung ausdrücklich aktiviert werden (Opt-in). Erst nach deiner Aktivierung werden im Fehlerfall technische Diagnosedaten wie Fehlermeldung, Stacktrace sowie Betriebssystem- und Versionsangaben übermittelt, um Fehler zu beheben (Art. 6 Abs. 1 lit. a DSGVO). Auf dieser Website findet kein Crash-Reporting statt.",
       "externalBody": "Diese Seite verlinkt auf externe Dienste wie GitHub-Repositories, GitHub-Discussions und Release-Downloads. Sobald du einem Link folgst, erhält der verlinkte Dienst deine Anfrage und kann deine Daten nach seiner eigenen Datenschutzerklärung verarbeiten.",
-      "rightsBody": "Dir stehen nach der DSGVO die Rechte auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung, auf Widerspruch sowie auf Datenübertragbarkeit zu. Wende dich dafür bitte an den im Impressum genannten Verantwortlichen.",
+      "rightsBody": "Dir stehen nach der DSGVO die Rechte auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17) und Einschränkung der Verarbeitung (Art. 18), auf Widerspruch (Art. 21) sowie auf Datenübertragbarkeit (Art. 20) zu. Wende dich dafür bitte an den im Impressum genannten Verantwortlichen. Darüber hinaus steht dir ein Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde zu, wenn du der Ansicht bist, dass die Verarbeitung deiner personenbezogenen Daten gegen die DSGVO verstößt (Art. 77 DSGVO).",
       "changesBody": "Wir passen diese Datenschutzerklärung bei Änderungen der technischen oder rechtlichen Situation an. Die jeweils aktuelle Version ist immer auf dieser Seite abrufbar."
     },
     "accessibility": {
       "title": "Erklärung zur Barrierefreiheit",
-      "subtitle": "Informationen gemäß Barrierefreiheitsstärkungsgesetz (BFSG) und WCAG 2.1 AA.",
+      "subtitle": "Unser Bekenntnis zu digitaler Barrierefreiheit – orientiert an den WCAG 2.1 AA.",
       "status": "Konformitätsstatus",
-      "statusBody": "Recrest orientiert sich an den <1>Web Content Accessibility Guidelines (WCAG) 2.1 auf Konformitätsstufe AA</1>. Sowohl die Website als auch die Desktop-Anwendung werden fortlaufend automatisiert (Axe) und manuell gegen diesen Standard geprüft. Zum Zeitpunkt dieser Erklärung sind keine Verstöße der Stufen critical, serious oder moderate bekannt.",
+      "statusBody": "Recrest orientiert sich an den <1>Web Content Accessibility Guidelines (WCAG) 2.1 auf Konformitätsstufe AA</1>. Sowohl die Website als auch die Desktop-Anwendung werden im Rahmen einer Selbstbewertung fortlaufend automatisiert (Axe) und manuell gegen diesen Standard geprüft. Zum Zeitpunkt dieser Erklärung sind keine Verstöße der Stufen critical, serious oder moderate bekannt.",
+      "features": "Barrierefreiheits-Funktionen",
+      "featuresIntro": "Die Desktop-Anwendung Recrest bringt zahlreiche Funktionen mit, die die Bedienung für möglichst viele Menschen zugänglich machen:",
+      "featureList": {
+        "dyslexia": "Eine speziell für Legastheniker:innen optimierte Schriftart (OpenDyslexic) lässt sich in den Einstellungen aktivieren.",
+        "contrast": "Ein Hochkontrast-Modus erhöht die Lesbarkeit von Texten und Bedienelementen.",
+        "motion": "Bewegungen und Animationen lassen sich reduzieren; die Systemeinstellung „prefers-reduced-motion“ wird automatisch respektiert.",
+        "underline": "Links können zur besseren Erkennbarkeit durchgehend unterstrichen werden.",
+        "scale": "Schrift- und Oberflächengröße lassen sich frei skalieren und an die eigenen Bedürfnisse anpassen."
+      },
       "scope": "Geltungsbereich",
       "scopeBody": "Diese Erklärung gilt für die Landingpage von Recrest sowie für die Desktop-Anwendung Recrest in der jeweils aktuellen Version.",
       "known": "Bekannte Einschränkungen",
-      "knownBody": "Uns sind derzeit keine Inhalte bekannt, die gegen WCAG 2.1 AA verstoßen. Scroll-Animationen auf der Startseite werden automatisch deaktiviert, sobald das Betriebssystem <1>prefers-reduced-motion</1> signalisiert.",
+      "knownBody": "Uns sind derzeit keine Inhalte bekannt, die gegen die WCAG 2.1 AA verstoßen. Sollten dir dennoch Barrieren auffallen, freuen wir uns über deinen Hinweis (siehe „Feedback“).",
+      "legal": "Rechtlicher Hinweis",
+      "legalBody": "Recrest ist ein kostenfreies Open-Source-Projekt und unterliegt als solches keiner gesetzlichen Verpflichtung zur Barrierefreiheit nach dem Barrierefreiheitsstärkungsgesetz (BFSG). Wir stellen diese Erklärung freiwillig bereit, weil uns zugängliche Software wichtig ist.",
       "feedback": "Feedback",
       "feedbackBody": "Wenn du auf dieser Website oder in der Desktop-Anwendung auf Barrieren stößt, melde dich gerne unter <1>{{email}}</1>. Wir antworten so schnell wie möglich.",
-      "enforcement": "Durchsetzungsverfahren",
-      "enforcementBody": "Solltest du mit unserer Antwort nicht zufrieden sein, kannst du dich an die Schlichtungsstelle nach dem Behindertengleichstellungsgesetz (<1>www.schlichtungsstelle-bgg.de</1>) wenden oder – speziell zum BFSG – an die zuständige Marktüberwachungsstelle deines Bundeslandes."
+      "created": "Diese Erklärung zur Barrierefreiheit wurde am {{date}} erstellt und zuletzt überprüft."
     }
   }
 }

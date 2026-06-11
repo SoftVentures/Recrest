@@ -1,5 +1,9 @@
 import { StrictMode } from "react";
 
+// Self-hosted fonts (weight axis only). Served from our own origin so no
+// visitor IP is sent to Google's font CDN — see the privacy policy.
+import "@fontsource-variable/inter/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";

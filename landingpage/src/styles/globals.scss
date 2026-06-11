@@ -170,6 +170,24 @@
   color: var(--amber);
   font-weight: 700;
 }
+.legal-updated {
+  margin: 28px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+.legal-features {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--ink-1);
+}
+.legal-features li {
+  padding-left: 4px;
+}
 
 /* ─── Reset / base ───────────────────────────────────────── */
 *,

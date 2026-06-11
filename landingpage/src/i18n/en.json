@@ -161,11 +161,13 @@
         "provider": "Provider",
         "contact": "Contact",
         "responsible": "Responsible for editorial content (§ 18 (2) MStV)",
-        "liability": "Liability",
-        "disclaimer": "Disclaimer"
+        "liability": "Liability for content",
+        "disclaimer": "Liability for links",
+        "copyright": "Copyright"
       },
-      "liabilityBody": "The content of this website has been compiled with the greatest possible care. We cannot, however, guarantee that the content is correct, complete or up to date. Recrest is an open-source project; the software is provided \"as is\" under the MIT license, without any warranty.",
-      "disclaimerBody": "This website contains links to external websites over which we have no influence. We therefore cannot accept any responsibility for their content. The respective provider or operator is always responsible for the content of the linked pages.",
+      "liabilityBody": "As a service provider, we are responsible for our own content on these pages in accordance with § 7 (1) DDG and general law. According to §§ 8 to 10 DDG, however, we as a service provider are not obliged to monitor transmitted or stored third-party information or to investigate circumstances that indicate illegal activity. Obligations to remove or block the use of information under general law remain unaffected. Liability in this respect is, however, only possible from the point in time at which a concrete infringement becomes known. If we become aware of any such infringements, we will remove the relevant content immediately. Recrest is an open-source project; the software itself is provided \"as is\" under the MIT license, without any warranty.",
+      "disclaimerBody": "Our website contains links to external third-party websites over whose content we have no influence. We therefore cannot accept any responsibility for this third-party content. The respective provider or operator is always responsible for the content of the linked pages. The linked pages were checked for possible legal violations at the time of linking; no unlawful content was identifiable at that time. However, permanent monitoring of the content of the linked pages is not reasonable without concrete evidence of an infringement. If we become aware of any legal violations, we will remove such links immediately.",
+      "copyrightBody": "The content created by the site operators on this website — in particular texts, graphics and the Recrest logo — is subject to German copyright law. The source code of the Recrest application, by contrast, is open source and licensed under the MIT license; it may be used, modified and redistributed freely within the terms of that license, including for commercial purposes. Insofar as content on this website was not created by the operator, the copyrights of third parties are respected and marked as such. Should you become aware of a copyright infringement, please notify us and we will remove the relevant content immediately.",
       "missing": {
         "title": "Imprint unavailable",
         "body": "The imprint has not been configured for this deployment. Please set the following environment variables at build time: {{keys}}."
@@ -174,34 +176,50 @@
     "privacy": {
       "title": "Privacy policy",
       "subtitle": "Information pursuant to Art. 13 GDPR.",
-      "intro": "This privacy policy explains how the Recrest project handles personal data when you visit this website. Recrest the desktop application does not transmit personal data; see the Privacy section on the homepage for details.",
+      "intro": "This privacy policy explains how the Recrest project handles personal data when you visit this website. Using this website is generally possible without providing any personal data. The Recrest desktop application transmits no personal data to us by default; optional crash reports can be enabled in the application's settings (see the \"Crash reports from the desktop application\" section).",
       "sections": {
         "controller": "Controller",
         "hosting": "Hosting",
-        "logs": "Server log files",
+        "fonts": "Fonts",
+        "storage": "Local storage",
+        "logs": "Data collection",
+        "crashReporting": "Crash reports from the desktop application",
         "external": "External links",
         "rights": "Your rights",
         "changes": "Changes to this policy"
       },
       "hostingBody": "This website is hosted on GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA). GitHub may process request metadata such as your IP address, the user agent of your browser and the time of the request for the purpose of operating the service and protecting it from abuse. The processing takes place on the basis of Art. 6 (1) lit. f GDPR (legitimate interest in providing a secure and stable service). For further information see the <1>GitHub Privacy Statement</1>.",
-      "logsBody": "We do not run our own analytics, trackers or cookies. No personal data is collected by us directly through this website.",
+      "fontsBody": "The fonts used on this website (Inter and JetBrains Mono) are served directly from our own origin. No external font services such as Google Fonts are embedded, so loading the fonts transmits no IP address or other personal data to third parties.",
+      "storageBody": "This website stores your display preferences in your browser's local storage so they persist on your next visit — specifically your language preference (key \"recrest-landing-locale\") and your colour theme (key \"recrest-landing-theme\"). This storage is technically necessary for the bilingual operation and theme selection of the site and does not require consent under § 25 (2) TDDDG. The data stays on your device only, is never transmitted to us and is not used for tracking. We do not use cookies.",
+      "logsBody": "We do not run our own analytics, trackers or comparable services. No personal data is collected by us through this website for analytics or marketing purposes.",
+      "crashReportingBody": "The separately installable Recrest desktop application can send optional crash reports via the Sentry service (Functional Software, Inc.). This feature is disabled by default and must be explicitly enabled in the application's settings (opt-in). Only after you enable it are technical diagnostic data such as the error message, stack trace and operating-system and version details transmitted in the event of an error, in order to fix bugs (Art. 6 (1) lit. a GDPR). No crash reporting takes place on this website.",
       "externalBody": "This site links to external services such as GitHub repositories, GitHub Discussions and release downloads. When you follow a link, the linked service receives your request and may process your data according to its own privacy policy.",
-      "rightsBody": "You have the right, under the GDPR, to access, rectify, erase or restrict the processing of your data, to object to processing and to data portability. Please contact the data controller listed in the imprint.",
+      "rightsBody": "Under the GDPR you have the right to access (Art. 15), rectification (Art. 16), erasure (Art. 17) and restriction of processing (Art. 18), to object (Art. 21) and to data portability (Art. 20). Please contact the data controller listed in the imprint to exercise these rights. You also have the right to lodge a complaint with a data protection supervisory authority if you believe that the processing of your personal data infringes the GDPR (Art. 77 GDPR).",
       "changesBody": "We may update this privacy policy when the technical or legal situation changes. The current version is always available on this page."
     },
     "accessibility": {
       "title": "Accessibility statement",
-      "subtitle": "Information pursuant to the German Accessibility Strengthening Act (BFSG) and WCAG 2.1 AA.",
+      "subtitle": "Our commitment to digital accessibility — aligned with WCAG 2.1 AA.",
       "status": "Conformance status",
-      "statusBody": "Recrest aims to meet the <1>Web Content Accessibility Guidelines (WCAG) 2.1 at level AA</1>. Both the website and the desktop application are tested continuously against this standard using automated (Axe) and manual checks. At the time of writing, no critical, serious or moderate violations are known.",
+      "statusBody": "Recrest aims to meet the <1>Web Content Accessibility Guidelines (WCAG) 2.1 at level AA</1>. Both the website and the desktop application are tested continuously against this standard through self-assessment, using automated (Axe) and manual checks. At the time of writing, no critical, serious or moderate violations are known.",
+      "features": "Accessibility features",
+      "featuresIntro": "The Recrest desktop application ships with a range of features that make it usable for as many people as possible:",
+      "featureList": {
+        "dyslexia": "A typeface optimised for readers with dyslexia (OpenDyslexic) can be enabled in the settings.",
+        "contrast": "A high-contrast mode improves the legibility of text and controls.",
+        "motion": "Motion and animations can be reduced; the system setting \"prefers-reduced-motion\" is respected automatically.",
+        "underline": "Links can be permanently underlined for better recognisability.",
+        "scale": "Text and interface size can be scaled freely to suit your needs."
+      },
       "scope": "Scope",
       "scopeBody": "This statement applies to the Recrest landing page and the Recrest desktop application in its current version.",
       "known": "Known limitations",
-      "knownBody": "We are not aware of any content that fails WCAG 2.1 AA at this time. Scroll-based animations on the homepage automatically pause when the operating system signals <1>prefers-reduced-motion</1>.",
+      "knownBody": "We are not aware of any content that fails WCAG 2.1 AA at this time. Should you nevertheless encounter barriers, we would be glad to hear about it (see \"Feedback\").",
+      "legal": "Legal note",
+      "legalBody": "Recrest is a free, open-source project and as such is not subject to any statutory accessibility obligation under the German Accessibility Strengthening Act (BFSG). We provide this statement voluntarily because accessible software matters to us.",
       "feedback": "Feedback",
       "feedbackBody": "If you encounter barriers on this website or in the desktop application, please contact us at <1>{{email}}</1>. We will respond as quickly as possible.",
-      "enforcement": "Enforcement",
-      "enforcementBody": "If you are not satisfied with our response, you can contact the Federal Arbitration Body for Accessibility (Schlichtungsstelle nach dem Behindertengleichstellungsgesetz) at <1>www.schlichtungsstelle-bgg.de</1> or, for the BFSG specifically, the Market Surveillance Authority (Marktüberwachungsstelle) of the state in which you reside."
+      "created": "This accessibility statement was created and last reviewed on {{date}}."
     }
   }
 }
