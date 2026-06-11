@@ -2,6 +2,14 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.9.1...recrest-v0.10.0) (2026-06-11)
+
+
+### Features
+
+* **landing:** Enhanced live demonstration & landing page overhaul ([a4c03c7](https://github.com/SoftVentures/Recrest/commit/a4c03c79ef362676094b29992d74a68d40d8db80))
+* **landing:** privacy, accessibility & imprint legal compliance ([848d855](https://github.com/SoftVentures/Recrest/commit/848d85501d8cf280a004cb2361ee162ef6bbb3b5))
+
 ## [0.9.1] — 2026-06-10
 
 Patch release on top of `0.9.0`: fixes a Windows-only regression in the packaged build and finishes the Windows installer branding.
