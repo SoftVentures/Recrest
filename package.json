@@ -43,13 +43,13 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
-    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "husky": "^9.1.6",
-    "lint-staged": "^15.2.10",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.3.3",
-    "typescript": "^5.6.3"
+    "typescript": "^6.0.3"
   },
   "repository": {
     "type": "git",
