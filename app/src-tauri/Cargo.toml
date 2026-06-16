@@ -49,7 +49,7 @@ tauri-plugin-window-state = "2.4"
 # Linux has no compositor blur, so Glassy falls back to a semi-transparent
 # surface without blur — documented as a platform limitation.
 window-vibrancy = "0.7"
-sentry = "0.38"
+sentry = "0.48"
 os_info = "3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -61,7 +61,7 @@ notify-debouncer-full = "0.7"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 keyring = { version = "3.5", features = ["apple-native", "windows-native", "linux-native"] }
 url = "2.5"
-dirs = "5.0"
+dirs = "6.0"
 zeroize = "1"
 anyhow = "1.0"
 async-trait = "0.1"
@@ -78,12 +78,15 @@ deunicode = "1"
 # unified-diff parser used by the Bitbucket provider where the API returns
 # the whole PR diff as a single text blob.
 serde_yaml = "0.9"
-unidiff = "0.3"
+unidiff = "0.4"
 # GitLab multi-line MR discussions anchor each range boundary with a
 # `line_code` of the form `<SHA1(file_path)>_<old>_<new>` — a plain SHA1 of the
 # file path, not a git blob OID, so `git2`'s hashing can't produce it. Pure
 # Rust (RustCrypto), no native linking, no second libgit2.
-sha1 = "0.10"
+sha1 = "0.11"
+# sha1 0.11 returns `digest::Output` (a `hybrid-array::Array`) which no
+# longer implements `LowerHex`, so we hex-encode manually.
+hex = "0.4"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 # Used by `commands::repos::delete_repo` to move a repo folder into the OS
 # trash (macOS Trash, Windows Recycle Bin, freedesktop Trash on Linux). All
@@ -101,7 +104,7 @@ ignore = "0.4.26"
 # instead of the parent process (e.g. powershell.exe in dev). The richer
 # `windows` crate is needed (vs `windows-sys`) because `SetWindowSubclass`
 # lives in the Win32 ABI helpers and we want safe HWND/LPARAM wrappers.
-windows = { version = "0.58", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Registry"] }
+windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Registry"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Sets NSApp.applicationIconImage at runtime so Stage Manager / Mission
