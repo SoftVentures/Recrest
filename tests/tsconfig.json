@@ -5,7 +5,6 @@
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM"],
     "types": ["node", "@wdio/globals/types", "expect-webdriverio", "mocha"],
-    "baseUrl": ".",
     "paths": {
       "@recrest/shared": ["../shared/src/index.ts"],
       "@recrest/shared/*": ["../shared/src/*"]

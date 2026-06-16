@@ -83,10 +83,7 @@ export function renderWithProviders(
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <MemoryRouter
-            initialEntries={[opts?.route ?? "/"]}
-            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-          >
+          <MemoryRouter initialEntries={[opts?.route ?? "/"]}>
             {ui}
           </MemoryRouter>
         </ThemeProvider>

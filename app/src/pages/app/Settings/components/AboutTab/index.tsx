@@ -7,13 +7,14 @@ import { styled } from "@mui/material/styles";
 
 import { type GitInfo, type PlatformInfo, TauriCommand } from "@recrest/shared";
 
-import { Bug, FileText, Github as GithubIcon, Scale } from "lucide-react";
+import { Bug, FileText, Scale } from "lucide-react";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { formatBuildTime, gitDescription } from "@/lib/utils/about.utils";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import LinkItem from "@/pages/app/Settings/components/AboutTab/parts/LinkItem";
+import { GithubGlyph } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow/ProviderRow.styles";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
 const GITHUB_URL = "https://github.com/SoftVentures/Recrest";
@@ -173,7 +174,7 @@ export function AboutSection() {
       <SettingsSection title={t("settings.about.links_title")}>
         <GeneralCard padding={0} flushHeight>
           <LinkItem
-            icon={GithubIcon}
+            icon={GithubGlyph}
             title={t("settings.about.link_github")}
             url={GITHUB_URL}
             onOpen={() => openUrl(GITHUB_URL)}
