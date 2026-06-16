@@ -4277,6 +4277,7 @@ dependencies = [
  "dirs 6.0.0",
  "fix-path-env",
  "git2",
+ "hex",
  "ignore",
  "keyring",
  "notify",

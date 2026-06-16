@@ -470,7 +470,7 @@ impl GitProvider for GitlabProvider {
             if let Some(start) = pos.start {
                 let differs = start.side != pos.end.side || pos.start_line() != pos.anchor_line();
                 if differs {
-                    let sha = format!("{:x}", Sha1::digest(path.as_bytes()));
+                    let sha = hex::encode(Sha1::digest(path.as_bytes()));
                     let boundary = |a: &CommentAnchor| {
                         serde_json::json!({
                             "line_code": format!(
