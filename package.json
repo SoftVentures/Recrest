@@ -51,6 +51,9 @@
     "prettier": "^3.3.3",
     "typescript": "^6.0.3"
   },
+  "resolutions": {
+    "@tauri-apps/api": "^2.11.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SoftVentures/Recrest.git"
