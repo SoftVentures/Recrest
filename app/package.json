@@ -54,7 +54,7 @@
     "@nivo/pie": "^0.99.0",
     "@recrest/shared": "*",
     "@reduxjs/toolkit": "^2.2.8",
-    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-autostart": "^2.5.1",
     "@tauri-apps/plugin-deep-link": "^2.4.8",
     "@tauri-apps/plugin-dialog": "^2.7.0",
