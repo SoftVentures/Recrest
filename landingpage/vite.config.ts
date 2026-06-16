@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 import rootPkg from "../package.json";
@@ -23,8 +23,9 @@ export default defineConfig({
     emptyOutDir: true,
     target: "es2022",
   },
-  esbuild: { target: "es2022" },
+  // Vite 8 uses Oxc instead of esbuild for transform.
+  oxc: { target: "es2022" },
   optimizeDeps: {
-    esbuildOptions: { target: "es2022" },
+    rolldownOptions: { transform: { target: "es2022" } },
   },
 });
