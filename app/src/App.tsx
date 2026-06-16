@@ -20,10 +20,7 @@ const routerBasename = import.meta.env.BASE_URL.replace(/\/+$/, "") || undefined
 
 export default function App() {
   return (
-    <BrowserRouter
-      basename={routerBasename}
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >
+    <BrowserRouter basename={routerBasename}>
       <Routes>
         <Route element={<AppLayout />}>
           <Route path={AppRoute.ROOT} element={<Navigate to={AppRoute.DASHBOARD} replace />} />
