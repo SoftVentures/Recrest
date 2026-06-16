@@ -40,7 +40,7 @@
     "clean": "sauber",
     "close": "Schließen",
     "open_full_view": "Vollansicht öffnen",
-    "files": "{{count}} Datei",
+    "files_one": "{{count}} Datei",
     "files_other": "{{count}} Dateien",
     "last_commit": "Letzter Commit",
     "open_prs": "Offene Merge Requests",
@@ -120,9 +120,11 @@
     "changed_files_one": "{{count}} Datei",
     "changed_files_other": "{{count}} Dateien",
     "commits_14d": "Commits · letzte {{days}} Tage",
-    "commits_14d_sub": "Spitze {{count}}",
+    "commits_14d_sub": "Spitze {{peak}}",
     "open_mrs": "Offene Merge-Requests",
-    "open_mrs_sub": "{{count}} Entwurf",
+    "open_mrs_sub_zero": "Keine Entwürfe",
+    "open_mrs_sub_one": "{{count}} Entwurf",
+    "open_mrs_sub_other": "{{count}} Entwürfe",
     "last_commit": "Letzter Commit",
     "last_commit_empty": "kein Provider verbunden"
   },
@@ -175,7 +177,7 @@
     "staged_files_other": "{{count}} gestagete Dateien",
     "subject_label": "Betreff",
     "subject_placeholder": "Die Änderung in einer Zeile zusammenfassen",
-    "subject_counter": "{{count}}/{{limit}}",
+    "subject_counter": "{{length}}/{{limit}}",
     "body_label": "Beschreibung (optional)",
     "body_placeholder": "Warum diese Änderung? Kontext, der aus dem Diff nicht hervorgeht?",
     "insert_template": "Vorlage",
@@ -194,7 +196,9 @@
     "clone_dest_placeholder": "/Users/du/Code",
     "clone_sub_placeholder": "z. B. mein-fork",
     "local_path_placeholder": "/Users/du/Code/mein-repo",
-    "selected": "{{count}} ausgewählt",
+    "selected_zero": "Keine ausgewählt",
+    "selected_one": "{{count}} ausgewählt",
+    "selected_other": "{{count}} ausgewählt",
     "badge_private": "privat",
     "badge_fork": "Fork",
     "badge_archived": "archiviert",
@@ -209,7 +213,8 @@
     "toast_cloned_count_one": "{{count}} Repository geklont",
     "toast_cloned_count_other": "{{count}} Repositories geklont",
     "toast_some_clones_failed": "Einige Klon-Vorgänge sind fehlgeschlagen",
-    "import_submit": "{{count}} importieren"
+    "import_submit_one": "{{count}} importieren",
+    "import_submit_other": "{{count}} importieren"
   },
   "branches": {
     "track_even": "gleich"
@@ -239,7 +244,8 @@
     "clean": "sauber",
     "files_meta_one": "{{count}} Datei",
     "files_meta_other": "{{count}} Dateien",
-    "card_files_meta": "· {{count}} Dateien"
+    "card_files_meta_one": "· {{count}} Datei",
+    "card_files_meta_other": "· {{count}} Dateien"
   },
   "detail_pane": {
     "open_in_terminal": "Im Terminal öffnen",

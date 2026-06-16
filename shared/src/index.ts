@@ -30,6 +30,7 @@ export * from "./types/provider.js";
 export * from "./types/remote.js";
 export * from "./types/repo.js";
 export * from "./types/settings.js";
+export * from "./types/system.js";
 export * from "./types/tauri.js";
 export * from "./types/terminalDetection.js";
 export * from "./types/updater.js";

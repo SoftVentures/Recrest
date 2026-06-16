@@ -112,6 +112,7 @@ export const TauriCommand = {
   // system
   GET_PLATFORM_INFO: "get_platform_info",
   GET_SYSTEM_DARK_MODE: "get_system_dark_mode",
+  GET_SYSTEM_FACTS: "get_system_facts",
   CHECK_GIT: "check_git",
   UPDATE_TRAY_BADGE: "update_tray_badge",
 

@@ -9,12 +9,6 @@
     "monospace": "Monospace",
     "custom": "Eigene"
   },
-  "storage_facts": {
-    "os_label": "Betriebssystem:",
-    "os_value": "macos 15.0 (x86_64)",
-    "git_label": "Git:",
-    "git_value": "2.44.0"
-  },
   "sections": {
     "general": "System",
     "appearance": "Erscheinungsbild",
@@ -24,7 +18,14 @@
     "providers": "Provider",
     "sources": "Scan-Quellen",
     "ide": "IDE",
-    "diagnostics": "Diagnose"
+    "diagnostics": "Diagnose",
+    "system": "System"
+  },
+  "system": {
+    "title": "System",
+    "os": "Betriebssystem",
+    "git": "Git",
+    "app": "Recrest"
   },
   "fields": {
     "theme": "Design",
@@ -65,7 +66,7 @@
     "xl": "Sehr groß"
   },
   "accent": {
-    "coral": "Koralle",
+    "coral": "Korallenorange",
     "blue": "Blau",
     "green": "Grün",
     "purple": "Violett",
@@ -180,7 +181,7 @@
       "build": "Build",
       "updater_playground": "Updater-Spielwiese",
       "notifications": "Notification-Spielwiese",
-      "storage": "Speicher",
+      "storage": "Daten & Cache",
       "ipc": "IPC & Debug",
       "i18n": "i18n",
       "flags": "Feature-Flags",

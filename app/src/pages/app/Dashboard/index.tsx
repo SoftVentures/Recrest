@@ -275,7 +275,7 @@ function DashboardPage() {
             label={t("dash.kpi.clean_repos")}
             value={cleanReposCount}
             sub={t("dash.kpi.clean_repos_sub", {
-              count: cleanReposCount,
+              clean: cleanReposCount,
               total: repos.length,
             })}
             onClick={() => navigate(AppRoute.REPOS)}
@@ -290,7 +290,7 @@ function DashboardPage() {
         <KpiCard
           label={t("dash.kpi.commits", { days: activityWindowDays })}
           value={totalCommits}
-          sub={t("dash.kpi.commits_sub", { count: maxDay })}
+          sub={t("dash.kpi.commits_sub", { peak: maxDay })}
           onClick={() => navigate(AppRoute.ACTIVITY)}
         />
       </StaggeredReveal>
@@ -308,7 +308,9 @@ function DashboardPage() {
           title={t("dash.attention.title")}
           right={
             <AttentionMeta variant="caption">
-              {Math.min(dirtyRepos.length, 3) + Math.min(behindRepos.length, 2)} items
+              {t("dash.attention.count", {
+                count: Math.min(dirtyRepos.length, 3) + Math.min(behindRepos.length, 2),
+              })}
             </AttentionMeta>
           }
         >

@@ -35,7 +35,7 @@
     "list_empty": "Noch keine Ordner.",
     "next": "Weiter",
     "back": "Zurück",
-    "at_least_one": "Mindestens einen Ordner hinzufügen."
+    "at_least_one_hint": "Mindestens einen Ordner hinzufügen."
   },
   "connectProvider": {
     "title": "Git-Host verbinden",
@@ -61,8 +61,11 @@
   "scan": {
     "title": "Durchsuche deine Ordner",
     "scanning": "Suche Repositories…",
-    "summary_one": "{{count}} Repository in {{pathCount}} Ordner gefunden.",
-    "summary_other": "{{count}} Repositories in {{pathCount}} Ordnern gefunden.",
+    "summary_repos_one": "{{count}} Repository",
+    "summary_repos_other": "{{count}} Repositories",
+    "summary_paths_one": "{{count}} Ordner",
+    "summary_paths_other": "{{count}} Ordnern",
+    "summary_template": "{{repos}} in {{paths}} gefunden.",
     "empty": "Keine Repositories gefunden. Du kannst später weitere Ordner in den Einstellungen hinzufügen.",
     "back": "Zurück",
     "next": "Weiter"

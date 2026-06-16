@@ -40,7 +40,7 @@
     "clean": "clean",
     "close": "Close",
     "open_full_view": "Open full view",
-    "files": "{{count}} file",
+    "files_one": "{{count}} file",
     "files_other": "{{count}} files",
     "last_commit": "Last commit",
     "open_prs": "Open merge requests",
@@ -120,9 +120,11 @@
     "changed_files_one": "{{count}} file",
     "changed_files_other": "{{count}} files",
     "commits_14d": "Commits · last {{days}} days",
-    "commits_14d_sub": "peak {{count}}",
+    "commits_14d_sub": "peak {{peak}}",
     "open_mrs": "Open merge requests",
-    "open_mrs_sub": "{{count}} draft",
+    "open_mrs_sub_zero": "No drafts",
+    "open_mrs_sub_one": "{{count}} draft",
+    "open_mrs_sub_other": "{{count}} drafts",
     "last_commit": "Last commit",
     "last_commit_empty": "no provider connected"
   },
@@ -175,7 +177,7 @@
     "staged_files_other": "{{count}} staged files",
     "subject_label": "Subject",
     "subject_placeholder": "Summarize the change in one line",
-    "subject_counter": "{{count}}/{{limit}}",
+    "subject_counter": "{{length}}/{{limit}}",
     "body_label": "Body (optional)",
     "body_placeholder": "Why this change? Any context that won't be obvious from the diff?",
     "insert_template": "Template",
@@ -194,7 +196,9 @@
     "clone_dest_placeholder": "/Users/you/Code",
     "clone_sub_placeholder": "e.g. my-fork",
     "local_path_placeholder": "/Users/you/Code/my-repo",
-    "selected": "{{count}} selected",
+    "selected_zero": "None selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
     "badge_private": "private",
     "badge_fork": "fork",
     "badge_archived": "archived",
@@ -209,7 +213,8 @@
     "toast_cloned_count_one": "Cloned {{count}} repository",
     "toast_cloned_count_other": "Cloned {{count}} repositories",
     "toast_some_clones_failed": "Some clones failed",
-    "import_submit": "Import {{count}}"
+    "import_submit_one": "Import {{count}}",
+    "import_submit_other": "Import {{count}}"
   },
   "branches": {
     "track_even": "even"
@@ -239,7 +244,8 @@
     "clean": "clean",
     "files_meta_one": "{{count}} file",
     "files_meta_other": "{{count}} files",
-    "card_files_meta": "· {{count}} files"
+    "card_files_meta_one": "· {{count}} file",
+    "card_files_meta_other": "· {{count}} files"
   },
   "detail_pane": {
     "open_in_terminal": "Open in Terminal",

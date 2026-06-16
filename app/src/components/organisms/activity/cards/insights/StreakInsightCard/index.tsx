@@ -33,10 +33,7 @@ const Caption = styled(Box)(({ theme }) => ({
 
 function StreakInsightCard({ streaks, loading }: Props) {
   const { t } = useTranslation();
-  const value =
-    streaks.current === 1
-      ? t("activity.insights.streak_value_days_one", { count: streaks.current })
-      : t("activity.insights.streak_value_days_other", { count: streaks.current });
+  const value = t("activity.insights.streak_value_days", { count: streaks.current });
   const range = streaks.longestRange;
   return (
     <GeneralCard

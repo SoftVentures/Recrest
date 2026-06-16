@@ -77,6 +77,18 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
       };
     }
 
+    case "get_system_facts": {
+      // Dev:web has no host bridge, so don't fabricate OS/arch/git values —
+      // the SystemInfoPanel renders its "—" fallback for missing fields.
+      return {
+        os: "web",
+        arch: "browser",
+        osVersion: undefined,
+        gitVersion: undefined,
+        appVersion: typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "0.0.0",
+      };
+    }
+
     // OS probes degrade to the renderer's stub maps on an empty result, so
     // returning [] outside Tauri is the correct no-detection signal.
     case "detect_terminals":

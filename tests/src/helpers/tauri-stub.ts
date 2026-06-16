@@ -580,6 +580,14 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return null;
       case "check_git":
         return { installed: true, version: "2.44.0" };
+      case "get_system_facts":
+        return {
+          os: "test",
+          arch: "test",
+          appVersion: "0.0.0",
+          osVersion: undefined,
+          gitVersion: undefined,
+        };
       case "update_tray_badge":
         return undefined;
 

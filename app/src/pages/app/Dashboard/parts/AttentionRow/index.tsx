@@ -36,10 +36,8 @@ export function AttentionRow({ repo, kind, onClick }: AttentionRowProps) {
                 −{repo.removed}
               </Box>
             </>
-          ) : repo.status.behind === 1 ? (
-            t("dash.attention.behind_one", { count: repo.status.behind })
           ) : (
-            t("dash.attention.behind_other", { count: repo.status.behind })
+            t("dash.attention.behind", { count: repo.status.behind })
           )}
         </AttnSub>
       </AttnBody>

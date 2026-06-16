@@ -36,7 +36,8 @@
       "openMrs": "Offene MRs"
     },
     "mainHeader": "Alle Repositories",
-    "mainHeaderSub": "{{count}} Projekte",
+    "mainHeaderSub_one": "{{count}} Projekt",
+    "mainHeaderSub_other": "{{count}} Projekte",
     "demo": {
       "title": "Recrest Live-Demo",
       "cta": "Live-Demo ausprobieren",
@@ -53,7 +54,8 @@
         "branch": "Branch",
         "changes": "Working Tree",
         "clean": "clean",
-        "dirty": "{{count}} geänderte Dateien",
+        "dirty_one": "{{count}} geänderte Datei",
+        "dirty_other": "{{count}} geänderte Dateien",
         "mrs": "Offene MRs",
         "ci": "CI-Status",
         "mrCount_one": "{{count}} offener MR",

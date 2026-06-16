@@ -372,6 +372,10 @@ export const TEST_IDS = {
 
     storage: {
       crashReporting: "settings-storage-crash-reporting",
+      systemPanel: "settings-storage-system-panel",
+      systemOs: "settings-storage-system-os",
+      systemGit: "settings-storage-system-git",
+      systemApp: "settings-storage-system-app",
     },
 
     accounts: {

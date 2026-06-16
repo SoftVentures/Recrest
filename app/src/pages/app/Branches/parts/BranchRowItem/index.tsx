@@ -8,6 +8,7 @@ import { type BranchInfo, TauriCommand } from "@recrest/shared";
 import { GitBranch as BranchIcon } from "lucide-react";
 
 import BranchFilterChip from "@/components/atoms/chips/BranchFilterChip";
+import IconSlot from "@/components/atoms/layout/IconSlot";
 import {
   PAGE_DUR_SM,
   PAGE_EASE,
@@ -50,7 +51,9 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
     <Row>
       <Dot tone={dotTone} />
       <NameCell>
-        <BranchIcon size={13} aria-hidden />
+        <IconSlot size={16} tone="information">
+          <BranchIcon size={13} aria-hidden />
+        </IconSlot>
         <Box component="span">{b.isRemote ? `${b.remote}/${b.name}` : b.name}</Box>
         {b.isCurrent && (
           <BranchFilterChip tone="current">{t("branches.tag.current")}</BranchFilterChip>
@@ -209,10 +212,6 @@ const NameCell = styled(Box)(({ theme }) => ({
   fontFamily: MONO_STACK,
   fontSize: 12.5,
   color: theme.palette.text.primary,
-  "& > svg": {
-    color: theme.palette.text.information,
-    flexShrink: 0,
-  },
   "& > span:first-of-type": {
     whiteSpace: "nowrap",
     overflow: "hidden",

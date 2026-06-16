@@ -126,26 +126,36 @@
   "view": {
     "dashboard": {
       "title": "Dashboard",
-      "meta": "{{count}} Repos"
+      "meta_zero": "Keine Repos",
+      "meta_one": "{{count}} Repo",
+      "meta_other": "{{count}} Repos"
     },
     "repos": {
       "title": "Repositories",
-      "meta": "{{count}} Repos"
+      "meta_zero": "Keine Repos",
+      "meta_one": "{{count}} Repo",
+      "meta_other": "{{count}} Repos"
     },
     "mrs": {
       "title": "Merge Requests",
-      "meta": "{{count}} offen"
+      "meta_zero": "Keine offen",
+      "meta_one": "{{count}} offen",
+      "meta_other": "{{count}} offen"
     },
     "mr": {
       "title": "Merge Request"
     },
     "changes": {
       "title": "Änderungen",
-      "meta": "{{count}} mit lokalen Änderungen"
+      "meta_zero": "Alles sauber",
+      "meta_one": "{{count}} mit lokalen Änderungen",
+      "meta_other": "{{count}} mit lokalen Änderungen"
     },
     "branches": {
       "title": "Branches",
-      "meta": "über {{count}} Repos"
+      "meta_zero": "über keine Repos",
+      "meta_one": "über {{count}} Repo",
+      "meta_other": "über {{count}} Repos"
     },
     "activity": {
       "title": "Aktivität",
@@ -195,15 +205,19 @@
   "dash": {
     "kpi": {
       "repositories": "Repositories",
-      "repositories_sub": "{{count}} mit Änderungen",
+      "repositories_sub_zero": "Keine mit Änderungen",
+      "repositories_sub_one": "{{count}} mit Änderungen",
+      "repositories_sub_other": "{{count}} mit Änderungen",
       "merge_requests": "Merge Requests",
-      "merge_requests_sub": "{{count}} Entwurf",
+      "merge_requests_sub_zero": "Keine Entwürfe",
+      "merge_requests_sub_one": "{{count}} Entwurf",
+      "merge_requests_sub_other": "{{count}} Entwürfe",
       "ahead_behind": "Ahead / Behind",
       "ahead_behind_sub": "über alle Remotes",
       "commits": "Commits · {{days}}T",
-      "commits_sub": "Spitze {{count}}",
+      "commits_sub": "Spitze {{peak}}",
       "clean_repos": "Saubere Repos",
-      "clean_repos_sub": "{{count}} von {{total}} vollständig synchron"
+      "clean_repos_sub": "{{clean}} von {{total}} vollständig synchron"
     },
     "activity": {
       "title": "Aktivität · letzte {{days}} Tage",
@@ -211,17 +225,35 @@
       "commits_one": "{{count}} Commit",
       "commits_other": "{{count}} Commits",
       "span": {
-        "day": { "now": "heute", "prev": "gestern", "ago": "vor {{count}} Tagen" },
-        "week": { "now": "diese Woche", "prev": "letzte Woche", "ago": "vor {{count}} Wochen" },
-        "month": { "now": "dieser Monat", "prev": "letzter Monat", "ago": "vor {{count}} Monaten" }
+        "day": {
+          "now": "heute",
+          "prev": "gestern",
+          "ago_one": "vor {{count}} Tag",
+          "ago_other": "vor {{count}} Tagen"
+        },
+        "week": {
+          "now": "diese Woche",
+          "prev": "letzte Woche",
+          "ago_one": "vor {{count}} Woche",
+          "ago_other": "vor {{count}} Wochen"
+        },
+        "month": {
+          "now": "dieser Monat",
+          "prev": "letzter Monat",
+          "ago_one": "vor {{count}} Monat",
+          "ago_other": "vor {{count}} Monaten"
+        }
       }
     },
     "attention": {
       "title": "Braucht deine Aufmerksamkeit",
       "empty": "Alles sauber und synchron.",
-      "changed": "{{count}} geändert",
+      "changed_one": "{{count}} geändert",
+      "changed_other": "{{count}} geändert",
       "behind_one": "{{count}} Commit hinterher",
-      "behind_other": "{{count}} Commits hinterher"
+      "behind_other": "{{count}} Commits hinterher",
+      "count_one": "{{count}} Eintrag",
+      "count_other": "{{count}} Einträge"
     },
     "empty": {
       "title": "Noch keine Repositories",
@@ -401,7 +433,8 @@
     },
     "leaders": {
       "title": "Top-Contributors",
-      "sub": "letzte {{days}} Tage · {{count}} Autor:innen",
+      "sub_one": "letzte {{days}} Tage · {{count}} Autor:in",
+      "sub_other": "letzte {{days}} Tage · {{count}} Autor:innen",
       "empty": "Keine Contributors im Zeitraum.",
       "share": "{{pct}}% Anteil"
     },
@@ -422,9 +455,12 @@
       "ci_failing_other": "{{count}} fehlerhaft",
       "ci_none": "Noch keine Check-Runs",
       "ci_runs": "{{passed}} / {{total}} Runs",
-      "ci_legend_passed": "{{count}} grün",
-      "ci_legend_failed": "{{count}} rot",
-      "ci_legend_other": "{{count}} sonstige"
+      "ci_legend_passed_one": "{{count}} grün",
+      "ci_legend_passed_other": "{{count}} grün",
+      "ci_legend_failed_one": "{{count}} rot",
+      "ci_legend_failed_other": "{{count}} rot",
+      "ci_legend_other_one": "{{count}} sonstige",
+      "ci_legend_other_other": "{{count}} sonstige"
     },
     "cards": {
       "chart_title": "Commit-Aktivität · {{days}} Tage",
@@ -451,7 +487,8 @@
       "ci_trend_sub": "tägliche Pass-Quote",
       "ci_trend_sub_repos_one": "über {{count}} Repo",
       "ci_trend_sub_repos_other": "über {{count}} Repos",
-      "ci_trend_sub_runs": "{{count}} Läufe",
+      "ci_trend_sub_runs_one": "{{count}} Lauf",
+      "ci_trend_sub_runs_other": "{{count}} Läufe",
       "ci_trend_avg": "Ø Pass",
       "flaky_title": "Instabilste Repos",
       "flaky_sub": "Fehlerquote · letzte {{days}} Tage",
@@ -461,9 +498,11 @@
       "peak_label": "Haupt-Zeiten",
       "age_days_one": "{{count}} Tag alt",
       "age_days_other": "{{count}} Tage alt",
-      "age_short": "{{count}}d",
+      "age_short_one": "{{count}}d",
+      "age_short_other": "{{count}}d",
       "ci_trend_sub_window": "letzte {{days}} Tage",
-      "stacked_axis_days_ago": "vor {{count}} T.",
+      "stacked_axis_days_ago_one": "vor {{count}} T.",
+      "stacked_axis_days_ago_other": "vor {{count}} T.",
       "stacked_axis_today": "heute",
       "commits_count_one": "{{count}} Commit",
       "commits_count_other": "{{count}} Commits",
@@ -479,7 +518,8 @@
       "no_remote": "Kein Remote-URL für diesen Commit",
       "failing_checks_one": "{{count}} fehlgeschlagener Check",
       "failing_checks_other": "{{count}} fehlgeschlagene Checks",
-      "passing": "{{count}} bestanden"
+      "passing_one": "{{count}} bestanden",
+      "passing_other": "{{count}} bestanden"
     },
     "insights": {
       "section_title": "Insights",
@@ -487,7 +527,8 @@
       "streak_sub": "Aufeinanderfolgende Tage mit Commits",
       "streak_value_days_one": "{{count}} Tag",
       "streak_value_days_other": "{{count}} Tage",
-      "streak_longest": "Längste: {{count}} ({{range}})",
+      "streak_longest_one": "Längste: {{count}} Tag ({{range}})",
+      "streak_longest_other": "Längste: {{count}} Tage ({{range}})",
       "trend_title": "Trend",
       "trend_sub": "Letzte {{days}} Tage vs. davor",
       "trend_up": "Aktiver",
@@ -507,7 +548,8 @@
     },
     "timeline": {
       "title": "Verlauf",
-      "sub": "{{count}} Events über {{days}} Tage",
+      "sub_one": "{{count}} Event über {{days}} Tage",
+      "sub_other": "{{count}} Events über {{days}} Tage",
       "filter_all": "Alle",
       "filter_commits": "Commits",
       "filter_prs": "Merge Requests",
@@ -519,25 +561,16 @@
       "chip_prs_merged_other": "{{count}} MRs gemerged",
       "chip_prs_opened_one": "{{count}} MR geöffnet",
       "chip_prs_opened_other": "{{count}} MRs geöffnet",
-      "chip_checks_failed": {
-        "github": {
-          "one": "{{count}} Check fehlgeschlagen",
-          "other": "{{count}} Checks fehlgeschlagen"
-        },
-        "gitlab": {
-          "one": "{{count}} Pipeline fehlgeschlagen",
-          "other": "{{count}} Pipelines fehlgeschlagen"
-        },
-        "bitbucket": {
-          "one": "{{count}} Pipeline fehlgeschlagen",
-          "other": "{{count}} Pipelines fehlgeschlagen"
-        },
-        "default": {
-          "one": "{{count}} Check fehlgeschlagen",
-          "other": "{{count}} Checks fehlgeschlagen"
-        }
-      },
-      "show_more": "{{count}} weitere anzeigen"
+      "chip_checks_failed_github_one": "{{count}} Check fehlgeschlagen",
+      "chip_checks_failed_github_other": "{{count}} Checks fehlgeschlagen",
+      "chip_checks_failed_gitlab_one": "{{count}} Pipeline fehlgeschlagen",
+      "chip_checks_failed_gitlab_other": "{{count}} Pipelines fehlgeschlagen",
+      "chip_checks_failed_bitbucket_one": "{{count}} Pipeline fehlgeschlagen",
+      "chip_checks_failed_bitbucket_other": "{{count}} Pipelines fehlgeschlagen",
+      "chip_checks_failed_default_one": "{{count}} Check fehlgeschlagen",
+      "chip_checks_failed_default_other": "{{count}} Checks fehlgeschlagen",
+      "show_more_one": "{{count}} weiteres anzeigen",
+      "show_more_other": "{{count}} weitere anzeigen"
     }
   },
   "settings": {
@@ -547,7 +580,7 @@
       "integrations": "Integrationen",
       "git": "Git-Config",
       "shortcuts": "Shortcuts",
-      "storage": "Speicher",
+      "storage": "Daten & Cache",
       "about": "Über",
       "developer": "Entwickler"
     },
@@ -727,7 +760,7 @@
       "open_settings": "Einstellungen öffnen"
     },
     "storage": {
-      "title": "Speicher",
+      "title": "Daten & Cache",
       "intro": "Wo Recrest Caches, Indizes und Klon-Ziele ablegt.",
       "crash_reporting": "Absturzberichte",
       "crash_reporting_info": "Absturzberichte werden per HTTPS an unseren Error-Tracker gesendet. Es werden keine persönlichen Daten übertragen.",
@@ -914,9 +947,12 @@
       "test_body": "Test-Benachrichtigung von Recrest"
     },
     "burst": {
-      "new_pr": "{{count}} neue Merge Requests",
-      "ci_failed": "{{count}} CI-Fehlschläge",
-      "merge_ready": "{{count}} MRs sind merge-bereit"
+      "new_pr_one": "{{count}} neuer Merge Request",
+      "new_pr_other": "{{count}} neue Merge Requests",
+      "ci_failed_one": "{{count}} CI-Fehlschlag",
+      "ci_failed_other": "{{count}} CI-Fehlschläge",
+      "merge_ready_one": "{{count}} MR ist merge-bereit",
+      "merge_ready_other": "{{count}} MRs sind merge-bereit"
     },
     "test": "Test",
     "test_sent": "Test-Benachrichtigung gesendet"

@@ -8,6 +8,7 @@ import {
   type CheckRunSummary,
   type PrEvent,
   PrEventKind,
+  type ProviderId,
   type RecentCommit,
 } from "@recrest/shared";
 
@@ -66,6 +67,9 @@ interface DayGroup {
   prsOpened: number;
   prsMerged: number;
   checksFailed: number;
+  /** Dominant provider across the day's failing check runs. `null` when mixed
+   *  (so the chip falls back to the provider-agnostic "checks failed" wording). */
+  checksProvider: ProviderId | null;
   events: FeedEvent[];
 }
 
@@ -81,8 +85,10 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
       prsOpened: 0,
       prsMerged: 0,
       checksFailed: 0,
+      checksProvider: null,
       events: [],
     }));
+    const providerTallies = new Map<number, Map<ProviderId, number>>();
 
     for (const c of commits) {
       const d = daysAgo(c.timestamp, today);
@@ -136,12 +142,32 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
       const g = buckets[d];
       if (!g) continue;
       g.checksFailed += s.failed;
+      const provider = reposById.get(s.repoId)?.providerId ?? null;
+      if (provider) {
+        let tally = providerTallies.get(d);
+        if (!tally) {
+          tally = new Map();
+          providerTallies.set(d, tally);
+        }
+        tally.set(provider, (tally.get(provider) ?? 0) + s.failed);
+      }
       g.events.push({
         kind: FeedEventKind.CHECK,
         at: noonIso,
         repo: reposById.get(s.repoId),
         data: s,
       });
+    }
+
+    for (const [d, tally] of providerTallies) {
+      const g = buckets[d];
+      if (!g) continue;
+      // Only label the chip with a provider when the day's failing checks all
+      // come from a single provider; mixed days stay on the default wording.
+      if (tally.size === 1) {
+        const first = tally.keys().next().value;
+        g.checksProvider = first ?? null;
+      }
     }
 
     for (const g of buckets) {
@@ -257,36 +283,31 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
                     filter !== FeedFilterKind.PRS &&
                     filter !== FeedFilterKind.CHECKS && (
                       <Chip tone="neutral">
-                        {g.commits === 1
-                          ? t("activity.timeline.chip_commits_one", { count: g.commits })
-                          : t("activity.timeline.chip_commits_other", { count: g.commits })}
+                        {t("activity.timeline.chip_commits", { count: g.commits })}
                       </Chip>
                     )}
                   {g.prsMerged > 0 &&
                     filter !== FeedFilterKind.COMMITS &&
                     filter !== FeedFilterKind.CHECKS && (
                       <Chip tone="ok">
-                        {g.prsMerged === 1
-                          ? t("activity.timeline.chip_prs_merged_one", { count: g.prsMerged })
-                          : t("activity.timeline.chip_prs_merged_other", { count: g.prsMerged })}
+                        {t("activity.timeline.chip_prs_merged", { count: g.prsMerged })}
                       </Chip>
                     )}
                   {g.prsOpened > 0 &&
                     filter !== FeedFilterKind.COMMITS &&
                     filter !== FeedFilterKind.CHECKS && (
                       <Chip tone="info">
-                        {g.prsOpened === 1
-                          ? t("activity.timeline.chip_prs_opened_one", { count: g.prsOpened })
-                          : t("activity.timeline.chip_prs_opened_other", { count: g.prsOpened })}
+                        {t("activity.timeline.chip_prs_opened", { count: g.prsOpened })}
                       </Chip>
                     )}
                   {g.checksFailed > 0 &&
                     filter !== FeedFilterKind.COMMITS &&
                     filter !== FeedFilterKind.PRS && (
                       <Chip tone="err">
-                        {g.checksFailed === 1
-                          ? `${g.checksFailed} check failed`
-                          : `${g.checksFailed} checks failed`}
+                        {t(
+                          `activity.timeline.chip_checks_failed_${g.checksProvider ?? "default"}` as const,
+                          { count: g.checksFailed },
+                        )}
                       </Chip>
                     )}
                 </ChipRow>

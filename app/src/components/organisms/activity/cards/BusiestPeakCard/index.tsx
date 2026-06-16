@@ -57,12 +57,20 @@ function BusiestPeakCard({ stats }: Props) {
         <Mini>
           <MiniLabel>{t("activity.cards.busiest_label")}</MiniLabel>
           <MiniValue>{stats.busiestDay ? stats.busiestDay.label : dash}</MiniValue>
-          <MiniSub>{stats.busiestDay ? `${stats.busiestDay.count} commits` : ""}</MiniSub>
+          <MiniSub>
+            {stats.busiestDay
+              ? t("activity.cards.commits_count", { count: stats.busiestDay.count })
+              : ""}
+          </MiniSub>
         </Mini>
         <Mini>
           <MiniLabel>{t("activity.cards.peak_label")}</MiniLabel>
           <MiniValue>{stats.peakHour ? stats.peakHour.label : dash}</MiniValue>
-          <MiniSub>{stats.peakHour ? `${stats.peakHour.count} commits` : ""}</MiniSub>
+          <MiniSub>
+            {stats.peakHour
+              ? t("activity.cards.commits_count", { count: stats.peakHour.count })
+              : ""}
+          </MiniSub>
         </Mini>
       </MiniGrid>
     </GeneralCard>

@@ -20,6 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import SystemInfoPanel from "@/components/molecules/SystemInfoPanel";
 import { useFullbleedScroll } from "@/hooks/useFullbleedScroll";
 import { platformLabel, usePlatform } from "@/hooks/usePlatform";
 import {
@@ -46,6 +47,7 @@ import {
 } from "@/pages/app/Settings/components/GeneralTab";
 import { GitConfigSection } from "@/pages/app/Settings/components/GitConfigTab";
 import { IntegrationsSection } from "@/pages/app/Settings/components/IntegrationsTab";
+import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { ShortcutsSection } from "@/pages/app/Settings/components/ShortcutsTab";
 import { StorageSection } from "@/pages/app/Settings/components/StorageTab";
 
@@ -364,6 +366,9 @@ function SettingsPage() {
               <PageIntro>{t("settings.storage.intro")}</PageIntro>
             </PageHead>
             <StorageSection />
+            <SettingsSection title={t("settings:sections.system")}>
+              <SystemInfoPanel />
+            </SettingsSection>
           </PageInner>
         )}
         {tab === "about" && (

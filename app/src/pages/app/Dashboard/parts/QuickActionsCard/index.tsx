@@ -55,11 +55,7 @@ function QuickActionsCard() {
     setFetching(true);
     try {
       const ok = await invoke<number>(TauriCommand.GIT_FETCH_ALL);
-      toast.success(
-        ok === 1
-          ? t("dash.quick.fetched_one", { count: ok })
-          : t("dash.quick.fetched_other", { count: ok }),
-      );
+      toast.success(t("dash.quick.fetched", { count: ok }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch {

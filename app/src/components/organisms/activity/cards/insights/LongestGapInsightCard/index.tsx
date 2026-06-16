@@ -34,9 +34,7 @@ const Caption = styled(Box)(({ theme }) => ({
 function LongestGapInsightCard({ gap, loading }: Props) {
   const { t } = useTranslation();
   const value = gap
-    ? gap.days === 1
-      ? t("activity.insights.longest_gap_value_one", { count: gap.days })
-      : t("activity.insights.longest_gap_value_other", { count: gap.days })
+    ? t("activity.insights.longest_gap_value", { count: gap.days })
     : t("activity.insights.empty");
   return (
     <GeneralCard

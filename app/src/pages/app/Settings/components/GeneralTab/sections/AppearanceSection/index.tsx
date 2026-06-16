@@ -240,13 +240,17 @@ export function AppearanceSection() {
         <Swatches data-testid={TEST_IDS.settings.general.accentSwatches}>
           {ACCENT_IDS.map((id) => {
             const scheme = ACCENT_SCHEME_MAP[id];
+            const accentLabel = t(`accent.${id}`, { ns: I18nNamespace.SETTINGS });
             return (
-              <GeneralTooltip key={id} title={id} arrow placement="top">
+              <GeneralTooltip key={id} title={accentLabel} arrow placement="top">
                 <Swatch
                   type="button"
                   color={PRIMARY_COLOR_SCHEMES[scheme].MAIN}
                   active={currentAccent === id}
-                  aria-label={t("settings.theme_swatch", { ns: I18nNamespace.ARIA, label: id })}
+                  aria-label={t("settings.theme_swatch", {
+                    ns: I18nNamespace.ARIA,
+                    label: accentLabel,
+                  })}
                   aria-pressed={currentAccent === id}
                   data-testid={TEST_IDS.settings.general.accentChip(id)}
                   onClick={() => dispatch(setPrimaryColor(scheme))}

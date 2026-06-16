@@ -197,8 +197,10 @@ pub enum GitMergeState {
     Conflicted,
 }
 
-/// Opens the host file manager at the given repository. Uses `explorer` on
-/// Windows, `open` on macOS and `xdg-open` on Linux — no extra crates needed.
+/// Opens the host file manager at the given repository, showing the repo's
+/// own contents (not its parent with the repo highlighted). Uses `explorer`
+/// on Windows, `open` on macOS and `xdg-open` on Linux — no extra crates
+/// needed.
 #[tauri::command]
 pub async fn open_in_explorer(
     state: State<'_, AppState>,
@@ -211,8 +213,10 @@ pub async fn open_in_explorer(
 
     #[cfg(target_os = "windows")]
     {
+        // No `/select,` — that flag opens the parent and highlights the repo
+        // instead of opening the repo itself.
         let mut cmd = std::process::Command::new("explorer");
-        cmd.arg(format!("/select,{path_str}"));
+        cmd.arg(path_str);
         no_window(&mut cmd);
         cmd.spawn()
             .map_err(|e| CommandError::internal(format!("explorer failed: {e}")))?;
@@ -221,8 +225,10 @@ pub async fn open_in_explorer(
 
     #[cfg(target_os = "macos")]
     {
+        // No `-R` — that flag reveals the path in its parent Finder window
+        // instead of opening the folder itself.
         std::process::Command::new("open")
-            .args(["-R", path_str])
+            .arg(path_str)
             .spawn()
             .map_err(|e| CommandError::internal(format!("open failed: {e}")))?;
         return Ok(());

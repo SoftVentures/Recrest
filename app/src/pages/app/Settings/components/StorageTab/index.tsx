@@ -1,8 +1,5 @@
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
-
 import { Info } from "lucide-react";
 
 import GeneralIconButton, {
@@ -13,34 +10,9 @@ import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setCrashReporting } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-
-const FactRow = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  fontSize: 12,
-  color: theme.palette.text.primary,
-  padding: "10px 16px",
-  fontFamily: MONO_STACK,
-  "& strong": {
-    fontWeight: 600,
-    fontFamily: "inherit",
-    color: theme.palette.text.primary,
-  },
-  "& span": { color: theme.palette.text.information },
-})) as typeof Box;
-
-const FactsBox = styled(Box)(({ theme }) => ({
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  backgroundColor: theme.palette.surface.interface.base,
-  marginTop: 8,
-  "& > div + div": { borderTop: `1px solid ${theme.palette.divider}` },
-})) as typeof Box;
 
 export function StorageSection() {
   const { t } = useTranslation();
@@ -78,28 +50,6 @@ export function StorageSection() {
           data-testid={TEST_IDS.settings.storage.crashReporting}
         />
       </SettingsRow>
-
-      <FactsBox>
-        <FactRow>
-          <Box component="strong">
-            {t("storage_facts.os_label", { ns: I18nNamespace.SETTINGS })}
-          </Box>
-          <Box component="span">{t("storage_facts.os_value", { ns: I18nNamespace.SETTINGS })}</Box>
-        </FactRow>
-        <FactRow>
-          <Box component="strong">
-            {t("storage_facts.git_label", { ns: I18nNamespace.SETTINGS })}
-          </Box>
-          <Box component="span">{t("storage_facts.git_value", { ns: I18nNamespace.SETTINGS })}</Box>
-          <GeneralIconButton
-            size={IconButtonSize.XS}
-            variant={IconButtonVariant.GHOST}
-            aria-label={t("settings.more_info", { ns: I18nNamespace.ARIA })}
-            tooltip={t("settings.storage.git_info")}
-            icon={<Info size={11} />}
-          />
-        </FactRow>
-      </FactsBox>
     </SettingsSection>
   );
 }
