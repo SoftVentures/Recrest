@@ -11,6 +11,17 @@ import tsconfigPaths from "vite-tsconfig-paths";
 const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
+function appPackageVersion(): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf8"),
+    ) as { version?: string };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 function gitShortSha(): string {
   try {
     return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
@@ -101,6 +112,7 @@ export default defineConfig({
     global: "globalThis",
     __GIT_SHA__: JSON.stringify(gitShortSha()),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __APP_VERSION__: JSON.stringify(appPackageVersion()),
   },
   optimizeDeps: {
     // Pre-bundle frequently-imported deps so the dev server's first load

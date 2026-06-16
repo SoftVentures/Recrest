@@ -106,7 +106,7 @@ export function pluginStub(cmd: string, a: Args, ctx: PluginStubCtx): unknown | 
       return null;
 
     case "plugin:app|version":
-      return "0.7.0";
+      return typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "0.0.0";
     case "plugin:app|name":
       return "Recrest";
     case "plugin:app|tauri_version":
