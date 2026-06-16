@@ -10,3 +10,14 @@ export interface SystemFacts {
   gitVersion?: string;
   appVersion: string;
 }
+
+/**
+ * Real on-disk byte counts for Recrest's own data, surfaced in
+ * Settings → Data & Cache. Mirrors the `commands::system::DataSizes` Rust DTO.
+ * All three fields are best-effort: a missing file/dir reports 0.
+ */
+export interface DataSizes {
+  settingsBytes: number;
+  cacheBytes: number;
+  tokensBytes: number;
+}

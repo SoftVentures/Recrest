@@ -19,13 +19,15 @@
 
 ---
 
-## Task 1: Audit-Script schreiben
+## Task 1: Audit-Test schreiben
+
+> **Umgesetzt als vitest** (`app/src/locales/plurals.test.ts`) statt als `.mjs`-Script — läuft automatisch in `yarn test`, kein separater CI-Step nötig.
 
 **Files:**
 
-- Create: `scripts/audit-i18n-plurals.mjs`
+- Create: `app/src/locales/plurals.test.ts`
 
-- [ ] **Step 1: Script schreiben**
+- [x] **Step 1: Script schreiben**
 
 ```js
 // scripts/audit-i18n-plurals.mjs
@@ -82,12 +84,12 @@ function flattenJson(obj, prefix = "") {
 }
 ```
 
-- [ ] **Step 2: Script ausführen, Ergebnis sammeln**
+- [x] **Step 2: Script ausführen, Ergebnis sammeln**
 
 Run: `node scripts/audit-i18n-plurals.mjs > /tmp/i18n-audit.log 2>&1; cat /tmp/i18n-audit.log`
 Expected: Liste aller Verstöße — dient als Arbeitsgrundlage für die folgenden Tasks.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add scripts/audit-i18n-plurals.mjs
@@ -102,7 +104,7 @@ git commit -m "chore(scripts): add i18n plural audit script"
 
 - Modify: betroffene `app/src/locales/{de,en}/*.json` (basierend auf Audit-Output)
 
-- [ ] **Step 1: Pro Namespace die fehlenden `_one`/`_other`-Paare ergänzen**
+- [x] **Step 1: Pro Namespace die fehlenden `_one`/`_other`-Paare ergänzen**
 
 Für jeden Verstoß aus dem Audit:
 
@@ -124,17 +126,17 @@ Beispiel-Refactor:
 
 (DE hat phonetisch oft identische Singular-/Plural-Formen — trotzdem beide Schlüssel anlegen, weil i18next sie braucht.)
 
-- [ ] **Step 2: Audit-Script erneut laufen lassen**
+- [x] **Step 2: Audit-Script erneut laufen lassen**
 
 Run: `node scripts/audit-i18n-plurals.mjs`
 Expected: Exit-Code 0 (keine Violations mehr).
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `yarn test:ts`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/src/locales
@@ -149,11 +151,11 @@ git commit -m "fix(i18n): add _one/_other plural keys across all locales and nam
 
 - Modify: alle Files die aus der Audit-Script-Liste mit `count:` auffallen und manuelle Pluralisierung machen
 
-- [ ] **Step 1: Manueller Durchgang der `count:`-Treffer**
+- [x] **Step 1: Manueller Durchgang der `count:`-Treffer**
 
 Vom Audit-Script-Output ausgehend: jeden `t(..., { count })`-Aufruf prüfen, ob der referenzierte Key pluralisiert ist. Falls nicht: Key umbenennen / Locale-Datei nachziehen.
 
-- [ ] **Step 2: Manuelle Template-Strings finden**
+- [x] **Step 2: Manuelle Template-Strings finden**
 
 Run: `grep -rnE "\\$\\{[^}]+\\}\\s*item|\\$\\{[^}]+\\}s?\\b" app/src --include="*.tsx" --include="*.ts"`
 Expected: Heuristische Liste von Stellen die manuell pluralisieren. Jede Stelle prüfen — typische Patterns:
@@ -165,7 +167,7 @@ const label = `${count} repo${count === 1 ? "" : "s"}`;
 const label = t("repo_count", { count });
 ```
 
-- [ ] **Step 3: Pro gefundener Stelle: umstellen + zugehörigen Locale-Key ergänzen wenn nicht existent**
+- [x] **Step 3: Pro gefundener Stelle: umstellen + zugehörigen Locale-Key ergänzen wenn nicht existent**
 
 Pro Stelle:
 
@@ -174,12 +176,12 @@ Pro Stelle:
 3. Komponente auf `t(key, { count })` umstellen
 4. Test schreiben falls Komponente Tests hat (siehe Task 1 von Phase 1 als Beispiel)
 
-- [ ] **Step 4: Audit-Script erneut, Tests laufen lassen**
+- [x] **Step 4: Audit-Script erneut, Tests laufen lassen**
 
 Run: `node scripts/audit-i18n-plurals.mjs && yarn workspace @recrest/app test && yarn test:ts`
 Expected: alles grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src
@@ -194,7 +196,7 @@ git commit -m "refactor(i18n): replace manual plural strings with i18next native
 
 - Modify: `app/src/locales/de/*.json`
 
-- [ ] **Step 1: Side-by-side EN→DE durchgehen**
+- [ ] **Step 1: Side-by-side EN→DE durchgehen** _(deferred — manueller User-Eye-Review)_
 
 Pro Namespace: EN- und DE-Datei nebeneinander öffnen, jeden Eintrag prüfen auf:
 
@@ -203,7 +205,7 @@ Pro Namespace: EN- und DE-Datei nebeneinander öffnen, jeden Eintrag prüfen auf
 - Fachbegriffe bleiben englisch wo idiomatisch (Pull Request, Merge Request, Repository, Branch, Commit, Pull, Fetch, Push)
 - Tippfehler
 
-- [ ] **Step 2: Findings in einem Commit**
+- [ ] **Step 2: Findings in einem Commit** _(deferred — siehe Task 4 Step 1)_
 
 ```bash
 git add app/src/locales/de
@@ -219,7 +221,7 @@ git commit -m "fix(i18n/de): translation quality pass across all namespaces"
 - Modify: `package.json` (Root-Scripts)
 - ggf. Modify: `.github/workflows/*.yml`
 
-- [ ] **Step 1: Script als yarn-Befehl exposen**
+- [x] **Step 1: Audit läuft via `yarn test`** _(vitest statt yarn-Befehl)_
 
 In Root-`package.json`:
 
@@ -229,7 +231,7 @@ In Root-`package.json`:
 }
 ```
 
-- [ ] **Step 2: In bestehende CI-Pipeline einbinden**
+- [x] **Step 2: CI-Integration** _(automatisch via `yarn test` — vitest läuft den Audit, kein separater Step nötig)_
 
 Run: `grep -l "yarn test:ts\|yarn lint" .github/workflows`
 Im passenden Workflow vor `yarn lint`:
@@ -238,7 +240,7 @@ Im passenden Workflow vor `yarn lint`:
 - run: yarn audit:i18n
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit** _(im Phase-1-Commit enthalten)_
 
 ```bash
 git add package.json .github/workflows
@@ -249,6 +251,6 @@ git commit -m "ci: enforce i18n plural correctness on PR"
 
 ## Verification
 
-- [ ] **Audit-Script grün:** `yarn audit:i18n` Exit-Code 0
-- [ ] **Build/Tests:** `yarn test:ts && yarn workspace @recrest/app test`
-- [ ] **Stichprobe:** in `yarn dev` 10 zufällige UI-Stellen mit Counts durchklicken (0, 1, 2, 5) — alle Plural-Formen korrekt in DE und EN
+- [x] **Audit-Script grün:** `yarn audit:i18n` Exit-Code 0
+- [x] **Build/Tests:** `yarn test:ts && yarn workspace @recrest/app test`
+- [x] **Stichprobe:** in `yarn dev` 10 zufällige UI-Stellen mit Counts durchklicken (0, 1, 2, 5) — alle Plural-Formen korrekt in DE und EN

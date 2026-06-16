@@ -28,6 +28,46 @@ pub struct SystemFacts {
     pub app_version: String,
 }
 
+/// Best-effort on-disk footprint of Recrest's own data; missing files report as 0.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataSizes {
+    pub settings_bytes: u64,
+    pub cache_bytes: u64,
+    pub tokens_bytes: u64,
+}
+
+#[tauri::command]
+pub fn get_data_sizes(app: tauri::AppHandle) -> Result<DataSizes, CommandError> {
+    use tauri::Manager;
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::internal(e.to_string()))?;
+    Ok(DataSizes {
+        settings_bytes: file_size(&dir.join("settings.json")),
+        cache_bytes: dir_size(&dir.join("cache")),
+        tokens_bytes: file_size(&dir.join("dev-tokens.json")),
+    })
+}
+
+fn file_size(p: &std::path::Path) -> u64 {
+    std::fs::metadata(p).map(|m| m.len()).unwrap_or(0)
+}
+
+fn dir_size(p: &std::path::Path) -> u64 {
+    // follow_links(false) + symlink_metadata avoids summing files outside
+    // the cache dir via symlinks pointing elsewhere on disk.
+    walkdir::WalkDir::new(p)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter_map(|e| e.path().symlink_metadata().ok())
+        .filter(|m| m.is_file())
+        .map(|m| m.len())
+        .sum()
+}
+
 /// Live "what is this machine" snapshot for the Settings → System panel.
 /// Replaces the previously hardcoded `storage_facts` locale block. Returns
 /// best-effort data: `os`/`arch`/`appVersion` are always populated; the
@@ -131,6 +171,32 @@ mod tests {
             !facts.app_version.is_empty(),
             "app_version must be non-empty"
         );
+    }
+
+    #[test]
+    fn file_size_returns_zero_for_missing_path() {
+        let p = std::path::Path::new("/this/path/does/not/exist/recrest-test");
+        assert_eq!(file_size(p), 0);
+    }
+
+    #[test]
+    fn dir_size_sums_files_recursively() {
+        let tmp = std::env::temp_dir().join(format!(
+            "recrest-dir-size-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(tmp.join("nested")).unwrap();
+        std::fs::write(tmp.join("a.txt"), b"abc").unwrap(); // 3 bytes
+        std::fs::write(tmp.join("nested/b.txt"), b"defgh").unwrap(); // 5 bytes
+        assert_eq!(dir_size(&tmp), 8);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn dir_size_returns_zero_for_missing_dir() {
+        let p = std::path::Path::new("/this/path/does/not/exist/recrest-dir-test");
+        assert_eq!(dir_size(p), 0);
     }
 
     #[test]

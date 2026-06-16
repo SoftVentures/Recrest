@@ -396,6 +396,14 @@
     }
   },
   "activity": {
+    "relative": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "hours_ago_one": "{{count}}h ago",
+      "hours_ago_other": "{{count}}h ago",
+      "days_ago_one": "{{count}} day ago",
+      "days_ago_other": "{{count}} days ago"
+    },
     "range": {
       "preset_7d": "7 days",
       "preset_14d": "14 days",

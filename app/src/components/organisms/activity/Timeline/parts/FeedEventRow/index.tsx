@@ -30,7 +30,8 @@ export interface FeedEventRowProps {
 export function FeedEventRow({ event, today }: FeedEventRowProps) {
   const { t } = useTranslation();
   const day = daysAgo(event.at, today);
-  const when = day >= 0 ? relativeWhen(event.at, day) : "";
+  const whenLabel = day >= 0 ? relativeWhen(event.at, day) : null;
+  const when = whenLabel ? t(whenLabel.key, { count: whenLabel.count }) : "";
 
   if (event.kind === FeedEventKind.COMMIT) {
     const url = commitUrl(event.repo?.remoteUrl, event.data.sha);

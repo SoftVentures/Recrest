@@ -65,7 +65,7 @@ export function SystemInfoPanel({ initialFacts }: SystemInfoPanelProps = {}) {
     };
   }, [initialFacts]);
 
-  const appFallback = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "0.0.0";
+  const appFallback = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "0.0.0"; // audit:ignore-fact — runtime fallback for the __APP_VERSION__ Vite define
   const osValue = facts ? formatOs(facts) : "—";
   const gitValue = facts?.gitVersion ?? "—";
   const appValue = `v${facts?.appVersion ?? appFallback}`;

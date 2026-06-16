@@ -588,6 +588,12 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
           osVersion: undefined,
           gitVersion: undefined,
         };
+      case "get_data_sizes":
+        return {
+          settingsBytes: 2_048,
+          cacheBytes: 1_572_864,
+          tokensBytes: 256,
+        };
       case "update_tray_badge":
         return undefined;
 

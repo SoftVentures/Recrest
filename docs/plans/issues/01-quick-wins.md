@@ -32,7 +32,7 @@
 - Modify: `app/src/locales/de/onboarding.json:64-65`, `app/src/locales/en/onboarding.json` analog
 - Modify: `app/src/components/organisms/onboarding/steps/InitialScanStep/index.tsx`
 
-- [ ] **Step 1: Test schreiben — Plural-Komposition stimmt für 1 Ordner**
+- [x] **Step 1: Test schreiben — Plural-Komposition stimmt für 1 Ordner**
 
 ```tsx
 // app/src/components/organisms/onboarding/steps/InitialScanStep/InitialScanStep.test.tsx
@@ -55,12 +55,12 @@ it("zeigt '8 Repositories in 1 Ordner' bei pluralem Count + singulärem Path", (
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen → fehlschlägt**
+- [x] **Step 2: Test laufen lassen → fehlschlägt**
 
 Run: `yarn workspace @recrest/app test InitialScanStep`
 Expected: FAIL — aktueller String zeigt „1 Ordnern".
 
-- [ ] **Step 3: Locale-Schlüssel aufsplitten**
+- [x] **Step 3: Locale-Schlüssel aufsplitten**
 
 ```json
 // app/src/locales/de/onboarding.json — ersetze summary_one / summary_other durch:
@@ -73,7 +73,7 @@ Expected: FAIL — aktueller String zeigt „1 Ordnern".
 
 (EN analog: `repos_count_one: "{{count}} repository"`, etc.)
 
-- [ ] **Step 4: Komposition im Component**
+- [x] **Step 4: Komposition im Component**
 
 ```tsx
 const repos = t("repos_count", { count: result.repositories });
@@ -81,12 +81,12 @@ const paths = t("paths_count", { count: result.pathCount });
 const summary = t("summary_template", { repos, paths });
 ```
 
-- [ ] **Step 5: Tests grün**
+- [x] **Step 5: Tests grün**
 
 Run: `yarn workspace @recrest/app test InitialScanStep`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src/locales app/src/components/organisms/onboarding/steps/InitialScanStep
@@ -102,17 +102,17 @@ git commit -m "fix(i18n): split onboarding summary plural into independent count
 - Modify: `app/src/locales/en/settings.json:68` (`accent.coral`)
 - Modify: `app/src/locales/de/settings.json:68` analog
 
-- [ ] **Step 1: Werte ändern**
+- [x] **Step 1: Werte ändern**
 
 EN: `"coral": "Coral Orange"`
 DE: `"coral": "Korallenorange"`
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `yarn test:ts`
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/src/locales
@@ -133,7 +133,7 @@ git commit -m "fix(settings): label accent color 'Coral Orange' instead of 'Cora
 - Modify: `app/src/pages/app/Settings/index.tsx`
 - Modify: `app/src/locales/{de,en}/settings.json` (`storage_facts` entfernen, neue `system_section` hinzufügen)
 
-- [ ] **Step 1: Test für SystemFacts-DTO schreiben**
+- [x] **Step 1: Test für SystemFacts-DTO schreiben**
 
 ```rust
 // app/src-tauri/src/commands/system.rs
@@ -149,7 +149,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Command implementieren**
+- [x] **Step 2: Command implementieren**
 
 ```rust
 use serde::Serialize;
@@ -190,7 +190,7 @@ pub fn get_system_facts() -> SystemFacts {
 
 `os_info` crate hinzufügen: `cd app/src-tauri && cargo add os_info`
 
-- [ ] **Step 3: Command in `lib.rs` registrieren**
+- [x] **Step 3: Command in `lib.rs` registrieren**
 
 In `app/src-tauri/src/lib.rs::run()` zu `tauri::generate_handler![...]` hinzufügen:
 
@@ -198,7 +198,7 @@ In `app/src-tauri/src/lib.rs::run()` zu `tauri::generate_handler![...]` hinzufü
 commands::system::get_system_facts,
 ```
 
-- [ ] **Step 4: DTO + Re-Export im shared package**
+- [x] **Step 4: DTO + Re-Export im shared package**
 
 ```ts
 // shared/src/types/system.ts
@@ -215,7 +215,7 @@ In `shared/src/index.ts`: `export type { SystemFacts } from "./types/system";`
 
 Run: `yarn workspace @recrest/shared build`
 
-- [ ] **Step 5: Component `SystemInfoCard`**
+- [x] **Step 5: Component `SystemInfoCard`**
 
 ```tsx
 // app/src/components/molecules/SystemInfoCard/index.tsx
@@ -249,11 +249,11 @@ export function SystemInfoCard() {
 }
 ```
 
-- [ ] **Step 6: Settings-Page bindet neue Sektion ein**
+- [x] **Step 6: Settings-Page bindet neue Sektion ein**
 
 In `app/src/pages/app/Settings/index.tsx`: neue Sektion „System" zwischen Diagnose und (umbenanntem) „Daten & Cache" einfügen.
 
-- [ ] **Step 7: Alte storage_facts-Schlüssel entfernen + neue Sektion-Labels hinzufügen**
+- [x] **Step 7: Alte storage_facts-Schlüssel entfernen + neue Sektion-Labels hinzufügen**
 
 ```json
 // app/src/locales/de/settings.json — storage_facts-Block komplett löschen, dazu:
@@ -267,12 +267,12 @@ In `app/src/pages/app/Settings/index.tsx`: neue Sektion „System" zwischen Diag
 
 EN analog mit englischen Labels.
 
-- [ ] **Step 8: Typecheck + Tests grün**
+- [x] **Step 8: Typecheck + Tests grün**
 
 Run: `yarn test:ts && yarn workspace @recrest/app test SystemInfoCard`
 Expected: PASS
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/src-tauri app/src shared
@@ -288,7 +288,7 @@ git commit -m "feat(settings): live system facts via get_system_facts, drop hard
 - Modify: `app/src/pages/app/Branches/parts/BranchRowItem/index.tsx`
 - Falls Styles separat: ergänzende Datei `BranchRowItem.styles.tsx`
 
-- [ ] **Step 1: Styled-Box für Icon-Slot**
+- [x] **Step 1: Styled-Box für Icon-Slot**
 
 Ergänze/fixe in der Component:
 
@@ -305,12 +305,12 @@ const IconSlot = styled(Box)({
 
 Icon-JSX wird in `<IconSlot>{icon}</IconSlot>` gewrappt.
 
-- [ ] **Step 2: Playwright-Visual-Check**
+- [x] **Step 2: Playwright-Visual-Check**
 
 Run: `yarn dev:web` und Browser zu `/branches` navigieren. Alle Icons sollten visuell auf derselben Baseline sitzen.
 (Memory: `feedback_verify_ui_with_playwright`.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/src/pages/app/Branches
@@ -326,17 +326,17 @@ git commit -m "fix(branches): unify icon slot height in branch row"
 - Modify: `app/src/locales/{de,en}/settings.json` (`sections.storage`)
 - ggf. Constant in `app/src/lib/constants/settings.constants.ts`
 
-- [ ] **Step 1: Locale-Schlüssel-Wert ändern**
+- [x] **Step 1: Locale-Schlüssel-Wert ändern**
 
 DE: `"storage": "Daten & Cache"`
 EN: `"storage": "Data & Cache"`
 
-- [ ] **Step 2: Test mit Settings-Page rendern und Sektions-Header prüfen**
+- [x] **Step 2: Test mit Settings-Page rendern und Sektions-Header prüfen**
 
 Run: `yarn workspace @recrest/app test Settings`
 Expected: PASS — alle existierenden Tests greifen auf den Key `sections.storage` zu, der unverändert bleibt.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/src/locales app/src/lib/constants
@@ -351,11 +351,11 @@ git commit -m "fix(settings): rename Storage section to Data & Cache"
 
 - Modify: `app/src-tauri/src/commands/repos.rs::open_folder`
 
-- [ ] **Step 1: Aktuelle Implementierung finden**
+- [x] **Step 1: Aktuelle Implementierung finden**
 
 Run: `grep -n "open_folder\|reveal_in_finder\|parent()" app/src-tauri/src/commands/repos.rs`
 
-- [ ] **Step 2: Test schreiben (Rust-Unit-Test, mock path)**
+- [x] **Step 2: Test schreiben (Rust-Unit-Test, mock path)**
 
 ```rust
 #[test]
@@ -366,15 +366,15 @@ fn open_folder_targets_repo_path_not_parent() {
 }
 ```
 
-- [ ] **Step 3: Implementation fixen**
+- [x] **Step 3: Implementation fixen**
 
 `open_folder` ruft `opener::open_path(repo_path)` (oder `tauri_plugin_opener::open_path`) **direkt mit dem Repo-Pfad** auf, ohne `.parent()`.
 
-- [ ] **Step 4: Manueller Smoke-Test**
+- [x] **Step 4: Manueller Smoke-Test**
 
 In `yarn dev` (Tauri) ein Repo aus der Liste „Im Ordner öffnen" → Finder/Explorer zeigt den Repo-Inhalt, nicht den Parent.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src-tauri/src/commands/repos.rs
@@ -385,10 +385,10 @@ git commit -m "fix(repos): open_folder reveals the repo path itself, not its par
 
 ## Verification
 
-- [ ] **Full typecheck:** `yarn test:ts`
-- [ ] **Full lint:** `yarn lint`
-- [ ] **App-Build smoke:** `yarn workspace @recrest/app build`
-- [ ] **Manueller End-to-End-Pass** in `yarn dev`:
+- [x] **Full typecheck:** `yarn test:ts`
+- [x] **Full lint:** `yarn lint`
+- [x] **App-Build smoke:** `yarn workspace @recrest/app build`
+- [x] **Manueller End-to-End-Pass** in `yarn dev`:
   - Onboarding bis zum Scan-Result öffnen, beide Plural-Varianten (1 + N) visuell prüfen
   - Settings → Akzentfarbe: „Coral Orange"-Label sichtbar
   - Settings → neue „System"-Sektion: zeigt echte Werte

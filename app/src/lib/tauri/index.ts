@@ -107,6 +107,7 @@ export async function openExternal(url: string): Promise<void> {
 }
 
 /**
+ * audit:ignore-fact — example version in docstring, not a fact.
  * Returns the Tauri runtime version (e.g. "2.1.0"). Wraps the direct
  * `@tauri-apps/api/app` import so component code stays inside the
  * `@/lib/tauri` boundary. No-ops to `null` outside Tauri.

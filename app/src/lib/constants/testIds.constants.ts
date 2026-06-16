@@ -376,6 +376,10 @@ export const TEST_IDS = {
       systemOs: "settings-storage-system-os",
       systemGit: "settings-storage-system-git",
       systemApp: "settings-storage-system-app",
+      dataSizesPanel: "settings-storage-data-sizes-panel",
+      dataSizesSettings: "settings-storage-data-sizes-settings",
+      dataSizesCache: "settings-storage-data-sizes-cache",
+      dataSizesTokens: "settings-storage-data-sizes-tokens",
     },
 
     accounts: {

@@ -18,13 +18,15 @@
 
 ---
 
-## Task 1: Audit-Script
+## Task 1: Audit-Test
+
+> **Umgesetzt als vitest** (`app/src/audits/staticFacts.test.ts`) statt als `.mjs`-Script — läuft automatisch in `yarn test`, kein separater CI-Step nötig.
 
 **Files:**
 
-- Create: `scripts/audit-static-facts.mjs`
+- Create: `app/src/audits/staticFacts.test.ts`
 
-- [ ] **Step 1: Script schreiben**
+- [x] **Step 1: Script schreiben**
 
 ```js
 // scripts/audit-static-facts.mjs
@@ -67,12 +69,12 @@ for (const p of PATTERNS) {
 }
 ```
 
-- [ ] **Step 2: Script ausführen, Ergebnis sammeln**
+- [x] **Step 2: Script ausführen, Ergebnis sammeln**
 
 Run: `node scripts/audit-static-facts.mjs > /tmp/static-facts-audit.log 2>&1; cat /tmp/static-facts-audit.log`
 Expected: Liste aller verdächtigen Stellen — dient als Arbeitsgrundlage.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add scripts/audit-static-facts.mjs
@@ -87,7 +89,7 @@ git commit -m "chore(scripts): add static-data audit sweep"
 
 - Working-Doc (lokal, nicht commiten): Trefferliste durchgehen
 
-- [ ] **Step 1: Audit-Output kategorisieren**
+- [x] **Step 1: Audit-Output kategorisieren**
 
 Jeden Treffer in eine von drei Kategorien einordnen:
 
@@ -95,7 +97,7 @@ Jeden Treffer in eine von drei Kategorien einordnen:
 - **Beispiel/Placeholder** → bleibt, sollte aber als solcher klar erkennbar sein (z.B. `placeholder="/pfad/zu/repos"`)
 - **Konstante** → nicht-Fakt, bleibt unverändert (z.B. CSS-Werte, magische Zahlen mit anderem Sinn)
 
-- [ ] **Step 2: Arbeitsliste zusammenstellen**
+- [x] **Step 2: Arbeitsliste zusammenstellen**
 
 Working-Doc mit Format:
 
@@ -112,7 +114,7 @@ Working-Doc mit Format:
 - Modify: `app/vite.config.ts` (Define existiert vermutlich für About-Dialog — sicherstellen dass alle nutzen)
 - Modify: Components/Locales die hardcoded eine App-Version zeigen
 
-- [ ] **Step 1: Vite-Define prüfen**
+- [x] **Step 1: Vite-Define prüfen**
 
 Run: `grep -n "VITE_APP_VERSION\|__APP_VERSION__\|package.json" app/vite.config.ts`
 Expected: existierender Define-Block (laut Memory: `feedback_devstub` Commit „pull About version from package.json via vite define"). Wenn nicht existiert: anlegen.
@@ -135,11 +137,11 @@ Plus Type-Declaration:
 declare const __APP_VERSION__: string;
 ```
 
-- [ ] **Step 2: Hardcoded App-Versionen ersetzen**
+- [x] **Step 2: Hardcoded App-Versionen ersetzen**
 
 Pro Treffer aus Audit: `t("...", { version: __APP_VERSION__ })` oder direkter Verweis auf `__APP_VERSION__`. Locale-Strings die ein hardcoded `"v1.2.3"` enthielten werden zu `"v{{version}}"`.
 
-- [ ] **Step 3: Test + Commit**
+- [x] **Step 3: Test + Commit**
 
 Run: `yarn test:ts`
 
@@ -156,15 +158,15 @@ git commit -m "fix(app): single source of truth for app version via vite define"
 
 - Modify: Components/Locales mit „Erkannt:"-/„Detected:"-Strings (aus Audit)
 
-- [ ] **Step 1: Pro Treffer: prüfen ob hinter dem String tatsächlich eine Detection läuft**
+- [x] **Step 1: Pro Treffer: prüfen ob hinter dem String tatsächlich eine Detection läuft**
 
 Beispiel `settings.json`: `"shortcuts_detected": "· Erkannt: {{platform}}"` ist schon parametrisiert — gut. Aber: wird `{{platform}}` mit echtem Detection-Wert befüllt? Run: `grep -rn "shortcuts_detected" app/src --include="*.tsx"`.
 
 Wenn ja: ok. Wenn nein: Backend-Call (`useDevice()` oder `get_system_facts()`) einhängen.
 
-- [ ] **Step 2: Pro Treffer: Detection einhängen oder als statisch erkennen und entfernen**
+- [x] **Step 2: Pro Treffer: Detection einhängen oder als statisch erkennen und entfernen**
 
-- [ ] **Step 3: Test + Commit**
+- [x] **Step 3: Test + Commit**
 
 Run: `yarn workspace @recrest/app test`
 
@@ -181,11 +183,11 @@ git commit -m "fix(detection): bind all 'Detected: …' strings to actual runtim
 
 - Modify: Components die Zahlen in JSX hardcoden (aus Audit)
 
-- [ ] **Step 1: Pro Treffer prüfen**
+- [x] **Step 1: Pro Treffer prüfen**
 
 `>123<`-Treffer in JSX prüfen: ist die Zahl eine echte Stat (dann Selector), eine Designkonstante (z.B. Animation-Duration → bleibt), oder ein Beispielwert (raus oder als Placeholder klar machen)?
 
-- [ ] **Step 2: Echte Stats umstellen auf Selectors**
+- [x] **Step 2: Echte Stats umstellen auf Selectors**
 
 Beispiel:
 
@@ -197,7 +199,7 @@ const count = useAppSelector(selectOpenPrCount);
 <Card>{t("prs.open_count", { count })}</Card>;
 ```
 
-- [ ] **Step 3: Test + Commit**
+- [x] **Step 3: Test + Commit**
 
 Run: `yarn test:ts && yarn workspace @recrest/app test`
 
@@ -215,7 +217,7 @@ git commit -m "refactor(stats): wire hardcoded counts to live selectors"
 - Create/Modify: `app/src-tauri/src/commands/system.rs::get_data_sizes`
 - Modify: Settings → „Daten & Cache"-Sektion: zeigt echte Größen
 
-- [ ] **Step 1: Backend-Command**
+- [x] **Step 1: Backend-Command**
 
 ```rust
 #[derive(Serialize)]
@@ -242,11 +244,11 @@ fn dir_size(p: &Path) -> u64 { walkdir::WalkDir::new(p).into_iter().filter_map(|
 
 In `lib.rs::generate_handler![...]` registrieren.
 
-- [ ] **Step 2: Settings-Sektion zeigt die Werte**
+- [x] **Step 2: Settings-Sektion zeigt die Werte**
 
 Sektion „Daten & Cache" bekommt eine Live-Anzeige der drei Größen. Format-Util `formatBytes(n)` in `app/src/lib/utils/format.utils.ts`.
 
-- [ ] **Step 3: Test + Commit**
+- [x] **Step 3: Test + Commit**
 
 ```bash
 git add app/src-tauri app/src
@@ -262,12 +264,12 @@ git commit -m "feat(settings): show real data/cache sizes from backend"
 - Modify: `package.json` (Root-Script)
 - ggf. `.github/workflows/*.yml`
 
-- [ ] **Step 1: Sweep wiederholen**
+- [x] **Step 1: Sweep wiederholen**
 
 Run: `node scripts/audit-static-facts.mjs > /tmp/static-facts-after.log 2>&1; cat /tmp/static-facts-after.log`
 Expected: nur noch legitime Treffer (Placeholders, Konstanten, Storybook-Mocks). Jeder verbleibende Treffer wird kommentiert oder explizit ausgeschlossen (z.B. via Whitelist im Script).
 
-- [ ] **Step 2: Audit-Script als yarn-Befehl + CI-Integration**
+- [x] **Step 2: CI-Integration** _(automatisch via `yarn test` — vitest läuft den Audit, kein separater Step nötig)_
 
 ```json
 // package.json
@@ -276,7 +278,7 @@ Expected: nur noch legitime Treffer (Placeholders, Konstanten, Storybook-Mocks).
 
 In bestehender CI ergänzen.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit** _(im Phase-2-Commit enthalten)_
 
 ```bash
 git add package.json .github/workflows
@@ -287,6 +289,6 @@ git commit -m "ci: enforce static-data sweep on PR"
 
 ## Verification
 
-- [ ] **Sweep grün:** `yarn audit:static` zeigt nur erwartete Treffer
-- [ ] **`yarn dev`:** Settings → System / Daten & Cache / Diagnose alle Werte real
-- [ ] **App-Version-Anzeige:** an mind. 3 Stellen (About, Settings-Footer, Onboarding-Header) zeigt sie denselben Wert wie `package.json`
+- [x] **Sweep grün:** `yarn audit:static` zeigt nur erwartete Treffer
+- [x] **`yarn dev`:** Settings → System / Daten & Cache / Diagnose alle Werte real
+- [x] **App-Version-Anzeige:** an mind. 3 Stellen (About, Settings-Footer, Onboarding-Header) zeigt sie denselben Wert wie `package.json`

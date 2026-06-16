@@ -89,6 +89,17 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
       };
     }
 
+    case "get_data_sizes": {
+      // Realistic-ish stub so the panel can render under dev:web / demo
+      // builds. The real Tauri backend reads actual byte counts from the
+      // app data dir.
+      return {
+        settingsBytes: 2_048,
+        cacheBytes: 1_572_864,
+        tokensBytes: 256,
+      };
+    }
+
     // OS probes degrade to the renderer's stub maps on an empty result, so
     // returning [] outside Tauri is the correct no-detection signal.
     case "detect_terminals":

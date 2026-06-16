@@ -33,18 +33,29 @@ export function daysAgo(
   return days;
 }
 
-export function relativeWhen(isoTimestamp: string, day: number): string {
-  if (day === 0) {
-    const h = Math.max(1, Math.floor((Date.now() - new Date(isoTimestamp).getTime()) / 3_600_000));
-    return `${h}h ago`;
-  }
-  return `${day}d ago`;
+/** i18n descriptor (key + count) — caller does the `t()` so this stays pure. */
+export interface RelativeWhenLabel {
+  key: string;
+  count: number;
 }
 
-export function dayLabel(d: number): string {
-  if (d === 0) return "Today";
-  if (d === 1) return "Yesterday";
-  return `${d} days ago`;
+export function relativeWhen(isoTimestamp: string, day: number): RelativeWhenLabel {
+  if (day === 0) {
+    const h = Math.max(1, Math.floor((Date.now() - new Date(isoTimestamp).getTime()) / 3_600_000));
+    return { key: "common:activity.relative.hours_ago", count: h };
+  }
+  return { key: "common:activity.relative.days_ago", count: day };
+}
+
+export interface DayLabelDescriptor {
+  key: string;
+  count: number;
+}
+
+export function dayLabel(d: number): DayLabelDescriptor {
+  if (d === 0) return { key: "common:activity.relative.today", count: 0 };
+  if (d === 1) return { key: "common:activity.relative.yesterday", count: 1 };
+  return { key: "common:activity.relative.days_ago", count: d };
 }
 
 /**

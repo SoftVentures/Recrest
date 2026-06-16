@@ -2,6 +2,7 @@
   "title": "Settings",
   "brand_name": "Recrest",
   "version_prefix": "v{{version}}",
+  "_comment_shortcuts_detected": "audit:ignore-fact — 'Detected:' is the user-visible label; {{platform}} interpolates the real value",
   "shortcuts_detected": "· Detected: {{platform}}",
   "notifications_test_button": "Test",
   "font_groups": {
@@ -26,6 +27,14 @@
     "os": "Operating system",
     "git": "Git",
     "app": "Recrest"
+  },
+  "storage": {
+    "facts_title": "Data on disk",
+    "facts": {
+      "settings": "Settings file",
+      "cache": "Cache",
+      "tokens": "Dev tokens"
+    }
   },
   "fields": {
     "theme": "Theme",

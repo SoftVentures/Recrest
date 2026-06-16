@@ -274,51 +274,54 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
         </Empty>
       ) : (
         <Wrap>
-          {visibleGroups.map((g) => (
-            <DayCard key={g.day} data-testid={TEST_IDS.activity.timeline.day}>
-              <DayHead>
-                <DayTitle>{dayLabel(g.day)}</DayTitle>
-                <ChipRow>
-                  {g.commits > 0 &&
-                    filter !== FeedFilterKind.PRS &&
-                    filter !== FeedFilterKind.CHECKS && (
-                      <Chip tone="neutral">
-                        {t("activity.timeline.chip_commits", { count: g.commits })}
-                      </Chip>
-                    )}
-                  {g.prsMerged > 0 &&
-                    filter !== FeedFilterKind.COMMITS &&
-                    filter !== FeedFilterKind.CHECKS && (
-                      <Chip tone="ok">
-                        {t("activity.timeline.chip_prs_merged", { count: g.prsMerged })}
-                      </Chip>
-                    )}
-                  {g.prsOpened > 0 &&
-                    filter !== FeedFilterKind.COMMITS &&
-                    filter !== FeedFilterKind.CHECKS && (
-                      <Chip tone="info">
-                        {t("activity.timeline.chip_prs_opened", { count: g.prsOpened })}
-                      </Chip>
-                    )}
-                  {g.checksFailed > 0 &&
-                    filter !== FeedFilterKind.COMMITS &&
-                    filter !== FeedFilterKind.PRS && (
-                      <Chip tone="err">
-                        {t(
-                          `activity.timeline.chip_checks_failed_${g.checksProvider ?? "default"}` as const,
-                          { count: g.checksFailed },
-                        )}
-                      </Chip>
-                    )}
-                </ChipRow>
-              </DayHead>
-              <Feed>
-                {g.events.slice(0, MAX_ROWS_PER_DAY).map((ev, idx) => (
-                  <FeedEventRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
-                ))}
-              </Feed>
-            </DayCard>
-          ))}
+          {visibleGroups.map((g) => {
+            const dayDescriptor = dayLabel(g.day);
+            return (
+              <DayCard key={g.day} data-testid={TEST_IDS.activity.timeline.day}>
+                <DayHead>
+                  <DayTitle>{t(dayDescriptor.key, { count: dayDescriptor.count })}</DayTitle>
+                  <ChipRow>
+                    {g.commits > 0 &&
+                      filter !== FeedFilterKind.PRS &&
+                      filter !== FeedFilterKind.CHECKS && (
+                        <Chip tone="neutral">
+                          {t("activity.timeline.chip_commits", { count: g.commits })}
+                        </Chip>
+                      )}
+                    {g.prsMerged > 0 &&
+                      filter !== FeedFilterKind.COMMITS &&
+                      filter !== FeedFilterKind.CHECKS && (
+                        <Chip tone="ok">
+                          {t("activity.timeline.chip_prs_merged", { count: g.prsMerged })}
+                        </Chip>
+                      )}
+                    {g.prsOpened > 0 &&
+                      filter !== FeedFilterKind.COMMITS &&
+                      filter !== FeedFilterKind.CHECKS && (
+                        <Chip tone="info">
+                          {t("activity.timeline.chip_prs_opened", { count: g.prsOpened })}
+                        </Chip>
+                      )}
+                    {g.checksFailed > 0 &&
+                      filter !== FeedFilterKind.COMMITS &&
+                      filter !== FeedFilterKind.PRS && (
+                        <Chip tone="err">
+                          {t(
+                            `activity.timeline.chip_checks_failed_${g.checksProvider ?? "default"}` as const,
+                            { count: g.checksFailed },
+                          )}
+                        </Chip>
+                      )}
+                  </ChipRow>
+                </DayHead>
+                <Feed>
+                  {g.events.slice(0, MAX_ROWS_PER_DAY).map((ev, idx) => (
+                    <FeedEventRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
+                  ))}
+                </Feed>
+              </DayCard>
+            );
+          })}
           {hiddenCount > 0 && (
             <ShowMore>
               <GeneralButton

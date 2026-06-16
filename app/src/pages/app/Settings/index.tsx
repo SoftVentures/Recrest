@@ -20,6 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import DataSizesPanel from "@/components/molecules/DataSizesPanel";
 import SystemInfoPanel from "@/components/molecules/SystemInfoPanel";
 import { useFullbleedScroll } from "@/hooks/useFullbleedScroll";
 import { platformLabel, usePlatform } from "@/hooks/usePlatform";
@@ -368,6 +369,9 @@ function SettingsPage() {
             <StorageSection />
             <SettingsSection title={t("settings:sections.system")}>
               <SystemInfoPanel />
+            </SettingsSection>
+            <SettingsSection title={t("storage.facts_title", { ns: I18nNamespace.SETTINGS })}>
+              <DataSizesPanel />
             </SettingsSection>
           </PageInner>
         )}
