@@ -41,3 +41,11 @@ if (typeof window !== "undefined" && typeof window.ResizeObserver === "undefined
   (window as unknown as { ResizeObserver: typeof ResizeObserverShim }).ResizeObserver =
     ResizeObserverShim;
 }
+
+// TipTap's placeholder extension calls ProseMirror's `posAtCoords` on mount,
+// which invokes `document.elementFromPoint`. jsdom does not implement that
+// CSSOM-View API; without a shim the editor throws synchronously during
+// `Editor.createView` and any test mounting a TipTap surface fails.
+if (typeof document !== "undefined" && typeof document.elementFromPoint !== "function") {
+  (document as unknown as { elementFromPoint: () => Element | null }).elementFromPoint = () => null;
+}

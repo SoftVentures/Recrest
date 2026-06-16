@@ -48,7 +48,7 @@ jobs:
             xvfb
 
       - name: Node 22
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
           cache: yarn
@@ -70,7 +70,7 @@ jobs:
 
       - name: Cache tauri-driver + tauri-cli
         id: tauri-bins-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/tauri-driver
@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-logs-${{ github.run_id }}
           # Matches the entrypoint default (`${REPO_ROOT}/target/e2e-logs`).
