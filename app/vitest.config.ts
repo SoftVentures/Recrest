@@ -31,6 +31,18 @@ export default defineConfig({
     env: { TZ: "Europe/Berlin" },
     environment: "jsdom",
     globals: true,
+    deps: {
+      optimizer: {
+        web: {
+          // MUI 9.1 added internal/Transition.mjs which directory-imports
+          // `react-transition-group/TransitionGroupContext`. Node's strict
+          // ESM loader rejects directory imports; pre-bundle MUI through
+          // esbuild so the directory path is resolved at build time.
+          enabled: true,
+          include: ["@mui/material", "@mui/icons-material", "react-transition-group"],
+        },
+      },
+    },
     // V8 coverage instrumentation roughly doubles per-test wall time under
     // `test:coverage` (now the CI gate); a few heavier component specs brush
     // past the 5s default and flake. 15s absorbs the overhead without masking
