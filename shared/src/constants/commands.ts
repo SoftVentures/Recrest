@@ -86,6 +86,8 @@ export const TauriCommand = {
   TRIGGER_WORKFLOW: "trigger_workflow",
   CANCEL_WORKFLOW_RUN: "cancel_workflow_run",
   GET_PAGES_STATUS: "get_pages_status",
+  PING_PROVIDER: "ping_provider",
+  VERIFY_CREDENTIALS: "verify_credentials",
   LIST_PR_EVENTS: "list_pr_events",
   LIST_CHECK_RUNS: "list_check_runs",
 

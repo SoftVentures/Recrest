@@ -1,10 +1,19 @@
 import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { Check as CheckIcon, X as ErrorIcon } from "lucide-react";
+
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import GeneralCircularLoader, {
+  CircularLoaderSize,
+} from "@/components/atoms/loaders/GeneralCircularLoader";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
 
 /**
  * Size of the icon-button hitbox. The icon itself sits in the middle — pass
@@ -35,6 +44,14 @@ export const ICON_BUTTON_ICON_SIZES: Record<IconButtonSize, number> = {
   [IconButtonSize.SM]: 13,
   [IconButtonSize.MD]: 14,
   [IconButtonSize.LG]: 16,
+};
+
+/** Spinner size that matches each hitbox without shrink-then-regrow. */
+const SPINNER_SIZE_BY_BUTTON_SIZE: Record<IconButtonSize, CircularLoaderSize> = {
+  [IconButtonSize.XS]: CircularLoaderSize.XS,
+  [IconButtonSize.SM]: CircularLoaderSize.XS,
+  [IconButtonSize.MD]: CircularLoaderSize.SM,
+  [IconButtonSize.LG]: CircularLoaderSize.SM,
 };
 
 /** Square-shape corner radius per size — a flat 8px reads as a circle on the
@@ -79,12 +96,14 @@ interface RootProps {
   $variant: IconButtonVariant;
   $shape: IconButtonShape;
   $tone: IconButtonTone;
+  $feedback: ActionFeedbackState;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required for accessibility (focus, keyboard, form-association)
 const Root = styled("button", {
-  shouldForwardProp: (p) => p !== "$size" && p !== "$variant" && p !== "$shape" && p !== "$tone",
-})<RootProps>(({ theme, $size, $variant, $shape, $tone }) => {
+  shouldForwardProp: (p) =>
+    p !== "$size" && p !== "$variant" && p !== "$shape" && p !== "$tone" && p !== "$feedback",
+})<RootProps>(({ theme, $size, $variant, $shape, $tone, $feedback }) => {
   const hit = ICON_BUTTON_HITBOX[$size];
   const baseColor =
     $tone === IconButtonTone.PRIMARY
@@ -114,7 +133,7 @@ const Root = styled("button", {
     backgroundColor:
       $variant === IconButtonVariant.OUTLINE ? theme.palette.surface.interface.base : "transparent",
     color: baseColor,
-    transition: "background-color 120ms ease, color 120ms ease, border-color 120ms ease",
+    transition: "background-color 200ms ease, color 200ms ease, border-color 200ms ease",
     "&:hover:not(:disabled)": {
       color: hoverColor,
       backgroundColor:
@@ -134,7 +153,40 @@ const Root = styled("button", {
     'html[data-reduced-motion="true"] &': {
       transition: "none",
     },
+    // Feedback states own the whole surface — full bg colour for unmistakable status.
+    ...($feedback === "success" && {
+      "&&": {
+        backgroundColor: theme.palette.success.main,
+        borderColor: theme.palette.success.main,
+        color: theme.palette.success.contrastText,
+        opacity: 1,
+      },
+    }),
+    ...($feedback === "error" && {
+      "&&": {
+        backgroundColor: theme.palette.error.main,
+        borderColor: theme.palette.error.main,
+        color: theme.palette.error.contrastText,
+        opacity: 1,
+      },
+    }),
   };
+});
+
+const SuccessGlyph = styled(CheckIcon)({ color: "inherit" });
+const FailureGlyph = styled(ErrorIcon)({ color: "inherit" });
+
+// eslint-disable-next-line no-restricted-syntax -- visually-hidden live region; pure layout primitive, no semantic <Typography>/<Box> equivalent
+const VisuallyHidden = styled("span")({
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
 });
 
 export interface GeneralIconButtonProps extends Omit<
@@ -157,6 +209,17 @@ export interface GeneralIconButtonProps extends Omit<
   tooltip?: string | false;
   /** Tooltip placement, forwarded to GeneralTooltip. */
   tooltipPlacement?: "top" | "bottom" | "left" | "right";
+  /**
+   * Transient one-shot feedback state. When set to anything other than
+   * `"idle"`, replaces the main `icon`:
+   *
+   * - `"loading"` → inline spinner (also disables the button)
+   * - `"success"` → green check
+   * - `"error"`   → red cross
+   *
+   * Drive this from `useActionFeedback().state`.
+   */
+  feedbackState?: ActionFeedbackState;
 }
 
 /**
@@ -181,10 +244,34 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
       type = "button",
       tooltip,
       tooltipPlacement = "top",
+      feedbackState = "idle",
+      disabled,
       ...rest
     },
     ref,
   ) {
+    const { t } = useTranslation(I18nNamespace.ARIA);
+    const iconPx = ICON_BUTTON_ICON_SIZES[size];
+    let displayedIcon: ReactNode = icon;
+    if (feedbackState === "loading") {
+      displayedIcon = (
+        <GeneralCircularLoader
+          size={SPINNER_SIZE_BY_BUTTON_SIZE[size]}
+          color="inherit"
+          aria-hidden="true"
+        />
+      );
+    } else if (feedbackState === "success") {
+      displayedIcon = <SuccessGlyph size={iconPx} aria-hidden="true" />;
+    } else if (feedbackState === "error") {
+      displayedIcon = <FailureGlyph size={iconPx} aria-hidden="true" />;
+    }
+    const isLoading = feedbackState === "loading";
+    const effectiveDisabled = disabled || isLoading;
+    let liveText = "";
+    if (isLoading) liveText = t("feedback.loading");
+    else if (feedbackState === "success") liveText = t("feedback.success");
+    else if (feedbackState === "error") liveText = t("feedback.error");
     const button = (
       <Root
         ref={ref}
@@ -193,9 +280,13 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
         $variant={variant}
         $shape={shape}
         $tone={tone}
+        $feedback={feedbackState}
+        disabled={effectiveDisabled}
+        aria-busy={isLoading || undefined}
         {...rest}
       >
-        {icon}
+        {displayedIcon}
+        <VisuallyHidden aria-live="polite">{liveText}</VisuallyHidden>
       </Root>
     );
 
@@ -205,7 +296,7 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
     // MUI Tooltip can't listen to events on a disabled <button>; wrap in a span so the
     // pointer events bubble to a non-disabled element. Skip the wrapper otherwise to
     // keep the DOM clean in the common, enabled case.
-    const trigger = rest.disabled ? (
+    const trigger = effectiveDisabled ? (
       <Box component="span" style={{ display: "inline-flex" }}>
         {button}
       </Box>

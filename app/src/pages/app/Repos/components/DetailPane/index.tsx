@@ -41,7 +41,7 @@ import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { timeAgo } from "@/lib/utils/timeAgo.utils";
 import {
@@ -163,7 +163,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_explorer")}
             tooltip={t("detail_pane.open_in_explorer")}
-            onClick={() => void revealPathInSystem(repo.path)}
+            onClick={() => void openFolderInSystem(repo.path)}
             icon={<Folder size={13} />}
           />
           {repo.remoteUrl && (

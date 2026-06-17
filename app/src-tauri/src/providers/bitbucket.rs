@@ -1082,6 +1082,73 @@ fn map_repo(r: BbRepo) -> RemoteRepositoryDto {
     }
 }
 
+/// Authenticated GET `/user` against an arbitrary Bitbucket-flavoured base URL.
+pub async fn verify_with_base(
+    base_url: &str,
+    username: &str,
+    app_password: &str,
+) -> Result<super::verify::VerifiedAccount, crate::commands::error::ProviderVerifyError> {
+    use crate::commands::error::ProviderVerifyError;
+    let url = format!("{}/user", base_url.trim_end_matches('/'));
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(ProviderVerifyError::Unknown {
+                message: format!("client build: {e}"),
+            })
+        }
+    };
+    let resp = client
+        .get(&url)
+        .basic_auth(username, Some(app_password))
+        .header("User-Agent", "Recrest")
+        .send()
+        .await
+        .map_err(super::verify::map_reqwest_err)?;
+    match resp.status().as_u16() {
+        200 => {
+            let txt = resp.text().await.unwrap_or_default();
+            let json: serde_json::Value = serde_json::from_str(&txt).map_err(|_| {
+                ProviderVerifyError::NotProviderResponse {
+                    hint: "response body was not JSON — base URL does not look like Bitbucket"
+                        .into(),
+                }
+            })?;
+            // Bitbucket returns `username` for old accounts and `nickname` for
+            // newer ones — prefer username, fall back to nickname, then to the
+            // caller-provided handle so we always echo something useful.
+            let login = json
+                .get("username")
+                .and_then(|v| v.as_str())
+                .or_else(|| json.get("nickname").and_then(|v| v.as_str()))
+                .map(str::to_string)
+                .unwrap_or_else(|| username.to_string());
+            // Sanity: if neither identifier was present AND the body lacks an
+            // `account_id` field, it's almost certainly not Bitbucket.
+            if json.get("username").is_none()
+                && json.get("nickname").is_none()
+                && json.get("account_id").is_none()
+            {
+                return Err(ProviderVerifyError::NotProviderResponse {
+                    hint: "response lacks Bitbucket account fields".into(),
+                });
+            }
+            Ok(super::verify::VerifiedAccount { login })
+        }
+        401 => Err(ProviderVerifyError::Unauthorized),
+        403 => Err(ProviderVerifyError::Forbidden {
+            message: "app password lacks required scopes".into(),
+        }),
+        s @ 500..=599 => Err(ProviderVerifyError::ServerError { status: s }),
+        s => Err(ProviderVerifyError::Unknown {
+            message: format!("unexpected status {s}"),
+        }),
+    }
+}
+
 async fn bb_json<T: serde::de::DeserializeOwned>(
     http: &reqwest::Client,
     username: &str,
@@ -1732,5 +1799,40 @@ mod tests {
             .unwrap_err();
         let serialized = serde_json::to_string(&err).unwrap();
         assert!(serialized.contains("rebase"), "{serialized}");
+    }
+
+    #[tokio::test]
+    async fn bitbucket_verify_returns_login_on_200() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_string(
+                    r#"{"username":"alice","nickname":"al","account_id":"a-1"}"#,
+                ),
+            )
+            .mount(&server)
+            .await;
+        let account = super::verify_with_base(&server.uri(), "alice", "good-app-password")
+            .await
+            .unwrap();
+        assert_eq!(account.login, "alice");
+    }
+
+    #[tokio::test]
+    async fn bitbucket_verify_returns_unauthorized_on_401() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+        let err = super::verify_with_base(&server.uri(), "alice", "bad-app-password")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::Unauthorized
+        ));
     }
 }

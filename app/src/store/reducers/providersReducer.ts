@@ -3,6 +3,7 @@ import { createReducer } from "@reduxjs/toolkit";
 import {
   clearProviderToken,
   loadProviders,
+  saveProviderCredentials,
   setProviderBaseUrl,
   setProviderToken,
   upsertConnection,
@@ -35,6 +36,15 @@ export const providersReducer = createReducer(initialState, (builder) => {
     .addCase(setProviderToken.fulfilled, (state, action) => {
       state.connections[action.payload.providerId] = action.payload;
     })
+    // saveProviderCredentials.fulfilled is the ONLY path that asserts a
+    // provider is "really" connected — it implies a successful verify call.
+    // The legacy `setProviderToken.fulfilled` path above is retained for
+    // backwards compatibility (e.g. the dev stub bypass) but new UI must
+    // route through saveProviderCredentials so `connected = true` is
+    // backed by proof rather than just a successful keychain write.
+    .addCase(saveProviderCredentials.fulfilled, (state, action) => {
+      state.connections[action.payload.connection.providerId] = action.payload.connection;
+    })
     .addCase(setProviderBaseUrl.fulfilled, (state, action) => {
       state.connections[action.payload.providerId] = action.payload;
     })
@@ -46,9 +56,11 @@ export const providersReducer = createReducer(initialState, (builder) => {
 export {
   clearProviderToken,
   loadProviders,
+  saveProviderCredentials,
   setProviderBaseUrl,
   setProviderToken,
   upsertConnection,
+  verifyProviderCredentials,
 } from "@/store/actions/providers.actions";
 
 export type { ProvidersState } from "@/store/types/providers.types";

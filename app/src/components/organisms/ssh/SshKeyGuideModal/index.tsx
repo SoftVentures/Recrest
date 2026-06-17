@@ -1,17 +1,16 @@
-import { useState } from "react";
-
 import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { Check, Copy, ShieldAlert } from "lucide-react";
+import { Copy, ShieldAlert } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 
 const KEYGEN_CMD = 'ssh-keygen -t ed25519 -C "you@example.com"';
 
@@ -93,17 +92,12 @@ export interface SshKeyGuideModalProps {
 
 function CopyableCommand({ value, testId }: { value: string; testId?: string }) {
   const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
+  const { state, run } = useActionFeedback();
 
-  const copy = async () => {
-    try {
+  const copy = () =>
+    run(async () => {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard unavailable — no-op */
-    }
-  };
+    });
 
   return (
     <CmdRow>
@@ -111,11 +105,16 @@ function CopyableCommand({ value, testId }: { value: string; testId?: string }) 
       <GeneralButton
         variant="ghost"
         size="sm"
-        startIcon={copied ? <Check size={13} /> : <Copy size={13} />}
-        onClick={() => void copy()}
+        startIcon={<Copy size={13} />}
+        feedbackState={state}
+        onClick={() => {
+          void copy().catch(() => {
+            /* clipboard unavailable — feedback already reflects the error */
+          });
+        }}
         data-testid={testId}
       >
-        {copied ? t("ssh.guide.copied") : t("ssh.guide.copy")}
+        {state === "success" ? t("ssh.guide.copied") : t("ssh.guide.copy")}
       </GeneralButton>
     </CmdRow>
   );

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Radio, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { Folder, FolderOpen, Plus, X } from "lucide-react";
@@ -120,15 +120,6 @@ const PathRow = styled(Box)(({ theme }) => ({
 
 const PathText = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 
-const DefaultBadge = styled(Box)(({ theme }) => ({
-  fontSize: 10,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  color: theme.palette.primary.main,
-  fontFamily: "inherit",
-})) as typeof Box;
-
 const AddRepoCard = styled(GeneralCard)(({ theme }) => ({
   marginBottom: theme.spacing(1.25),
 }));
@@ -137,7 +128,6 @@ export function IntegrationsSection() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const paths = useAppSelector((s) => s.repos.scanPaths);
-  const defaultScanPath = useAppSelector((s) => s.settings.backend?.defaultScanPath ?? null);
   // Used only to count how many repos a freshly added root surfaced (ids that
   // weren't known before the scan) so the success toast can report a number.
   const repoItems = useAppSelector((s) => s.repos.items);
@@ -178,10 +168,12 @@ export function IntegrationsSection() {
 
   const onBrowse = async () => {
     if (!isTauri()) return;
-    // Fall back to the user's preferred root (or the first existing scan
-    // path) so a new entry usually starts as a sibling of what's there
-    // already — beats reopening at $HOME every time.
-    const fallback = defaultScanPath ?? paths[0] ?? undefined;
+    // Fall back to the first existing scan path so a new entry usually
+    // starts as a sibling of what's there already — beats reopening at
+    // $HOME every time. The legacy `defaultScanPath` selector was dropped
+    // in plan-04: the wizard now picks a folder explicitly, so a separate
+    // "default folder" radio is redundant.
+    const fallback = paths[0] ?? undefined;
     const picked = await pickFolder(draft.trim() || fallback);
     if (picked && !paths.includes(picked)) {
       void addPath(picked);
@@ -194,10 +186,9 @@ export function IntegrationsSection() {
   const onRemove = async (p: string) => {
     const previous = paths;
     const next = paths.filter((x) => x !== p);
-    const nextDefault = defaultScanPath === p ? null : defaultScanPath;
     dispatch(setScanPaths(next));
     try {
-      await dispatch(saveSettings({ scanPaths: next, defaultScanPath: nextDefault })).unwrap();
+      await dispatch(saveSettings({ scanPaths: next })).unwrap();
     } catch {
       // The path itself didn't persist — put it back so the editor stays
       // truthful, and bail before pruning anything.
@@ -219,10 +210,6 @@ export function IntegrationsSection() {
       // the path — just report that the prune didn't complete.
       toast.error(t("internal", { ns: I18nNamespace.ERRORS }));
     }
-  };
-
-  const onSetDefault = (p: string) => {
-    void dispatch(saveSettings({ defaultScanPath: p }));
   };
 
   return (
@@ -272,19 +259,6 @@ export function IntegrationsSection() {
         <PathRow key={p}>
           <Folder size={13} />
           <PathText component="span">{p}</PathText>
-          {defaultScanPath === p && (
-            <DefaultBadge component="span">{t("settings.integrations.default_badge")}</DefaultBadge>
-          )}
-          <Radio
-            size="small"
-            checked={defaultScanPath === p}
-            onChange={() => onSetDefault(p)}
-            name="default-scan-path"
-            data-testid={TEST_IDS.settings.integrations.scanDefaultRadio(p)}
-            slotProps={{
-              input: { "aria-label": t("settings.integrations.set_default", { path: p }) },
-            }}
-          />
           <GeneralIconButton
             size={IconButtonSize.SM}
             aria-label={t("settings.remove_path", { ns: I18nNamespace.ARIA, path: p })}

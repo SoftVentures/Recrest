@@ -58,5 +58,10 @@
   },
   "dashboard": {
     "main": "Dashboard-Inhalt"
+  },
+  "feedback": {
+    "loading": "Wird geladen…",
+    "success": "Erledigt",
+    "error": "Fehlgeschlagen"
   }
 }

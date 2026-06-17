@@ -28,6 +28,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { type ThemeId } from "@/lib/constants/theme.constants";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import {
+  setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setFollowsSystem,
@@ -99,6 +100,7 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
   const autoStart = useAppSelector((s) => s.settings.desktop.autoStart);
   const closeToTray = useAppSelector((s) => s.settings.desktop.closeToTray);
   const notifEnabled = useAppSelector((s) => s.settings.notifications.enabled);
+  const crashReports = useAppSelector((s) => s.settings.backend?.crashReporting ?? false);
 
   const onThemeChoice = (choice: ThemeChoice) => {
     if (choice === "system") dispatch(setFollowsSystem(true));
@@ -212,6 +214,20 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
               <GeneralSwitchInput
                 checked={notifEnabled}
                 onCheckedChange={(v) => dispatch(setNotificationsEnabled(v))}
+              />
+            </TileRight>
+          </Tile>
+
+          <Tile>
+            <TileLeft>
+              <TileLabel>{t("crashReports.label")}</TileLabel>
+              <TileSub>{t("crashReports.hint")}</TileSub>
+            </TileLeft>
+            <TileRight>
+              <GeneralSwitchInput
+                checked={crashReports}
+                onCheckedChange={(v) => dispatch(setCrashReporting(v))}
+                data-testid={TEST_IDS.onboarding.crashReportsToggle}
               />
             </TileRight>
           </Tile>

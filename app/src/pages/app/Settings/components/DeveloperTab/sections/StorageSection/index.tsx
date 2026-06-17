@@ -11,6 +11,7 @@ import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { clearProviderToken } from "@/store/actions/providers.actions";
 import { scanForRepos } from "@/store/actions/repos.actions";
@@ -37,6 +38,8 @@ export function StorageSection() {
   const scanPaths = useAppSelector((s) => s.repos.scanPaths);
 
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const copyStateFeedback = useActionFeedback();
+  const rescanFeedback = useActionFeedback();
 
   const confirmPending = async () => {
     const action = pending;
@@ -44,21 +47,24 @@ export function StorageSection() {
     if (action) await action.run();
   };
 
-  const copyState = async () => {
-    try {
-      const { store } = await import("@/store");
-      const state = store.getState();
-      const redacted = JSON.parse(
-        JSON.stringify(state, (key, value) =>
-          typeof value === "string" && /token|secret|password/i.test(key) ? "[redacted]" : value,
-        ),
-      );
-      await navigator.clipboard?.writeText(JSON.stringify(redacted, null, 2));
-      toast.success(t("developer.storage.copy_state_done"));
-    } catch {
-      toast.error(t("developer.storage.copy_state_error"));
-    }
-  };
+  const copyState = () =>
+    copyStateFeedback
+      .run(async () => {
+        const { store } = await import("@/store");
+        const state = store.getState();
+        const redacted = JSON.parse(
+          JSON.stringify(state, (key, value) =>
+            typeof value === "string" && /token|secret|password/i.test(key) ? "[redacted]" : value,
+          ),
+        );
+        await navigator.clipboard?.writeText(JSON.stringify(redacted, null, 2));
+      })
+      .then(() => {
+        toast.success(t("developer.storage.copy_state_done"));
+      })
+      .catch(() => {
+        toast.error(t("developer.storage.copy_state_error"));
+      });
 
   const wipeLocal = () => {
     try {
@@ -109,13 +115,21 @@ export function StorageSection() {
     setTimeout(() => window.location.reload(), 250);
   };
 
-  const rescanRepos = async () => {
+  const rescanRepos = () => {
     if (scanPaths.length === 0) {
       toast.info(t("developer.storage.no_scan_paths"));
-      return;
+      return Promise.resolve();
     }
-    await dispatch(scanForRepos(scanPaths));
-    toast.success(t("developer.storage.rescan_done"));
+    return rescanFeedback
+      .run(async () => {
+        await dispatch(scanForRepos(scanPaths));
+      })
+      .then(() => {
+        toast.success(t("developer.storage.rescan_done"));
+      })
+      .catch(() => {
+        /* error feedback shown by hook + toast */
+      });
   };
 
   const openOnboarding = () => {
@@ -136,6 +150,7 @@ export function StorageSection() {
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.copyState}
+          feedbackState={copyStateFeedback.state}
           onClick={() => void copyState()}
         >
           {t("developer.storage.copy_state_button")}
@@ -231,6 +246,7 @@ export function StorageSection() {
           size="sm"
           variant="outline"
           data-testid={TEST_IDS.settings.developer.storage.rescan}
+          feedbackState={rescanFeedback.state}
           onClick={() => void rescanRepos()}
         >
           {t("developer.storage.rescan_button")}

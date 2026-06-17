@@ -15,12 +15,21 @@ export const OnboardingStep = {
   BASICS: "basics",
   FOLDERS: "folders",
   PROVIDER: "provider",
+  /** Conditionally inserted after PROVIDER when the user selected GitLab.
+   *  Resolves cloud vs self-hosted + verifies a self-hosted URL is reachable. */
+  GITLAB_VARIANT: "gitlab-variant",
   SCAN: "scan",
   DONE: "done",
 } as const;
 
 export type OnboardingStep = (typeof OnboardingStep)[keyof typeof OnboardingStep];
 
+/**
+ * Canonical step list — also drives the progress-dot count in the wizard.
+ * The GitLab variant step is *not* listed here because it doesn't get a dot:
+ * it only appears for users who picked GitLab and would otherwise inflate
+ * the progress count for everyone else.
+ */
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   OnboardingStep.WELCOME,
   OnboardingStep.BASICS,

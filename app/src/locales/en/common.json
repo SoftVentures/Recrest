@@ -118,6 +118,29 @@
       "error": "Refresh failed: {{detail}}"
     }
   },
+  "pat": {
+    "required_scopes": "Required scopes",
+    "read_docs": "Read docs",
+    "create_token": "Create token",
+    "scopes_manual_hint": "Bitbucket app passwords don't accept scopes via URL. Tick the scopes listed above on the create page.",
+    "scope_label": {
+      "github": {
+        "repo": "repo — read your private repositories",
+        "read:user": "read:user — your profile",
+        "read:org": "read:org — organisations you belong to"
+      },
+      "gitlab": {
+        "read_api": "read_api — read the GitLab API",
+        "read_repository": "read_repository — read repository content",
+        "read_user": "read_user — read your profile"
+      },
+      "bitbucket": {
+        "account:read": "account:read — your account",
+        "repository:read": "repository:read — read repositories",
+        "pullrequest:read": "pullrequest:read — read pull requests"
+      }
+    }
+  },
   "states": {
     "loading": "Loading…",
     "empty": "Nothing here yet",
@@ -864,6 +887,9 @@
       "connect_browser": "Connect via browser",
       "connect_with": "Connect with {{name}}",
       "disconnect": "Disconnect",
+      "disconnect_confirm_title": "Disconnect {{name}}?",
+      "disconnect_confirm_description": "We'll forget the stored token and stop fetching merge requests from {{name}}. Your local repositories aren't touched.",
+      "disconnect_confirm_action": "Disconnect",
       "edit_base_url": "Change API base URL",
       "paste_here": "Paste the token you just created — we store it encrypted in your OS keychain.",
       "ssh_key_label": "SSH key",
@@ -872,6 +898,26 @@
       "ssh_key_hint": "Default private key for this provider's SSH remotes. A repository can override it in its detail view.",
       "required_scopes": "Required scopes",
       "save": "Save",
+      "verify": "Verify connection",
+      "verified_as": "Verified as {{login}}",
+      "back_to_default": "Reset to default",
+      "test_connection": "Test connection",
+      "test": {
+        "ok": "Reachable. {{providerName}} detected.",
+        "ok_version": "Reachable. {{providerName}} {{version}} detected.",
+        "unreachable": "Could not reach this host. Check the URL and your network connection.",
+        "not_provider": "Reachable, but the response doesn't look like {{providerName}}. Double-check the URL."
+      },
+      "verifying": "Verifying…",
+      "error": {
+        "network": "Could not reach the host. Check the URL and your network connection.",
+        "tls": "TLS handshake failed — the certificate could not be validated.",
+        "unauthorized": "The token was rejected. Double-check that you copied it correctly and that it hasn't expired.",
+        "forbidden": "The token is valid but lacks the required scopes: {{detail}}",
+        "server": "The provider returned a {{status}} server error. Try again in a few minutes.",
+        "not_provider": "The host responded, but the answer didn't look like the expected provider ({{hint}}).",
+        "unknown": "Something went wrong: {{detail}}"
+      },
       "token_create_link": "Create a {{name}} token",
       "token_create_link_aria": "Open {{name}} token creation page in browser",
       "self_hosted": "Self-hosted",

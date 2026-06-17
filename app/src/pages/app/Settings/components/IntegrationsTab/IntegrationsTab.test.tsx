@@ -1,31 +1,29 @@
 import { fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { IntegrationsSection } from "@/pages/app/Settings/components/IntegrationsTab";
 import { setScanPaths } from "@/store/actions/repos.actions";
-import * as settingsActions from "@/store/actions/settings.actions";
 import { makeTestStore, renderWithProviders } from "@/test/utils";
 
 describe("IntegrationsSection scan paths", () => {
   it("lists the scan paths from the repos slice", () => {
     const store = makeTestStore();
     store.dispatch(setScanPaths(["~/Code", "~/Work"]));
-    const { getByTestId } = renderWithProviders(<IntegrationsSection />, { store });
+    const { getByText } = renderWithProviders(<IntegrationsSection />, { store });
 
-    expect(
-      getByTestId(TEST_IDS.settings.integrations.scanDefaultRadio("~/Work")),
-    ).toBeInTheDocument();
+    expect(getByText("~/Code")).toBeInTheDocument();
+    expect(getByText("~/Work")).toBeInTheDocument();
   });
 
-  it("marking a scan path as default persists it via saveSettings({ defaultScanPath })", () => {
+  it("removing a scan path drops it from the rendered list", () => {
     const store = makeTestStore();
     store.dispatch(setScanPaths(["~/Code", "~/Work"]));
-    const saveSpy = vi.spyOn(settingsActions, "saveSettings");
-    const { getByRole } = renderWithProviders(<IntegrationsSection />, { store });
+    const { queryByText, getByTestId } = renderWithProviders(<IntegrationsSection />, { store });
 
-    fireEvent.click(getByRole("radio", { name: /~\/Work/ }));
-
-    expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ defaultScanPath: "~/Work" }));
+    fireEvent.click(getByTestId(TEST_IDS.settings.integrations.scanRemove("~/Work")));
+    // The optimistic dispatch yanks the row from the list synchronously
+    // (saveSettings is fire-and-forget for the UI's purposes).
+    expect(queryByText("~/Work")).toBeNull();
   });
 });

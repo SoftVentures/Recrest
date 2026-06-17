@@ -1205,6 +1205,71 @@ fn map_repo(r: GhRepo) -> RemoteRepositoryDto {
     }
 }
 
+/// Authenticated GET `/user` against an arbitrary GitHub-flavoured base URL.
+/// Production callers go through `verify` which pins the cloud default; the
+/// injection point exists so wiremock tests can swap in a mock server.
+///
+/// Base-URL shapes accepted (GitHub Enterprise uses `/api/v3`):
+///   - `https://api.github.com` (cloud API root — append `/user`)
+///   - `https://github.acme.com` (Enterprise host root — append `/user`)
+///   - `https://github.acme.com/api/v3` (Enterprise API root — strip suffix
+///     then append `/user`)
+pub async fn verify_with_base(
+    base_url: &str,
+    token: &str,
+) -> Result<super::verify::VerifiedAccount, crate::commands::error::ProviderVerifyError> {
+    use crate::commands::error::ProviderVerifyError;
+    let trimmed = base_url.trim_end_matches('/');
+    let trimmed = trimmed.strip_suffix("/api/v3").unwrap_or(trimmed);
+    let url = format!("{}/user", trimmed);
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(ProviderVerifyError::Unknown {
+                message: format!("client build: {e}"),
+            })
+        }
+    };
+    let resp = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {token}"))
+        .header("User-Agent", "Recrest")
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .await
+        .map_err(super::verify::map_reqwest_err)?;
+    match resp.status().as_u16() {
+        200 => {
+            let txt = resp.text().await.unwrap_or_default();
+            let json: serde_json::Value = serde_json::from_str(&txt).map_err(|_| {
+                ProviderVerifyError::NotProviderResponse {
+                    hint: "response body was not JSON".into(),
+                }
+            })?;
+            let login = json
+                .get("login")
+                .and_then(|v| v.as_str())
+                .ok_or(ProviderVerifyError::NotProviderResponse {
+                    hint: "missing login field — response does not look like GitHub".into(),
+                })?;
+            Ok(super::verify::VerifiedAccount {
+                login: login.to_string(),
+            })
+        }
+        401 => Err(ProviderVerifyError::Unauthorized),
+        403 => Err(ProviderVerifyError::Forbidden {
+            message: "token lacks required scopes".into(),
+        }),
+        s @ 500..=599 => Err(ProviderVerifyError::ServerError { status: s }),
+        s => Err(ProviderVerifyError::Unknown {
+            message: format!("unexpected status {s}"),
+        }),
+    }
+}
+
 async fn gh_json<T: serde::de::DeserializeOwned>(
     http: &reqwest::Client,
     token: &str,
@@ -1993,5 +2058,68 @@ on:
             .unwrap_err();
         let serialized = serde_json::to_string(&err).unwrap();
         assert!(serialized.contains("not mergeable"), "{serialized}");
+    }
+
+    #[tokio::test]
+    async fn github_verify_returns_login_on_200() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"login":"octocat"}"#))
+            .mount(&server)
+            .await;
+        let account = super::verify_with_base(&server.uri(), "good-token")
+            .await
+            .unwrap();
+        assert_eq!(account.login, "octocat");
+    }
+
+    #[tokio::test]
+    async fn github_verify_returns_unauthorized_on_401() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+        let err = super::verify_with_base(&server.uri(), "bad-token")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::Unauthorized
+        ));
+    }
+
+    #[tokio::test]
+    async fn github_verify_strips_api_v3_suffix_for_enterprise() {
+        let server = MockServer::start().await;
+        // Only succeeds if the suffix was stripped — otherwise the path would
+        // be `/api/v3/user` and not match this mount.
+        Mock::given(method("GET"))
+            .and(path_regex(r"^/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"login":"enterprise-user"}"#))
+            .mount(&server)
+            .await;
+        let with_suffix = format!("{}/api/v3", server.uri());
+        let account = super::verify_with_base(&with_suffix, "tok").await.unwrap();
+        assert_eq!(account.login, "enterprise-user");
+    }
+
+    #[tokio::test]
+    async fn github_verify_flags_non_provider_response() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"unrelated":"json"}"#))
+            .mount(&server)
+            .await;
+        let err = super::verify_with_base(&server.uri(), "tok")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::NotProviderResponse { .. }
+        ));
     }
 }

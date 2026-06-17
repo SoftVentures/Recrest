@@ -3,7 +3,8 @@ use tauri::{AppHandle, State};
 
 use crate::AppState;
 
-use super::error::CommandError;
+use super::error::{CommandError, ProviderVerifyError};
+use crate::providers::verify::VerifiedAccount;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -300,6 +301,307 @@ pub async fn get_pages_status(
         .get(&provider_id)
         .ok_or_else(|| CommandError::not_found(format!("provider {provider_id} not found")))?;
     provider.get_pages_status(&remote_url).await
+}
+
+// ─── Plan 04 — Provider reachability probe ─────────────────────────────────
+//
+// Lightweight, unauthenticated probe used by Settings → Accounts and the
+// onboarding wizard to confirm a (potentially self-hosted) URL actually
+// points at the expected provider before the user pastes their token.
+// Deliberately state-less: no provider registry lookup, no token store, just
+// a one-shot reqwest with a 5s ceiling. A failed body parse is not fatal —
+// we still report `reachable: true` so the user knows the URL is alive, but
+// signal `looksLikeProvider: false` so they can fix a typo before continuing.
+
+/// Result of `ping_provider`. Mirrors the TS `ProviderPingResult` in
+/// `@recrest/shared`. `error` carries the underlying reqwest message on
+/// transport failure so the renderer can surface a precise hint
+/// (DNS / timeout / TLS / etc.) without re-deriving it from a generic flag.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderPingResult {
+    pub reachable: bool,
+    pub looks_like_provider: bool,
+    pub version: Option<String>,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn ping_provider(provider: String, base_url: String) -> ProviderPingResult {
+    let trimmed = base_url.trim().trim_end_matches('/').to_string();
+    if trimmed.is_empty() {
+        return ProviderPingResult {
+            reachable: false,
+            looks_like_provider: false,
+            version: None,
+            error: Some("empty base url".to_string()),
+        };
+    }
+    // GitHub's API rejects any request without a User-Agent (HTTP 403),
+    // which would make a UA-less ping look like "not GitHub" against the
+    // canonical `https://api.github.com`. Set it on the client so every
+    // probe — github, gitlab, bitbucket — sends one.
+    let client = match reqwest::Client::builder()
+        .user_agent("recrest")
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return ProviderPingResult {
+                reachable: false,
+                looks_like_provider: false,
+                version: None,
+                error: Some(format!("client build: {e}")),
+            };
+        }
+    };
+
+    match provider.as_str() {
+        "gitlab" => ping_gitlab_inner(&client, &trimmed).await,
+        "github" => ping_github_inner(&client, &trimmed).await,
+        "bitbucket" => ping_bitbucket_inner(&client, &trimmed).await,
+        other => ProviderPingResult {
+            reachable: false,
+            looks_like_provider: false,
+            version: None,
+            error: Some(format!("unknown provider {other}")),
+        },
+    }
+}
+
+async fn ping_gitlab_inner(client: &reqwest::Client, trimmed: &str) -> ProviderPingResult {
+    // Callers pass either the host root (`https://gitlab.com`) or the
+    // API-suffixed URL (`https://gitlab.com/api/v4` — the default stored in
+    // PROVIDER_API_URLS). Strip the suffix here so the appended path is
+    // never doubled.
+    let root = trimmed.strip_suffix("/api/v4").unwrap_or(trimmed);
+    let url = format!("{}/api/v4/version", root);
+    match client.get(&url).send().await {
+        Err(e) => ProviderPingResult {
+            reachable: false,
+            looks_like_provider: false,
+            version: None,
+            error: Some(e.to_string()),
+        },
+        Ok(resp) => {
+            let status = resp.status();
+            let server_hdr = resp
+                .headers()
+                .get("server")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string());
+            let www_auth = resp
+                .headers()
+                .get("www-authenticate")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string());
+            let body = resp.text().await.unwrap_or_default();
+            let json: Option<serde_json::Value> = serde_json::from_str(&body).ok();
+            let version: Option<String> = json
+                .as_ref()
+                .and_then(|v| v.get("version").and_then(|s| s.as_str().map(String::from)));
+            // Identify GitLab by ANY of the following signals — gitlab.com
+            // sits behind Cloudflare so the server header alone isn't enough,
+            // and `/api/v4/version` requires auth so the 200-with-version case
+            // is the exception, not the rule.
+            let looks_like_provider = version.is_some()
+                || server_hdr.as_deref().map(|s| s.contains("GitLab")).unwrap_or(false)
+                || www_auth.as_deref().map(|s| s.contains("GitLab")).unwrap_or(false)
+                || (status.as_u16() == 401 && json.is_some());
+            ProviderPingResult {
+                reachable: true,
+                looks_like_provider,
+                version,
+                error: None,
+            }
+        }
+    }
+}
+
+async fn ping_github_inner(client: &reqwest::Client, trimmed: &str) -> ProviderPingResult {
+    // GitHub Enterprise uses `/api/v3`. Strip it so we hit the API root.
+    let root = trimmed.strip_suffix("/api/v3").unwrap_or(trimmed);
+    // `GET <root>` returns a JSON dictionary of API URLs (including
+    // `current_user_url`) on both cloud (https://api.github.com) and
+    // Enterprise (`<host>/api/v3`). Cheap, unauthenticated, no scope needed.
+    match client.get(root).header("Accept", "application/vnd.github+json").send().await {
+        Err(e) => ProviderPingResult {
+            reachable: false,
+            looks_like_provider: false,
+            version: None,
+            error: Some(e.to_string()),
+        },
+        Ok(resp) => {
+            let server_hdr = resp
+                .headers()
+                .get("server")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string());
+            let status_ok = resp.status().is_success();
+            let body = resp.text().await.unwrap_or_default();
+            let looks_json_github = body.contains("\"current_user_url\"")
+                || body.contains("\"repository_url\"");
+            let looks_like_provider = (status_ok && looks_json_github)
+                || server_hdr
+                    .as_deref()
+                    .map(|s| s.contains("GitHub"))
+                    .unwrap_or(false);
+            ProviderPingResult {
+                reachable: true,
+                looks_like_provider,
+                version: None,
+                error: None,
+            }
+        }
+    }
+}
+
+async fn ping_bitbucket_inner(client: &reqwest::Client, trimmed: &str) -> ProviderPingResult {
+    // The Bitbucket Cloud API root `/2.0` responds 200 with a JSON dictionary
+    // of resource hrefs. Self-hosted Bitbucket Server is API-shape different
+    // but typically still surfaces a JSON body at the root; we degrade to
+    // `looks_like_provider: false` rather than a hard error so the user can
+    // see "reachable but wrong shape" feedback.
+    match client.get(trimmed).send().await {
+        Err(e) => ProviderPingResult {
+            reachable: false,
+            looks_like_provider: false,
+            version: None,
+            error: Some(e.to_string()),
+        },
+        Ok(resp) => {
+            let server_hdr = resp
+                .headers()
+                .get("server")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string());
+            let status_ok = resp.status().is_success();
+            let body = resp.text().await.unwrap_or_default();
+            let looks_json_bitbucket = (body.contains("\"href\"") && body.contains("bitbucket"))
+                || body.contains("\"repositories\"");
+            let looks_like_provider = (status_ok && looks_json_bitbucket)
+                || server_hdr
+                    .as_deref()
+                    .map(|s| s.contains("AtlassianEdge") || s.contains("Bitbucket"))
+                    .unwrap_or(false);
+            ProviderPingResult {
+                reachable: true,
+                looks_like_provider,
+                version: None,
+                error: None,
+            }
+        }
+    }
+}
+
+// ─── Phase 3 — Provider trust ──────────────────────────────────────────────
+//
+// `verify_credentials` performs a real, authenticated API call against the
+// target provider and returns a structured `ProviderVerifyError` on failure
+// (network / TLS / auth / body mismatch). Frontends route the save-thunk
+// through this first so the UI never marks a provider "connected" without
+// proof.
+
+/// Dispatch a verify call to the right per-provider backend.
+///
+/// `base_url` is honoured for all three providers so users can verify against
+/// GitHub Enterprise / GitLab self-hosted / Bitbucket Server installations.
+/// When `base_url` is null / empty the provider's canonical cloud default is
+/// used. `username` is required for Bitbucket basic auth and ignored elsewhere.
+#[tauri::command]
+pub async fn verify_credentials(
+    provider: String,
+    base_url: Option<String>,
+    token: String,
+    username: Option<String>,
+) -> Result<VerifiedAccount, ProviderVerifyError> {
+    let base = base_url
+        .as_deref()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    match provider.as_str() {
+        "github" => {
+            let b = base.unwrap_or_else(|| "https://api.github.com".to_string());
+            crate::providers::github::verify_with_base(&b, &token).await
+        }
+        "gitlab" => {
+            let b = base.unwrap_or_else(|| "https://gitlab.com/api/v4".to_string());
+            crate::providers::gitlab::verify_with_base(&b, &token).await
+        }
+        "bitbucket" => {
+            let user = username
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(ProviderVerifyError::Unknown {
+                    message: "bitbucket verify requires a username".into(),
+                })?;
+            let b = base.unwrap_or_else(|| "https://api.bitbucket.org/2.0".to_string());
+            crate::providers::bitbucket::verify_with_base(&b, user, &token).await
+        }
+        other => Err(ProviderVerifyError::Unknown {
+            message: format!("unknown provider {other}"),
+        }),
+    }
+}
+
+#[cfg(test)]
+mod ping_provider_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn empty_base_url_short_circuits() {
+        let r = ping_provider("gitlab".into(), String::new()).await;
+        assert!(!r.reachable);
+        assert!(!r.looks_like_provider);
+        assert!(r.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn whitespace_base_url_is_treated_as_empty() {
+        let r = ping_provider("github".into(), "   ".into()).await;
+        assert!(!r.reachable);
+        assert_eq!(r.error.as_deref(), Some("empty base url"));
+    }
+
+    #[tokio::test]
+    async fn unknown_provider_id_is_rejected() {
+        let r = ping_provider("nope".into(), "https://example.com".into()).await;
+        assert!(!r.reachable);
+        assert!(!r.looks_like_provider);
+        assert!(r.error.as_deref().unwrap_or("").contains("unknown provider"));
+    }
+
+    #[test]
+    fn gitlab_root_url_strip_logic_avoids_doubled_api_v4() {
+        let cases = [
+            ("https://gitlab.com", "https://gitlab.com/api/v4/version"),
+            ("https://gitlab.com/api/v4", "https://gitlab.com/api/v4/version"),
+            ("https://gitlab.com/api/v4/", "https://gitlab.com/api/v4/version"),
+            ("https://gl.acme.test/", "https://gl.acme.test/api/v4/version"),
+        ];
+        for (input, expected) in cases {
+            let trimmed = input.trim().trim_end_matches('/').to_string();
+            let root = trimmed.strip_suffix("/api/v4").unwrap_or(&trimmed);
+            assert_eq!(format!("{}/api/v4/version", root), expected, "for input {input}");
+        }
+    }
+
+    #[test]
+    fn github_root_url_strip_logic_handles_api_v3() {
+        let cases = [
+            ("https://api.github.com", "https://api.github.com"),
+            ("https://github.acme.com", "https://github.acme.com"),
+            ("https://github.acme.com/api/v3", "https://github.acme.com"),
+            ("https://github.acme.com/api/v3/", "https://github.acme.com"),
+        ];
+        for (input, expected) in cases {
+            let trimmed = input.trim().trim_end_matches('/').to_string();
+            let root = trimmed.strip_suffix("/api/v3").unwrap_or(&trimmed);
+            assert_eq!(root, expected, "for input {input}");
+        }
+    }
 }
 
 async fn resolve_repo_provider(

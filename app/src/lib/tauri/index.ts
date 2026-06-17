@@ -124,9 +124,10 @@ export async function getTauriRuntimeVersion(): Promise<string | null> {
 }
 
 /**
- * Reveal a path (file or directory) in the OS file browser, selecting the
- * item. Thin wrapper over `@tauri-apps/plugin-opener`'s `revealItemInDir` so
- * component code doesn't import the plugin directly. No-ops outside Tauri.
+ * Reveal a FILE in the OS file browser by selecting it in its parent
+ * directory. For folders you almost always want `openFolderInSystem` instead,
+ * which opens the folder's contents rather than highlighting the folder in
+ * its parent. No-ops outside Tauri.
  */
 export async function revealPathInSystem(path: string): Promise<void> {
   if (!isTauri() || !path) return;
@@ -135,6 +136,21 @@ export async function revealPathInSystem(path: string): Promise<void> {
     await revealItemInDir(path);
   } catch (err) {
     console.warn("[tauri] revealPathInSystem failed:", err);
+  }
+}
+
+/**
+ * Open a FOLDER in the OS file browser, showing its contents (Finder /
+ * Explorer / nautilus etc.). For files use `revealPathInSystem` which
+ * highlights the file in its parent instead. No-ops outside Tauri.
+ */
+export async function openFolderInSystem(path: string): Promise<void> {
+  if (!isTauri() || !path) return;
+  try {
+    const { openPath } = await import("@tauri-apps/plugin-opener");
+    await openPath(path);
+  } catch (err) {
+    console.warn("[tauri] openFolderInSystem failed:", err);
   }
 }
 

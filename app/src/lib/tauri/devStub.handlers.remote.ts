@@ -50,6 +50,68 @@ export function remoteStub(cmd: string, a: Args, state: DevStubState): unknown |
     case "clear_provider_token":
       return undefined;
 
+    case "ping_provider": {
+      const provider = String(a.provider ?? "");
+      const baseUrl = String(a.baseUrl ?? "").trim();
+      if (!baseUrl) {
+        return {
+          reachable: false,
+          looksLikeProvider: false,
+          version: null,
+          error: "empty base url",
+        };
+      }
+      // Demo heuristics: a URL containing the provider's name OR an obvious
+      // cloud host is treated as reachable + provider-shaped. Anything with
+      // "kyrillix" (the canonical "user typed nonsense" sentinel used by the
+      // demo) is reachable but flagged as non-provider so the UI can show
+      // the matching error state.
+      const looksBogus = /kyrillix|notreal|example\.invalid/i.test(baseUrl);
+      const namedProvider =
+        new RegExp(`\\b${provider}\\b`, "i").test(baseUrl) ||
+        /api\.(github|gitlab|bitbucket)\b/i.test(baseUrl) ||
+        baseUrl.includes("gitlab.com") ||
+        baseUrl.includes("github.com") ||
+        baseUrl.includes("bitbucket.org");
+      return {
+        reachable: true,
+        looksLikeProvider: !looksBogus && namedProvider,
+        version: provider === "gitlab" && !looksBogus ? "17.2.0-ee" : null,
+        error: null,
+      };
+    }
+
+    case "verify_credentials": {
+      const token = String(a.token ?? "");
+      const providerId = String(a.provider ?? "github");
+      const baseUrl = a.baseUrl as string | null | undefined;
+      const username = (a.username as string | null | undefined) ?? "";
+      // Demo heuristics so the live demo can showcase each error branch
+      // without needing a real backend:
+      //   - "1234" → unauthorized
+      //   - obviously-non-provider URL → not-provider-response
+      //   - empty token → unauthorized
+      //   - otherwise → success, login mirrors any provided username
+      if (!token.trim() || token === "1234") {
+        // Throw the serialized error so the renderer catch-branch sees it
+        // exactly like Tauri would deliver it.
+        throw { kind: "unauthorized" };
+      }
+      const looksBogus =
+        typeof baseUrl === "string" &&
+        baseUrl.length > 0 &&
+        !/\b(github|gitlab|bitbucket)\b/i.test(baseUrl);
+      if (looksBogus) {
+        throw {
+          kind: "not-provider-response",
+          hint: `demo: base URL does not look like ${providerId}`,
+        };
+      }
+      return {
+        login: username || `${providerId}-demo-user`,
+      };
+    }
+
     case "fetch_pull_requests": {
       const repoId = a.repoId as string | undefined;
       return (seed.prs && repoId && seed.prs[repoId]) || [];

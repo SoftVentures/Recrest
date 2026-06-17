@@ -58,6 +58,30 @@
     "connected": "{{name}} verbunden.",
     "failed": "Verbindung fehlgeschlagen. Token prüfen und erneut versuchen."
   },
+  "gitlab": {
+    "variant_title": "GitLab-Variante",
+    "variant_body": "Nutzt du GitLab.com oder einen eigenen Server?",
+    "cloud": "GitLab.com (Cloud)",
+    "cloud_sub": "Die öffentliche gitlab.com-Instanz verwenden.",
+    "self_hosted": "Self-hosted GitLab",
+    "self_hosted_sub": "Recrest auf deinen eigenen GitLab-Server richten. Wir prüfen die Erreichbarkeit.",
+    "domain_label": "Server-URL",
+    "domain_hint": "Hostname oder vollständige URL — z. B. gitlab.example.com oder https://gitlab.example.com.",
+    "domain_placeholder": "gitlab.example.com",
+    "empty_domain": "Bitte die Server-URL deiner GitLab-Instanz angeben.",
+    "unreachable": "Server nicht erreichbar. {{error}}",
+    "not_gitlab": "Der Server antwortet, sieht aber nicht nach GitLab aus. Bitte URL prüfen.",
+    "detected": "GitLab {{version}} erkannt.",
+    "back": "Zurück",
+    "next": "Weiter"
+  },
+  "crashReports": {
+    "label": "Anonymisierte Absturzberichte senden",
+    "hint": "Hilft uns, Fehler zu beheben. Keine Repo-Inhalte, Pfade, Tokens oder Git-Daten verlassen deinen Rechner."
+  },
+  "wizard": {
+    "back": "Zurück"
+  },
   "scan": {
     "title": "Durchsuche deine Ordner",
     "scanning": "Suche Repositories…",

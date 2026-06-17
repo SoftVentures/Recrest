@@ -27,7 +27,7 @@
 - Create: `app/src/lib/utils/useActionFeedback.ts`
 - Create: `app/src/lib/utils/useActionFeedback.test.ts`
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 ```ts
 import { act, renderHook } from "@testing-library/react";
@@ -82,11 +82,11 @@ describe("useActionFeedback", () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen → fehlschlägt**
+- [x] **Step 2: Test laufen lassen → fehlschlägt**
 
 Run: `yarn workspace @recrest/app test useActionFeedback`
 
-- [ ] **Step 3: Hook implementieren**
+- [x] **Step 3: Hook implementieren**
 
 ```ts
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -127,12 +127,12 @@ export function useActionFeedback() {
 }
 ```
 
-- [ ] **Step 4: Tests grün**
+- [x] **Step 4: Tests grün**
 
 Run: `yarn workspace @recrest/app test useActionFeedback`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/lib/utils
@@ -148,7 +148,7 @@ git commit -m "feat(ux): useActionFeedback hook with auto-revert"
 - Modify: `app/src/components/atoms/buttons/GeneralButton/index.tsx`
 - Modify: `app/src/components/atoms/buttons/GeneralIconButton/index.tsx`
 
-- [ ] **Step 1: Props erweitern**
+- [x] **Step 1: Props erweitern**
 
 ```tsx
 // GeneralButton/index.tsx — Props
@@ -158,7 +158,7 @@ export interface GeneralButtonProps {
 }
 ```
 
-- [ ] **Step 2: Inline-Indicator-Rendering**
+- [x] **Step 2: Inline-Indicator-Rendering**
 
 ```tsx
 const showSpinner = feedbackState === "loading";
@@ -177,11 +177,11 @@ const startIcon = showSpinner ? (
 
 `GeneralIconButton` rendert den Indikator statt des Icons.
 
-- [ ] **Step 3: Visual-Test mit Storybook**
+- [x] **Step 3: Visual-Test mit Storybook**
 
 In `GeneralButton.stories.tsx` Story `WithFeedback` ergänzen, die alle 4 States zeigt.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/src/components/atoms/buttons
@@ -196,7 +196,7 @@ git commit -m "feat(buttons): feedbackState prop on GeneralButton and GeneralIco
 
 - Modify: Reload-Buttons im App-Header, RepoDetail, MR-Liste, etc. (grep nach `reload\|refresh` in Components)
 
-- [ ] **Step 1: Pro Reload-Button: useActionFeedback ein-bauen**
+- [x] **Step 1: Pro Reload-Button: useActionFeedback ein-bauen**
 
 ```tsx
 const { state, run } = useActionFeedback();
@@ -207,7 +207,7 @@ const { state, run } = useActionFeedback();
 />;
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/src
@@ -222,7 +222,7 @@ git commit -m "fix(ux): reload buttons show success feedback after refresh"
 
 - Modify: Copy-Buttons (PR-URLs, Branch-Namen, Token-Felder, Path-Felder)
 
-- [ ] **Step 1: Pro Copy-Button: useActionFeedback**
+- [x] **Step 1: Pro Copy-Button: useActionFeedback**
 
 ```tsx
 const { state, run } = useActionFeedback();
@@ -237,7 +237,7 @@ const { state, run } = useActionFeedback();
 />;
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/src
@@ -252,11 +252,11 @@ git commit -m "fix(ux): copy buttons confirm success with check icon"
 
 - Modify: Settings-Sektionen mit Save-Aktionen (siehe Phase 3 Provider-Karten, Settings allgemein)
 
-- [ ] **Step 1: Pro Save: useActionFeedback**
+- [x] **Step 1: Pro Save: useActionFeedback**
 
 Analog zu Task 3.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/src
@@ -267,7 +267,7 @@ git commit -m "fix(ux): settings save buttons show feedback state"
 
 ## Verification
 
-- [ ] `yarn workspace @recrest/app test`
-- [ ] **Visual-Smoke (`yarn dev`)**: Reload, Copy, Save → grünes Häkchen blitzt nach Erfolg, dann zurück zu idle
-- [ ] Auf Fehler-Pfaden: rotes Kreuz mit Error-Tooltip
-- [ ] Pull/Fetch/Push aus Phase 6 nutzen dieses Pattern (siehe Phase 9-Plan)
+- [x] `yarn workspace @recrest/app test`
+- [x] **Visual-Smoke (`yarn dev`)**: Reload, Copy, Save → grünes Häkchen blitzt nach Erfolg, dann zurück zu idle
+- [x] Auf Fehler-Pfaden: rotes Kreuz mit Error-Tooltip
+- [x] Pull/Fetch/Push aus Phase 6 nutzen dieses Pattern (siehe Phase 9-Plan)

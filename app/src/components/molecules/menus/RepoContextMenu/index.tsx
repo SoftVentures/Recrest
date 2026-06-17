@@ -25,7 +25,7 @@ import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
 import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
@@ -151,7 +151,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
                 key: "open-explorer",
                 label: t("context_menu.open_in_explorer"),
                 icon: <Folder size={13} />,
-                onSelect: () => void revealPathInSystem(repo.path),
+                onSelect: () => void openFolderInSystem(repo.path),
               },
             ],
           },

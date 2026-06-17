@@ -118,6 +118,29 @@
       "error": "Aktualisieren fehlgeschlagen: {{detail}}"
     }
   },
+  "pat": {
+    "required_scopes": "Erforderliche Scopes",
+    "read_docs": "Anleitung lesen",
+    "create_token": "Token erstellen",
+    "scopes_manual_hint": "Bitbucket-App-Passwörter unterstützen keine Scopes per URL. Wähle die oben aufgeführten Scopes manuell auf der Erstellseite.",
+    "scope_label": {
+      "github": {
+        "repo": "repo — Zugriff auf private Repositories",
+        "read:user": "read:user — dein Profil",
+        "read:org": "read:org — deine Organisationen"
+      },
+      "gitlab": {
+        "read_api": "read_api — GitLab-API lesen",
+        "read_repository": "read_repository — Repository-Inhalte lesen",
+        "read_user": "read_user — dein Profil lesen"
+      },
+      "bitbucket": {
+        "account:read": "account:read — dein Account",
+        "repository:read": "repository:read — Repositories lesen",
+        "pullrequest:read": "pullrequest:read — Pull Requests lesen"
+      }
+    }
+  },
   "states": {
     "loading": "Wird geladen…",
     "empty": "Nichts hier",
@@ -864,6 +887,9 @@
       "connect_browser": "Per Browser verbinden",
       "connect_with": "Mit {{name}} verbinden",
       "disconnect": "Trennen",
+      "disconnect_confirm_title": "{{name}} trennen?",
+      "disconnect_confirm_description": "Wir verwerfen den gespeicherten Token und holen keine Merge Requests mehr von {{name}}. Deine lokalen Repositories werden nicht angetastet.",
+      "disconnect_confirm_action": "Trennen",
       "edit_base_url": "API-Basis-URL ändern",
       "paste_here": "Füge den eben erstellten Token ein — wir speichern ihn verschlüsselt im Schlüsselbund.",
       "ssh_key_label": "SSH-Key",
@@ -872,6 +898,26 @@
       "ssh_key_hint": "Standard-Private-Key für die SSH-Remotes dieses Anbieters. Ein Repository kann ihn in seiner Detailansicht überschreiben.",
       "required_scopes": "Benötigte Scopes",
       "save": "Speichern",
+      "verify": "Verbindung prüfen",
+      "verified_as": "Verifiziert als {{login}}",
+      "back_to_default": "Auf Standard zurücksetzen",
+      "test_connection": "Verbindung testen",
+      "test": {
+        "ok": "Erreichbar. {{providerName}} erkannt.",
+        "ok_version": "Erreichbar. {{providerName}} {{version}} erkannt.",
+        "unreachable": "Host nicht erreichbar. Prüfe URL und Netzwerkverbindung.",
+        "not_provider": "Erreichbar, aber die Antwort sieht nicht nach {{providerName}} aus. Prüfe die URL."
+      },
+      "verifying": "Prüfe…",
+      "error": {
+        "network": "Host nicht erreichbar. Prüfe URL und Netzwerkverbindung.",
+        "tls": "TLS-Handshake fehlgeschlagen — das Zertifikat konnte nicht validiert werden.",
+        "unauthorized": "Der Token wurde abgelehnt. Prüfe, ob du ihn korrekt kopiert hast und er noch gültig ist.",
+        "forbidden": "Der Token ist gültig, aber ihm fehlen die nötigen Scopes: {{detail}}",
+        "server": "Der Anbieter hat einen {{status}}-Serverfehler zurückgegeben. Versuche es in ein paar Minuten erneut.",
+        "not_provider": "Der Host antwortet, aber die Antwort sieht nicht nach dem erwarteten Anbieter aus ({{hint}}).",
+        "unknown": "Etwas ist schiefgelaufen: {{detail}}"
+      },
       "token_create_link": "{{name}}-Token erstellen",
       "token_create_link_aria": "{{name}}-Token-Erstellseite im Browser öffnen",
       "self_hosted": "Selbst gehostet",

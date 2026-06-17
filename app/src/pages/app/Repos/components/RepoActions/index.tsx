@@ -28,7 +28,7 @@ import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import {
   DangerMenuIcon,
@@ -70,8 +70,17 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
   };
 
   const onOpenRemote = () => {
-    if (repo.remoteUrl) void openExternal(repo.remoteUrl);
-    else toast.error(t("row_actions.toast_no_remote"));
+    if (!repo.remoteUrl) {
+      toast.error(t("row_actions.toast_no_remote"));
+      return;
+    }
+    // Surface OS-handler failures (no app registered for the URL scheme,
+    // sandboxed shell, etc.) as a toast instead of silently swallowing the
+    // rejection — without this the user has no signal that the click did
+    // nothing.
+    openExternal(repo.remoteUrl).catch(() => {
+      toast.error(t("row_actions.toast_command_failed", { label: t("row_actions.open_on_host") }));
+    });
   };
 
   const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
@@ -137,7 +146,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
         size={iconSize}
         aria-label={tAria("repo.open_in_explorer")}
         tooltip={t("row_actions.open_in_explorer")}
-        onClick={() => void revealPathInSystem(repo.path)}
+        onClick={() => void openFolderInSystem(repo.path)}
         icon={<Folder size={px} />}
       />
       <GeneralIconButton
