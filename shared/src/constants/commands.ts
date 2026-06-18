@@ -26,6 +26,9 @@ export const TauriCommand = {
   DETECT_IDES: "detect_ides",
   DETECT_SHELLS: "detect_shells",
   DETECT_TERMINALS: "detect_terminals",
+  LIST_TERMINALS: "list_terminals",
+  LIST_IDES: "list_ides",
+  TEST_CUSTOM_TERMINAL: "test_custom_terminal",
   OPEN_TERMINAL: "open_terminal",
   SSH_UNLOCK_KEY: "ssh_unlock_key",
   SET_REPO_SSH_KEY: "set_repo_ssh_key",
@@ -110,6 +113,10 @@ export const TauriCommand = {
 
   // window
   SET_CAPTION_BUTTON_BOUNDS: "set_caption_button_bounds",
+
+  // theme
+  SET_THEME_EFFECT: "set_theme_effect",
+  SUPPORTS_GLASSY: "supports_glassy",
 
   // system
   GET_PLATFORM_INFO: "get_platform_info",

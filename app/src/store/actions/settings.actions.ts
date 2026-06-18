@@ -4,6 +4,7 @@ import {
   type AppSettings,
   type AutoUpdateMode,
   type CustomFont,
+  type DiscoveredApp,
   type FontSelection,
   type FontSizeId,
   type LigatureMode,
@@ -75,6 +76,19 @@ export const loadDetectedShells = createAsyncThunk<ShellDetection[]>(
 
 export const loadDetectedIdes = createAsyncThunk<string[]>("settings/detectIdes", async () =>
   invoke<string[]>(TauriCommand.DETECT_IDES),
+);
+
+/** Bundle/registry/.desktop-based discovery — returns real installed apps with
+ *  human display names. Augments the older PATH-based `loadDetectedTerminals`
+ *  probe; the picker prefers this when available and falls back otherwise. */
+export const loadDiscoveredTerminals = createAsyncThunk<DiscoveredApp[]>(
+  "settings/discoverTerminals",
+  async () => invoke<DiscoveredApp[]>(TauriCommand.LIST_TERMINALS),
+);
+
+export const loadDiscoveredIdes = createAsyncThunk<DiscoveredApp[]>(
+  "settings/discoverIdes",
+  async () => invoke<DiscoveredApp[]>(TauriCommand.LIST_IDES),
 );
 
 export const loadCustomFonts = createAsyncThunk<CustomFont[]>(

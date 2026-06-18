@@ -27,7 +27,7 @@ path = "src/main.rs"
 tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
-tauri = { version = "2.9", features = ["tray-icon", "image-png"] }
+tauri = { version = "2.9", features = ["macos-private-api", "tray-icon", "image-png"] }
 tauri-plugin-opener = "2.2"
 tauri-plugin-store = "2.4"
 tauri-plugin-notification = "2.2"
@@ -94,6 +94,7 @@ fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 # mis-click — we never permanently `rm -rf` from a button.
 trash = "5"
 ignore = "0.4.26"
+tauri-plugin-liquid-glass = "0.1.6"
 
 [target.'cfg(windows)'.dependencies]
 # Single Win32 dependency (M4 — was windows + windows-sys side-by-side).
@@ -105,6 +106,9 @@ ignore = "0.4.26"
 # `windows` crate is needed (vs `windows-sys`) because `SetWindowSubclass`
 # lives in the Win32 ABI helpers and we want safe HWND/LPARAM wrappers.
 windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Registry"] }
+# Phase 6 discovery — scans `HKLM/HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths`
+# for installed editors and terminals. Pure Rust, no native linking.
+winreg = "0.55"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Sets NSApp.applicationIconImage at runtime so Stage Manager / Mission
@@ -118,12 +122,18 @@ windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSAppearance", "NSDockTile"] }
 objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSProcessInfo"] }
+# Phase 6 discovery — reads `CFBundleIdentifier` from each `.app`'s
+# `Contents/Info.plist`. Pure Rust (no native linking).
+plist = "1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Direct notify-rust use on Linux so we can attach the Recrest icon name +
 # image-path hint that dunst/Plasma/GNOME need to display the app logo
 # on toasts. The Tauri notification plugin doesn't expose those fields.
 notify-rust = { version = "4", features = [] }
+# Phase 6 discovery — parses freedesktop `.desktop` entries to find installed
+# terminals and IDEs. Pure Rust, no native linking.
+freedesktop-desktop-entry = "0.7"
 
 [dev-dependencies]
 # Phase 3 backend test harness: throwaway git repos + mocked provider HTTP.

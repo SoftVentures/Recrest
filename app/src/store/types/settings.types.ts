@@ -2,6 +2,7 @@ import type {
   AppSettings,
   AutoUpdateMode,
   CustomFont,
+  DiscoveredApp,
   FontSelection,
   FontSizeId,
   LigatureMode,
@@ -69,6 +70,12 @@ export interface SettingsState {
   detectedShells: ShellDetection[] | null;
   /** Detected IDE ids (`detect_ides` probe); `null` until resolved. */
   detectedIdes: string[] | null;
+  /** Bundle/registry/.desktop-based terminal discovery (`list_terminals`).
+   *  Preferred over `detectedTerminals` when non-null; carries real install
+   *  metadata (display name, launch spec) for accurate picker rendering. */
+  discoveredTerminals: DiscoveredApp[] | null;
+  /** Bundle/registry/.desktop-based IDE discovery (`list_ides`). */
+  discoveredIdes: DiscoveredApp[] | null;
   /** User-uploaded custom fonts (`list_custom_fonts`); empty until loaded. */
   customFonts: CustomFont[];
   loading: boolean;

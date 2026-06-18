@@ -5,6 +5,8 @@ import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 
 import { type FontSizeId, TauriCommand } from "@recrest/shared";
 
+import { useGlassySupport } from "@/hooks/useGlassySupport";
+import { THEME_NO_TRANSITIONS_CLASS, ThemeId } from "@/lib/constants/theme.constants";
 import { safeInvoke } from "@/lib/tauri";
 import { codeLigatureFeatureSettings, fontCssFamily } from "@/lib/utils/appearance.utils";
 import { syncSystemTheme } from "@/store/actions/settings.actions";
@@ -86,23 +88,46 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     apply(); // re-assert at mount; handles stale themeId after OS change.
 
     let cancelled = false;
+    let raf1: number | null = null;
+    let raf2: number | null = null;
     void safeInvoke<boolean | null>(TauriCommand.GET_SYSTEM_DARK_MODE).then((osDark) => {
       if (cancelled || osDark === null || osDark === undefined) return;
       if (osDark !== mq.matches) {
+        // Suppress transitions across the one-frame surface flip so the
+        // anti-flash inline script's painted value cross-fades cleanly into
+        // the OS-truth value (avoids a visible coloured frame on cold boot).
+        const root = document.documentElement;
+        root.classList.add(THEME_NO_TRANSITIONS_CLASS);
         dispatch(syncSystemTheme(osDark ? "dark" : "light"));
+        raf1 = requestAnimationFrame(() => {
+          raf2 = requestAnimationFrame(() => {
+            if (!cancelled) root.classList.remove(THEME_NO_TRANSITIONS_CLASS);
+          });
+        });
       }
     });
 
     mq.addEventListener("change", apply);
     return () => {
       cancelled = true;
+      if (raf1 !== null) cancelAnimationFrame(raf1);
+      if (raf2 !== null) cancelAnimationFrame(raf2);
       mq.removeEventListener("change", apply);
     };
   }, [followsSystem, dispatch]);
 
+  // When the persisted theme is `glassy` but the host can't render vibrancy
+  // (Linux without compositor support, or when the backend probe reports
+  // false), the effective render falls back to plain `dark` so surfaces still
+  // paint sensibly. We never mutate the stored `themeId` — only the value
+  // that feeds `getTheme` — so re-launching on a supported host restores the
+  // user's actual preference without any extra plumbing.
+  const supportsGlassy = useGlassySupport();
+  const effectiveThemeId = themeId === ThemeId.GLASSY && !supportsGlassy ? ThemeId.DARK : themeId;
+
   const theme = useMemo(
-    () => getTheme(themeId, { primaryColor, dyslexiaFont, font, fontSize }),
-    [themeId, primaryColor, dyslexiaFont, font, fontSize],
+    () => getTheme(effectiveThemeId, { primaryColor, dyslexiaFont, font, fontSize }),
+    [effectiveThemeId, primaryColor, dyslexiaFont, font, fontSize],
   );
 
   // Root-element side effects so non-MUI children (native inputs, our own
@@ -110,6 +135,17 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   // the header, etc.) cascade with the picked font too.
   useEffect(() => {
     const root = document.documentElement;
+    // Reconcile the anti-flash inline-style background (set once at boot by
+    // index.html before any module loads). Without this, switching to the
+    // Glassy theme at runtime leaves <html> painted in the boot theme's solid
+    // color, which sits ABOVE the NSVisualEffectView and hides the desktop
+    // vibrancy entirely. For opaque themes we still want a solid backstop
+    // (matches `palette.background.default`) so a brief reload doesn't flash
+    // through the window.
+    root.style.backgroundColor =
+      effectiveThemeId === ThemeId.GLASSY
+        ? "transparent"
+        : (theme.palette.background.default as string);
     root.style.setProperty("--app-font-family", theme.typography.fontFamily ?? "");
     root.style.setProperty("--app-font-size", `${theme.typography.fontSize}px`);
     // Code-surface font (snippets, diffs, …) — consumed via `MONO_STACK` /
@@ -151,8 +187,10 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // size steps without breaking the outer viewport-lock.
     root.style.setProperty("--ui-scale", String(scaleForSize(fontSize)));
   }, [
+    theme.palette.background.default,
     theme.typography.fontFamily,
     theme.typography.fontSize,
+    effectiveThemeId,
     font,
     codeFont,
     codeLigatures,

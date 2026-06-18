@@ -20,8 +20,6 @@ import {
   Wrench,
 } from "lucide-react";
 
-import DataSizesPanel from "@/components/molecules/DataSizesPanel";
-import SystemInfoPanel from "@/components/molecules/SystemInfoPanel";
 import { useFullbleedScroll } from "@/hooks/useFullbleedScroll";
 import { platformLabel, usePlatform } from "@/hooks/usePlatform";
 import {
@@ -48,7 +46,6 @@ import {
 } from "@/pages/app/Settings/components/GeneralTab";
 import { GitConfigSection } from "@/pages/app/Settings/components/GitConfigTab";
 import { IntegrationsSection } from "@/pages/app/Settings/components/IntegrationsTab";
-import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { ShortcutsSection } from "@/pages/app/Settings/components/ShortcutsTab";
 import { StorageSection } from "@/pages/app/Settings/components/StorageTab";
 
@@ -227,6 +224,13 @@ const PageIntro = styled(Typography)(({ theme }) => ({
   margin: 0,
 })) as typeof Typography;
 
+const SectionDivider = styled(Box)(({ theme }) => ({
+  height: 1,
+  width: "100%",
+  backgroundColor: theme.palette.divider,
+  margin: `${theme.spacing(1)} 0`,
+}));
+
 const KNOWN_TAB_IDS = new Set<TabId>([
   "general",
   "accounts",
@@ -315,7 +319,6 @@ function SettingsPage() {
             <SystemSection />
             <DesktopSection />
             <NotificationsSection />
-            <UpdatesSection />
           </PageInner>
         )}
         {tab === "accounts" && (
@@ -366,13 +369,9 @@ function SettingsPage() {
               <PageH2 component="h2">{t("settings.storage.title")}</PageH2>
               <PageIntro>{t("settings.storage.intro")}</PageIntro>
             </PageHead>
+            <UpdatesSection />
+            <SectionDivider />
             <StorageSection />
-            <SettingsSection title={t("settings:sections.system")}>
-              <SystemInfoPanel />
-            </SettingsSection>
-            <SettingsSection title={t("storage.facts_title", { ns: I18nNamespace.SETTINGS })}>
-              <DataSizesPanel />
-            </SettingsSection>
           </PageInner>
         )}
         {tab === "about" && (

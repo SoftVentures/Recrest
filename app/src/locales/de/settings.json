@@ -60,9 +60,10 @@
     "title": "Darstellung",
     "themeSelect": "Theme",
     "themes": {
+      "system": "System",
       "light": "Hell",
       "dark": "Dunkel",
-      "oled": "OLED",
+      "oled": "OLED Schwarz",
       "glassy": "Glasig"
     },
     "accent": "Akzentfarbe",

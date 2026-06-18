@@ -19,6 +19,7 @@ export * from "./constants/ui.js";
 
 export * from "./types/activity.js";
 export * from "./types/ci.js";
+export * from "./types/discovery.js";
 export * from "./types/errors.js";
 export * from "./types/git.js";
 export * from "./types/ide.js";

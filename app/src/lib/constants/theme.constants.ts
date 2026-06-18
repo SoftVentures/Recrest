@@ -298,8 +298,17 @@ export type ThemeId = (typeof ThemeId)[keyof typeof ThemeId];
 export const THEMES = [
   { id: ThemeId.LIGHT, label: "Light", mode: "light", isOled: false, isGlassy: false },
   { id: ThemeId.DARK, label: "Dark", mode: "dark", isOled: false, isGlassy: false },
-  { id: ThemeId.OLED, label: "OLED", mode: "dark", isOled: true, isGlassy: false },
+  { id: ThemeId.OLED, label: "OLED Black", mode: "dark", isOled: true, isGlassy: false },
   { id: ThemeId.GLASSY, label: "Glassy", mode: "dark", isOled: false, isGlassy: true },
 ] as const satisfies readonly AppTheme[];
 
 export const DEFAULT_THEME_ID: ThemeId = ThemeId.LIGHT;
+
+/**
+ * Root-element class applied for one paint cycle while the renderer reconciles
+ * the OS-truth theme value at boot. The matching CSS rule in `globals.css`
+ * suppresses all transitions while the class is present so the surface flip
+ * from the anti-flash painted value to the OS-truth value doesn't show a
+ * highlighted/cross-faded frame.
+ */
+export const THEME_NO_TRANSITIONS_CLASS = "recrest-no-transitions";

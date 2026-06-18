@@ -35,9 +35,7 @@ describe("SystemInfoPanel", () => {
         }}
       />,
     );
-    expect(getByTestId(TEST_IDS.settings.storage.systemOs).textContent).toContain(
-      "linux (aarch64)",
-    );
+    expect(getByTestId(TEST_IDS.settings.storage.systemOs).textContent).toContain("linux (ARM64)");
     expect(getByTestId(TEST_IDS.settings.storage.systemGit).textContent).toContain("—");
   });
 

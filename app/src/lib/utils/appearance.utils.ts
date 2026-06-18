@@ -6,6 +6,7 @@ import {
   type LigatureMode,
 } from "@recrest/shared";
 
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { THEMES, type ThemeId } from "@/lib/constants/theme.constants";
 
 const SANS_FALLBACK = "system-ui, sans-serif";
@@ -118,8 +119,19 @@ export function fontSizeLabel(id: FontSizeId): string {
   }
 }
 
-/** Human-readable label for the rendered theme choice (incl. `system`). */
-export function themeChoiceLabel(choice: ThemeChoice): string {
+/** Human-readable label for the rendered theme choice (incl. `system`).
+ *  Pass i18next's `t` to localise; falls back to the static English label
+ *  when called without a translator (e.g. tests, static snapshots). The
+ *  `theme.themes.*` keys live in the `settings` namespace, so callers using
+ *  the default-namespaced `t` from `useTranslation()` must pass the second
+ *  arg shape — that's the type we accept here. */
+export function themeChoiceLabel(
+  choice: ThemeChoice,
+  t?: (key: string, opts?: { ns?: string }) => string,
+): string {
+  if (t) {
+    return t(`theme.themes.${choice}`, { ns: I18nNamespace.SETTINGS });
+  }
   if (choice === "system") return "System";
   const th = THEMES.find((x) => x.id === choice);
   return th?.label ?? "Light";

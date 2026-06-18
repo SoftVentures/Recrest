@@ -210,6 +210,52 @@ describe("settingsReducer — synchronous actions", () => {
   });
 });
 
+describe("settingsReducer — theme-flicker audit", () => {
+  // Guard against regressions where an unrelated setting toggle accidentally
+  // resets the user's picked theme (e.g. a reducer case writing the entire
+  // appearance block instead of patching the single field). Every toggle
+  // tested here must leave `themeId` and `followsSystem` exactly as set.
+  function withDarkExplicit() {
+    return {
+      ...initial(),
+      themeId: "dark" as const,
+      followsSystem: false,
+    };
+  }
+
+  it("setNotificationsEnabled does not reset theme", () => {
+    const next = settingsReducer(withDarkExplicit(), setNotificationsEnabled(true));
+    expect(next.themeId).toBe("dark");
+    expect(next.followsSystem).toBe(false);
+  });
+
+  it("setCrashReporting does not reset theme", () => {
+    const next = settingsReducer(withDarkExplicit(), setCrashReporting(true));
+    expect(next.themeId).toBe("dark");
+    expect(next.followsSystem).toBe(false);
+  });
+
+  it("setDesktopAutoStart does not reset theme", () => {
+    const next = settingsReducer(withDarkExplicit(), setDesktopAutoStart(true));
+    expect(next.themeId).toBe("dark");
+    expect(next.followsSystem).toBe(false);
+  });
+
+  it("setHighContrast does not reset theme", () => {
+    const next = settingsReducer(withDarkExplicit(), setHighContrast(true));
+    expect(next.themeId).toBe("dark");
+    expect(next.followsSystem).toBe(false);
+  });
+
+  it("syncSystemTheme preserves followsSystem flag", () => {
+    const start = settingsReducer(initial(), setFollowsSystem(true));
+    expect(start.followsSystem).toBe(true);
+    const next = settingsReducer(start, syncSystemTheme("dark"));
+    expect(next.themeId).toBe("dark");
+    expect(next.followsSystem).toBe(true);
+  });
+});
+
 describe("settingsReducer — async thunks", () => {
   it("sets loading on loadSettings.pending", () => {
     const next = settingsReducer(initial(), loadSettings.pending("internal-id", undefined));

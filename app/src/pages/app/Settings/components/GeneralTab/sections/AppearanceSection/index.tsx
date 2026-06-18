@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { useGlassySupport } from "@/hooks/useGlassySupport";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { PRIMARY_COLOR_SCHEMES, type PrimaryColorScheme } from "@/lib/constants/theme.constants";
@@ -74,7 +75,7 @@ const SCHEME_TO_ACCENT: Record<PrimaryColorScheme, AccentId> = {
 const ACCENT_IDS: AccentId[] = ["coral", "blue", "green", "purple", "pink", "amber"];
 const FONT_SIZE_IDS: FontSizeId[] = ["sm", "md", "lg", "xl"];
 const LIGATURE_MODE_IDS: LigatureMode[] = [...LIGATURE_MODES];
-const THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled", "glassy"];
+const BASE_THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled"];
 
 const LOCALES: { code: string; countryCode: string; label: string }[] = [
   { code: "en", countryCode: "GB", label: "English" },
@@ -172,6 +173,10 @@ export function AppearanceSection() {
   const codeLigatures = useAppSelector((s) => s.settings.codeLigatures);
   const fontSize = useAppSelector((s) => s.settings.fontSize);
   const customFonts = useAppSelector((s) => s.settings.customFonts);
+  const supportsGlassy = useGlassySupport();
+  const themeChoices: ThemeChoice[] = supportsGlassy
+    ? [...BASE_THEME_CHOICES, "glassy"]
+    : BASE_THEME_CHOICES;
 
   const onThemeChoice = (choice: ThemeChoice) => {
     if (choice === "system") {
@@ -198,17 +203,17 @@ export function AppearanceSection() {
             return (
               <>
                 <Icon size={13} />
-                {themeChoiceLabel(c)}
+                {themeChoiceLabel(c, t)}
               </>
             );
           }}
         >
-          {THEME_CHOICES.map((c) => {
+          {themeChoices.map((c) => {
             const Icon = THEME_CHOICE_ICONS[c];
             return (
               <MenuItem key={c} value={c}>
                 <Icon size={13} />
-                <MenuLabel>{themeChoiceLabel(c)}</MenuLabel>
+                <MenuLabel>{themeChoiceLabel(c, t)}</MenuLabel>
               </MenuItem>
             );
           })}

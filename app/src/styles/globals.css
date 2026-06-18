@@ -102,3 +102,14 @@ html[data-underline-links="true"] a {
   text-decoration: underline !important;
   text-underline-offset: 2px;
 }
+
+/* Boot theme-flash suppression. Class is added on <html> by ThemeWrapper for
+   one paint cycle while the OS-truth theme value is reconciled, so the
+   surface flip doesn't show a cross-fade frame. Keep the class name in sync
+   with `THEME_NO_TRANSITIONS_CLASS` in `lib/constants/theme.constants.ts`. */
+.recrest-no-transitions,
+.recrest-no-transitions *,
+.recrest-no-transitions *::before,
+.recrest-no-transitions *::after {
+  transition: none !important;
+}

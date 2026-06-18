@@ -611,7 +611,7 @@
       "integrations": "Integrationen",
       "git": "Git-Config",
       "shortcuts": "Shortcuts",
-      "storage": "Daten & Cache",
+      "storage": "Updates & Diagnose",
       "about": "Über",
       "developer": "Entwickler"
     },
@@ -791,8 +791,8 @@
       "open_settings": "Einstellungen öffnen"
     },
     "storage": {
-      "title": "Daten & Cache",
-      "intro": "Wo Recrest Caches, Indizes und Klon-Ziele ablegt.",
+      "title": "Updates & Diagnose",
+      "intro": "Update-Einstellungen und anonyme Diagnose.",
       "crash_reporting": "Absturzberichte",
       "crash_reporting_info": "Absturzberichte werden per HTTPS an unseren Error-Tracker gesendet. Es werden keine persönlichen Daten übertragen.",
       "crash_reporting_sub": "Sende anonymisierte Absturzberichte, damit wir Fehler beheben können.",
@@ -866,9 +866,8 @@
     },
     "ide": {
       "auto_system_default": "System-Standard ({{ide}})",
-      "detection_hint": "Auf $PATH wurde keine bekannte IDE gefunden. Installiere eine oder wähle manuell unten.",
-      "no_ide_detected": "Keine IDE erkannt",
-      "not_installed_tag": "nicht installiert"
+      "detection_hint": "Auf diesem System wurde keine IDE gefunden. Installiere eine und öffne die Einstellungen erneut.",
+      "no_ide_detected": "Keine IDE erkannt"
     },
     "notifications": {
       "ci_failed": "CI fehlgeschlagen",
@@ -947,7 +946,11 @@
       "profile_label": "Terminal-Profil",
       "profile_hint": "Profilname, der ans Terminal übergeben wird (z. B. wt.exe -p).",
       "custom_command_label": "Eigener Befehl",
-      "custom_command_hint": "Vollständiger Befehl; der Repo-Pfad ist das Arbeitsverzeichnis."
+      "custom_command_hint": "Vollständiger Befehl; der Repo-Pfad ist das Arbeitsverzeichnis.",
+      "test_button": "Test",
+      "test_success": "Befehl erfolgreich gestartet.",
+      "test_failure": "Befehl fehlgeschlagen: {{error}}",
+      "test_empty_command": "Bitte zuerst einen Befehl eingeben."
     },
     "updates": {
       "check_now_label": "Nach Updates suchen",

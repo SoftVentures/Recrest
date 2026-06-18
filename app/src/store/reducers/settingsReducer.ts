@@ -23,6 +23,8 @@ import {
   loadDetectedIdes,
   loadDetectedShells,
   loadDetectedTerminals,
+  loadDiscoveredIdes,
+  loadDiscoveredTerminals,
   loadSettings,
   saveSettings,
   setCodeFont,
@@ -148,6 +150,8 @@ const initialState: SettingsState = {
   detectedTerminals: null,
   detectedShells: null,
   detectedIdes: null,
+  discoveredTerminals: null,
+  discoveredIdes: null,
   customFonts: [],
   loading: false,
   error: null,
@@ -165,9 +169,23 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
   // yet (the Rust side `#[serde(default)]` fills the new substructs).
   const appearance = payload.appearance;
   if (appearance) {
-    state.themeId = KNOWN_THEME_IDS.has(appearance.themeId as ThemeId)
-      ? (appearance.themeId as ThemeId)
-      : DEFAULT_THEME_ID;
+    // When followsSystem is on, the persisted themeId is stale by definition —
+    // it reflects whatever the OS was at last save, not what the OS is right
+    // now. Re-derive from matchMedia so a boot under a flipped system theme
+    // hydrates to the right colour without ThemeWrapper's effect having to
+    // race against this `applyBackend` write. The Rust-side OS-truth read in
+    // ThemeWrapper still corrects the WKWebView cold-start quirk afterwards.
+    if (appearance.followsSystem) {
+      const matchesDark =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      state.themeId = matchesDark ? "dark" : "light";
+    } else {
+      state.themeId = KNOWN_THEME_IDS.has(appearance.themeId as ThemeId)
+        ? (appearance.themeId as ThemeId)
+        : DEFAULT_THEME_ID;
+    }
     state.followsSystem = appearance.followsSystem;
     state.primaryColor = appearance.primaryColor;
     state.font = appearance.font;
@@ -323,6 +341,12 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     })
     .addCase(loadDetectedIdes.fulfilled, (state, action) => {
       state.detectedIdes = action.payload;
+    })
+    .addCase(loadDiscoveredTerminals.fulfilled, (state, action) => {
+      state.discoveredTerminals = action.payload;
+    })
+    .addCase(loadDiscoveredIdes.fulfilled, (state, action) => {
+      state.discoveredIdes = action.payload;
     })
     .addCase(loadCustomFonts.fulfilled, (state, action) => {
       state.customFonts = action.payload;

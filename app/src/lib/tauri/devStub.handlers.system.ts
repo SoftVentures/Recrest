@@ -106,6 +106,82 @@ export function systemStub(cmd: string, a: Args, state: DevStubState): unknown |
     case "detect_shells":
       return [];
 
+    // New bundle/registry-based discovery stubs (Phase 6). dev:web has no real
+    // filesystem to scan, so we return a plausible per-platform set so the
+    // picker renders realistically.
+    case "list_terminals": {
+      const p = detectPlatform();
+      if (p === "macos") {
+        return [
+          {
+            kind: "terminal",
+            id: "apple-terminal",
+            displayName: "Terminal",
+            iconPath: null,
+            launchCommand: {
+              kind: "appBundle",
+              bundlePath: "/System/Applications/Utilities/Terminal.app",
+            },
+          },
+        ];
+      }
+      if (p === "windows") {
+        return [
+          {
+            kind: "terminal",
+            id: "windows-terminal",
+            displayName: "Windows Terminal",
+            iconPath: null,
+            launchCommand: { kind: "executable", binary: "wt.exe", args: [] },
+          },
+        ];
+      }
+      return [];
+    }
+
+    case "list_ides": {
+      const p = detectPlatform();
+      if (p === "macos") {
+        return [
+          {
+            kind: "ide",
+            id: "vscode",
+            displayName: "Visual Studio Code",
+            iconPath: null,
+            launchCommand: {
+              kind: "appBundle",
+              bundlePath: "/Applications/Visual Studio Code.app",
+            },
+          },
+          {
+            kind: "ide",
+            id: "cursor",
+            displayName: "Cursor",
+            iconPath: null,
+            launchCommand: { kind: "appBundle", bundlePath: "/Applications/Cursor.app" },
+          },
+        ];
+      }
+      if (p === "windows") {
+        return [
+          {
+            kind: "ide",
+            id: "vscode",
+            displayName: "Visual Studio Code",
+            iconPath: null,
+            launchCommand: { kind: "executable", binary: "Code.exe", args: [] },
+          },
+        ];
+      }
+      return [];
+    }
+
+    // Pure happy-path: pretend the spawn worked. The real backend actually
+    // forks a process; dev:web can't, so dropping the call is the closest
+    // honest behavior.
+    case "test_custom_terminal":
+      return undefined;
+
     case "check_git":
       return { installed: true, version: "2.44.0" };
 

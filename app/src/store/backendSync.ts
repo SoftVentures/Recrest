@@ -1,9 +1,9 @@
 import type { Middleware } from "@reduxjs/toolkit";
 
-import type { AppSettings, ThemeMode } from "@recrest/shared";
+import { type AppSettings, TauriCommand, type ThemeMode } from "@recrest/shared";
 
 import type { ThemeId } from "@/lib/constants/theme.constants";
-import { isTauri } from "@/lib/tauri";
+import { invoke, isTauri } from "@/lib/tauri";
 import {
   saveSettings,
   setCodeFont,
@@ -128,6 +128,7 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
         appearance: appearancePatch(state, { themeId: a.payload, followsSystem: false }),
       }),
     );
+    void applyThemeEffect(a.payload);
   } else if (setFollowsSystem.match(a)) {
     dispatch(
       saveSettings({
@@ -135,6 +136,10 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
         appearance: appearancePatch(state, { followsSystem: a.payload }),
       }),
     );
+    // Re-assert window vibrancy for whatever themeId the renderer resolves to
+    // once follow-system reconciles — the effective theme may be `dark`/`light`
+    // now, so the OS-level effect needs to clear or re-apply accordingly.
+    void applyThemeEffect((store.getState() as StoreState).settings.themeId);
   } else if (setPrimaryColor.match(a)) {
     dispatch(saveSettings({ appearance: appearancePatch(state, { primaryColor: a.payload }) }));
   } else if (setFont.match(a)) {
@@ -319,6 +324,19 @@ function notificationsPatchFromState(
 ) {
   const current = store.getState().settings.notifications;
   return { ...current, [field]: value };
+}
+
+/**
+ * Tell the Rust side to apply/clear the OS-level window vibrancy effect for
+ * the new theme. Fire-and-forget — the backend collapses unsupported themes
+ * to no-op, and a transient failure shouldn't block the settings save path.
+ */
+async function applyThemeEffect(theme: ThemeId): Promise<void> {
+  try {
+    await invoke<void>(TauriCommand.SET_THEME_EFFECT, { theme });
+  } catch (err) {
+    console.warn("[settings] set_theme_effect failed", err);
+  }
 }
 
 async function applyAutostart(enable: boolean): Promise<void> {

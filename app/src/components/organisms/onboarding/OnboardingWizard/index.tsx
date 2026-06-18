@@ -64,7 +64,7 @@ export function OnboardingWizard() {
   const settingsLoaded = useAppSelector((s) => !s.settings.loading);
   const override = useAppSelector((s) => s.ui.onboardingOverride);
   const scanPaths = useAppSelector((s) => s.repos.scanPaths);
-  const repoIds = useAppSelector((s) => Object.keys(s.repos.items));
+  const repoCount = useAppSelector((s) => Object.keys(s.repos.items).length);
 
   const [step, setStep] = useState<OnboardingStep>(OnboardingStep.WELCOME);
   const [active, setActive] = useState(false);
@@ -99,7 +99,7 @@ export function OnboardingWizard() {
     // slices, so anything that lands shows up automatically. A previously-
     // skipped scan now happens here so users that landed on "Skip" in
     // PickFolderStep still get a populated dashboard.
-    if (scanPaths.length > 0 && repoIds.length === 0) {
+    if (scanPaths.length > 0 && repoCount === 0) {
       void dispatch(scanForRepos(scanPaths));
     } else {
       const reposResult = await dispatch(loadRepos());

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -17,6 +17,7 @@ import {
   type ShellId,
   TERMINAL_DEFINITIONS,
   TERMINAL_IDS,
+  TauriCommand,
   type TerminalId,
 } from "@recrest/shared";
 
@@ -25,15 +26,19 @@ import { toast } from "sonner";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import ShellIcon from "@/assets/icons/ShellIcon";
 import TerminalIcon from "@/assets/icons/TerminalIcon";
+import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { isTauri } from "@/lib/tauri";
+import { invoke, isTauri } from "@/lib/tauri";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import {
   loadDetectedIdes,
   loadDetectedShells,
   loadDetectedTerminals,
+  loadDiscoveredIdes,
+  loadDiscoveredTerminals,
   saveSettings,
   setPollingIntervalMinutes,
 } from "@/store/actions/settings.actions";
@@ -89,18 +94,6 @@ const TextInput = styled("input")(({ theme }) => ({
   "&:focus": { borderColor: theme.palette.border.hover },
 }));
 
-const NotInstalledTag = styled(Typography)(({ theme }) => ({
-  marginLeft: 6,
-  fontSize: 10,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  padding: "1px 6px",
-  borderRadius: 100,
-  backgroundColor: theme.palette.surface.interface.backElevation,
-  color: theme.palette.text.information,
-})) as typeof Typography;
-
 const WideSelect = styled(SelectControl)({ minWidth: 260 });
 
 const MenuLabel = styled(Box, {
@@ -111,6 +104,32 @@ const MenuLabel = styled(Box, {
   opacity: dimmed ? 0.55 : 1,
 }));
 
+const CustomCommandRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(1),
+  alignItems: "flex-start",
+}));
+
+const CustomCommandInputRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  gap: theme.spacing(1),
+  alignItems: "center",
+}));
+
+const SuccessText = styled(Typography)(({ theme }) => ({
+  fontSize: 12,
+  margin: 0,
+  color: theme.palette.success.main,
+})) as typeof Typography;
+
+const ErrorText = styled(Typography)(({ theme }) => ({
+  fontSize: 12,
+  margin: 0,
+  color: theme.palette.error.main,
+})) as typeof Typography;
+
 export function SystemSection() {
   const { t } = useTranslation();
   const platform = usePlatform();
@@ -119,20 +138,32 @@ export function SystemSection() {
   // Source of truth is the persisted backend settings, not local state — local
   // state was lost on tab switch (component remount), resetting the dropdowns.
   const backend = useAppSelector((s) => s.settings.backend);
+  const testFeedback = useActionFeedback();
+  const [testMessage, setTestMessage] = useState<{
+    tone: "success" | "error";
+    text: string;
+  } | null>(null);
   const detectedTerminalsState = useAppSelector((s) => s.settings.detectedTerminals);
   const detectedShellsState = useAppSelector((s) => s.settings.detectedShells);
   const detectedIdesState = useAppSelector((s) => s.settings.detectedIdes);
+  const discoveredTerminalsState = useAppSelector((s) => s.settings.discoveredTerminals);
+  const discoveredIdesState = useAppSelector((s) => s.settings.discoveredIdes);
   const defaultIde = backend?.defaultIde ?? "auto";
   const defaultTerminal = backend?.terminal?.id ?? "auto";
   const defaultShell = backend?.shell ?? "auto";
 
   // Tauri-only: kick off the real OS probe once. Outside Tauri the thunks would
   // throw `tauri-ipc-unavailable`, so the stub maps below stay authoritative.
+  // Both the legacy PATH-based detect probes and the new bundle/registry-based
+  // discovery run side-by-side — discovery is preferred when it resolves, the
+  // older probes remain as fallback so the migration is non-breaking.
   useEffect(() => {
     if (!isTauri()) return;
     void dispatch(loadDetectedTerminals());
     void dispatch(loadDetectedShells());
     void dispatch(loadDetectedIdes());
+    void dispatch(loadDiscoveredTerminals());
+    void dispatch(loadDiscoveredIdes());
   }, [dispatch]);
 
   const persist = (patch: Partial<AppSettings>) => {
@@ -142,15 +173,33 @@ export function SystemSection() {
       .catch((err) => toast.error(String((err as Error)?.message ?? err)));
   };
 
-  // Real OS probe (`detect_ides`); `null` until it resolves (and in non-Tauri
-  // contexts like Storybook) → no IDE shown as installed until we actually know.
-  const detectedSet = new Set<string>(detectedIdesState ?? []);
+  // Prefer the new bundle/registry-based discovery when available; fall back to
+  // the legacy probes, then to the platform stub. `DiscoveredApp.id` aligns
+  // with `IdeId` / `TerminalId` for known apps in the catalog.
+  const discoveredIdeIds = discoveredIdesState?.map((a) => a.id) ?? null;
+  const detectedSet = new Set<string>(discoveredIdeIds ?? detectedIdesState ?? []);
 
+  const discoveredTerminalIds = discoveredTerminalsState?.map((a) => a.id) ?? null;
   const detectedTerminals = new Set<TerminalId>(
-    detectedTerminalsState
-      ? detectedTerminalsState.filter((d) => d.available).map((d) => d.id)
-      : DETECTED_TERMINALS_BY_PLATFORM[platform],
+    (discoveredTerminalIds as TerminalId[] | null) ??
+      (detectedTerminalsState
+        ? detectedTerminalsState.filter((d) => d.available).map((d) => d.id)
+        : DETECTED_TERMINALS_BY_PLATFORM[platform]),
   );
+
+  // Lookups for the discovered display names — when present these override
+  // the static catalog name so the picker shows what the OS actually calls
+  // the app (e.g. "iTerm" vs "iTerm2", localised CFBundleName, …).
+  const discoveredTerminalNames = new Map<string, string>(
+    discoveredTerminalsState?.map((a) => [a.id, a.displayName]) ?? [],
+  );
+  const discoveredIdeNames = new Map<string, string>(
+    discoveredIdesState?.map((a) => [a.id, a.displayName]) ?? [],
+  );
+  const terminalName = (id: TerminalId): string =>
+    discoveredTerminalNames.get(id) ?? TERMINAL_DEFINITIONS[id].name;
+  const ideName = (id: (typeof IDE_IDS)[number]): string =>
+    discoveredIdeNames.get(id) ?? IDE_DEFINITIONS[id].name;
   const detectedShells = new Set<ShellId>(
     detectedShellsState
       ? detectedShellsState.filter((d) => d.available).map((d) => d.id)
@@ -177,7 +226,7 @@ export function SystemSection() {
 
   const terminalAutoLabel = firstTerminal
     ? t("settings.terminal.auto_system_default", {
-        terminal: TERMINAL_DEFINITIONS[firstTerminal].name,
+        terminal: terminalName(firstTerminal),
       })
     : t("settings.terminal.no_terminal_detected");
   const shellAutoLabel = firstShell
@@ -186,9 +235,10 @@ export function SystemSection() {
 
   const installedTerminalIds = visibleTerminalIds.filter((id) => detectedTerminals.has(id));
   const installedShellIds = visibleShellIds.filter((id) => detectedShells.has(id));
+  const installedIdeIds = IDE_IDS.filter((id) => detectedSet.has(id));
   const firstDetected = IDE_IDS.find((id) => detectedSet.has(id)) ?? null;
   const autoLabel = firstDetected
-    ? t("settings.ide.auto_system_default", { ide: IDE_DEFINITIONS[firstDetected].name })
+    ? t("settings.ide.auto_system_default", { ide: ideName(firstDetected) })
     : t("settings.ide.no_ide_detected");
 
   return (
@@ -238,7 +288,7 @@ export function SystemSection() {
             return (
               <>
                 <IdeIcon id={v as (typeof IDE_IDS)[number]} size={14} />
-                {IDE_DEFINITIONS[v as (typeof IDE_IDS)[number]].name}
+                {ideName(v as (typeof IDE_IDS)[number])}
               </>
             );
           }}
@@ -247,22 +297,12 @@ export function SystemSection() {
             {firstDetected && <IdeIcon id={firstDetected} size={14} />}
             <MenuLabel indent={!!firstDetected}>{autoLabel}</MenuLabel>
           </MenuItem>
-          {IDE_IDS.map((id) => {
-            const detected = detectedSet.has(id);
-            return (
-              <MenuItem key={id} value={id} disabled={!detected}>
-                <IdeIcon id={id} size={14} color={detected ? "brand" : "currentColor"} />
-                <MenuLabel indent dimmed={!detected}>
-                  {IDE_DEFINITIONS[id].name}
-                </MenuLabel>
-                {!detected && (
-                  <NotInstalledTag component="span" variant="caption">
-                    {t("settings.ide.not_installed_tag")}
-                  </NotInstalledTag>
-                )}
-              </MenuItem>
-            );
-          })}
+          {installedIdeIds.map((id) => (
+            <MenuItem key={id} value={id}>
+              <IdeIcon id={id} size={14} color="brand" />
+              <MenuLabel indent>{ideName(id)}</MenuLabel>
+            </MenuItem>
+          ))}
         </WideSelect>
       </SettingsRow>
 
@@ -305,7 +345,7 @@ export function SystemSection() {
             return (
               <>
                 <TerminalIcon id={v as TerminalId} size={16} />
-                {TERMINAL_DEFINITIONS[v as TerminalId].name}
+                {terminalName(v as TerminalId)}
               </>
             );
           }}
@@ -317,7 +357,7 @@ export function SystemSection() {
           {installedTerminalIds.map((id) => (
             <MenuItem key={id} value={id}>
               <TerminalIcon id={id} size={16} />
-              <MenuLabel indent>{TERMINAL_DEFINITIONS[id].name}</MenuLabel>
+              <MenuLabel indent>{terminalName(id)}</MenuLabel>
             </MenuItem>
           ))}
           <MenuItem value={CUSTOM_TERMINAL_ID}>
@@ -355,22 +395,77 @@ export function SystemSection() {
           label={t("settings.terminal.custom_command_label")}
           sub={t("settings.terminal.custom_command_hint")}
         >
-          <TextInput
-            key="custom-command"
-            type="text"
-            defaultValue={backend?.terminal?.customCommand ?? ""}
-            onBlur={(e) =>
-              persist({
-                terminal: {
-                  id: CUSTOM_TERMINAL_ID,
-                  profile: backend?.terminal?.profile ?? null,
-                  customCommand: e.target.value.trim() || null,
-                },
-              })
-            }
-            aria-label={t("settings.terminal.custom_command_label")}
-            data-testid={TEST_IDS.settings.general.terminalCustomCommandInput}
-          />
+          <CustomCommandRow>
+            <CustomCommandInputRow>
+              <TextInput
+                key="custom-command"
+                type="text"
+                defaultValue={backend?.terminal?.customCommand ?? ""}
+                onBlur={(e) => {
+                  setTestMessage(null);
+                  persist({
+                    terminal: {
+                      id: CUSTOM_TERMINAL_ID,
+                      profile: backend?.terminal?.profile ?? null,
+                      customCommand: e.target.value.trim() || null,
+                    },
+                  });
+                }}
+                aria-label={t("settings.terminal.custom_command_label")}
+                data-testid={TEST_IDS.settings.general.terminalCustomCommandInput}
+              />
+              <GeneralButton
+                variant="outline"
+                size="default"
+                onClick={() => {
+                  const command = (backend?.terminal?.customCommand ?? "").trim();
+                  if (!command) {
+                    setTestMessage({
+                      tone: "error",
+                      text: t("settings.terminal.test_empty_command"),
+                    });
+                    return;
+                  }
+                  setTestMessage(null);
+                  void testFeedback
+                    .run(async () => {
+                      // Empty cwd → backend resolves to $HOME.
+                      await invoke<void>(TauriCommand.TEST_CUSTOM_TERMINAL, { command, cwd: "" });
+                    })
+                    .then(() => {
+                      setTestMessage({
+                        tone: "success",
+                        text: t("settings.terminal.test_success"),
+                      });
+                    })
+                    .catch((err: unknown) => {
+                      const message =
+                        err instanceof Error
+                          ? err.message
+                          : typeof err === "object" && err !== null && "message" in err
+                            ? String((err as { message: unknown }).message)
+                            : String(err);
+                      setTestMessage({
+                        tone: "error",
+                        text: t("settings.terminal.test_failure", { error: message }),
+                      });
+                    });
+                }}
+                disabled={testFeedback.state === "loading"}
+                feedbackState={testFeedback.state}
+                loading={testFeedback.state === "loading"}
+                data-testid={TEST_IDS.settings.general.terminalCustomCommandTest}
+              >
+                {t("settings.terminal.test_button")}
+              </GeneralButton>
+            </CustomCommandInputRow>
+            {testMessage &&
+              (testMessage.tone === "success" ? (
+                <SuccessText component="p">{testMessage.text}</SuccessText>
+              ) : (
+                <ErrorText component="p">{testMessage.text}</ErrorText>
+              ))}
+          </CustomCommandRow>
         </SettingsRow>
       )}
 

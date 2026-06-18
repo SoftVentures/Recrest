@@ -1,6 +1,7 @@
 mod auth;
 mod commands;
 mod config;
+mod discovery;
 mod git;
 mod identity;
 mod platform;
@@ -487,6 +488,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
+        // Native macOS Liquid Glass (macOS 26+) / NSVisualEffectView with
+        // `UnderWindowBackground` material fallback on older versions. The
+        // plugin handles main-thread dispatch and per-window state — we just
+        // toggle it via `LiquidGlassExt::set_effect` when the user picks the
+        // Glassy theme. Safe no-op on Windows/Linux.
+        .plugin(tauri_plugin_liquid_glass::init())
         // Remember the window's size, position (→ which monitor), maximized
         // and fullscreen state across restarts and re-apply on launch. We omit
         // VISIBLE/DECORATIONS from the persisted flags so the "close to tray"
@@ -677,6 +684,11 @@ pub fn run() {
                 }
             }
 
+            // Snapshot the persisted theme id before `config` moves into the
+            // AppState so the platform vibrancy block below can decide
+            // whether to apply Glassy on the freshly-created main window.
+            let persisted_theme_id = config.settings().appearance.theme_id.clone();
+
             let state = AppState {
                 config: Arc::new(Mutex::new(config)),
                 providers: Arc::new(registry),
@@ -689,7 +701,6 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 use tauri::TitleBarStyle;
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
                 // (Process name is set at the very top of `run()` — calling
                 // it here would be too late, the Dock has already captured
@@ -698,10 +709,11 @@ pub fn run() {
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.set_decorations(true);
                     let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
-                    // Vibrancy is applied unconditionally — the Glassy theme makes
-                    // the React surfaces translucent so it shows through; opaque
-                    // themes simply cover it.
-                    let _ = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None);
+                    // No unconditional vibrancy any more — the Glassy theme
+                    // toggles it on/off via `set_theme_effect` (tauri-plugin-
+                    // liquid-glass). Leaving vibrancy permanently on under
+                    // opaque themes was wasteful (compositor still blurs the
+                    // window buffer behind solid React surfaces).
                 }
 
                 // Defer the initial icon set by 500ms so NSApp.effectiveAppearance
@@ -724,11 +736,13 @@ pub fn run() {
                 spawn_macos_appearance_poller(handle.clone());
             }
 
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::apply_acrylic;
+            // Replay the persisted theme effect on boot so a user who picked
+            // the Glassy theme last session sees the effect already applied on
+            // first paint instead of waiting for the renderer to dispatch
+            // `set_theme_effect` after hydration.
+            if persisted_theme_id == "glassy" {
                 if let Some(window) = handle.get_webview_window("main") {
-                    let _ = apply_acrylic(&window, None);
+                    let _ = commands::theme::apply_glassy(&handle, &window);
                 }
             }
 
@@ -947,6 +961,9 @@ pub fn run() {
         commands::ide::detect_ides,
         commands::terminal::detect_terminals,
         commands::terminal::detect_shells,
+        commands::terminal::test_custom_terminal,
+        commands::discovery::list_terminals,
+        commands::discovery::list_ides,
         commands::repos::open_terminal,
         commands::ssh::ssh_unlock_key,
         commands::ssh::set_repo_ssh_key,
@@ -1018,6 +1035,8 @@ pub fn run() {
         commands::system::get_system_facts,
         commands::system::get_data_sizes,
         commands::git_info::check_git,
+        commands::theme::set_theme_effect,
+        commands::theme::supports_glassy,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
         commands::update::install_update,
@@ -1043,6 +1062,9 @@ pub fn run() {
         commands::ide::detect_ides,
         commands::terminal::detect_terminals,
         commands::terminal::detect_shells,
+        commands::terminal::test_custom_terminal,
+        commands::discovery::list_terminals,
+        commands::discovery::list_ides,
         commands::repos::open_terminal,
         commands::ssh::ssh_unlock_key,
         commands::ssh::set_repo_ssh_key,
@@ -1114,6 +1136,8 @@ pub fn run() {
         commands::system::get_system_facts,
         commands::system::get_data_sizes,
         commands::git_info::check_git,
+        commands::theme::set_theme_effect,
+        commands::theme::supports_glassy,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
         commands::update::install_update,

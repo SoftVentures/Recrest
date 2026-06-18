@@ -3,6 +3,13 @@
   "productName": "Recrest Dev",
   "identifier": "eu.softventures.recrest.dev",
   "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "transparent": true
+      }
+    ],
     "security": {
       "capabilities": [
         "default",

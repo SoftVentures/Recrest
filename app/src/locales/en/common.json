@@ -611,7 +611,7 @@
       "integrations": "Integrations",
       "git": "Git config",
       "shortcuts": "Shortcuts",
-      "storage": "Data & Cache",
+      "storage": "Updates & Diagnostics",
       "about": "About",
       "developer": "Developer"
     },
@@ -791,8 +791,8 @@
       "open_settings": "Open settings"
     },
     "storage": {
-      "title": "Data & Cache",
-      "intro": "Where Recrest keeps caches, indexes, and clone targets.",
+      "title": "Updates & Diagnostics",
+      "intro": "Update preferences and anonymous diagnostics.",
       "crash_reporting": "Crash reporting",
       "crash_reporting_info": "Crash reports are sent over HTTPS to our error tracker. No personal data is included.",
       "crash_reporting_sub": "Send anonymised crash reports to help us fix bugs.",
@@ -866,9 +866,8 @@
     },
     "ide": {
       "auto_system_default": "System default ({{ide}})",
-      "detection_hint": "We didn't find a known IDE on $PATH. Install one or pick manually below.",
-      "no_ide_detected": "No IDE detected",
-      "not_installed_tag": "not installed"
+      "detection_hint": "We didn't find any IDE on this system. Install one and reopen settings.",
+      "no_ide_detected": "No IDE detected"
     },
     "notifications": {
       "ci_failed": "CI failed",
@@ -947,7 +946,11 @@
       "profile_label": "Terminal profile",
       "profile_hint": "Profile name passed to the terminal (e.g. wt.exe -p).",
       "custom_command_label": "Custom command",
-      "custom_command_hint": "Full command to run; the repo path is the working directory."
+      "custom_command_hint": "Full command to run; the repo path is the working directory.",
+      "test_button": "Test",
+      "test_success": "Command launched successfully.",
+      "test_failure": "Command failed: {{error}}",
+      "test_empty_command": "Please enter a command first."
     },
     "updates": {
       "check_now_label": "Check for updates",

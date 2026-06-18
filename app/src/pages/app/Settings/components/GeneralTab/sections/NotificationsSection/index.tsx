@@ -112,7 +112,6 @@ export function NotificationsSection() {
       <GeneralSwitchInput
         checked={checked}
         onCheckedChange={onChange}
-        disabled={!enabled && testId !== "master"}
         aria-label={label}
         data-testid={TEST_IDS.settings.general.notifications(testId)}
       />
@@ -143,36 +142,40 @@ export function NotificationsSection() {
           />
         </InlineRow>
       </SettingsRow>
-      <SettingsRow label={t("settings.notifications.new_pr")}>
-        <TestPair
-          checked={newPr}
-          onChange={setNewPr}
-          show={enabled && newPr}
-          testId={TEST_IDS.settings.general.notificationsField.newPr}
-          kind={NotificationKind.NEW_PR}
-          label={t("settings.notifications.new_pr")}
-        />
-      </SettingsRow>
-      <SettingsRow label={t("settings.notifications.ci_failed")}>
-        <TestPair
-          checked={ciFailed}
-          onChange={setCiFailed}
-          show={enabled && ciFailed}
-          testId={TEST_IDS.settings.general.notificationsField.ciFailed}
-          kind={NotificationKind.CI_FAILED}
-          label={t("settings.notifications.ci_failed")}
-        />
-      </SettingsRow>
-      <SettingsRow label={t("settings.notifications.merge_ready")}>
-        <TestPair
-          checked={mergeReady}
-          onChange={setMergeReady}
-          show={enabled && mergeReady}
-          testId={TEST_IDS.settings.general.notificationsField.mergeReady}
-          kind={NotificationKind.MERGE_READY}
-          label={t("settings.notifications.merge_ready")}
-        />
-      </SettingsRow>
+      {enabled && (
+        <>
+          <SettingsRow label={t("settings.notifications.new_pr")}>
+            <TestPair
+              checked={newPr}
+              onChange={setNewPr}
+              show={newPr}
+              testId={TEST_IDS.settings.general.notificationsField.newPr}
+              kind={NotificationKind.NEW_PR}
+              label={t("settings.notifications.new_pr")}
+            />
+          </SettingsRow>
+          <SettingsRow label={t("settings.notifications.ci_failed")}>
+            <TestPair
+              checked={ciFailed}
+              onChange={setCiFailed}
+              show={ciFailed}
+              testId={TEST_IDS.settings.general.notificationsField.ciFailed}
+              kind={NotificationKind.CI_FAILED}
+              label={t("settings.notifications.ci_failed")}
+            />
+          </SettingsRow>
+          <SettingsRow label={t("settings.notifications.merge_ready")}>
+            <TestPair
+              checked={mergeReady}
+              onChange={setMergeReady}
+              show={mergeReady}
+              testId={TEST_IDS.settings.general.notificationsField.mergeReady}
+              kind={NotificationKind.MERGE_READY}
+              label={t("settings.notifications.merge_ready")}
+            />
+          </SettingsRow>
+        </>
+      )}
     </SettingsSection>
   );
 }

@@ -350,6 +350,7 @@ export const TEST_IDS = {
       defaultShellSelect: "settings-default-shell-select",
       terminalProfileInput: "settings-terminal-profile-input",
       terminalCustomCommandInput: "settings-terminal-custom-command-input",
+      terminalCustomCommandTest: "settings-terminal-custom-command-test",
       desktopAutoStart: "settings-desktop-auto-start",
       desktopStartMinimized: "settings-desktop-start-minimized",
       desktopCloseToTray: "settings-desktop-close-to-tray",

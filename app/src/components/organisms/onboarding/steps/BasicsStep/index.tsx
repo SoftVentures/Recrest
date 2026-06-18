@@ -22,6 +22,7 @@ import {
   TileStack,
   TileSub,
 } from "@/components/organisms/onboarding/steps/_shared";
+import { useGlassySupport } from "@/hooks/useGlassySupport";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -45,7 +46,7 @@ export interface BasicsStepProps {
 
 type ThemeChoice = "system" | "light" | "dark" | "oled" | "glassy";
 
-const THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled", "glassy"];
+const BASE_THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled"];
 
 const THEME_ICONS: Record<ThemeChoice, typeof Monitor> = {
   system: Monitor,
@@ -97,6 +98,10 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
   const themeId = useAppSelector((s) => s.settings.themeId);
   const followsSystem = useAppSelector((s) => s.settings.followsSystem);
   const themeChoice: ThemeChoice = followsSystem ? "system" : themeId;
+  const supportsGlassy = useGlassySupport();
+  const themeChoices: ThemeChoice[] = supportsGlassy
+    ? [...BASE_THEME_CHOICES, "glassy"]
+    : BASE_THEME_CHOICES;
   const autoStart = useAppSelector((s) => s.settings.desktop.autoStart);
   const closeToTray = useAppSelector((s) => s.settings.desktop.closeToTray);
   const notifEnabled = useAppSelector((s) => s.settings.notifications.enabled);
@@ -143,7 +148,7 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
                   );
                 }}
               >
-                {THEME_CHOICES.map((c) => {
+                {themeChoices.map((c) => {
                   const Icon = THEME_ICONS[c];
                   return (
                     <MenuItem key={c} value={c}>

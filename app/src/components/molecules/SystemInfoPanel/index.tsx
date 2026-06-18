@@ -10,6 +10,7 @@ import { type SystemFacts, TauriCommand } from "@recrest/shared";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
+import { prettyArch } from "@/lib/utils/about.utils";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 const FactRow = styled(Box)(({ theme }) => ({
@@ -37,7 +38,7 @@ const FactsBox = styled(Box)(({ theme }) => ({
 
 function formatOs(facts: SystemFacts): string {
   const version = facts.osVersion ? ` ${facts.osVersion}` : "";
-  return `${facts.os}${version} (${facts.arch})`;
+  return `${facts.os}${version} (${prettyArch(facts.arch)})`;
 }
 
 interface SystemInfoPanelProps {

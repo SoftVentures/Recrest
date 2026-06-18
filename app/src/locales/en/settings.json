@@ -60,9 +60,10 @@
     "title": "Appearance",
     "themeSelect": "Theme",
     "themes": {
+      "system": "System",
       "light": "Light",
       "dark": "Dark",
-      "oled": "OLED",
+      "oled": "OLED Black",
       "glassy": "Glassy"
     },
     "accent": "Accent color",
