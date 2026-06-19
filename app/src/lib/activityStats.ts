@@ -131,7 +131,9 @@ export interface ActivityStats {
   repos: WeekPair;
   currentStreak: number;
   longestStreak: number;
-  busiestDay: { label: string; count: number } | null;
+  /** `weekday` is a JS `getDay()` index (0=Sunday…6=Saturday); the label is
+   *  formatted in the component with the user's resolved locale. */
+  busiestDay: { weekday: number; count: number } | null;
   peakHour: { label: string; count: number } | null;
   quietestRepos: string[];
 }
@@ -179,14 +181,7 @@ export function computeActivityStats(
 
   const busiestWdEntry = [...byWeekday.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
   const busiestDay = busiestWdEntry
-    ? {
-        label: new Date(
-          2024,
-          0,
-          busiestWdEntry[0] === 0 ? 7 : busiestWdEntry[0],
-        ).toLocaleDateString(undefined, { weekday: "short" }),
-        count: busiestWdEntry[1],
-      }
+    ? { weekday: busiestWdEntry[0], count: busiestWdEntry[1] }
     : null;
 
   const peakHourIdx = byHour.reduce((best, v, i) => (v > (byHour[best] ?? -1) ? i : best), 0);

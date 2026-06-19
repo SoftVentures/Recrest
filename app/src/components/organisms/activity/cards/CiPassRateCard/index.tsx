@@ -31,6 +31,7 @@ import {
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useResolvedLocale } from "@/lib/utils/datetime.utils";
 
 // nivo's line point carries the original datum on `.data`. Typed here so the
 // `onMouseMove` handler references a named shape instead of an inline
@@ -61,7 +62,8 @@ export interface Props {
 }
 
 function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const locale = useResolvedLocale();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
   const { show, hide, portal } = useChartTooltip();
@@ -76,7 +78,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
     const passed = b.rows.reduce((a, r) => a + r.passed, 0);
     const total = b.rows.reduce((a, r) => a + r.total, 0);
     return {
-      x: dayLabel(b.newestDay, i18n.language),
+      x: dayLabel(b.newestDay, locale),
       y: total === 0 ? 1 : passed / total,
       passed,
       total,

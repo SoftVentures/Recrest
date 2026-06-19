@@ -95,9 +95,12 @@ export const setDateFormat = createAction<DateFormat>("settings/setDateFormat");
 export const setTimeFormat = createAction<TimeFormat>("settings/setTimeFormat");
 /** First day of the week for the activity heatmap + any week grid. */
 export const setWeekStart = createAction<WeekStart>("settings/setWeekStart");
-/** Optional BCP-47 region code (`"US"`, `"GB"`, `"DE"`, …) or `null` to
- *  follow the active language. */
+/** Optional ISO 3166-1 alpha-2 country code (`"US"`, `"GB"`, `"DE"`, …) or
+ *  `null` to follow the active language. Drives `Intl` regional formatting. */
 export const setRegion = createAction<string | null>("settings/setRegion");
+/** Optional IANA time-zone id (`"Europe/Berlin"`, …) or `null` to follow the
+ *  host system's zone. */
+export const setTimeZone = createAction<string | null>("settings/setTimeZone");
 
 export const loadSettings = createAsyncThunk<AppSettings>("settings/load", async () =>
   invoke<AppSettings>(TauriCommand.GET_SETTINGS),

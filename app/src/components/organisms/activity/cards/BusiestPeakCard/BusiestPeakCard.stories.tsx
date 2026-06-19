@@ -12,7 +12,7 @@ const meta = {
       repos: { current: 0, previous: 0, delta: 0 },
       currentStreak: 0,
       longestStreak: 0,
-      busiestDay: { label: "Wed", count: 18 },
+      busiestDay: { weekday: 3, count: 18 },
       peakHour: { label: "14:00", count: 9 },
       quietestRepos: [],
     },

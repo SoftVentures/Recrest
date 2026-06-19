@@ -93,6 +93,10 @@ pub struct LocaleSettings {
     /// ISO 3166-1 alpha-2 code (e.g. `"US"`, `"GB"`, `"DE"`).
     #[serde(default)]
     pub region: Option<String>,
+    /// `None` => follow the host system's zone. Otherwise an IANA time-zone
+    /// id (e.g. `"Europe/Berlin"`).
+    #[serde(default)]
+    pub time_zone: Option<String>,
 }
 
 fn default_date_format() -> String {
@@ -114,6 +118,7 @@ impl Default for LocaleSettings {
             time_format: default_time_format(),
             week_start: default_week_start(),
             region: None,
+            time_zone: None,
         }
     }
 }
@@ -649,20 +654,26 @@ mod tests {
     fn locale_prefs_round_trip_with_camel_case_keys() {
         let mut s = AppSettings::default();
         s.appearance.locale_prefs = LocaleSettings {
-            date_format: "absolute".into(),
+            date_format: "medium".into(),
             time_format: "12h".into(),
             week_start: "sunday".into(),
             region: Some("GB".into()),
+            time_zone: Some("Europe/London".into()),
         };
         let json = serde_json::to_string(&s).expect("serialize");
         assert!(json.contains("\"localePrefs\""));
-        assert!(json.contains("\"dateFormat\":\"absolute\""));
+        assert!(json.contains("\"dateFormat\":\"medium\""));
         assert!(json.contains("\"timeFormat\":\"12h\""));
         assert!(json.contains("\"weekStart\":\"sunday\""));
         assert!(json.contains("\"region\":\"GB\""));
+        assert!(json.contains("\"timeZone\":\"Europe/London\""));
         let back: AppSettings = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(back.appearance.locale_prefs.date_format, "absolute");
+        assert_eq!(back.appearance.locale_prefs.date_format, "medium");
         assert_eq!(back.appearance.locale_prefs.region.as_deref(), Some("GB"));
+        assert_eq!(
+            back.appearance.locale_prefs.time_zone.as_deref(),
+            Some("Europe/London")
+        );
     }
 
     /// Settings written before the translucency split (no `translucency` key)

@@ -9,6 +9,7 @@ import {
   DEFAULT_LOCALE_SETTINGS,
   POLLING_INTERVAL_MAX_MS,
   POLLING_INTERVAL_MIN_MS,
+  migrateDateFormat,
 } from "@recrest/shared";
 
 import { StorageKey } from "@/lib/constants/storage.constants";
@@ -54,6 +55,7 @@ import {
   setRegion,
   setThemeId,
   setTimeFormat,
+  setTimeZone,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
   setUnderlineLinks,
@@ -256,10 +258,13 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
     // Old settings.json predating the locale-prefs split won't carry it.
     state.localePrefs = appearance.localePrefs
       ? {
-          dateFormat: appearance.localePrefs.dateFormat ?? DEFAULT_LOCALE_SETTINGS.dateFormat,
+          // `migrateDateFormat` rewrites the legacy "absolute" value (and any
+          // unknown string) to a valid concrete preset.
+          dateFormat: migrateDateFormat(appearance.localePrefs.dateFormat),
           timeFormat: appearance.localePrefs.timeFormat ?? DEFAULT_LOCALE_SETTINGS.timeFormat,
           weekStart: appearance.localePrefs.weekStart ?? DEFAULT_LOCALE_SETTINGS.weekStart,
           region: appearance.localePrefs.region ?? null,
+          timeZone: appearance.localePrefs.timeZone ?? null,
         }
       : { ...DEFAULT_LOCALE_SETTINGS };
   } else {
@@ -421,6 +426,9 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     })
     .addCase(setRegion, (state, action) => {
       state.localePrefs.region = action.payload;
+    })
+    .addCase(setTimeZone, (state, action) => {
+      state.localePrefs.timeZone = action.payload;
     })
     .addCase(loadSettings.pending, (state) => {
       state.loading = true;

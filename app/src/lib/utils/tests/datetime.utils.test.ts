@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   formatAbsolute,
+  formatRange,
   formatRelative,
   formatTimeOnly,
   formatTimestamp,
@@ -54,9 +55,14 @@ describe("resolveLocale", () => {
 });
 
 describe("formatRelative", () => {
-  it("renders 2 minutes ago in the same bucket regardless of clock preference", () => {
+  it("renders a localized 'minutes ago' phrasing in English", () => {
     const twoMinAgo = new Date(FIXED_NOW - 2 * 60 * 1000);
-    expect(formatRelative(twoMinAgo, "en")).toBe("2 min ago");
+    expect(formatRelative(twoMinAgo, "en")).toBe("2 minutes ago");
+  });
+
+  it("localizes to the given locale (German)", () => {
+    const twoHoursAgo = new Date(FIXED_NOW - 2 * 60 * 60 * 1000);
+    expect(formatRelative(twoHoursAgo, "de")).toBe("vor 2 Stunden");
   });
 
   it("returns — for unparseable input", () => {
@@ -144,23 +150,77 @@ describe("formatTimestamp", () => {
         dateFormat: DateFormat.RELATIVE,
         timeFormat: TimeFormat.TWELVE_HOUR,
       }),
-    ).toBe("2 min ago");
+    ).toBe("2 minutes ago");
     expect(
       formatTimestamp(twoMinAgo, {
         locale: "en-US",
         dateFormat: DateFormat.RELATIVE,
         timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
       }),
-    ).toBe("2 min ago");
+    ).toBe("2 minutes ago");
   });
 
-  it("uses the absolute formatter when the preference is absolute", () => {
+  it("uses the absolute formatter for a concrete (non-relative) preset", () => {
     const out = formatTimestamp(REF_UTC, {
       locale: "en-US",
-      dateFormat: DateFormat.ABSOLUTE,
+      dateFormat: DateFormat.MEDIUM,
       timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
     });
     expect(out).toContain(localHHMM(TimeFormat.TWENTY_FOUR_HOUR));
     expect(out).toMatch(/2026/);
+  });
+
+  it("renders ISO preset as YYYY-MM-DD", () => {
+    const out = formatTimestamp(REF_UTC, {
+      locale: "en-US",
+      dateFormat: DateFormat.ISO,
+      timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+    });
+    expect(out).toMatch(/^\d{4}-\d{2}-\d{2} /);
+  });
+
+  it("honours an explicit time zone", () => {
+    const tokyo = formatTimestamp(REF_UTC, {
+      locale: "en-US",
+      dateFormat: DateFormat.ISO,
+      timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+      timeZone: "Asia/Tokyo",
+    });
+    const utc = formatTimestamp(REF_UTC, {
+      locale: "en-US",
+      dateFormat: DateFormat.ISO,
+      timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+      timeZone: "UTC",
+    });
+    expect(tokyo).not.toBe(utc);
+  });
+});
+
+describe("formatRange", () => {
+  it("collapses a same-day range to a single date", () => {
+    expect(formatRange("2026-06-18", "2026-06-18", "en-US")).toBe("Jun 18, 2026");
+  });
+
+  it("collapses the shared year onto the end date", () => {
+    expect(formatRange("2026-05-28", "2026-06-08", "en-US")).toBe("May 28 – Jun 8, 2026");
+  });
+
+  it("keeps both years on a cross-year range", () => {
+    expect(formatRange("2025-12-30", "2026-01-02", "en-US")).toBe("Dec 30, 2025 – Jan 2, 2026");
+  });
+
+  it("localizes month names to the given locale", () => {
+    expect(formatRange("2026-06-18", "2026-06-18", "de-DE")).toBe("18. Juni 2026");
+  });
+
+  it("treats date-only inputs as calendar dates — no timezone shift moves the day", () => {
+    // 2026-06-18 read as local midnight must stay June 18 regardless of host
+    // zone; a naive `new Date("2026-06-18")` (UTC midnight) would slip a day
+    // west of UTC. We assert the rendered day is 18, not 17.
+    expect(formatRange("2026-06-18", "2026-06-18", "en-US")).toContain("18");
+  });
+
+  it("falls back to the raw 'start – end' string on unparseable input", () => {
+    expect(formatRange("nope", "also-nope", "en-US")).toBe("nope – also-nope");
   });
 });

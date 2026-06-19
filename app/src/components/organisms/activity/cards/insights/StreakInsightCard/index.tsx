@@ -8,7 +8,7 @@ import { styled } from "@mui/material/styles";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { Streaks } from "@/lib/insights";
-import { formatDateRange } from "@/lib/utils/dateFormat.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 
 interface Props {
   streaks: Streaks;
@@ -33,6 +33,7 @@ const Caption = styled(Box)(({ theme }) => ({
 
 function StreakInsightCard({ streaks, loading }: Props) {
   const { t } = useTranslation();
+  const dt = useDateTimeFormat();
   const value = t("activity.insights.streak_value_days", { count: streaks.current });
   const range = streaks.longestRange;
   return (
@@ -48,7 +49,7 @@ function StreakInsightCard({ streaks, loading }: Props) {
         {streaks.longest > 0 && range
           ? t("activity.insights.streak_longest", {
               count: streaks.longest,
-              range: formatDateRange(range.start, range.end),
+              range: dt.formatRange(range.start, range.end),
             })
           : t("activity.insights.empty")}
       </Caption>

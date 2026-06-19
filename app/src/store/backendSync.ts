@@ -38,6 +38,7 @@ import {
   setRegion,
   setThemeId,
   setTimeFormat,
+  setTimeZone,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
   setUnderlineLinks,
@@ -273,7 +274,8 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
     setDateFormat.match(a) ||
     setTimeFormat.match(a) ||
     setWeekStart.match(a) ||
-    setRegion.match(a)
+    setRegion.match(a) ||
+    setTimeZone.match(a)
   ) {
     // Read the freshly-written value off state (the middleware already ran
     // the reducer above) so the backend gets the merged localePrefs block,
@@ -317,6 +319,7 @@ type StoreState = {
       timeFormat: TimeFormat;
       weekStart: WeekStart;
       region: string | null;
+      timeZone: string | null;
     };
   };
   ui: {
@@ -359,6 +362,7 @@ function appearancePatch(
           timeFormat: s.localePrefs.timeFormat,
           weekStart: s.localePrefs.weekStart,
           region: s.localePrefs.region,
+          timeZone: s.localePrefs.timeZone,
         }
       : { ...DEFAULT_LOCALE_SETTINGS },
     ...patch,

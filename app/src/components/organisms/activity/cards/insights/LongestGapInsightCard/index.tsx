@@ -8,7 +8,7 @@ import { styled } from "@mui/material/styles";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { LongestGap } from "@/lib/insights";
-import { formatDateRange } from "@/lib/utils/dateFormat.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 
 interface Props {
   gap: LongestGap | null;
@@ -33,6 +33,7 @@ const Caption = styled(Box)(({ theme }) => ({
 
 function LongestGapInsightCard({ gap, loading }: Props) {
   const { t } = useTranslation();
+  const dt = useDateTimeFormat();
   const value = gap
     ? t("activity.insights.longest_gap_value", { count: gap.days })
     : t("activity.insights.empty");
@@ -45,7 +46,7 @@ function LongestGapInsightCard({ gap, loading }: Props) {
       testId={TEST_IDS.activity.cards.insights.longestGap}
     >
       <Value>{value}</Value>
-      <Caption>{gap ? formatDateRange(gap.startDate, gap.endDate) : ""}</Caption>
+      <Caption>{gap ? dt.formatRange(gap.startDate, gap.endDate) : ""}</Caption>
     </GeneralCard>
   );
 }

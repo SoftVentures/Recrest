@@ -6,6 +6,8 @@ import { styled } from "@mui/material/styles";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { ActivityStats } from "@/lib/activityStats";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useResolvedLocale } from "@/lib/utils/datetime.utils";
+import { weekdayLabel } from "@/lib/utils/locale.utils";
 
 interface Props {
   stats: ActivityStats;
@@ -47,7 +49,11 @@ const MiniSub = styled(Box)(({ theme }) => ({
 
 function BusiestPeakCard({ stats }: Props) {
   const { t } = useTranslation();
+  const locale = useResolvedLocale();
   const dash = t("activity.cadence.none");
+  const busiestLabel = stats.busiestDay
+    ? weekdayLabel(stats.busiestDay.weekday, locale, "short")
+    : dash;
   return (
     <GeneralCard
       title={t("activity.cards.busiest_peak_title")}
@@ -56,7 +62,7 @@ function BusiestPeakCard({ stats }: Props) {
       <MiniGrid>
         <Mini>
           <MiniLabel>{t("activity.cards.busiest_label")}</MiniLabel>
-          <MiniValue>{stats.busiestDay ? stats.busiestDay.label : dash}</MiniValue>
+          <MiniValue>{busiestLabel}</MiniValue>
           <MiniSub>
             {stats.busiestDay
               ? t("activity.cards.commits_count", { count: stats.busiestDay.count })

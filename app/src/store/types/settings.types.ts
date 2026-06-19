@@ -56,6 +56,9 @@ export interface LocalePrefs {
   /** `null` => follow the active language. Otherwise an ISO 3166-1 alpha-2
    *  code (e.g. `"US"`, `"GB"`, `"DE"`). */
   region: string | null;
+  /** `null` => follow the host system's zone. Otherwise an IANA time-zone id
+   *  (e.g. `"Europe/Berlin"`). */
+  timeZone: string | null;
 }
 
 export interface SettingsState {

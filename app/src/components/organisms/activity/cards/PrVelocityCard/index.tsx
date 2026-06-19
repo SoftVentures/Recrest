@@ -14,6 +14,7 @@ import type { VelocityDay } from "@/lib/activityAggregates";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useResolvedLocale } from "@/lib/utils/datetime.utils";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -52,7 +53,8 @@ const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
 }));
 
 function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const locale = useResolvedLocale();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
   const { show, move, hide, portal } = useChartTooltip();
@@ -65,7 +67,7 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
   // Newest-first buckets → reverse for chronological left-to-right.
   const buckets = bucketDays(rows, (r) => r.day, size).reverse();
   const data = buckets.map((b) => ({
-    x: dayLabel(b.newestDay, i18n.language),
+    x: dayLabel(b.newestDay, locale),
     [openedLabel]: b.rows.reduce((a, r) => a + r.opened, 0),
     [mergedLabel]: b.rows.reduce((a, r) => a + r.merged, 0),
   }));

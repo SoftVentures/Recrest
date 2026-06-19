@@ -1,4 +1,10 @@
-import type { AppSettings, CustomFont, ShellDetection, TerminalDetection } from "@recrest/shared";
+import type {
+  AppSettings,
+  CustomFont,
+  DateFormat,
+  ShellDetection,
+  TerminalDetection,
+} from "@recrest/shared";
 
 import { describe, expect, it } from "vitest";
 
@@ -33,6 +39,7 @@ import {
   setRegion,
   setThemeId,
   setTimeFormat,
+  setTimeZone,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
   setUnderlineLinks,
@@ -96,6 +103,7 @@ function appSettings(overrides: Partial<AppSettings> = {}): AppSettings {
         timeFormat: "24h",
         weekStart: "monday",
         region: null,
+        timeZone: null,
       },
     },
     accessibility: {
@@ -281,6 +289,7 @@ describe("settingsReducer — translucency (orthogonal to theme)", () => {
               timeFormat: "24h",
               weekStart: "monday",
               region: null,
+              timeZone: null,
             },
           },
         }),
@@ -315,6 +324,7 @@ describe("settingsReducer — translucency (orthogonal to theme)", () => {
               timeFormat: "24h",
               weekStart: "monday",
               region: null,
+              timeZone: null,
             },
           },
         }),
@@ -347,6 +357,7 @@ describe("settingsReducer — translucency (orthogonal to theme)", () => {
               timeFormat: "24h",
               weekStart: "monday",
               region: null,
+              timeZone: null,
             },
           },
         }),
@@ -562,8 +573,8 @@ describe("settingsReducer — locale preferences", () => {
   });
 
   it("setDateFormat updates the dateFormat slot", () => {
-    const next = settingsReducer(initial(), setDateFormat("absolute"));
-    expect(next.localePrefs.dateFormat).toBe("absolute");
+    const next = settingsReducer(initial(), setDateFormat("numeric"));
+    expect(next.localePrefs.dateFormat).toBe("numeric");
   });
 
   it("setTimeFormat updates the timeFormat slot", () => {
@@ -607,17 +618,29 @@ describe("settingsReducer — locale preferences", () => {
         fontSize: "md",
         translucency: { enabled: false, intensity: 30, blurIntensity: 30 },
         localePrefs: {
-          dateFormat: "absolute",
+          // Legacy on-disk value predating the concrete-format split; the
+          // reducer migrates it. Cast because it's no longer a valid DateFormat.
+          dateFormat: "absolute" as unknown as DateFormat,
           timeFormat: "12h",
           weekStart: "sunday",
           region: "GB",
+          timeZone: "Europe/London",
         },
       },
     });
     const next = settingsReducer(initial(), loadSettings.fulfilled(payload, "id", undefined));
-    expect(next.localePrefs.dateFormat).toBe("absolute");
+    // Legacy "absolute" is migrated to the closest concrete preset ("medium").
+    expect(next.localePrefs.dateFormat).toBe("medium");
     expect(next.localePrefs.timeFormat).toBe("12h");
     expect(next.localePrefs.weekStart).toBe("sunday");
     expect(next.localePrefs.region).toBe("GB");
+    expect(next.localePrefs.timeZone).toBe("Europe/London");
+  });
+
+  it("setTimeZone accepts a zone and clears with null", () => {
+    const on = settingsReducer(initial(), setTimeZone("Europe/Berlin"));
+    expect(on.localePrefs.timeZone).toBe("Europe/Berlin");
+    const off = settingsReducer(on, setTimeZone(null));
+    expect(off.localePrefs.timeZone).toBeNull();
   });
 });
