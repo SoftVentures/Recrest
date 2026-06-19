@@ -174,18 +174,13 @@ async function bootstrap(): Promise<void> {
     };
     void reveal();
 
-    // NOTE: We deliberately do NOT re-run `probeBackdropCompositor` on
-    // focus-regain anymore. The OS material (NSVisualEffectView, applied
-    // via `tauri-plugin-liquid-glass`) is captured into the window
-    // snapshot macOS animates during Stage Manager swap-in / Cmd-Tab /
-    // Dock click, so the snapshot is no longer transparent. Running the
-    // probe on focus events made the WebView push a full-screen
-    // backdrop-filter layer through its compositor mid-transition — that
-    // layer was paid for in a visible "blue → black → blue" flicker
-    // because the WKWebView's transient repaint during snapshot-to-live
-    // swap exposed the layer composition before the ::before glass
-    // layer's tint settled. The keep-alive animation on `::before` keeps
-    // the steady-state backdrop-filter layer alive on its own.
+    // We deliberately do NOT re-run the probe on focus-regain. The desktop
+    // blur is the OS `NSVisualEffectView` material (see `commands::theme`),
+    // which macOS captures into the window snapshot it animates during Stage
+    // Manager swap-in / Cmd-Tab / Dock click — so the snapshot already shows
+    // the glass. Forcing a CSS backdrop-filter layer through the compositor on
+    // focus events instead caused a visible "blue → black → blue" flicker as
+    // the WKWebView's transient repaint exposed the layer mid-transition.
   }
 }
 

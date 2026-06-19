@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::Serialize;
 use tauri::{AppHandle, State};
 use zeroize::Zeroizing;
@@ -25,21 +27,24 @@ pub struct SshKeyListing {
     pub keys: Vec<SshKeyInfo>,
 }
 
-/// Detected private keys in the user's `~/.ssh`, plus the absolute directory so
-/// the renderer's file picker opens in the right place per OS.
-#[tauri::command]
-pub async fn list_ssh_keys() -> Result<SshKeyListing, CommandError> {
-    let Some(home) = dirs::home_dir() else {
-        return Ok(SshKeyListing {
-            dir: None,
-            keys: vec![],
-        });
-    };
-    let dir = home.join(".ssh");
-    let dir_str = Some(dir.to_string_lossy().to_string());
+/// Auto-selection priority for discovered keys: modern algorithms first, with
+/// unknown names sorted last (then alphabetically within their band). Lower
+/// wins — `id_ed25519` is the preferred default when nothing is configured.
+pub fn key_priority(name: &str) -> usize {
+    match name {
+        "id_ed25519" => 0,
+        "id_ed25519_sk" => 1,
+        "id_ecdsa" => 2,
+        "id_ecdsa_sk" => 3,
+        "id_rsa" => 4,
+        _ => 100,
+    }
+}
 
+/// Scan a directory for private SSH keys, ordered by `key_priority` then name.
+fn scan_keys(dir: &Path) -> Vec<SshKeyInfo> {
     let mut keys = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(&dir) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if !path.is_file() {
@@ -70,8 +75,41 @@ pub async fn list_ssh_keys() -> Result<SshKeyListing, CommandError> {
             });
         }
     }
-    keys.sort_by(|a, b| a.name.cmp(&b.name));
-    Ok(SshKeyListing { dir: dir_str, keys })
+    keys.sort_by(|a, b| {
+        key_priority(&a.name)
+            .cmp(&key_priority(&b.name))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    keys
+}
+
+/// Detected private keys in the user's `~/.ssh`, plus the absolute directory so
+/// the renderer's file picker opens in the right place per OS.
+#[tauri::command]
+pub async fn list_ssh_keys() -> Result<SshKeyListing, CommandError> {
+    let Some(home) = dirs::home_dir() else {
+        return Ok(SshKeyListing {
+            dir: None,
+            keys: vec![],
+        });
+    };
+    let dir = home.join(".ssh");
+    let dir_str = Some(dir.to_string_lossy().to_string());
+    Ok(SshKeyListing {
+        dir: dir_str,
+        keys: scan_keys(&dir),
+    })
+}
+
+/// Path of the highest-priority key in `~/.ssh`, used as the automatic default
+/// when no key is explicitly configured (per-repo or global). `None` when
+/// `~/.ssh` holds no usable key — callers then fall back to ssh-agent.
+pub fn highest_priority_key_path() -> Option<String> {
+    let home = dirs::home_dir()?;
+    scan_keys(&home.join(".ssh"))
+        .into_iter()
+        .next()
+        .map(|k| k.path)
 }
 
 /// Cache an SSH key passphrase for the current session, keyed by repo id. The
@@ -106,4 +144,15 @@ pub async fn set_repo_ssh_key(
     record.ssh_key_path = key_path.filter(|s| !s.trim().is_empty());
     config.save(&app)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn priority_prefers_ed25519_over_rsa_and_unknown() {
+        assert!(key_priority("id_ed25519") < key_priority("id_rsa"));
+        assert!(key_priority("id_rsa") < key_priority("work_key"));
+    }
 }

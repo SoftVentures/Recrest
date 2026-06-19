@@ -1,4 +1,5 @@
 import type { ActivityState } from "@/store/types/activity.types";
+import type { BranchesState } from "@/store/types/branches.types";
 import type { ProvidersState } from "@/store/types/providers.types";
 import type { PrsState } from "@/store/types/prs.types";
 import type { RemoteImportState } from "@/store/types/remoteImport.types";
@@ -27,4 +28,5 @@ export interface RootState {
   prs: PrsState;
   remoteImport: RemoteImportState;
   activity: ActivityState;
+  branches: BranchesState;
 }

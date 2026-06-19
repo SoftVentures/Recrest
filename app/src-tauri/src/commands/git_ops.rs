@@ -12,13 +12,22 @@ use crate::config::settings::{AppSettings, RepoRecord};
 use crate::git::{branches, status};
 use crate::AppState;
 
-/// The SSH key a repo should use: its own override first, then the global
-/// default key, else `None` (ssh-agent / global config).
-fn resolve_ssh_key(settings: &AppSettings, record: &RepoRecord) -> Option<String> {
-    record
+/// The SSH key a repo should use, plus whether ssh-agent may serve as a
+/// fallback when that key is rejected. Resolution order: the repo's own
+/// override, then the global default key, then the highest-priority key
+/// auto-discovered in `~/.ssh`. Only the auto-discovered key permits an agent
+/// fallback — an explicitly chosen key is honoured as-is so a deploy key isn't
+/// silently bypassed by unrelated agent identities. If `~/.ssh` holds no key
+/// either, the agent is the sole option.
+fn resolve_ssh_key(settings: &AppSettings, record: &RepoRecord) -> (Option<String>, bool) {
+    if let Some(key) = record
         .ssh_key_path
         .clone()
         .or_else(|| settings.default_ssh_key_path.clone())
+    {
+        return (Some(key), false);
+    }
+    (super::ssh::highest_priority_key_path(), true)
 }
 
 /// Matches a remote URL's host against our known providers so we can pick the
@@ -81,6 +90,10 @@ fn resolve_provider_for_remote(repo: &Repository, hint: Option<&str>) -> Option<
 pub struct SshCreds {
     pub key_path: Option<PathBuf>,
     pub passphrase: Option<String>,
+    /// When the key was auto-discovered (not an explicit user choice), allow
+    /// ssh-agent as a fallback if the key is rejected, so multi-key and
+    /// per-host `~/.ssh/config` setups still authenticate.
+    pub allow_agent_fallback: bool,
 }
 
 /// Build an `ssh-key` credential from a private key on disk, pairing it with
@@ -125,23 +138,37 @@ fn install_credentials(
     // returns the same wrong creds repeatedly.
     let mut tried_token = false;
     let mut tried_helper = false;
-    let mut tried_ssh = false;
+    let mut tried_ssh_key = false;
+    let mut tried_ssh_agent = false;
 
     callbacks.credentials(move |url, username_from_url, allowed| {
         if allowed.contains(git2::CredentialType::SSH_KEY) {
-            if tried_ssh {
+            let user = username_from_url.unwrap_or("git");
+            // A configured key wins over the agent so a repo with its own deploy
+            // key authenticates even when ssh-agent holds unrelated keys.
+            if let Some(key) = ssh.key_path.as_deref() {
+                if !tried_ssh_key {
+                    tried_ssh_key = true;
+                    return build_ssh_key_cred(Some(user), key, ssh.passphrase.as_deref());
+                }
+                // Key rejected: fall back to ssh-agent only for an
+                // auto-discovered key, so per-host `~/.ssh/config` and multi-key
+                // setups recover; an explicit choice is used as-is.
+                if ssh.allow_agent_fallback && !tried_ssh_agent {
+                    tried_ssh_agent = true;
+                    return git2::Cred::ssh_key_from_agent(user);
+                }
                 return Err(git2::Error::from_str(
                     "ssh key was not accepted for this remote",
                 ));
             }
-            tried_ssh = true;
-            let user = username_from_url.unwrap_or("git");
-            // A per-repo key wins over the agent so a repo with its own deploy
-            // key authenticates even when ssh-agent holds unrelated keys.
-            if let Some(key) = ssh.key_path.as_deref() {
-                return build_ssh_key_cred(Some(user), key, ssh.passphrase.as_deref());
+            if !tried_ssh_agent {
+                tried_ssh_agent = true;
+                return git2::Cred::ssh_key_from_agent(user);
             }
-            return git2::Cred::ssh_key_from_agent(user);
+            return Err(git2::Error::from_str(
+                "ssh key was not accepted for this remote",
+            ));
         }
 
         if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
@@ -251,20 +278,22 @@ pub async fn git_fetch(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<status::RepoStatusDto, CommandError> {
-    let (path, provider_id, key_path) = {
+    let (path, provider_id, key_path, allow_agent_fallback) = {
         let config = state.config.lock().await;
         let settings = config.settings();
         let record = settings
             .repos
             .get(&repo_id)
             .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+        let (key_path, allow_agent_fallback) = resolve_ssh_key(settings, record);
         (
             record.path.clone(),
             record.provider_id.clone(),
-            resolve_ssh_key(settings, record),
+            key_path,
+            allow_agent_fallback,
         )
     };
-    let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    let ssh = ssh_creds_for(&state, &repo_id, key_path, allow_agent_fallback).await;
     tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref(), ssh))
         .await
         .map_err(|e| CommandError::internal(format!("fetch task failed: {e}")))??;
@@ -279,23 +308,25 @@ pub async fn git_fetch(
 pub async fn git_fetch_all(state: State<'_, AppState>) -> Result<u32, CommandError> {
     let config = state.config.lock().await;
     let settings = config.settings();
-    let repos: Vec<(String, PathBuf, Option<String>, Option<String>)> = settings
+    let repos: Vec<(String, PathBuf, Option<String>, Option<String>, bool)> = settings
         .repos
         .values()
         .map(|r| {
+            let (key_path, allow_agent_fallback) = resolve_ssh_key(settings, r);
             (
                 r.id.clone(),
                 r.path.clone(),
                 r.provider_id.clone(),
-                resolve_ssh_key(settings, r),
+                key_path,
+                allow_agent_fallback,
             )
         })
         .collect();
     drop(config);
 
     let mut ok = 0u32;
-    for (repo_id, path, provider_id, key_path) in repos {
-        let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    for (repo_id, path, provider_id, key_path, allow_agent_fallback) in repos {
+        let ssh = ssh_creds_for(&state, &repo_id, key_path, allow_agent_fallback).await;
         let result =
             tokio::task::spawn_blocking(move || fetch_blocking(&path, provider_id.as_deref(), ssh))
                 .await;
@@ -378,21 +409,23 @@ pub async fn git_push(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<status::RepoStatusDto, CommandError> {
-    let (path, provider_id, key_path) = {
+    let (path, provider_id, key_path, allow_agent_fallback) = {
         let config = state.config.lock().await;
         let settings = config.settings();
         let record = settings
             .repos
             .get(&repo_id)
             .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+        let (key_path, allow_agent_fallback) = resolve_ssh_key(settings, record);
         (
             record.path.clone(),
             record.provider_id.clone(),
-            resolve_ssh_key(settings, record),
+            key_path,
+            allow_agent_fallback,
         )
     };
 
-    let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    let ssh = ssh_creds_for(&state, &repo_id, key_path, allow_agent_fallback).await;
     tokio::task::spawn_blocking(move || push_blocking(&path, provider_id.as_deref(), ssh))
         .await
         .map_err(|e| CommandError::internal(format!("push task failed: {e}")))??;
@@ -491,20 +524,22 @@ pub async fn git_pull(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<status::RepoStatusDto, CommandError> {
-    let (path, provider_id, key_path) = {
+    let (path, provider_id, key_path, allow_agent_fallback) = {
         let config = state.config.lock().await;
         let settings = config.settings();
         let record = settings
             .repos
             .get(&repo_id)
             .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+        let (key_path, allow_agent_fallback) = resolve_ssh_key(settings, record);
         (
             record.path.clone(),
             record.provider_id.clone(),
-            resolve_ssh_key(settings, record),
+            key_path,
+            allow_agent_fallback,
         )
     };
-    let ssh = ssh_creds_for(&state, &repo_id, key_path).await;
+    let ssh = ssh_creds_for(&state, &repo_id, key_path, allow_agent_fallback).await;
     tokio::task::spawn_blocking(move || pull_blocking(&path, provider_id.as_deref(), ssh))
         .await
         .map_err(|e| CommandError::internal(format!("pull task failed: {e}")))??;
@@ -518,6 +553,7 @@ async fn ssh_creds_for(
     state: &State<'_, AppState>,
     repo_id: &str,
     key_path: Option<String>,
+    allow_agent_fallback: bool,
 ) -> SshCreds {
     let passphrase = {
         let cache = state.ssh_passphrases.lock().await;
@@ -526,6 +562,7 @@ async fn ssh_creds_for(
     SshCreds {
         key_path: key_path.map(PathBuf::from),
         passphrase,
+        allow_agent_fallback,
     }
 }
 

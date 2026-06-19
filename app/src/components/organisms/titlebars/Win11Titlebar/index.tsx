@@ -1,23 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useNavigate } from "react-router-dom";
-
 import { useTranslation } from "react-i18next";
 
-import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
+import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { AppRoute, TauriCommand } from "@recrest/shared";
+import { TauriCommand } from "@recrest/shared";
 
-import { FolderPlus, Info, Menu as MenuIcon, Search, Settings } from "lucide-react";
+import { Menu as MenuIcon } from "lucide-react";
 
+import AppMenu from "@/components/organisms/titlebars/AppMenu";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
-import { SETTINGS_TAB_QUERY_PARAM, SettingsTab } from "@/lib/constants/settings.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { runWindow } from "@/lib/utils/window.utils";
-import { setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
-import { useAppDispatch } from "@/store/hooks";
 
 export interface Win11TitlebarProps {
   isMaximized: boolean;
@@ -110,8 +106,6 @@ const CtrlButton = styled("button", {
  */
 function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
   const { t } = useTranslation(I18nNamespace.COMMON);
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const minimizeLabel = t("titlebar.minimize");
   const maximizeLabel = isMaximized ? t("titlebar.restore") : t("titlebar.maximize");
   const closeLabel = t("titlebar.close");
@@ -119,10 +113,6 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const closeMenu = () => setMenuAnchor(null);
-  const runMenu = (action: () => void) => () => {
-    closeMenu();
-    action();
-  };
 
   const minRef = useRef<HTMLButtonElement | null>(null);
   const maxRef = useRef<HTMLButtonElement | null>(null);
@@ -189,46 +179,7 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
       >
         <MenuIcon size={15} aria-hidden />
       </MenuButton>
-      <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu}>
-        <MenuItem
-          data-testid={TEST_IDS.titlebar.menuAddRepo}
-          onClick={runMenu(() => dispatch(setImportDialogOpen(true)))}
-        >
-          <ListItemIcon>
-            <FolderPlus size={15} aria-hidden />
-          </ListItemIcon>
-          {t("actions.add_repo")}
-        </MenuItem>
-        <MenuItem
-          data-testid={TEST_IDS.titlebar.menuSearch}
-          onClick={runMenu(() => dispatch(setSearchOpen(true)))}
-        >
-          <ListItemIcon>
-            <Search size={15} aria-hidden />
-          </ListItemIcon>
-          {t("actions.search")}
-        </MenuItem>
-        <MenuItem
-          data-testid={TEST_IDS.titlebar.menuSettings}
-          onClick={runMenu(() => navigate(AppRoute.SETTINGS))}
-        >
-          <ListItemIcon>
-            <Settings size={15} aria-hidden />
-          </ListItemIcon>
-          {t("nav.settings")}
-        </MenuItem>
-        <MenuItem
-          data-testid={TEST_IDS.titlebar.menuAbout}
-          onClick={runMenu(() =>
-            navigate(`${AppRoute.SETTINGS}?${SETTINGS_TAB_QUERY_PARAM}=${SettingsTab.ABOUT}`),
-          )}
-        >
-          <ListItemIcon>
-            <Info size={15} aria-hidden />
-          </ListItemIcon>
-          {t("nav.about")}
-        </MenuItem>
-      </Menu>
+      <AppMenu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} />
       {/* Brand mark/name/version intentionally omitted — they live in the
        *  sidebar instead. The empty drag region keeps the bar draggable. */}
       <TitleSlot data-tauri-drag-region />

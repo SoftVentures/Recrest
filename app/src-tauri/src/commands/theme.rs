@@ -1,88 +1,175 @@
 use crate::commands::error::CommandError;
+#[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, clear_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
 
-/// Apply the macOS native translucency: an `NSVisualEffectView` (the stock
-/// vibrancy view) attached behind the transparent WKWebView.
+/// Apply the platform's translucency.
 ///
-/// History — why NOT NSGlassEffectView / `tauri-plugin-liquid-glass`:
-/// the liquid-glass plugin auto-selects `NSGlassEffectView` (the macOS 26
-/// "Liquid Glass" view) whenever the class is available. That view has a
-/// confirmed Apple regression on macOS 26 where it flashes BLACK for one
-/// frame during animated window transitions — including Stage Manager
-/// swap-in and Cmd-Tab focus regain (see Apple Developer Forums
-/// "Black Pixel Flicker When Using glassEffect() with Animation", and the
-/// NSGlassEffectView caching bug threads). Runtime diagnostics confirmed
-/// the plugin was attaching an NSGlassEffectView (our search for an
-/// NSVisualEffectView in the hierarchy found zero), and the user saw
-/// exactly that black flash in the translucent area on every focus regain.
+/// **macOS:** an `NSVisualEffectView` (the stock vibrancy view) attached behind
+/// the transparent WKWebView, providing the actual desktop blur. We use the OS
+/// material rather than CSS `backdrop-filter` because a CSS blur on a
+/// transparent WKWebView window is unreliable — WebKit drops/recomputes the
+/// layer on scroll (flicker) and lightens its edges (white shimmer). The
+/// material's blur radius is fixed, so the renderer hides the blur-amount
+/// slider on macOS (only the rgba intensity tint, which lives in CSS).
 ///
-/// `window-vibrancy`'s `apply_vibrancy` uses the decade-old, rock-stable
-/// `NSVisualEffectView`. We use the `Sidebar` material (same one every
-/// Finder/Mail/Notes sidebar uses) with `State::Active` so the blur renders
-/// at full intensity regardless of window focus (keeps the glass look
-/// consistent when the window sits in the background / a Stage Manager
-/// group).
+/// **Windows / other:** nothing to do here — translucency is rendered by CSS
+/// `backdrop-filter` over the transparent window, which the Chromium WebView2
+/// composites reliably (incl. an adjustable blur slider). See `ThemeWrapper` /
+/// `globals.css`.
 ///
-/// KNOWN ISSUE — Stage Manager black flicker: on macOS Tahoe (26) the
-/// NSVisualEffectView (BehindWindow blending) flashes black for ~1 frame in
-/// the see-through area during the Stage Manager swap-in animation. This was
-/// exhaustively confirmed to be an OS-level behaviour, not app-fixable:
-/// reproduced identically with NSGlassEffectView, NSVisualEffectView in both
-/// `Active` and `FollowsWindowActiveState`, with WKWebView occlusion
-/// detection disabled, and with the NSWindow backing forced clear — and it
-/// vanished only when the OS material was removed entirely (which also
-/// removes the desktop blur, since CSS `backdrop-filter` cannot blur the
-/// desktop behind a transparent window). Tracked in
-/// https://github.com/SoftVentures/Recrest/issues/85 — we keep the blur and
-/// accept the flicker.
+/// History — why NOT `NSGlassEffectView` / `tauri-plugin-liquid-glass`: that
+/// plugin selects macOS 26's `NSGlassEffectView`, which has a confirmed Apple
+/// regression that flashes BLACK for one frame on animated window transitions.
+/// We use `window-vibrancy`'s `NSVisualEffectView` (`Sidebar` material,
+/// `State::Active`).
 ///
-/// We DON'T tint here — the user-controlled rgba overlay lives on `<html>`
-/// in CSS so the renderer keeps 1:1 control of the transparency slider.
+/// KNOWN ISSUE — Stage Manager black flicker (#85): on macOS Tahoe the
+/// NSVisualEffectView still flashes black for ~1 frame during the Stage Manager
+/// swap-in animation. Proven OS-level, not app-fixable while keeping the blur.
+/// Accepted; tracked at https://github.com/SoftVentures/Recrest/issues/85.
 ///
-/// `apply_vibrancy` is main-thread-only (returns `Error::NotMainThread`
-/// otherwise) and Tauri commands run off the main thread, so we hop via
-/// `run_on_main_thread`. We `clear_vibrancy` first so repeated calls
-/// (every theme/settings change re-invokes this) don't stack multiple
-/// blur views.
+/// On macOS the blur must follow the **app** theme (dark app → dark blur, light
+/// app → light blur), not the system: an `NSVisualEffectView` inherits its
+/// window's effective appearance, so we pin the vibrancy *view's* own
+/// appearance per the `dark` flag (see `set_vibrancy_appearance`).
+///
+/// `apply_vibrancy` is main-thread-only and Tauri commands run off the main
+/// thread, so we hop via `run_on_main_thread`. We `clear_vibrancy` first so
+/// repeated calls don't stack multiple blur views.
 pub fn apply_translucency(
     _app: &tauri::AppHandle,
     window: &tauri::WebviewWindow,
     _intensity: u8,
-    _dark: bool,
+    dark: bool,
 ) -> Result<(), CommandError> {
-    let win = window.clone();
-    window
-        .run_on_main_thread(move || {
-            let _ = clear_vibrancy(&win);
-            let _ = apply_vibrancy(
-                &win,
-                NSVisualEffectMaterial::Sidebar,
-                Some(NSVisualEffectState::Active),
-                None,
-            );
-        })
-        .map_err(|e| CommandError::internal(format!("apply_translucency main-thread hop failed: {e}")))
+    #[cfg(target_os = "macos")]
+    {
+        let win = window.clone();
+        window
+            .run_on_main_thread(move || {
+                let _ = clear_vibrancy(&win);
+                let _ = apply_vibrancy(
+                    &win,
+                    NSVisualEffectMaterial::Sidebar,
+                    Some(NSVisualEffectState::Active),
+                    None,
+                );
+                set_vibrancy_appearance(&win, dark);
+            })
+            .map_err(|e| {
+                CommandError::internal(format!("apply_translucency main-thread hop failed: {e}"))
+            })?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // Windows/Linux: translucency is CSS-only; nothing to attach natively.
+        let _ = (window, dark);
+    }
+    Ok(())
 }
 
-/// Clear the translucency effect so the next theme renders against an opaque
-/// surface. Inverse of [`apply_translucency`].
+/// Pin the appearance of the `NSVisualEffectView` that `apply_vibrancy` just
+/// attached to match the app theme (`dark`), independent of the window/system
+/// appearance. Setting the view's own `appearance` overrides the inherited
+/// effective appearance for that view only. Main-thread only (caller hops).
+#[cfg(target_os = "macos")]
+fn set_vibrancy_appearance(window: &tauri::WebviewWindow, dark: bool) {
+    use objc2::runtime::{AnyClass, AnyObject, Bool};
+    use objc2::{class, msg_send};
+    use objc2_foundation::NSString;
+
+    let Ok(raw_handle) = window.ns_window() else {
+        return;
+    };
+    if raw_handle.is_null() {
+        return;
+    }
+    // SAFETY: we're on the main thread (caller hops via run_on_main_thread) and
+    // the pointer is the live NSWindow from Tauri.
+    unsafe {
+        let ns_window = raw_handle as *mut AnyObject;
+        let content_view: *mut AnyObject = msg_send![ns_window, contentView];
+        if content_view.is_null() {
+            return;
+        }
+        let Some(vev_class) = AnyClass::get(c"NSVisualEffectView") else {
+            return;
+        };
+
+        // window-vibrancy inserts the effect view relative to the contentView;
+        // search from the contentView's superview (the window frame) down so we
+        // find it whether it's a sibling of or nested under the contentView.
+        fn find_view(view: *mut AnyObject, class: &AnyClass) -> Option<*mut AnyObject> {
+            if view.is_null() {
+                return None;
+            }
+            unsafe {
+                let is_kind: Bool = msg_send![view, isKindOfClass: class];
+                if is_kind.as_bool() {
+                    return Some(view);
+                }
+                let subviews: *mut AnyObject = msg_send![view, subviews];
+                if subviews.is_null() {
+                    return None;
+                }
+                let count: usize = msg_send![subviews, count];
+                for i in 0..count {
+                    let sub: *mut AnyObject = msg_send![subviews, objectAtIndex: i];
+                    if let Some(found) = find_view(sub, class) {
+                        return Some(found);
+                    }
+                }
+            }
+            None
+        }
+
+        let superview: *mut AnyObject = msg_send![content_view, superview];
+        let root = if superview.is_null() {
+            content_view
+        } else {
+            superview
+        };
+        let Some(effect_view) = find_view(root, vev_class) else {
+            return;
+        };
+
+        let name = NSString::from_str(if dark {
+            "NSAppearanceNameDarkAqua"
+        } else {
+            "NSAppearanceNameAqua"
+        });
+        let appearance: *mut AnyObject = msg_send![class!(NSAppearance), appearanceNamed: &*name];
+        let _: () = msg_send![effect_view, setAppearance: appearance];
+    }
+}
+
+/// Clear the translucency effect. macOS detaches the vibrancy view; other
+/// platforms have nothing native attached (CSS-only).
 pub fn clear_translucency(
     _app: &tauri::AppHandle,
     window: &tauri::WebviewWindow,
 ) -> Result<(), CommandError> {
-    let win = window.clone();
-    window
-        .run_on_main_thread(move || {
-            let _ = clear_vibrancy(&win);
-        })
-        .map_err(|e| CommandError::internal(format!("clear_translucency main-thread hop failed: {e}")))
+    #[cfg(target_os = "macos")]
+    {
+        let win = window.clone();
+        window
+            .run_on_main_thread(move || {
+                let _ = clear_vibrancy(&win);
+            })
+            .map_err(|e| {
+                CommandError::internal(format!("clear_translucency main-thread hop failed: {e}"))
+            })?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window;
+    }
+    Ok(())
 }
 
-/// Apply (or clear) the OS-level translucency effect with the given intensity.
-/// Orthogonal to `theme_id` — any theme can be made translucent on top.
-/// Intensity is clamped to [0, 100] and mapped to a tint alpha on the
-/// underlying liquid-glass material. `dark` picks the tint base colour so
-/// the glass blends into the active palette.
+/// Apply (or clear) the OS-level translucency effect. Orthogonal to `theme_id`.
+/// `intensity` drives the CSS rgba tint on the renderer side; `dark` selects the
+/// macOS vibrancy view's appearance so the blur matches the app theme.
 #[tauri::command]
 pub fn set_translucency(
     app: tauri::AppHandle,
@@ -98,11 +185,11 @@ pub fn set_translucency(
     }
 }
 
-/// Capability check the renderer uses to hide the Translucency controls on
-/// platforms where the effect isn't supported. Always-on for macOS (Liquid
-/// Glass on 26+, vibrancy fallback below); off on Windows / Linux where the
-/// plugin is a documented no-op.
+/// Capability check the renderer uses to show/hide the Translucency controls.
+/// macOS: native NSVisualEffectView. Windows: CSS `backdrop-filter` over the
+/// transparent window (Chromium WebView2 composites it reliably). Off on Linux
+/// where WebKitGTK's backdrop-filter over a transparent window isn't reliable.
 #[tauri::command]
 pub fn supports_translucency() -> bool {
-    cfg!(target_os = "macos")
+    cfg!(target_os = "macos") || cfg!(target_os = "windows")
 }

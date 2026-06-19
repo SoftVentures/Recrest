@@ -6,6 +6,7 @@ import {
 } from "@/store/activityRangePersistence";
 import { settingsBackendSync } from "@/store/backendSync";
 import { activityReducer, initialActivityState } from "@/store/reducers/activityReducer";
+import { branchesReducer } from "@/store/reducers/branchesReducer";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
@@ -41,6 +42,7 @@ export const store = configureStore({
     prs: prsReducer,
     remoteImport: remoteImportReducer,
     activity: activityReducer,
+    branches: branchesReducer,
   },
   preloadedState: persistedRange
     ? { activity: { ...initialActivityState, selectedRange: persistedRange } }

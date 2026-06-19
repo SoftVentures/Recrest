@@ -15,6 +15,7 @@ import { type ThemeId } from "@/lib/constants/theme.constants";
 import i18n from "@/locales";
 import type { RootState } from "@/store";
 import { activityReducer } from "@/store/reducers/activityReducer";
+import { branchesReducer } from "@/store/reducers/branchesReducer";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
@@ -31,6 +32,7 @@ const testReducer = {
   prs: prsReducer,
   remoteImport: remoteImportReducer,
   activity: activityReducer,
+  branches: branchesReducer,
 };
 
 type PreloadedSlices = { [K in keyof RootState]?: Partial<RootState[K]> };

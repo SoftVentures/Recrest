@@ -632,13 +632,19 @@ pub fn run() {
                 }
             }
 
-            // Window title carries the dev/prod marker. `tauri.conf.json`
-            // hard-codes "Recrest" and the `tauri.dev.conf.json` overlay
-            // can't safely replace `app.windows[]` (array-replace would
-            // require duplicating every Window property), so we set the
-            // title at runtime via `identity::current_tray_tooltip()` —
+            // Window title carries the dev/prod marker for the taskbar /
+            // window switcher. `tauri.conf.json` hard-codes "Recrest" and the
+            // `tauri.dev.conf.json` overlay can't safely replace `app.windows[]`,
+            // so we set it at runtime via `identity::current_tray_tooltip()` —
             // same string that goes on the tray, kept in one place.
+            //
+            // macOS is the exception: the Overlay titlebar paints the window
+            // title next to the traffic lights, where we want nothing (brand
+            // lives in the sidebar). So macOS gets an empty title.
             if let Some(window) = handle.get_webview_window("main") {
+                #[cfg(target_os = "macos")]
+                let _ = window.set_title("");
+                #[cfg(not(target_os = "macos"))]
                 let _ = window.set_title(identity::current_tray_tooltip());
                 // Belt-and-suspenders: explicitly hide the window here in
                 // case the `visible: false` config-overlay merge didn't
@@ -799,11 +805,9 @@ pub fn run() {
 
             // Snapshot the persisted translucency settings before `config`
             // moves into the AppState so the boot replay below can re-apply
-            // the orthogonal translucency effect on the freshly-created
-            // main window. Theme id is no longer the gate — any theme can
-            // be translucent now. We ALSO snapshot the resolved dark/light
-            // bit so the tint base colour matches the active theme on first
-            // paint, before the renderer can dispatch its own update.
+            // the OS vibrancy material on the freshly-created main window. We
+            // ALSO snapshot the resolved dark/light bit so the vibrancy view's
+            // appearance matches the active theme on first paint.
             let translucency_enabled = config.settings().appearance.translucency.enabled;
             let translucency_intensity = config.settings().appearance.translucency.intensity;
             let translucency_dark = {
@@ -885,13 +889,13 @@ pub fn run() {
                 spawn_macos_appearance_poller(handle.clone());
             }
 
-            // Re-apply the OS-level translucency material on boot if the
-            // user had it on last session. Without this, the first React
+            // Re-apply the OS vibrancy material on boot if the user had
+            // translucency on last session. Without this the first React
             // render fires the `set_translucency` IPC but macOS' window
-            // snapshot is captured BEFORE that lands — leading to a
-            // transparent first frame in Stage Manager / Dock previews.
-            // Applying it here in Rust setup keeps the NSVisualEffectView
-            // attached from the moment the window's NSWindow is composed.
+            // snapshot is captured BEFORE that lands — a transparent first
+            // frame in Stage Manager / Dock previews. Applying it here in Rust
+            // setup keeps the NSVisualEffectView attached from the moment the
+            // window's NSWindow is composed.
             if translucency_enabled {
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = commands::theme::apply_translucency(

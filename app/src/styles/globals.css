@@ -116,42 +116,23 @@ html[data-translucent="true"] #root {
   background-image: none !important;
 }
 
-/* Glass layer — painted by a `position: fixed` pseudo-element so it sits
-   on its own compositor layer behind everything.
+/* Glass layer — a `position: fixed` pseudo-element behind everything.
 
-   Three WebKit-specific workarounds stacked here:
+   It ALWAYS carries the rgba tint (`--translucency-bg`, intensity slider,
+   written by `ThemeWrapper`) that washes the blurred desktop with the active
+   palette colour. The BLUR is platform-split:
 
-     1. `will-change: backdrop-filter, transform` — hint the compositor to
-        keep the filter layer alive instead of recycling it.
-     2. `transform: translateZ(0)` + `backface-visibility: hidden` —
-        promotes the element to its own GPU layer and keeps it on the
-        compositor's "stable" side (not the per-frame repaint path).
-     3. `contain: layout style paint` — isolates this element from
-        siblings' invalidations so a React re-render doesn't cause the
-        backdrop layer to be recomputed.
+     - macOS: the OS `NSVisualEffectView` material does the blur (see
+       `commands::theme`). We deliberately put NO `backdrop-filter` here — a CSS
+       backdrop-filter over a transparent WKWebView is dropped/recomputed on
+       scroll (flicker) and lightens its edges (white shimmer in light mode).
+     - Windows: there is no OS material, so CSS `backdrop-filter` does the blur,
+       driven by the slider. Chromium WebView2 composites it reliably. This is
+       gated on `data-css-blur` (set by ThemeWrapper only where CSS blurs).
 
-   We previously had a sub-pixel keep-alive `animation` to force a
-   constant paint tick. It turned out to cause more harm than good on
-   focus-regain (Stage Manager swap, Cmd-Tab): WebKit pauses animations
-   on hidden windows, and on resume the animation restart races with
-   macOS's snapshot-to-live transition. Visible symptom was a
-   "blur → black → blur" flicker — black being the one frame where the
-   backdrop-filter layer was being re-allocated. The OS material
-   (NSVisualEffectView, applied via `tauri-plugin-liquid-glass`) is in
-   the snapshot now, so we don't need the animation to keep the layer
-   alive — `will-change` + the GPU promotion is enough.
-
-   `--translucency-bg` carries the rgba tint (intensity slider, written
-   by `ThemeWrapper`); `--translucency-blur-px` carries the blur radius
-   (0..MAX_BLUR_PX). At blurIntensity = 0, `blur(0px)` is a no-op — zero
-   blur, just the tint. `pointer-events: none` keeps React interactive.
-
-   NO `transition` on background-color / backdrop-filter here: when the
-   window wakes from Stage Manager the browser interprets the previous
-   state as the default (transparent / no filter) and transitions TO
-   the target over the duration, which the user sees as the settings
-   "applying gradually" after opening. A hard snap on the first wake
-   frame is jarring less than a 180 ms ramp-up. */
+   NO `transition` on background-color / backdrop-filter: on Stage-Manager wake
+   the browser would otherwise ramp from the default over the duration, reading
+   as the setting "applying gradually". A hard snap is less jarring. */
 html[data-translucent="true"]::before {
   content: "";
   position: fixed;
@@ -159,13 +140,14 @@ html[data-translucent="true"]::before {
   z-index: -1;
   pointer-events: none;
   background-color: var(--translucency-bg, transparent);
+}
+
+/* CSS blur path (Windows / Chromium WebView2 only — see above). */
+html[data-css-blur="true"]::before {
   -webkit-backdrop-filter: blur(var(--translucency-blur-px, 0px));
   backdrop-filter: blur(var(--translucency-blur-px, 0px));
-  will-change: backdrop-filter, transform;
+  will-change: backdrop-filter;
   transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  contain: layout style paint;
 }
 
 /* Boot theme-flash suppression. Class is added on <html> by ThemeWrapper for

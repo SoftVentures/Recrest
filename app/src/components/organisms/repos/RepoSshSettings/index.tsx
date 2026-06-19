@@ -63,7 +63,7 @@ export function RepoSshSettings({ repoId, sshKeyPath }: RepoSshSettingsProps) {
   const apply = async (keyPath: string | null) => {
     try {
       await dispatch(setRepoSshKey({ repoId, keyPath })).unwrap();
-      toast.success(keyPath ? t("ssh.key_set") : t("ssh.use_agent"));
+      toast.success(keyPath ? t("ssh.key_set") : t("ssh.auto_set"));
     } catch (err) {
       toast.error((err as { message?: string })?.message ?? t("ssh.failed"));
     }

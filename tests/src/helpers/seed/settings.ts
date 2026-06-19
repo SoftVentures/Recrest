@@ -45,6 +45,7 @@ export const SEED_SETTINGS: AppSettings = {
       timeFormat: "24h",
       weekStart: "monday",
       region: null,
+      timeZone: null,
     },
   },
   accessibility: {

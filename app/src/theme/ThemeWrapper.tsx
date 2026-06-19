@@ -5,6 +5,7 @@ import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 
 import { type FontSizeId, TauriCommand } from "@recrest/shared";
 
+import { Platform, usePlatform } from "@/hooks/usePlatform";
 import {
   MAX_BLUR_PX,
   THEME_MODE_QUERY,
@@ -69,6 +70,9 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   const translucencyEnabled = useAppSelector((s) => s.settings.translucency.enabled);
   const translucencyIntensity = useAppSelector((s) => s.settings.translucency.intensity);
   const blurIntensity = useAppSelector((s) => s.settings.translucency.blurIntensity);
+  // macOS blurs via the OS material; only the CSS path (Windows/Chromium) reads
+  // the blur slider, so the blur var + `data-css-blur` are non-macOS only.
+  const isMac = usePlatform() === Platform.MAC;
 
   // "Follow system" mode: subscribe to the OS appearance media query and
   // mirror its current value into the store via `syncSystemTheme` (which
@@ -185,11 +189,11 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     //   <#root>         transparent
     //   <AppFrame, MainSlot> palette.background.default → transparent
     //
-    // Slider semantics:
+    // Intensity slider (the tint alpha — applies on every platform; the blur
+    // amount is the OS material's fixed radius on macOS, the CSS slider on
+    // Windows):
     //   intensity 0   → alpha 1.0 → solid theme tint, no see-through.
-    //   intensity 100 → alpha 0   → no tint, wallpaper shows raw.
-    //   blurIntensity 0   → no backdrop blur at all.
-    //   blurIntensity 100 → MAX_BLUR_PX backdrop blur.
+    //   intensity 100 → alpha 0   → no tint, blurred wallpaper shows raw.
     const transparentBg = translucencyEnabled;
     root.style.backgroundColor = transparentBg
       ? "transparent"
@@ -207,8 +211,20 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
       root.style.removeProperty("--translucency-bg");
     }
     root.dataset.translucent = transparentBg ? "true" : "false";
-    const blurPx = transparentBg ? Math.round((blurIntensity * MAX_BLUR_PX) / 100) : 0;
-    root.style.setProperty("--translucency-blur-px", `${blurPx}px`);
+    // CSS blur path (Windows): drive the slider-controlled backdrop-filter. On
+    // macOS the OS NSVisualEffectView material blurs instead, so we leave
+    // `data-css-blur` off and set no blur var (a CSS backdrop-filter there
+    // would scroll-flicker / shimmer).
+    const cssBlur = transparentBg && !isMac;
+    root.dataset.cssBlur = cssBlur ? "true" : "false";
+    if (cssBlur) {
+      root.style.setProperty(
+        "--translucency-blur-px",
+        `${Math.round((blurIntensity * MAX_BLUR_PX) / 100)}px`,
+      );
+    } else {
+      root.style.removeProperty("--translucency-blur-px");
+    }
 
     root.style.setProperty("--app-font-family", theme.typography.fontFamily ?? "");
     root.style.setProperty("--app-font-size", `${theme.typography.fontSize}px`);
@@ -237,15 +253,14 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // every descendant length scales uniformly.
     root.style.setProperty("--ui-scale", String(scaleForSize(fontSize)));
 
-    // Apply (or clear) the macOS NSVisualEffectView material via the
-    // liquid-glass plugin. The OS material is what's actually captured by
-    // macOS for Stage Manager thumbnails / Cmd-Tab swap-in / Dock-click
-    // animations — without it the focus-regain snapshot is a transparent
-    // window and the user sees a "transparent → shadow → blur" staged
-    // sequence every time. The CSS rgba `::before` + backdrop-filter sit
-    // on top of the OS material; this means slider 0 still has the
-    // material's intrinsic baseline blur (NSVisualEffectMaterial fixed
-    // property), but the focus-regain flash is gone.
+    // Translucency is rendered entirely in CSS above (the rgba `::before`
+    // tint + backdrop-filter blur) — there is no OS NSVisualEffectView
+    // material. That material was dropped because its fixed blur radius
+    // masked the blur slider (slider 0 still showed the material's baseline
+    // blur) and it caused the #85 black flicker on focus regain. This IPC is
+    // now only a defensive "ensure no stale vibrancy view" clear on the
+    // native side; the blur the user sees is the CSS layer driven by the
+    // settings above.
     void safeInvoke<void>(TauriCommand.SET_TRANSLUCENCY, {
       enabled: translucencyEnabled,
       intensity: translucencyIntensity,
@@ -269,6 +284,7 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     translucencyEnabled,
     translucencyIntensity,
     blurIntensity,
+    isMac,
   ]);
 
   return (

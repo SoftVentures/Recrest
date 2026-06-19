@@ -38,6 +38,7 @@ import {
   matchSearchFilter,
   matchTrackingFilter,
 } from "@/lib/utils/branchFilters.utils";
+import BranchesSkeleton from "@/pages/app/Branches/parts/BranchesSkeleton";
 import PopoverChip from "@/pages/app/Branches/parts/PopoverChip";
 import RepoGroup from "@/pages/app/Branches/parts/RepoGroup";
 import {
@@ -339,12 +340,15 @@ export default function BranchesPage() {
         </Toolbar>
 
         <Groups>
-          {!loading && byRepo.length === 0 && (
+          {loading ? (
+            <BranchesSkeleton groups={Math.min(Math.max(repos.length, 3), 6)} />
+          ) : byRepo.length === 0 ? (
             <Empty>{repos.length === 0 ? t("branches.no_repos") : t("branches.empty")}</Empty>
+          ) : (
+            byRepo.map((group) => (
+              <RepoGroup key={group.repo.id} group={group} busyKey={busyKey} run={run} t={t} />
+            ))
           )}
-          {byRepo.map((group) => (
-            <RepoGroup key={group.repo.id} group={group} busyKey={busyKey} run={run} t={t} />
-          ))}
         </Groups>
       </Page>
     </Root>

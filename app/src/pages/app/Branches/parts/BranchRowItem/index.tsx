@@ -9,13 +9,6 @@ import { GitBranch as BranchIcon } from "lucide-react";
 
 import BranchFilterChip from "@/components/atoms/chips/BranchFilterChip";
 import IconSlot from "@/components/atoms/layout/IconSlot";
-import {
-  PAGE_DUR_SM,
-  PAGE_EASE,
-  pgRise,
-  prefersReducedMotionGuard,
-  staggerNthOfType,
-} from "@/lib/animations/pageAnimations";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -146,7 +139,9 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
         <Track>
           {b.ahead > 0 && <Trk tone="ahead">↑{b.ahead}</Trk>}
           {b.behind > 0 && <Trk tone="behind">↓{b.behind}</Trk>}
-          {b.ahead === 0 && b.behind === 0 && !b.isRemote && (
+          {/* "in sync" only makes sense against an upstream — a branch with no
+              upstream already says so in the middle column, so show nothing. */}
+          {!b.isRemote && !!b.upstream && b.ahead === 0 && b.behind === 0 && (
             <Trk tone="even">{tRepos("branches.track_even")}</Trk>
           )}
         </Track>
@@ -174,9 +169,9 @@ const Row = styled(Box)(({ theme }) => ({
   "&:focus-within [data-row-acts]": {
     visibility: "visible",
   },
-  animation: `${pgRise} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
-  ...staggerNthOfType({ step: 40, count: 10, base: 80 }),
-  ...prefersReducedMotionGuard,
+  // No per-row entrance animation: rows render instantly with their group's
+  // fade. Animating every row (with a stagger cascade) janked on repos with
+  // many branches and made the tab feel slow to settle.
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props

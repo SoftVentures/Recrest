@@ -10,6 +10,7 @@ import { Monitor, Moon, Sun, Type } from "lucide-react";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import IntensitySlider from "@/components/atoms/inputs/IntensitySlider";
+import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { useTranslucencySupport } from "@/hooks/useTranslucencySupport";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -103,6 +104,9 @@ export function DesignSection() {
   const translucencyIntensity = useAppSelector((s) => s.settings.translucency.intensity);
   const blurIntensity = useAppSelector((s) => s.settings.translucency.blurIntensity);
   const supportsTranslucency = useTranslucencySupport();
+  // The blur-amount slider is only meaningful where CSS does the blur
+  // (Windows). On macOS the OS material has a fixed radius, so we hide it.
+  const showBlurSlider = usePlatform() !== Platform.MAC;
 
   const onThemeChoice = (choice: ThemeChoice) => {
     if (choice === "system") {
@@ -176,7 +180,7 @@ export function DesignSection() {
         </SettingsRow>
       )}
 
-      {supportsTranslucency && translucencyEnabled && (
+      {supportsTranslucency && translucencyEnabled && showBlurSlider && (
         <SettingsRow
           label={t("settings.fields.translucency_blur")}
           sub={t("settings.fields.translucency_blur_sub")}

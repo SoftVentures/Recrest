@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { Check, FolderOpen, KeyRound, ServerCog, Sparkles } from "lucide-react";
+import { Check, FolderOpen, KeyRound, Sparkles, Wand2 } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import SshKeyGuideModal from "@/components/organisms/ssh/SshKeyGuideModal";
@@ -81,6 +81,18 @@ const Tick = styled(Box)(({ theme }) => ({
   color: theme.palette.primary.main,
 })) as typeof Box;
 
+const DefaultBadge = styled(Box)(({ theme }) => ({
+  flexShrink: 0,
+  fontSize: 10,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  padding: "1px 6px",
+  borderRadius: 6,
+  color: theme.palette.text.information,
+  border: `1px solid ${theme.palette.divider}`,
+})) as typeof Box;
+
 const Actions = styled(Box)({
   display: "flex",
   alignItems: "center",
@@ -111,7 +123,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
   return (
     <Wrap data-testid={TEST_IDS.ssh.field}>
       <OptionList>
-        {listing.keys.map((key) => {
+        {listing.keys.map((key, index) => {
           const selected = value === key.path;
           return (
             <Option
@@ -128,6 +140,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
                 <OptionName>{key.name}</OptionName>
                 <OptionSub variant="caption">{key.path}</OptionSub>
               </OptionBody>
+              {index === 0 && !selected && <DefaultBadge>{t("ssh.default_badge")}</DefaultBadge>}
               {selected && (
                 <Tick>
                   <Check size={15} />
@@ -159,11 +172,11 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
           onClick={() => onChange(null)}
         >
           <OptionIcon>
-            <ServerCog size={15} />
+            <Wand2 size={15} />
           </OptionIcon>
           <OptionBody>
-            <OptionName>{t("ssh.use_agent_option")}</OptionName>
-            <OptionSub variant="caption">{t("ssh.use_agent_sub")}</OptionSub>
+            <OptionName>{t("ssh.auto_option")}</OptionName>
+            <OptionSub variant="caption">{t("ssh.auto_sub")}</OptionSub>
           </OptionBody>
           {value === null && (
             <Tick>

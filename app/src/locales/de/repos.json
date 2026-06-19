@@ -217,7 +217,7 @@
     "import_submit_other": "{{count}} importieren"
   },
   "branches": {
-    "track_even": "gleich"
+    "track_even": "synchron"
   },
   "changes": {
     "expand_aria": "Geänderte Dateien aufklappen",

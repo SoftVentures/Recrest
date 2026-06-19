@@ -217,7 +217,7 @@
     "import_submit_other": "Import {{count}}"
   },
   "branches": {
-    "track_even": "even"
+    "track_even": "in sync"
   },
   "changes": {
     "expand_aria": "Expand changed files",

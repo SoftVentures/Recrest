@@ -314,6 +314,7 @@ export const TEST_IDS = {
     fetchAll: "branches-fetch-all",
     filterTrigger: "branches-filter-trigger",
     group: "branches-group",
+    loadMore: "branches-load-more",
     checkout: "branch-checkout",
     checkoutRemote: "branch-checkout-remote",
   },

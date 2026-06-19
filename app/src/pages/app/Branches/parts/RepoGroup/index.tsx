@@ -13,13 +13,17 @@ import {
   PAGE_EASE,
   pgZoom,
   prefersReducedMotionGuard,
-  staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import BranchRowItem from "@/pages/app/Branches/parts/BranchRowItem";
 import { type BranchesByRepo, SpinIcon } from "@/pages/app/Branches/parts/_shared";
+
+// Branches render in pages of this size per repo group — a "+N entries" row
+// reveals the next page. Keeps repos with hundreds of branches from rendering
+// every row at once (the cause of the load jank).
+const BRANCH_PAGE_SIZE = 25;
 
 export interface RepoGroupProps {
   group: BranchesByRepo;
@@ -31,11 +35,15 @@ export interface RepoGroupProps {
 export function RepoGroup({ group, busyKey, run, t }: RepoGroupProps) {
   const { repo, branches } = group;
   const [collapsed, setCollapsed] = useState(false);
+  const [visible, setVisible] = useState(BRANCH_PAGE_SIZE);
   const fetchKey = `${repo.id}:fetch`;
   const isFetching = busyKey === fetchKey;
   const open = !collapsed;
 
   const toggle = () => setCollapsed((c) => !c);
+
+  const shown = branches.slice(0, visible);
+  const remaining = branches.length - shown.length;
 
   return (
     <GroupCard
@@ -93,7 +101,7 @@ export function RepoGroup({ group, busyKey, run, t }: RepoGroupProps) {
       </GroupHead>
       {open && (
         <List>
-          {branches.map((b) => (
+          {shown.map((b) => (
             <BranchRowItem
               key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
               repo={repo}
@@ -103,6 +111,15 @@ export function RepoGroup({ group, busyKey, run, t }: RepoGroupProps) {
               t={t}
             />
           ))}
+          {remaining > 0 && (
+            <LoadMore
+              type="button"
+              data-testid={TEST_IDS.branches.loadMore}
+              onClick={() => setVisible((v) => v + BRANCH_PAGE_SIZE)}
+            >
+              {t("branches.load_more", { count: Math.min(BRANCH_PAGE_SIZE, remaining) })}
+            </LoadMore>
+          )}
         </List>
       )}
     </GroupCard>
@@ -116,8 +133,10 @@ const GroupCard = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   overflow: "hidden",
+  // Quick fade-in, no per-card stagger delay: with progressive loading each
+  // card mounts as its repo resolves, so a stagger delay would hold an
+  // already-loaded group invisible. Snap it in instead.
   animation: `${pgZoom} ${PAGE_DUR_MD}ms ${PAGE_EASE} both`,
-  ...staggerNthOfType({ step: 80, count: 8 }),
   ...prefersReducedMotionGuard,
 })) as typeof Box;
 
@@ -200,3 +219,29 @@ const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
 }) as typeof Box;
+
+// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
+const LoadMore = styled("button")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  padding: "10px 16px",
+  border: 0,
+  borderTop: `1px solid ${theme.palette.divider}`,
+  backgroundColor: "transparent",
+  color: theme.palette.text.link,
+  fontSize: 12,
+  fontWeight: 600,
+  fontVariantNumeric: "tabular-nums",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  transition: "background 120ms ease, color 120ms ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -2,
+  },
+}));
