@@ -6,7 +6,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 /**
  * Living-doc story that prints every token in `theme.palette` as a labelled
  * swatch, grouped by section. Switch theme via the toolbar paintbrush to
- * cross-check parity across `light`, `dark`, `oled`, and `glassy`. Add a new
+ * cross-check parity across `light` and `dark`. Add a new
  * section here whenever `mui.d.ts` grows a new palette branch — the surface is
  * intentionally manual so missing tokens show up as "undefined" instead of
  * disappearing silently.
@@ -261,7 +261,7 @@ const meta: Meta<typeof PaletteShowcase> = {
     docs: {
       description: {
         component:
-          "Visual reference for every `theme.palette` token. Switch theme in the toolbar to compare `light`, `dark`, `oled`, and `glassy`.",
+          "Visual reference for every `theme.palette` token. Switch theme in the toolbar to compare `light` and `dark`.",
       },
     },
   },

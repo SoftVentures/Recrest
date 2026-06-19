@@ -4,7 +4,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { AppearanceSection } from "@/pages/app/Settings/components/GeneralTab/sections/AppearanceSection";
+import { FontsSection } from "@/pages/app/Settings/components/GeneralTab/sections/FontsSection";
 import { makeTestStore, renderWithProviders } from "@/test/utils";
 
 const CUSTOM_FONT: CustomFont = {
@@ -23,14 +23,13 @@ function openSelect(testId: string) {
   fireEvent.mouseDown(combobox);
 }
 
-describe("AppearanceSection", () => {
+describe("FontsSection", () => {
   it("renders the code-font select with the mono options and dispatches a codeFont update", () => {
     const store = makeTestStore();
-    renderWithProviders(<AppearanceSection />, { store });
+    renderWithProviders(<FontsSection />, { store });
 
     openSelect(TEST_IDS.settings.general.codeFontSelect);
 
-    // Mono options are present inside the open code-font listbox.
     expect(
       screen.getByTestId(TEST_IDS.settings.general.codeFontOption("jetbrains-mono")),
     ).toBeInTheDocument();
@@ -45,7 +44,7 @@ describe("AppearanceSection", () => {
 
   it("renders the three ligature modes and dispatches a codeLigatures update", () => {
     const store = makeTestStore();
-    renderWithProviders(<AppearanceSection />, { store });
+    renderWithProviders(<FontsSection />, { store });
 
     openSelect(TEST_IDS.settings.general.codeLigaturesSelect);
 
@@ -66,13 +65,11 @@ describe("AppearanceSection", () => {
 
   it("renders the UI-font select with sans options that the code-font select omits", () => {
     const store = makeTestStore();
-    renderWithProviders(<AppearanceSection />, { store });
+    renderWithProviders(<FontsSection />, { store });
 
     openSelect(TEST_IDS.settings.general.fontSelect);
 
-    // Sans family is selectable in the UI-font picker.
     expect(screen.getByTestId(TEST_IDS.settings.general.fontOption("inter"))).toBeInTheDocument();
-    // The code-font picker is mono-only, so a sans option never appears there.
     expect(
       screen.queryByTestId(TEST_IDS.settings.general.codeFontOption("inter")),
     ).not.toBeInTheDocument();
@@ -84,14 +81,14 @@ describe("AppearanceSection", () => {
 
   it("disables the custom-font upload button outside the Tauri runtime", () => {
     const store = makeTestStore();
-    renderWithProviders(<AppearanceSection />, { store });
+    renderWithProviders(<FontsSection />, { store });
 
     expect(screen.getByTestId(TEST_IDS.settings.general.customFontUpload)).toBeDisabled();
   });
 
   it("renders uploaded custom fonts with a chip and a delete affordance", () => {
     const store = makeTestStore({ settings: { customFonts: [CUSTOM_FONT] } });
-    renderWithProviders(<AppearanceSection />, { store });
+    renderWithProviders(<FontsSection />, { store });
 
     expect(
       screen.getByTestId(TEST_IDS.settings.general.customFontChip(CUSTOM_FONT.id)),

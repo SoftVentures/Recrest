@@ -28,7 +28,6 @@
     "updater:default",
     "deep-link:default",
     "process:default",
-    "dialog:default",
-    "liquid-glass:default"
+    "dialog:default"
   ]
 }

@@ -15,6 +15,10 @@ export interface PluginStubCtx {
   unregisterListener: (id: number) => void;
 }
 
+/** Maps the browser UA to the literal value the Tauri backend would emit
+ *  for `plugin:os|platform`. The return values are the on-wire IPC
+ *  contract (Tauri's plugin-os returns these exact strings), so we don't
+ *  funnel them through the `Platform` enum on the way out. */
 function detectPlatform(): "macos" | "linux" | "windows" {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   if (/Mac|iPhone|iPad/i.test(ua)) return "macos";
@@ -133,6 +137,18 @@ export function pluginStub(cmd: string, a: Args, ctx: PluginStubCtx): unknown | 
       return null;
     case "plugin:deep-link|register":
     case "plugin:deep-link|unregister":
+      return undefined;
+
+    // Translucency (liquid-glass plugin) — macOS-only at runtime; we mirror
+    // that capability here so `useTranslucencySupport` resolves identically
+    // on macOS browsers and the Settings UI keeps surfacing the toggle. The
+    // apply call is a no-op because there's no OS window to vibrancy.
+    // Comparing against the wire-contract literal (`"macos"`, what Tauri's
+    // plugin-os returns) rather than `Platform.MAC` (the renderer-side id
+    // `"mac"`, which is a different domain).
+    case "supports_translucency":
+      return detectPlatform() === "macos";
+    case "set_translucency":
       return undefined;
 
     default:

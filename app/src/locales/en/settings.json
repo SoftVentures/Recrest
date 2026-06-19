@@ -62,9 +62,7 @@
     "themes": {
       "system": "System",
       "light": "Light",
-      "dark": "Dark",
-      "oled": "OLED Black",
-      "glassy": "Glassy"
+      "dark": "Dark"
     },
     "accent": "Accent color",
     "dyslexiaFont": "Dyslexia-friendly font"

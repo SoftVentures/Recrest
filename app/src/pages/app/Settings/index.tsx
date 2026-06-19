@@ -38,8 +38,10 @@ import { AboutSection } from "@/pages/app/Settings/components/AboutTab";
 import { AccountsSection } from "@/pages/app/Settings/components/AccountsTab";
 import {
   AccessibilitySection,
-  AppearanceSection,
+  DesignSection,
   DesktopSection,
+  FontsSection,
+  LanguageSection,
   NotificationsSection,
   SystemSection,
   UpdatesSection,
@@ -314,7 +316,9 @@ function SettingsPage() {
               <PageH2 component="h2">{t("settings.general.title")}</PageH2>
               <PageIntro>{t("settings.general.intro")}</PageIntro>
             </PageHead>
-            <AppearanceSection />
+            <DesignSection />
+            <LanguageSection />
+            <FontsSection />
             <AccessibilitySection />
             <SystemSection />
             <DesktopSection />

@@ -37,8 +37,8 @@ const Bar = styled(Box)(({ theme }) => ({
   // No left inset — the app-menu button sits flush in the top-left corner.
   paddingLeft: 0,
   paddingRight: 0,
-  // Opaque chrome surface (not `background.paper`, which goes translucent in
-  // the Glassy theme) so the window controls keep a solid strip.
+  // Opaque chrome surface (not `background.paper`, which can sit behind the
+  // translucency effect) so the window controls keep a solid strip.
   backgroundColor: theme.palette.surface.interface.chrome,
   borderBottom: `1px solid ${theme.palette.divider}`,
   WebkitUserSelect: "none",

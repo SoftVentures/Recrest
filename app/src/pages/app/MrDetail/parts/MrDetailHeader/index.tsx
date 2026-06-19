@@ -15,7 +15,7 @@ import { ciFor } from "@/lib/constants/ciStates.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
-import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import {
   CiDot,
   CiPill,
@@ -65,6 +65,7 @@ export default function MrDetailHeader({
   const brand = brandFromUrl(pr.url);
   const ci = ciFor(pr.ciStatus);
   const hasChangeStats = pr.additions != null && pr.deletions != null;
+  const dt = useDateTimeFormat();
 
   return (
     <Header>
@@ -98,7 +99,7 @@ export default function MrDetailHeader({
           <Sep component="span" variant="caption">
             ·
           </Sep>
-          <Box component="span">{timeAgo(pr.createdAt)}</Box>
+          <Box component="span">{dt.formatTimestamp(pr.createdAt)}</Box>
         </AuthorRow>
         <MetaRow>
           <Chip tone="branch">

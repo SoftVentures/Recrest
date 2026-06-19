@@ -9,6 +9,7 @@ import { I18nextProvider } from "react-i18next";
 import { StorageKey } from "@recrest/shared";
 
 import App from "@/App";
+import { isTauri } from "@/lib/tauri";
 import i18n from "@/locales";
 import { store } from "@/store";
 import { setGroups } from "@/store/actions/repos.actions";
@@ -102,6 +103,90 @@ async function bootstrap(): Promise<void> {
       </ReduxProvider>
     </React.StrictMode>,
   );
+
+  // Reveal the main window AFTER the WebKit GPU compositor has actually
+  // engaged the backdrop-filter layer. The window config has
+  // `visible: false` to suppress macOS's cold-boot animation, but if we
+  // call `show()` too eagerly the user still sees a 1-3 frame "boot
+  // sequence" (transparent → window-chrome shadow → tint+blur snaps in)
+  // because:
+  //
+  //   - React mounts and commits the DOM ✓
+  //   - `::before` with `backdrop-filter` is in the layout tree ✓
+  //   - WebKit has NOT yet allocated a backdrop-filter compositor layer
+  //
+  // The compositor lazy-initialises on the first frame that actually
+  // needs a backdrop layer. To force it eagerly while the window is
+  // still hidden, we drop an invisible probe div with its own
+  // `backdrop-filter`, let WebKit composite a couple of frames, then
+  // remove it. By the time `.show()` fires, the compositor is warm and
+  // our real `::before` paints in frame 1.
+  //
+  // If anything in this chain fails, Rust spawns a 3-second safety-net
+  // `window.show()` so the user never gets stuck on an invisible
+  // window. See `app/src-tauri/src/lib.rs` (`spawn safety_handle ...`).
+  if (isTauri()) {
+    // Drop an invisible probe div with its own `backdrop-filter` so WebKit
+    // is forced to allocate / re-engage the GPU compositor layer for
+    // backdrop-filter. This is the workaround for two distinct symptoms:
+    //
+    //   1. Cold boot: window stays `visible: false` until the compositor
+    //      is warm, so the user only sees the window AFTER the glass layer
+    //      is ready (no transparent → shadow → blur sequence).
+    //   2. Focus regain (Cmd-Tab, Stage Manager swap, Dock click): macOS
+    //      captures the WebView's last paint when the window loses focus.
+    //      WebKit drops the backdrop-filter layer on hidden windows; on
+    //      focus regain it takes 1-3 frames to re-engage. During those
+    //      frames the user sees the same boot-style sequence.
+    //
+    // The probe div is invisible (`opacity:0`) and pointer-events:none, so
+    // it never affects the user. It exists for ~3 frames each invocation.
+    let probing = false;
+    const probeBackdropCompositor = async () => {
+      if (probing) return;
+      probing = true;
+      const probe = document.createElement("div");
+      probe.style.cssText =
+        "position:fixed;inset:0;pointer-events:none;opacity:0;" +
+        "background-color:rgba(0,0,0,0.001);" +
+        "backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px);";
+      document.body.appendChild(probe);
+      const raf = () => new Promise((r) => requestAnimationFrame(() => r(null)));
+      await raf();
+      await raf();
+      await raf();
+      probe.remove();
+      probing = false;
+    };
+
+    // Cold-boot: warm compositor + show window when ready. Rust spawns a
+    // 3 s safety-net `window.show()` so a JS error here can't strand the
+    // user on an invisible window.
+    const reveal = async () => {
+      await probeBackdropCompositor();
+      await new Promise((r) => setTimeout(r, 80));
+      try {
+        const mod = await import("@tauri-apps/api/webviewWindow");
+        await mod.getCurrentWebviewWindow().show();
+      } catch {
+        /* non-fatal — Rust 3 s safety net catches this. */
+      }
+    };
+    void reveal();
+
+    // NOTE: We deliberately do NOT re-run `probeBackdropCompositor` on
+    // focus-regain anymore. The OS material (NSVisualEffectView, applied
+    // via `tauri-plugin-liquid-glass`) is captured into the window
+    // snapshot macOS animates during Stage Manager swap-in / Cmd-Tab /
+    // Dock click, so the snapshot is no longer transparent. Running the
+    // probe on focus events made the WebView push a full-screen
+    // backdrop-filter layer through its compositor mid-transition — that
+    // layer was paid for in a visible "blue → black → blue" flicker
+    // because the WKWebView's transient repaint during snapshot-to-live
+    // swap exposed the layer composition before the ::before glass
+    // layer's tint settled. The keep-alive animation on `::before` keeps
+    // the steady-state backdrop-filter layer alive on its own.
+  }
 }
 
 void bootstrap();

@@ -13,6 +13,7 @@ import {
   setCodeFont,
   setCodeLigatures,
   setCrashReporting,
+  setDateFormat,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
@@ -29,9 +30,14 @@ import {
   setPollingIntervalMinutes,
   setPrimaryColor,
   setReducedMotion,
+  setRegion,
   setThemeId,
+  setTimeFormat,
+  setTranslucencyEnabled,
+  setTranslucencyIntensity,
   setUnderlineLinks,
   setUpdateMode,
+  setWeekStart,
   syncSystemTheme,
   uploadCustomFont,
 } from "@/store/actions/settings.actions";
@@ -77,13 +83,20 @@ function appSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     defaultSshKeyPath: null,
     gitConfigOverride: { userName: null, userEmail: null },
     appearance: {
-      themeId: "oled",
+      themeId: "dark",
       followsSystem: false,
       primaryColor: "blue",
       font: "jetbrains-mono",
       codeFont: "fira-code",
       codeLigatures: "stylistic",
       fontSize: "md",
+      translucency: { enabled: false, intensity: 30, blurIntensity: 30 },
+      localePrefs: {
+        dateFormat: "relative",
+        timeFormat: "24h",
+        weekStart: "monday",
+        region: null,
+      },
     },
     accessibility: {
       dyslexiaFont: false,
@@ -99,8 +112,8 @@ function appSettings(overrides: Partial<AppSettings> = {}): AppSettings {
 describe("settingsReducer — synchronous actions", () => {
   it("sets a specific theme and leaves follow-system mode", () => {
     const start = settingsReducer(initial(), setFollowsSystem(true));
-    const next = settingsReducer(start, setThemeId("oled"));
-    expect(next.themeId).toBe("oled");
+    const next = settingsReducer(start, setThemeId("dark"));
+    expect(next.themeId).toBe("dark");
     expect(next.followsSystem).toBe(false);
   });
 
@@ -210,6 +223,142 @@ describe("settingsReducer — synchronous actions", () => {
   });
 });
 
+describe("settingsReducer — translucency (orthogonal to theme)", () => {
+  it("toggles translucency without touching the theme id", () => {
+    const start = settingsReducer(initial(), setThemeId("dark"));
+    const on = settingsReducer(start, setTranslucencyEnabled(true));
+    expect(on.translucency.enabled).toBe(true);
+    expect(on.themeId).toBe("dark");
+    const off = settingsReducer(on, setTranslucencyEnabled(false));
+    expect(off.translucency.enabled).toBe(false);
+    expect(off.themeId).toBe("dark");
+  });
+
+  it("clamps the intensity slider to the [0, 100] range", () => {
+    const tooBig = settingsReducer(initial(), setTranslucencyIntensity(250));
+    expect(tooBig.translucency.intensity).toBe(100);
+    const tooSmall = settingsReducer(initial(), setTranslucencyIntensity(-5));
+    expect(tooSmall.translucency.intensity).toBe(0);
+    const ok = settingsReducer(initial(), setTranslucencyIntensity(42));
+    expect(ok.translucency.intensity).toBe(42);
+  });
+
+  it("migrates a legacy glassy themeId payload to dark + translucency-on", () => {
+    // Defensive renderer-side migration: even if a stale store ever
+    // dispatches `setThemeId("glassy")`, we land on a valid state instead
+    // of writing an invalid theme id.
+    const next = settingsReducer(initial(), setThemeId("glassy" as never));
+    expect(next.themeId).toBe("dark");
+    expect(next.translucency.enabled).toBe(true);
+  });
+
+  it("migrates a legacy oled themeId payload to dark (without touching translucency)", () => {
+    // OLED was retired as a functional duplicate of dark + high contrast;
+    // a stale `setThemeId("oled")` lands on plain dark, and the user's
+    // current translucency state is left alone.
+    const before = initial();
+    const next = settingsReducer(before, setThemeId("oled" as never));
+    expect(next.themeId).toBe("dark");
+    expect(next.translucency.enabled).toBe(before.translucency.enabled);
+  });
+
+  it("hydrates translucency from the backend appearance block", () => {
+    const next = settingsReducer(
+      initial(),
+      loadSettings.fulfilled(
+        appSettings({
+          appearance: {
+            themeId: "dark",
+            followsSystem: false,
+            primaryColor: "default",
+            font: "inter",
+            codeFont: "jetbrains-mono",
+            codeLigatures: "standard",
+            fontSize: "md",
+            translucency: { enabled: true, intensity: 33, blurIntensity: 30 },
+            localePrefs: {
+              dateFormat: "relative",
+              timeFormat: "24h",
+              weekStart: "monday",
+              region: null,
+            },
+          },
+        }),
+        "internal-id",
+        undefined,
+      ),
+    );
+    expect(next.translucency.enabled).toBe(true);
+    expect(next.translucency.intensity).toBe(33);
+  });
+
+  it("migrates a backend payload that still carries themeId=oled to dark", () => {
+    // The OLED-Black variant was retired as a functional duplicate of dark
+    // + high-contrast. Any persisted `themeId === "oled"` from an older
+    // build must land on a valid id rather than silently fall through.
+    const next = settingsReducer(
+      initial(),
+      loadSettings.fulfilled(
+        appSettings({
+          theme: "dark",
+          appearance: {
+            themeId: "oled" as never,
+            followsSystem: false,
+            primaryColor: "default",
+            font: "inter",
+            codeFont: "jetbrains-mono",
+            codeLigatures: "standard",
+            fontSize: "md",
+            translucency: { enabled: false, intensity: 30, blurIntensity: 30 },
+            localePrefs: {
+              dateFormat: "relative",
+              timeFormat: "24h",
+              weekStart: "monday",
+              region: null,
+            },
+          },
+        }),
+        "internal-id",
+        undefined,
+      ),
+    );
+    expect(next.themeId).toBe("dark");
+  });
+
+  it("migrates a backend payload that still carries themeId=glassy", () => {
+    // Belt-and-suspenders: the Rust side migrates `theme_id=glassy` on
+    // load, but the renderer must also tolerate a stale payload (mid-
+    // upgrade scenario) and produce a valid state.
+    const next = settingsReducer(
+      initial(),
+      loadSettings.fulfilled(
+        appSettings({
+          appearance: {
+            themeId: "glassy" as never,
+            followsSystem: false,
+            primaryColor: "default",
+            font: "inter",
+            codeFont: "jetbrains-mono",
+            codeLigatures: "standard",
+            fontSize: "md",
+            translucency: { enabled: false, intensity: 30, blurIntensity: 30 },
+            localePrefs: {
+              dateFormat: "relative",
+              timeFormat: "24h",
+              weekStart: "monday",
+              region: null,
+            },
+          },
+        }),
+        "internal-id",
+        undefined,
+      ),
+    );
+    expect(next.themeId).toBe("dark");
+    expect(next.translucency.enabled).toBe(true);
+  });
+});
+
 describe("settingsReducer — theme-flicker audit", () => {
   // Guard against regressions where an unrelated setting toggle accidentally
   // resets the user's picked theme (e.g. a reducer case writing the entire
@@ -223,22 +372,37 @@ describe("settingsReducer — theme-flicker audit", () => {
     };
   }
 
-  it("setNotificationsEnabled does not reset theme", () => {
-    const next = settingsReducer(withDarkExplicit(), setNotificationsEnabled(true));
+  function withDarkExplicitPlusTranslucency() {
+    return {
+      ...initial(),
+      themeId: "dark" as const,
+      followsSystem: false,
+      translucency: { enabled: true, intensity: 55, blurIntensity: 30 },
+    };
+  }
+
+  it("setNotificationsEnabled does not reset theme or translucency", () => {
+    const next = settingsReducer(withDarkExplicitPlusTranslucency(), setNotificationsEnabled(true));
     expect(next.themeId).toBe("dark");
     expect(next.followsSystem).toBe(false);
+    expect(next.translucency.enabled).toBe(true);
+    expect(next.translucency.intensity).toBe(55);
   });
 
-  it("setCrashReporting does not reset theme", () => {
-    const next = settingsReducer(withDarkExplicit(), setCrashReporting(true));
+  it("setCrashReporting does not reset theme or translucency", () => {
+    const next = settingsReducer(withDarkExplicitPlusTranslucency(), setCrashReporting(true));
     expect(next.themeId).toBe("dark");
     expect(next.followsSystem).toBe(false);
+    expect(next.translucency.enabled).toBe(true);
+    expect(next.translucency.intensity).toBe(55);
   });
 
-  it("setDesktopAutoStart does not reset theme", () => {
-    const next = settingsReducer(withDarkExplicit(), setDesktopAutoStart(true));
+  it("setDesktopAutoStart does not reset theme or translucency", () => {
+    const next = settingsReducer(withDarkExplicitPlusTranslucency(), setDesktopAutoStart(true));
     expect(next.themeId).toBe("dark");
     expect(next.followsSystem).toBe(false);
+    expect(next.translucency.enabled).toBe(true);
+    expect(next.translucency.intensity).toBe(55);
   });
 
   it("setHighContrast does not reset theme", () => {
@@ -269,7 +433,7 @@ describe("settingsReducer — async thunks", () => {
       loadSettings.fulfilled(appSettings(), "internal-id", undefined),
     );
     expect(next.loading).toBe(false);
-    expect(next.themeId).toBe("oled");
+    expect(next.themeId).toBe("dark");
     expect(next.primaryColor).toBe("blue");
     expect(next.codeFont).toBe("fira-code");
     expect(next.highContrast).toBe(true);
@@ -385,5 +549,75 @@ describe("settingsReducer — async thunks", () => {
       deleteCustomFont.fulfilled("alpha", "internal-id", "alpha"),
     );
     expect(next.customFonts.map((f) => f.id)).toEqual(["beta"]);
+  });
+});
+
+describe("settingsReducer — locale preferences", () => {
+  it("defaults to relative / 24h / monday / null region on a fresh init", () => {
+    const s = initial();
+    expect(s.localePrefs.dateFormat).toBe("relative");
+    expect(s.localePrefs.timeFormat).toBe("24h");
+    expect(s.localePrefs.weekStart).toBe("monday");
+    expect(s.localePrefs.region).toBeNull();
+  });
+
+  it("setDateFormat updates the dateFormat slot", () => {
+    const next = settingsReducer(initial(), setDateFormat("absolute"));
+    expect(next.localePrefs.dateFormat).toBe("absolute");
+  });
+
+  it("setTimeFormat updates the timeFormat slot", () => {
+    const next = settingsReducer(initial(), setTimeFormat("12h"));
+    expect(next.localePrefs.timeFormat).toBe("12h");
+  });
+
+  it("setWeekStart updates the weekStart slot", () => {
+    const next = settingsReducer(initial(), setWeekStart("sunday"));
+    expect(next.localePrefs.weekStart).toBe("sunday");
+  });
+
+  it("setRegion accepts a code and clears with null", () => {
+    const on = settingsReducer(initial(), setRegion("GB"));
+    expect(on.localePrefs.region).toBe("GB");
+    const off = settingsReducer(on, setRegion(null));
+    expect(off.localePrefs.region).toBeNull();
+  });
+
+  it("falls back to defaults when the backend payload omits localePrefs", () => {
+    // Simulate an old settings.json with no `localePrefs` block on appearance.
+    const payload = appSettings();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (payload.appearance as any).localePrefs;
+    const next = settingsReducer(initial(), loadSettings.fulfilled(payload, "id", undefined));
+    expect(next.localePrefs.dateFormat).toBe("relative");
+    expect(next.localePrefs.timeFormat).toBe("24h");
+    expect(next.localePrefs.weekStart).toBe("monday");
+    expect(next.localePrefs.region).toBeNull();
+  });
+
+  it("hydrates localePrefs from the backend appearance block", () => {
+    const payload = appSettings({
+      appearance: {
+        themeId: "dark",
+        followsSystem: false,
+        primaryColor: "blue",
+        font: "inter",
+        codeFont: "jetbrains-mono",
+        codeLigatures: "standard",
+        fontSize: "md",
+        translucency: { enabled: false, intensity: 30, blurIntensity: 30 },
+        localePrefs: {
+          dateFormat: "absolute",
+          timeFormat: "12h",
+          weekStart: "sunday",
+          region: "GB",
+        },
+      },
+    });
+    const next = settingsReducer(initial(), loadSettings.fulfilled(payload, "id", undefined));
+    expect(next.localePrefs.dateFormat).toBe("absolute");
+    expect(next.localePrefs.timeFormat).toBe("12h");
+    expect(next.localePrefs.weekStart).toBe("sunday");
+    expect(next.localePrefs.region).toBe("GB");
   });
 });

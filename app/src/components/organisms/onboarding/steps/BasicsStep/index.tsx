@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { MenuItem, type SelectChangeEvent } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { Layers, Monitor, Moon, Sparkles, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
@@ -22,17 +22,16 @@ import {
   TileStack,
   TileSub,
 } from "@/components/organisms/onboarding/steps/_shared";
-import { useGlassySupport } from "@/hooks/useGlassySupport";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { type ThemeId } from "@/lib/constants/theme.constants";
 import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sections/_shared";
 import {
+  followSystemTheme,
   setCrashReporting,
   setDesktopAutoStart,
   setDesktopCloseToTray,
-  setFollowsSystem,
   setLocale,
   setNotificationsEnabled,
   setThemeId,
@@ -44,16 +43,16 @@ export interface BasicsStepProps {
   onNext: () => void;
 }
 
-type ThemeChoice = "system" | "light" | "dark" | "oled" | "glassy";
+type ThemeChoice = "system" | "light" | "dark";
 
-const BASE_THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark", "oled"];
+// Translucency lives in Settings now, so the wizard stays simple — just
+// the canonical three picks.
+const THEME_CHOICES: ThemeChoice[] = ["system", "light", "dark"];
 
 const THEME_ICONS: Record<ThemeChoice, typeof Monitor> = {
   system: Monitor,
   light: Sun,
   dark: Moon,
-  oled: Layers,
-  glassy: Sparkles,
 };
 
 interface LocaleEntry {
@@ -84,10 +83,6 @@ function themeLabel(choice: ThemeChoice, t: (key: string) => string): string {
       return t("basics.theme_light");
     case "dark":
       return t("basics.theme_dark");
-    case "oled":
-      return t("basics.theme_oled");
-    case "glassy":
-      return t("basics.theme_glassy");
   }
 }
 
@@ -98,17 +93,13 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
   const themeId = useAppSelector((s) => s.settings.themeId);
   const followsSystem = useAppSelector((s) => s.settings.followsSystem);
   const themeChoice: ThemeChoice = followsSystem ? "system" : themeId;
-  const supportsGlassy = useGlassySupport();
-  const themeChoices: ThemeChoice[] = supportsGlassy
-    ? [...BASE_THEME_CHOICES, "glassy"]
-    : BASE_THEME_CHOICES;
   const autoStart = useAppSelector((s) => s.settings.desktop.autoStart);
   const closeToTray = useAppSelector((s) => s.settings.desktop.closeToTray);
   const notifEnabled = useAppSelector((s) => s.settings.notifications.enabled);
   const crashReports = useAppSelector((s) => s.settings.backend?.crashReporting ?? false);
 
   const onThemeChoice = (choice: ThemeChoice) => {
-    if (choice === "system") dispatch(setFollowsSystem(true));
+    if (choice === "system") void dispatch(followSystemTheme());
     else dispatch(setThemeId(choice as ThemeId));
   };
 
@@ -148,7 +139,7 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
                   );
                 }}
               >
-                {themeChoices.map((c) => {
+                {THEME_CHOICES.map((c) => {
                   const Icon = THEME_ICONS[c];
                   return (
                     <MenuItem key={c} value={c}>

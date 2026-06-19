@@ -5,7 +5,7 @@ import { styled } from "@mui/material/styles";
 
 /**
  * App-wide tooltip styled to match the `bg-popover` surface from `src-old`:
- * theme-bound background (light / dark / oled / glassy), border + small
+ * theme-bound background (light / dark), border + small
  * shadow, rounded-md radius, no MUI default dark-grey block. The slide+fade
  * comes from MUI's built-in `Fade` transition (which honours user-side
  * reduced-motion via the same CSS toggle we use elsewhere).

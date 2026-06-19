@@ -94,7 +94,6 @@ fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 # mis-click — we never permanently `rm -rf` from a button.
 trash = "5"
 ignore = "0.4.26"
-tauri-plugin-liquid-glass = "0.1.6"
 
 [target.'cfg(windows)'.dependencies]
 # Single Win32 dependency (M4 — was windows + windows-sys side-by-side).

@@ -114,9 +114,12 @@ export const TauriCommand = {
   // window
   SET_CAPTION_BUTTON_BOUNDS: "set_caption_button_bounds",
 
-  // theme
-  SET_THEME_EFFECT: "set_theme_effect",
-  SUPPORTS_GLASSY: "supports_glassy",
+  // theme — orthogonal translucency effect (replaced the old glassy theme).
+  // `set_translucency` swaps the OS-level vibrancy/liquid-glass effect on/off
+  // with the given intensity; `supports_translucency` is a static capability
+  // probe used to hide the UI on platforms where it is a no-op.
+  SET_TRANSLUCENCY: "set_translucency",
+  SUPPORTS_TRANSLUCENCY: "supports_translucency",
 
   // system
   GET_PLATFORM_INFO: "get_platform_info",

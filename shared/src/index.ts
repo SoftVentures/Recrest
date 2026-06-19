@@ -7,6 +7,7 @@ export * from "./constants/events.js";
 export * from "./constants/git.js";
 export * from "./constants/ide.js";
 export * from "./constants/legal.js";
+export * from "./constants/locale.js";
 export * from "./constants/polling.js";
 export * from "./constants/pr-states.js";
 export * from "./constants/providers.js";

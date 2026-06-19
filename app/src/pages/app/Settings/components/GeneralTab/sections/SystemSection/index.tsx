@@ -211,10 +211,16 @@ export function SystemSection() {
   const isCustomTerminal = defaultTerminal === CUSTOM_TERMINAL_ID;
   const firstTerminal = TERMINAL_IDS.find((id) => detectedTerminals.has(id)) ?? null;
   const firstShell = SHELL_IDS.find((id) => detectedShells.has(id)) ?? null;
+  // Maps the renderer-side platform id (`Platform.MAC = "mac"` etc.) to the
+  // wire-contract value used by `TERMINAL_DEFINITIONS.platforms` /
+  // `SHELL_DEFINITIONS.platforms` (where macOS rides as the explicit
+  // `"macos"` literal). Only the mac slot diverges; the other two pass
+  // through. Kept as a small map rather than a runtime branch so adding a
+  // future platform stays a one-line edit.
   const platformMap = {
-    mac: "macos" as const,
-    windows: "windows" as const,
-    linux: "linux" as const,
+    [Platform.MAC]: "macos" as const,
+    [Platform.WINDOWS]: "windows" as const,
+    [Platform.LINUX]: "linux" as const,
   };
   const sharedPlatform = platformMap[platform];
   const visibleTerminalIds = TERMINAL_IDS.filter((id) =>

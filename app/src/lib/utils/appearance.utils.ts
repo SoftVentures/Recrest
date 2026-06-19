@@ -12,6 +12,8 @@ import { THEMES, type ThemeId } from "@/lib/constants/theme.constants";
 const SANS_FALLBACK = "system-ui, sans-serif";
 const MONO_FALLBACK = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
+/** Picker choice surfaced in the Appearance settings dropdown. "system"
+ *  isn't a theme — it asks the renderer to follow `prefers-color-scheme`. */
 export type ThemeChoice = "system" | ThemeId;
 
 /**

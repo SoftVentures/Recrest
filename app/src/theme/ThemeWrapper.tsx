@@ -5,8 +5,12 @@ import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 
 import { type FontSizeId, TauriCommand } from "@recrest/shared";
 
-import { useGlassySupport } from "@/hooks/useGlassySupport";
-import { THEME_NO_TRANSITIONS_CLASS, ThemeId } from "@/lib/constants/theme.constants";
+import {
+  MAX_BLUR_PX,
+  THEME_MODE_QUERY,
+  THEME_NO_TRANSITIONS_CLASS,
+  ThemeId,
+} from "@/lib/constants/theme.constants";
 import { safeInvoke } from "@/lib/tauri";
 import { codeLigatureFeatureSettings, fontCssFamily } from "@/lib/utils/appearance.utils";
 import { syncSystemTheme } from "@/store/actions/settings.actions";
@@ -62,6 +66,9 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   const highContrast = useAppSelector((s) => s.settings.highContrast);
   const reducedMotion = useAppSelector((s) => s.settings.reducedMotion);
   const underlineLinks = useAppSelector((s) => s.settings.underlineLinks);
+  const translucencyEnabled = useAppSelector((s) => s.settings.translucency.enabled);
+  const translucencyIntensity = useAppSelector((s) => s.settings.translucency.intensity);
+  const blurIntensity = useAppSelector((s) => s.settings.translucency.blurIntensity);
 
   // "Follow system" mode: subscribe to the OS appearance media query and
   // mirror its current value into the store via `syncSystemTheme` (which
@@ -81,116 +88,177 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return;
     }
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => {
-      dispatch(syncSystemTheme(mq.matches ? "dark" : "light"));
-    };
-    apply(); // re-assert at mount; handles stale themeId after OS change.
-
+    const mq = window.matchMedia(THEME_MODE_QUERY);
     let cancelled = false;
     let raf1: number | null = null;
     let raf2: number | null = null;
+
+    // Validate any candidate dark-mode value against Rust's authoritative
+    // `NSApp.effectiveAppearance` read before dispatching. WKWebView's
+    // matchMedia for `prefers-color-scheme` is known to fire spurious "change"
+    // events with the wrong value during focus regain (the WebView's effective
+    // appearance briefly disagrees with the system on the wake-up frame). A
+    // raw dispatch from the matchMedia listener would flip themeId to DARK
+    // for one render — that, in turn, flips `--translucency-bg` to the dark
+    // rgba (~11,13,18) and the user sees a near-black flicker on the glass
+    // layer before matchMedia settles and we flip back. Routing every
+    // candidate through Rust eliminates the bad frame.
+    const dispatchOsTruth = async (candidate: boolean) => {
+      const osDark = await safeInvoke<boolean | null>(TauriCommand.GET_SYSTEM_DARK_MODE);
+      if (cancelled) return;
+      const truth = osDark === null || osDark === undefined ? candidate : osDark;
+      dispatch(syncSystemTheme(truth ? ThemeId.DARK : ThemeId.LIGHT));
+    };
+
+    // Initial reconcile at mount — handles stale themeId after OS change.
+    // Suppress transitions for one frame so the anti-flash inline script's
+    // painted value cross-fades cleanly into the OS-truth value.
     void safeInvoke<boolean | null>(TauriCommand.GET_SYSTEM_DARK_MODE).then((osDark) => {
-      if (cancelled || osDark === null || osDark === undefined) return;
-      if (osDark !== mq.matches) {
-        // Suppress transitions across the one-frame surface flip so the
-        // anti-flash inline script's painted value cross-fades cleanly into
-        // the OS-truth value (avoids a visible coloured frame on cold boot).
+      if (cancelled) return;
+      const truth = osDark === null || osDark === undefined ? mq.matches : osDark;
+      if (truth !== mq.matches) {
         const root = document.documentElement;
         root.classList.add(THEME_NO_TRANSITIONS_CLASS);
-        dispatch(syncSystemTheme(osDark ? "dark" : "light"));
+        dispatch(syncSystemTheme(truth ? ThemeId.DARK : ThemeId.LIGHT));
         raf1 = requestAnimationFrame(() => {
           raf2 = requestAnimationFrame(() => {
             if (!cancelled) root.classList.remove(THEME_NO_TRANSITIONS_CLASS);
           });
         });
+      } else {
+        dispatch(syncSystemTheme(truth ? ThemeId.DARK : ThemeId.LIGHT));
       }
     });
 
-    mq.addEventListener("change", apply);
+    const onChange = () => {
+      void dispatchOsTruth(mq.matches);
+    };
+    mq.addEventListener("change", onChange);
     return () => {
       cancelled = true;
       if (raf1 !== null) cancelAnimationFrame(raf1);
       if (raf2 !== null) cancelAnimationFrame(raf2);
-      mq.removeEventListener("change", apply);
+      mq.removeEventListener("change", onChange);
     };
   }, [followsSystem, dispatch]);
 
-  // When the persisted theme is `glassy` but the host can't render vibrancy
-  // (Linux without compositor support, or when the backend probe reports
-  // false), the effective render falls back to plain `dark` so surfaces still
-  // paint sensibly. We never mutate the stored `themeId` — only the value
-  // that feeds `getTheme` — so re-launching on a supported host restores the
-  // user's actual preference without any extra plumbing.
-  const supportsGlassy = useGlassySupport();
-  const effectiveThemeId = themeId === ThemeId.GLASSY && !supportsGlassy ? ThemeId.DARK : themeId;
-
   const theme = useMemo(
-    () => getTheme(effectiveThemeId, { primaryColor, dyslexiaFont, font, fontSize }),
-    [effectiveThemeId, primaryColor, dyslexiaFont, font, fontSize],
+    () =>
+      getTheme(themeId, {
+        primaryColor,
+        dyslexiaFont,
+        font,
+        fontSize,
+        translucent: translucencyEnabled,
+      }),
+    [themeId, primaryColor, dyslexiaFont, font, fontSize, translucencyEnabled],
   );
 
-  // Root-element side effects so non-MUI children (native inputs, our own
-  // styled() rules that read `font-family: inherit`, the Kbd hint chip in
-  // the header, etc.) cascade with the picked font too.
+  // Single root-element side-effect. Combining background + font + a11y +
+  // translucency into one effect prevents the dark→transparent→dark race
+  // that happened when independent effects raced to write `<html>.style`:
+  // the translucency effect would set `background-color: transparent`, the
+  // theme effect would immediately overwrite it with the opaque value, and
+  // the next paint flipped back when the translucency effect re-ran.
   useEffect(() => {
     const root = document.documentElement;
-    // Reconcile the anti-flash inline-style background (set once at boot by
-    // index.html before any module loads). Without this, switching to the
-    // Glassy theme at runtime leaves <html> painted in the boot theme's solid
-    // color, which sits ABOVE the NSVisualEffectView and hides the desktop
-    // vibrancy entirely. For opaque themes we still want a solid backstop
-    // (matches `palette.background.default`) so a brief reload doesn't flash
-    // through the window.
-    root.style.backgroundColor =
-      effectiveThemeId === ThemeId.GLASSY
-        ? "transparent"
-        : (theme.palette.background.default as string);
+
+    // Background: translucency wins over theme. When translucent, `<html>`
+    // must stay transparent so the OS vibrancy layer composites through;
+    // when opaque, paint the theme's solid backdrop so a brief reload
+    // doesn't flash through the window. The anti-flash inline script
+    // already painted the right initial value — this effect just keeps it
+    // in sync as the user toggles settings at runtime.
+    // Translucency lives entirely in CSS — no OS NSVisualEffectView material
+    // (so the blur slider can truly bottom out at 0). The glass effect is
+    // painted by a `position: fixed` pseudo-element on <html> so it stays
+    // on its own compositor layer; without that, WebKit drops the
+    // `backdrop-filter` while the user is scrolling and re-applies it on
+    // scroll-end, producing a visible blur "pop" the user reported.
+    //
+    // Layering:
+    //   <html>::before  position: fixed; inset: 0; z-index: -1;
+    //                   background-color: var(--translucency-bg);
+    //                   backdrop-filter: blur(var(--translucency-blur-px));
+    //   <html>          transparent (anti-flash + Tauri window)
+    //   <body>          transparent (so ::before shows through)
+    //   <#root>         transparent
+    //   <AppFrame, MainSlot> palette.background.default → transparent
+    //
+    // Slider semantics:
+    //   intensity 0   → alpha 1.0 → solid theme tint, no see-through.
+    //   intensity 100 → alpha 0   → no tint, wallpaper shows raw.
+    //   blurIntensity 0   → no backdrop blur at all.
+    //   blurIntensity 100 → MAX_BLUR_PX backdrop blur.
+    const transparentBg = translucencyEnabled;
+    root.style.backgroundColor = transparentBg
+      ? "transparent"
+      : (theme.palette.background.default as string);
+    if (transparentBg) {
+      // RGB mirrored from `theme.constants.ts` (dark APP_BG / light APP_BG).
+      const rgb = theme.palette.mode === "dark" ? "11, 13, 18" : "250, 250, 250";
+      const alpha = (100 - translucencyIntensity) / 100;
+      // Body stays transparent so the fixed ::before glass layer is what
+      // the user sees as the canvas tint.
+      document.body.style.backgroundColor = "transparent";
+      root.style.setProperty("--translucency-bg", `rgba(${rgb}, ${alpha})`);
+    } else {
+      document.body.style.backgroundColor = theme.palette.background.default as string;
+      root.style.removeProperty("--translucency-bg");
+    }
+    root.dataset.translucent = transparentBg ? "true" : "false";
+    const blurPx = transparentBg ? Math.round((blurIntensity * MAX_BLUR_PX) / 100) : 0;
+    root.style.setProperty("--translucency-blur-px", `${blurPx}px`);
+
     root.style.setProperty("--app-font-family", theme.typography.fontFamily ?? "");
     root.style.setProperty("--app-font-size", `${theme.typography.fontSize}px`);
-    // Code-surface font (snippets, diffs, …) — consumed via `MONO_STACK` /
-    // `monoFont` so every monospace component follows the user's code font.
+    // Code-surface font + ligatures consumed by `MONO_STACK` / `CODE_LIGATURES`.
     root.style.setProperty("--recrest-font-mono", fontCssFamily(codeFont, "mono"));
-    // Code-ligature features (consumed via `monoFont` / `CODE_LIGATURES`).
     root.style.setProperty("--recrest-code-ligatures", codeLigatureFeatureSettings(codeLigatures));
     root.dataset.font = font;
     root.dataset.codeFont = codeFont;
     root.dataset.codeLigatures = codeLigatures;
     root.dataset.fontSize = fontSize;
-    // Accessibility — `globals.css` keys CSS rules off these attributes so
-    // every component (MUI, native, third-party) picks them up at once.
+    // Accessibility flags drive CSS rules in globals.css.
     root.dataset.highContrast = highContrast ? "true" : "false";
     root.dataset.reducedMotion = reducedMotion ? "true" : "false";
     root.dataset.underlineLinks = underlineLinks ? "true" : "false";
-    // Also drive a body-level font-family so children that don't read from
-    // MUI's theme (raw <input>, <select>, lucide icons) still match.
+    // Drive a body-level font-family so children that don't read from MUI's
+    // theme (raw <input>, <select>, lucide icons) still match.
     document.body.style.fontFamily = theme.typography.fontFamily ?? "";
     document.body.style.fontSize = `${theme.typography.fontSize}px`;
     // Interface-size scaling — CSS `zoom` scales every descendant uniformly
     // (font-size, padding, border-width, fixed-px widths in styled() rules,
     // SVG icons) without us having to convert every magic number to `em`.
-    //
-    // CSS `zoom` does NOT change the layout box of the element it's applied
-    // to in the parent's frame: `<body>` would visually grow past the
-    // viewport. We work around this by scaling `#root` and reverse-sizing
-    // its box (`100/scale%`) so its rendered footprint stays at viewport
-    // dimensions. `globals.css` clamps `html/body/#root` to the viewport so
-    // the document never gets browser-level scrollbars regardless of which
-    // intermediate length wins.
-    // Interface-size scaling — write the multiplier into a CSS custom
-    // property on `<html>`. `globals.css` consumes it via:
+    // We write the multiplier into a CSS custom property on `<html>`;
+    // `globals.css` consumes it via:
     //   #root { zoom: var(--ui-scale); width: calc(100vw / var(--ui-scale)); ... }
     // so the visible rendered size always equals the real viewport while
-    // every descendant length (font-size, padding, border, fixed-px width
-    // in styled() rules, SVG icons) scales uniformly. Approach mirrored
-    // from src-old's tokens.scss where it was battle-tested across all 4
-    // size steps without breaking the outer viewport-lock.
+    // every descendant length scales uniformly.
     root.style.setProperty("--ui-scale", String(scaleForSize(fontSize)));
+
+    // Apply (or clear) the macOS NSVisualEffectView material via the
+    // liquid-glass plugin. The OS material is what's actually captured by
+    // macOS for Stage Manager thumbnails / Cmd-Tab swap-in / Dock-click
+    // animations — without it the focus-regain snapshot is a transparent
+    // window and the user sees a "transparent → shadow → blur" staged
+    // sequence every time. The CSS rgba `::before` + backdrop-filter sit
+    // on top of the OS material; this means slider 0 still has the
+    // material's intrinsic baseline blur (NSVisualEffectMaterial fixed
+    // property), but the focus-regain flash is gone.
+    void safeInvoke<void>(TauriCommand.SET_TRANSLUCENCY, {
+      enabled: translucencyEnabled,
+      intensity: translucencyIntensity,
+      dark: theme.palette.mode === "dark",
+    }).catch((err) => {
+      console.warn("[theme] set_translucency failed", err);
+    });
   }, [
     theme.palette.background.default,
+    theme.palette.mode,
     theme.typography.fontFamily,
     theme.typography.fontSize,
-    effectiveThemeId,
+    themeId,
     font,
     codeFont,
     codeLigatures,
@@ -198,6 +266,9 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     highContrast,
     reducedMotion,
     underlineLinks,
+    translucencyEnabled,
+    translucencyIntensity,
+    blurIntensity,
   ]);
 
   return (

@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
+import { WeekStart } from "@recrest/shared";
+
 import { ResponsiveHeatMap } from "@nivo/heatmap";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
@@ -14,6 +16,7 @@ import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useLocalePrefs } from "@/lib/utils/datetime.utils";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -22,7 +25,11 @@ export interface Props {
   loading?: boolean;
 }
 
-const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+/** Matrix rows are stored Monday-first (index 0=Mon..6=Sun); we keep that
+ *  storage invariant and rotate the *display* order based on the user's
+ *  week-start preference. */
+const WEEKDAYS_MON_FIRST = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+const WEEKDAYS_SUN_FIRST = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
 const AXIS_HOURS = ["0", "6", "12", "18"];
 
 function HeatmapCard({ matrix, loading }: Props) {
@@ -30,6 +37,8 @@ function HeatmapCard({ matrix, loading }: Props) {
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
   const { show, hide, portal } = useChartTooltip();
+  const { weekStart } = useLocalePrefs();
+  const sundayFirst = weekStart === WeekStart.SUNDAY;
   // Single-metric chart → follow the user's primary color, not a fixed accent.
   const accent = theme.palette.primary.main;
 
@@ -43,9 +52,13 @@ function HeatmapCard({ matrix, loading }: Props) {
     </Tooltip>
   );
 
-  const data = matrix.map((row, weekday) => ({
-    id: WEEKDAYS[weekday]!,
-    data: row.map((count, hour) => ({ x: String(hour), y: count })),
+  // Reorder Mon-first storage into the display order. When `sundayFirst`, the
+  // Sunday row (matrix index 6) jumps to the top; the others follow Mon..Sat.
+  const displayLabels = sundayFirst ? WEEKDAYS_SUN_FIRST : WEEKDAYS_MON_FIRST;
+  const displayMatrix = sundayFirst ? [matrix[6], ...matrix.slice(0, 6)] : matrix;
+  const data = displayMatrix.map((row, weekday) => ({
+    id: displayLabels[weekday]!,
+    data: (row ?? []).map((count, hour) => ({ x: String(hour), y: count })),
   }));
 
   return (

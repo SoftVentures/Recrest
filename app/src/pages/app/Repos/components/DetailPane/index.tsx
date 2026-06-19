@@ -43,7 +43,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
-import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import {
   BranchCard,
   BranchChip,
@@ -97,6 +97,7 @@ export interface DetailPaneProps {
 export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const { t } = useTranslation(I18nNamespace.REPOS);
+  const dt = useDateTimeFormat();
   const ide = useDefaultIde();
   const ideLabel = ide.name
     ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
@@ -227,7 +228,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                         {c.sha.slice(0, 7)}
                       </CommitSha>
                       <Box component="span">·</Box>
-                      <Box component="span">{timeAgo(c.timestamp)}</Box>
+                      <Box component="span">{dt.formatTimestamp(c.timestamp)}</Box>
                     </CommitMeta>
                   </CommitText>
                 </CommitItem>

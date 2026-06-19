@@ -30,8 +30,7 @@ export function useFaviconSync(): void {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const isDark =
-      themeId === ThemeId.DARK || themeId === ThemeId.OLED || themeId === ThemeId.GLASSY;
+    const isDark = themeId === ThemeId.DARK;
     const isDev = import.meta.env.DEV;
 
     const href = isDev ? (isDark ? IconDevDark : IconDevLight) : isDark ? IconDark : IconLight;

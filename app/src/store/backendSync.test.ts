@@ -137,11 +137,10 @@ describe("settingsBackendSync", () => {
 
   it("writes both the legacy theme slot and appearance on setThemeId", () => {
     const store = makeStore();
-    store.dispatch(setThemeId("oled"));
+    store.dispatch(setThemeId("dark"));
     const patch = lastPatch();
-    // oled is a dark-like renderer variant → collapses to "dark" on disk.
     expect(patch.theme).toBe("dark");
-    expect(patch.appearance).toMatchObject({ themeId: "oled", followsSystem: false });
+    expect(patch.appearance).toMatchObject({ themeId: "dark", followsSystem: false });
   });
 
   it("maps light themeId straight through", () => {

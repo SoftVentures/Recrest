@@ -62,9 +62,7 @@
     "themes": {
       "system": "System",
       "light": "Hell",
-      "dark": "Dunkel",
-      "oled": "OLED Schwarz",
-      "glassy": "Glasig"
+      "dark": "Dunkel"
     },
     "accent": "Akzentfarbe",
     "dyslexiaFont": "Legasthenie-Schrift"

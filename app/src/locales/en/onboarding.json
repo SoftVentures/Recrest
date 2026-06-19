@@ -14,8 +14,6 @@
     "theme_system": "System",
     "theme_light": "Light",
     "theme_dark": "Dark",
-    "theme_oled": "OLED Black",
-    "theme_glassy": "Glassy",
     "language": "Language",
     "language_desc": "Used for the interface.",
     "auto_start": "Start with system",

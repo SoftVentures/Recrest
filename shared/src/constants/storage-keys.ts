@@ -14,13 +14,27 @@ export const StorageKey = {
   /** App version as last recorded on mount. Used by the developer "Reset
    *  last-seen version" affordance and (future) "What's new" dialog. */
   LAST_SEEN_VERSION: `${STORAGE_PREFIX}lastSeenVersion`,
-  /** Active theme id ("light" | "dark" | "oled" | "glassy"). Mirrored on
-   *  every render by `useThemeAttribute` so the anti-flash inline script in
-   *  `index.html` can paint the correct surface on first frame. */
+  /** Active theme id ("light" | "dark"). Mirrored on every render by
+   *  `useThemeAttribute` so the anti-flash inline script in `index.html`
+   *  can paint the correct surface on first frame. */
   THEME: `${STORAGE_PREFIX}theme`,
   /** "true" when the user has opted into "follow system" appearance.
    *  Read by `resolveBootTheme()` and the anti-flash script. */
   THEME_FOLLOWS_SYSTEM: `${STORAGE_PREFIX}theme-follows-system`,
+  /** "true" when the user has enabled the orthogonal translucency effect.
+   *  Read by the anti-flash inline script in `index.html` so the first
+   *  paint already paints the glass layer (no transparent-then-blur cold-
+   *  boot flash). */
+  TRANSLUCENCY_ENABLED: `${STORAGE_PREFIX}translucency-enabled`,
+  /** Integer 0..100, the user's last transparency-slider value. Mirrored
+   *  to localStorage so the anti-flash inline script can compute the
+   *  initial `rgba()` tint on first paint — without this, the cold-boot
+   *  ::before glass layer would render with the renderer default for one
+   *  paint before React hydrates the real value. */
+  TRANSLUCENCY_INTENSITY: `${STORAGE_PREFIX}translucency-intensity`,
+  /** Integer 0..100, the user's last blur-slider value. Same rationale as
+   *  `TRANSLUCENCY_INTENSITY`. */
+  TRANSLUCENCY_BLUR: `${STORAGE_PREFIX}translucency-blur`,
   /** dev:web only: serialized AppSettings overlay so reloads persist user
    *  changes against the seed. Real Tauri uses `settings.json` on disk. */
   DEV_SETTINGS: `${STORAGE_PREFIX}dev-settings`,

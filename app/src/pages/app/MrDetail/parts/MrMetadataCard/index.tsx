@@ -8,7 +8,7 @@ import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import MrChip from "@/components/atoms/chips/MrChip";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
-import { formatDateLong } from "@/lib/utils/dateFormat.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import {
   MetaCell,
   MetaGrid,
@@ -22,17 +22,18 @@ interface Props {
 
 export default function MrMetadataCard({ pr }: Props) {
   const { t: tPrs } = useTranslation(I18nNamespace.PRS);
+  const dt = useDateTimeFormat();
 
   return (
     <GeneralCard title={tPrs("detail.section_metadata")} flushHeight>
       <MetaGrid>
         <MetaCell>
           <MetaLabel>{tPrs("detail.meta_opened")}</MetaLabel>
-          <MetaValue>{formatDateLong(pr.createdAt)}</MetaValue>
+          <MetaValue>{dt.formatTimestamp(pr.createdAt)}</MetaValue>
         </MetaCell>
         <MetaCell>
           <MetaLabel>{tPrs("detail.meta_updated")}</MetaLabel>
-          <MetaValue>{formatDateLong(pr.updatedAt)}</MetaValue>
+          <MetaValue>{dt.formatTimestamp(pr.updatedAt)}</MetaValue>
         </MetaCell>
         <MetaCell>
           <MetaLabel>{tPrs("detail.meta_author")}</MetaLabel>

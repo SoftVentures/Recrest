@@ -34,17 +34,33 @@
       // with the reducer's "light" initial state and flips to dark a tick
       // later, which the user perceives as a jarring flash on every reload.
       //
-      // Order of preference:
+      // Order of preference for theme:
       //   1. `recrest:theme-follows-system === "true"` → resolve via matchMedia
-      //   2. explicit `recrest:theme` ∈ {light,dark,oled,glassy} → use it
-      //   3. fall back to matchMedia (first run / no localStorage)
+      //   2. explicit `recrest:theme` ∈ {light,dark} → use it
+      //   3. legacy `glassy` / `oled` migrate to `dark` (the orthogonal
+      //      translucency + high-contrast toggles replaced them)
+      //   4. fall back to matchMedia (first run / no localStorage)
+      //
+      // Translucency is orthogonal: a separate `recrest:translucency-enabled`
+      // flag wins over the theme background — when true we paint `<html>`
+      // transparent regardless of theme so the OS vibrancy/acrylic shows
+      // through from frame 1 (eliminates the dark→transparent flicker the
+      // old single-flag scheme exhibited on every reload).
+      //
+      // The string literals here intentionally duplicate `StorageKey.THEME`,
+      // `StorageKey.THEME_FOLLOWS_SYSTEM`, and `StorageKey.TRANSLUCENCY_ENABLED`
+      // because this script runs before any module loads. If you rename
+      // any of those keys, update this block too — there is no other
+      // sanctioned magic-string exception in the renderer.
       (function () {
         try {
           var stored = null;
           var follows = null;
+          var translucent = null;
           try {
             stored = localStorage.getItem("recrest:theme");
             follows = localStorage.getItem("recrest:theme-follows-system");
+            translucent = localStorage.getItem("recrest:translucency-enabled");
           } catch (_) {}
           var prefersDark =
             typeof window.matchMedia === "function" &&
@@ -52,35 +68,104 @@
           var themeId;
           if (follows === "true") {
             themeId = prefersDark ? "dark" : "light";
-          } else if (
-            stored === "light" ||
-            stored === "dark" ||
-            stored === "oled" ||
-            stored === "glassy"
-          ) {
+          } else if (stored === "light" || stored === "dark") {
             themeId = stored;
+          } else if (stored === "glassy") {
+            // Legacy: the old "glassy" theme migrates to "dark" plus the
+            // translucency flag at the renderer/backend boundary. Pick the
+            // same answer here so frame 1 matches the migrated state.
+            themeId = "dark";
+            if (translucent === null) translucent = "true";
+          } else if (stored === "oled") {
+            // Legacy: the retired OLED-Black variant migrates to dark.
+            themeId = "dark";
           } else {
             themeId = prefersDark ? "dark" : "light";
           }
-          var isDark = themeId === "dark" || themeId === "oled" || themeId === "glassy";
+          var isDark = themeId === "dark";
+          var isTranslucent = translucent === "true";
           var root = document.documentElement;
           root.setAttribute("data-theme", isDark ? "dark" : "light");
           root.setAttribute("data-theme-id", themeId);
           root.setAttribute("data-boot-theme", themeId);
-          // Paint the body in the correct surface immediately so the first
-          // frame doesn't show the browser's default white before MUI's
-          // CssBaseline applies the palette. Values match `theme/palette`
-          // defaults for `background.default` (light/dark). Glassy stays
-          // transparent so the native window vibrancy/acrylic shows through
-          // from the very first paint instead of being covered by an opaque
-          // bootstrap colour.
-          root.style.backgroundColor =
-            themeId === "glassy" ? "transparent" : isDark ? "#0b0d12" : "#ffffff";
+          root.setAttribute("data-translucent", isTranslucent ? "true" : "false");
+          root.style.backgroundColor = isTranslucent
+            ? "transparent"
+            : isDark
+              ? "#0b0d12"
+              : "#ffffff";
+          // Translucency vars consumed by the `html::before` glass layer
+          // (see the inline <style> below). Reading the user's last slider
+          // values from localStorage means frame 1 already paints with
+          // the right tint + blur — no "transparent → desktop → blur
+          // applied" cold-boot sequence.
+          if (isTranslucent) {
+            var intensityRaw = null;
+            var blurRaw = null;
+            try {
+              intensityRaw = localStorage.getItem("recrest:translucency-intensity");
+              blurRaw = localStorage.getItem("recrest:translucency-blur");
+            } catch (_) {}
+            var clamp = function (n, fallback) {
+              var v = parseInt(n, 10);
+              if (isNaN(v)) return fallback;
+              return Math.min(100, Math.max(0, v));
+            };
+            var intensity = clamp(intensityRaw, 50);
+            var blurI = clamp(blurRaw, 30);
+            var rgb = isDark ? "11, 13, 18" : "250, 250, 250";
+            var alpha = (100 - intensity) / 100;
+            var blurPx = Math.round((blurI * 30) / 100);
+            root.style.setProperty(
+              "--translucency-bg",
+              "rgba(" + rgb + ", " + alpha + ")"
+            );
+            root.style.setProperty("--translucency-blur-px", blurPx + "px");
+          }
         } catch (e) {
           /* swallow — defaults stand */
         }
       })();
     </script>
+    <style>
+      /*
+       * Boot anti-flash for translucency: applies BEFORE the JS bundle (and
+       * with it, MUI's CssBaseline + globals.css) loads. The anti-flash
+       * script above sets `data-translucent` on <html> AND seeds the two
+       * `--translucency-*` CSS variables from localStorage, so the
+       * `html::before` glass layer below paints with the right tint + blur
+       * from FRAME 1. Without these (CSS rule only in globals.css), the
+       * cold-boot sequence the user saw was: 1) transparent desktop,
+       * 2) gray window-frame shadows, 3) blur applies once JS finished
+       * loading. Now: 1) glass with user's settings, end of story.
+       *
+       * The duplicated `html::before` rule mirrors the one in globals.css —
+       * Vite serves globals.css async via the JS bundle in dev, so we
+       * keep this inline copy as a load-order safety net. Keep the two in
+       * sync.
+       */
+      html[data-translucent="true"],
+      html[data-translucent="true"] body,
+      html[data-translucent="true"] #root {
+        background-color: transparent !important;
+        background-image: none !important;
+      }
+      html[data-translucent="true"]::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background-color: var(--translucency-bg, transparent);
+        -webkit-backdrop-filter: blur(var(--translucency-blur-px, 0px));
+        backdrop-filter: blur(var(--translucency-blur-px, 0px));
+        will-change: backdrop-filter, transform;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        contain: layout style paint;
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

@@ -2,12 +2,15 @@ import type {
   AppSettings,
   AutoUpdateMode,
   CustomFont,
+  DateFormat,
   DiscoveredApp,
   FontSelection,
   FontSizeId,
   LigatureMode,
   ShellDetection,
   TerminalDetection,
+  TimeFormat,
+  WeekStart,
 } from "@recrest/shared";
 
 import type { PrimaryColorScheme, ThemeId } from "@/lib/constants/theme.constants";
@@ -31,6 +34,28 @@ export interface NotificationPrefs {
 
 export interface UpdatePrefs {
   mode: AutoUpdateMode;
+}
+
+/** Orthogonal window-translucency effect — independent of `themeId`. */
+export interface TranslucencyPrefs {
+  enabled: boolean;
+  /** 0..100, clamped at the reducer boundary. */
+  intensity: number;
+  /** Extra backdrop-filter blur stacked on top of the OS material. 0..100,
+   *  mapped to 0..MAX_BLUR_PX in CSS. */
+  blurIntensity: number;
+}
+
+/** Locale-aware rendering preferences — drive `Intl.DateTimeFormat` /
+ *  `formatDistanceToNow`-style helpers across the app. Persisted on the
+ *  backend under `appearance.localePrefs`. */
+export interface LocalePrefs {
+  dateFormat: DateFormat;
+  timeFormat: TimeFormat;
+  weekStart: WeekStart;
+  /** `null` => follow the active language. Otherwise an ISO 3166-1 alpha-2
+   *  code (e.g. `"US"`, `"GB"`, `"DE"`). */
+  region: string | null;
 }
 
 export interface SettingsState {
@@ -63,6 +88,10 @@ export interface SettingsState {
   desktop: DesktopPrefs;
   notifications: NotificationPrefs;
   updates: UpdatePrefs;
+  /** Orthogonal translucency effect (any theme can be made translucent). */
+  translucency: TranslucencyPrefs;
+  /** Locale-aware rendering preferences (date/time format, week start, region). */
+  localePrefs: LocalePrefs;
   backend: AppSettings | null;
   /** OS-probe results; `null` until `loadDetectedTerminals` resolved.
    *  Outside Tauri this stays `null` and the UI falls back to stub maps. */
