@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -22,11 +22,13 @@ import {
 import { toast } from "sonner";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { useAppDispatch } from "@/store/hooks";
 import { loadRepos } from "@/store/reducers/reposReducer";
 import {
@@ -48,20 +50,17 @@ function QuickActionsCard() {
   const repos = useEnrichedRepos();
   const { commits: recentCommits } = useActivityCommits();
 
-  const [fetching, setFetching] = useState(false);
+  const fetchAll = useActionFeedback();
 
   const onFetchAll = async () => {
     if (!isTauri()) return;
-    setFetching(true);
     try {
-      const ok = await invoke<number>(TauriCommand.GIT_FETCH_ALL);
+      const ok = await fetchAll.run(() => invoke<number>(TauriCommand.GIT_FETCH_ALL));
       toast.success(t("dash.quick.fetched", { count: ok }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch {
       toast.error(t("dash.quick.fetch_all_error"));
-    } finally {
-      setFetching(false);
     }
   };
 
@@ -107,9 +106,13 @@ function QuickActionsCard() {
   return (
     <GeneralCard title={t("dash.quick.title")}>
       <Grid>
-        <QBtn type="button" onClick={() => void onFetchAll()} disabled={fetching}>
-          <RefreshCw size={14} />
-          <Box component="span">{fetching ? "…" : t("dash.quick.fetch_all")}</Box>
+        <QBtn
+          type="button"
+          onClick={() => void onFetchAll()}
+          disabled={fetchAll.state === "loading"}
+        >
+          <ActionFeedbackIcon state={fetchAll.state} fallback={<RefreshCw size={14} />} size={14} />
+          <Box component="span">{t("dash.quick.fetch_all")}</Box>
         </QBtn>
         <GeneralTooltip title={t("dash.quick.clone_tooltip")} placement="top">
           <QBtn type="button" onClick={onOpenImport} data-testid={TEST_IDS.dashboard.qa.clone}>

@@ -1,5 +1,7 @@
 # Phase 7 — UX-Feedback-Pattern — Implementation Plan
 
+> ✅ **Erledigt.** Hook + `feedbackState`-Props vorhanden; voller Sweep aller async Action-Buttons mit persistenter Fläche migriert (DetailPane, QuickActionsCard, RepoDetail, MrDetail/MrDetailPanel, Branches inkl. keyed Multi-Action-Feedback, Changes, CustomFontRow). Neuer Shared-Helper `ActionFeedbackIcon` für bespoke `styled("button")`-Trigger. Header-Refresh-Button: ≥2 Umdrehungen + echter Abruf, dann grünes Häkchen. Kontextmenüs bewusst auf Toast belassen. test:ts/lint/739 Tests grün, Dark-Mode-Playwright verifiziert.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Generisches `useActionFeedback`-Hook + `feedbackState`-Prop für `GeneralButton`/`GeneralIconButton`. Bestehende Reload-, Copy-, Save-, Pull/Fetch/Push-Buttons migrieren.

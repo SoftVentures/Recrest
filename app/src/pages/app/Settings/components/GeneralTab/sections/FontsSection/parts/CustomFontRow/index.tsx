@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
@@ -17,6 +15,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { fontCssFamily } from "@/lib/utils/appearance.utils";
 import { pickFontFile } from "@/lib/utils/pickFolder.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { SettingsRow } from "@/pages/app/Settings/components/SettingsPrimitives";
 import {
   deleteCustomFont,
@@ -65,19 +64,17 @@ export function CustomFontRow() {
   const customFonts = useAppSelector((s) => s.settings.customFonts);
   const font = useAppSelector((s) => s.settings.font);
   const codeFont = useAppSelector((s) => s.settings.codeFont);
-  const [busy, setBusy] = useState(false);
+  const upload = useActionFeedback();
 
   const onUpload = async () => {
     if (!isTauri()) return;
-    setBusy(true);
+    // Pick outside `run` so cancelling the dialog doesn't flash a success check.
+    const path = await pickFontFile();
+    if (!path) return;
     try {
-      const path = await pickFontFile();
-      if (!path) return;
-      await dispatch(uploadCustomFont(path)).unwrap();
+      await upload.run(() => dispatch(uploadCustomFont(path)).unwrap());
     } catch {
       toast.error(t("internal", { ns: I18nNamespace.ERRORS }));
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -103,7 +100,7 @@ export function CustomFontRow() {
         <GeneralButton
           variant="outline"
           onClick={() => void onUpload()}
-          loading={busy}
+          feedbackState={upload.state}
           disabled={!isTauri()}
           startIcon={<Upload size={14} />}
           data-testid={TEST_IDS.settings.general.customFontUpload}

@@ -42,6 +42,7 @@ export const TEST_IDS = {
 
   sidebar: {
     root: "sidebar",
+    brandHome: "sidebar-brand-home",
     foldBtn: "sidebar-fold-btn",
     navSettings: "nav-settings",
     nav: navTestId,
@@ -342,9 +343,7 @@ export const TEST_IDS = {
       fontOption: <T extends string>(id: T) => `settings-font-option-${id}` as const,
       codeFontSelect: "settings-code-font-select",
       codeFontOption: <T extends string>(id: T) => `settings-code-font-option-${id}` as const,
-      codeLigaturesSelect: "settings-code-ligatures-select",
-      codeLigaturesOption: <T extends string>(mode: T) =>
-        `settings-code-ligatures-option-${mode}` as const,
+      codeLigaturesSwitch: "settings-code-ligatures-switch",
       fontSizeSelect: "settings-font-size-select",
       customFontUpload: "settings-custom-font-upload",
       customFontDelete: <T extends string>(id: T) => `settings-custom-font-delete-${id}` as const,
@@ -378,8 +377,7 @@ export const TEST_IDS = {
 
     shortcuts: {
       navigation: "settings-shortcuts-navigation",
-      git: "settings-shortcuts-git",
-      editor: "settings-shortcuts-editor",
+      actions: "settings-shortcuts-actions",
     },
 
     storage: {

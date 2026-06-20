@@ -42,25 +42,21 @@ describe("FontsSection", () => {
     expect(store.getState().settings.codeFont).toBe("fira-code");
   });
 
-  it("renders the three ligature modes and dispatches a codeLigatures update", () => {
+  it("toggles code ligatures on and off via the switch", () => {
     const store = makeTestStore();
     renderWithProviders(<FontsSection />, { store });
 
-    openSelect(TEST_IDS.settings.general.codeLigaturesSelect);
+    // Default "standard" → switch reads as on.
+    expect(store.getState().settings.codeLigatures).toBe("standard");
+    const root = screen.getByTestId(TEST_IDS.settings.general.codeLigaturesSwitch);
+    const input = root.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(input.checked).toBe(true);
 
-    expect(
-      screen.getByTestId(TEST_IDS.settings.general.codeLigaturesOption("off")),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByTestId(TEST_IDS.settings.general.codeLigaturesOption("standard")),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByTestId(TEST_IDS.settings.general.codeLigaturesOption("stylistic")),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId(TEST_IDS.settings.general.codeLigaturesOption("off")));
-
+    fireEvent.click(input);
     expect(store.getState().settings.codeLigatures).toBe("off");
+
+    fireEvent.click(input);
+    expect(store.getState().settings.codeLigatures).toBe("standard");
   });
 
   it("renders the UI-font select with sans options that the code-font select omits", () => {

@@ -14,7 +14,8 @@
   "sidebar": {
     "primary": "Primary",
     "expand": "Expand sidebar",
-    "collapse": "Collapse sidebar"
+    "collapse": "Collapse sidebar",
+    "home": "Go to dashboard"
   },
   "header": {
     "search": "Search",

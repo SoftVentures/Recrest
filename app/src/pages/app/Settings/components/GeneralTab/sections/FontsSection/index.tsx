@@ -7,15 +7,13 @@ import {
   CUSTOM_FONT_PREFIX,
   type FontSelection,
   type FontSizeId,
-  LIGATURE_MODES,
-  LIGATURE_MODE_LABELS,
-  type LigatureMode,
   MONO_FONT_IDS,
   SANS_FONT_IDS,
 } from "@recrest/shared";
 
 import { AArrowDown, AArrowUp, ALargeSmall, Type } from "lucide-react";
 
+import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import {
@@ -35,7 +33,6 @@ import {
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-const LIGATURE_MODE_IDS: LigatureMode[] = [...LIGATURE_MODES];
 const FONT_SIZE_IDS: FontSizeId[] = ["sm", "md", "lg", "xl"];
 
 const FONT_SIZE_ICONS: Record<FontSizeId, typeof Type> = {
@@ -201,47 +198,12 @@ export function FontsSection() {
         label={t("settings.fields.code_ligatures")}
         sub={t("settings.fields.code_ligatures_sub")}
       >
-        <FontSelect
-          size="small"
-          value={codeLigatures}
-          onChange={(e: SelectChangeEvent<unknown>) =>
-            dispatch(setCodeLigatures(e.target.value as LigatureMode))
-          }
-          slotProps={{ input: { "aria-label": t("settings.fields.code_ligatures") } }}
-          data-testid={TEST_IDS.settings.general.codeLigaturesSelect}
-          renderValue={(value) => {
-            const mode = value as LigatureMode;
-            return (
-              <Box
-                component="span"
-                style={{
-                  fontFamily: fontCssFamily(codeFont, "mono"),
-                  fontFeatureSettings: codeLigatureFeatureSettings(mode),
-                }}
-              >
-                {LIGATURE_MODE_LABELS[mode]}
-              </Box>
-            );
-          }}
-        >
-          {LIGATURE_MODE_IDS.map((mode) => (
-            <MenuItem
-              key={mode}
-              value={mode}
-              data-testid={TEST_IDS.settings.general.codeLigaturesOption(mode)}
-            >
-              <Box
-                component="span"
-                style={{
-                  fontFamily: fontCssFamily(codeFont, "mono"),
-                  fontFeatureSettings: codeLigatureFeatureSettings(mode),
-                }}
-              >
-                {LIGATURE_MODE_LABELS[mode]} &nbsp; =&gt; != &gt;= -&gt; ===
-              </Box>
-            </MenuItem>
-          ))}
-        </FontSelect>
+        <GeneralSwitchInput
+          checked={codeLigatures !== "off"}
+          onCheckedChange={(next) => dispatch(setCodeLigatures(next ? "standard" : "off"))}
+          aria-label={t("settings.fields.code_ligatures")}
+          data-testid={TEST_IDS.settings.general.codeLigaturesSwitch}
+        />
       </SettingsRow>
 
       <CustomFontRow />

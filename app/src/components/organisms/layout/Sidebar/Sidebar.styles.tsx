@@ -52,6 +52,23 @@ export const BrandRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 })) as typeof Box;
 
+export const BrandLink = styled(NavLink)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing(1),
+  textDecoration: "none",
+  color: "inherit",
+  padding: theme.spacing(0.5),
+  borderRadius: 8,
+  transition: "background-color 120ms ease",
+  "&:hover": { backgroundColor: theme.palette.surface.interface.active },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 2,
+  },
+}));
+
 export const BrandMark = styled(Logo, { shouldForwardProp: SHOULD_FORWARD })<CollapsibleProps>(
   ({ collapsed }) => ({
     width: collapsed ? 32 : 40,

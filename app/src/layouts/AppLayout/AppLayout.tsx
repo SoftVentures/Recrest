@@ -19,6 +19,7 @@ import { useActivityCommitsSync } from "@/hooks/useActivityCommits";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 import { useCustomFonts } from "@/hooks/useCustomFonts";
 import { useFaviconSync } from "@/hooks/useFaviconSync";
+import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
 import { useWindowChrome } from "@/hooks/usePlatform";
@@ -118,6 +119,7 @@ export function AppLayout() {
   useScrollbarWidth();
   usePrPolling();
   usePageSwipe();
+  useGlobalShortcuts();
   // Keying `PageTransition` on the current pathname makes React unmount the
   // previous route's tree and remount the next one — so the enter animation
   // re-fires on every navigation, not just on the initial app boot. Pages
@@ -141,20 +143,6 @@ export function AppLayout() {
       document.documentElement.style.removeProperty("--recrest-app-chrome-bottom");
     };
   }, [chromeHeight]);
-
-  // Cmd+Shift+F / Ctrl+Shift+F opens the cross-repo search. Plain Cmd+F stays
-  // free for the host browser's find-in-page (when running under `dev:web`).
-  useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.shiftKey && e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        dispatch(setFindDialogOpen(true));
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch]);
 
   return (
     <AppFrame data-testid={TEST_IDS.app}>

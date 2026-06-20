@@ -25,6 +25,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
@@ -45,6 +46,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import {
@@ -134,7 +136,10 @@ export default function RepoDetailPage() {
     [byRepo, repoId],
   );
 
-  const [busy, setBusy] = useState<null | "pull" | "push" | "fetch">(null);
+  const pull = useActionFeedback();
+  const push = useActionFeedback();
+  const fetch = useActionFeedback();
+  const busy = pull.state === "loading" || push.state === "loading" || fetch.state === "loading";
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
   const [commitDialogOpen, setCommitDialogOpen] = useState(false);
@@ -183,11 +188,10 @@ export default function RepoDetailPage() {
     [repo],
   );
 
-  const doFetch = useCallback(async () => {
+  const doFetch = async () => {
     if (!repo) return;
-    setBusy("fetch");
     try {
-      await invoke(TauriCommand.GIT_FETCH, { repoId: repo.id });
+      await fetch.run(() => invoke(TauriCommand.GIT_FETCH, { repoId: repo.id }));
       toast.success(t("detail.toast_fetched", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -196,16 +200,13 @@ export default function RepoDetailPage() {
         (err as { message?: string })?.message ??
           t("detail.toast_fetch_failed", { ns: I18nNamespace.REPOS }),
       );
-    } finally {
-      setBusy(null);
     }
-  }, [dispatch, repo, t]);
+  };
 
-  const doPull = useCallback(async () => {
+  const doPull = async () => {
     if (!repo) return;
-    setBusy("pull");
     try {
-      await invoke(TauriCommand.GIT_PULL, { repoId: repo.id });
+      await pull.run(() => invoke(TauriCommand.GIT_PULL, { repoId: repo.id }));
       toast.success(t("detail.toast_pulled", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -214,16 +215,13 @@ export default function RepoDetailPage() {
         (err as { message?: string })?.message ??
           t("detail.toast_pull_failed", { ns: I18nNamespace.REPOS }),
       );
-    } finally {
-      setBusy(null);
     }
-  }, [dispatch, repo, t]);
+  };
 
-  const doPush = useCallback(async () => {
+  const doPush = async () => {
     if (!repo) return;
-    setBusy("push");
     try {
-      await invoke(TauriCommand.GIT_PUSH, { repoId: repo.id });
+      await push.run(() => invoke(TauriCommand.GIT_PUSH, { repoId: repo.id }));
       toast.success(t("detail.toast_pushed", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -232,10 +230,8 @@ export default function RepoDetailPage() {
         (err as { message?: string })?.message ??
           t("detail.toast_push_failed", { ns: I18nNamespace.REPOS }),
       );
-    } finally {
-      setBusy(null);
     }
-  }, [dispatch, repo, t]);
+  };
 
   if (!repo) {
     return (
@@ -497,23 +493,21 @@ export default function RepoDetailPage() {
                 <KeyRound size={14} />
               </IconOnlyBtn>
             </GeneralTooltip>
-            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
-              <ArrowDown size={13} />
-              {busy === "pull"
-                ? t("detail.pulling", { ns: I18nNamespace.REPOS })
-                : t("detail.pull", { ns: I18nNamespace.REPOS })}
+            <SecondaryBtn type="button" disabled={busy} onClick={() => void doPull()}>
+              <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={13} />} size={13} />
+              {t("detail.pull", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
-            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPush()}>
-              <ArrowUp size={13} />
-              {busy === "push"
-                ? t("detail.pushing", { ns: I18nNamespace.REPOS })
-                : t("detail.push", { ns: I18nNamespace.REPOS })}
+            <SecondaryBtn type="button" disabled={busy} onClick={() => void doPush()}>
+              <ActionFeedbackIcon state={push.state} fallback={<ArrowUp size={13} />} size={13} />
+              {t("detail.push", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
-            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doFetch()}>
-              <RefreshCw size={13} />
-              {busy === "fetch"
-                ? t("detail.fetching", { ns: I18nNamespace.REPOS })
-                : t("detail.fetch", { ns: I18nNamespace.REPOS })}
+            <SecondaryBtn type="button" disabled={busy} onClick={() => void doFetch()}>
+              <ActionFeedbackIcon
+                state={fetch.state}
+                fallback={<RefreshCw size={13} />}
+                size={13}
+              />
+              {t("detail.fetch", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" onClick={() => setBranchDialogOpen(true)}>
               <Plus size={13} />

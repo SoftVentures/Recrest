@@ -2,7 +2,7 @@
   <title>Recrest</title>
   <desc>Recrest app icon — dark tile, Apple icon grid (824 tile inside 1024 canvas, 100px transparent margin, rx ≈ 185).</desc>
   <g transform="translate(100 100) scale(0.8046875)">
-    <rect width="1024" height="1024" rx="230" fill="#0F1115"/>
+    <rect width="1024" height="1024" rx="230" fill="#23262E"/>
     <g transform="translate(288 352)" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="52">
       <path d="M0 200 L224 0 L448 200"/>
       <path d="M0 320 L224 120 L448 320" opacity="0.5"/>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
 import { useBranchesByRepo } from "@/hooks/useBranchesByRepo";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
@@ -38,6 +39,11 @@ import {
   matchSearchFilter,
   matchTrackingFilter,
 } from "@/lib/utils/branchFilters.utils";
+import {
+  ACTION_FEEDBACK_MIN_LOADING_MS,
+  ACTION_FEEDBACK_REVERT_MS,
+  type ActionFeedbackState,
+} from "@/lib/utils/useActionFeedback";
 import BranchesSkeleton from "@/pages/app/Branches/parts/BranchesSkeleton";
 import PopoverChip from "@/pages/app/Branches/parts/PopoverChip";
 import RepoGroup from "@/pages/app/Branches/parts/RepoGroup";
@@ -46,7 +52,6 @@ import {
   Empty,
   FilterItem,
   SectionLabel,
-  SpinIcon,
 } from "@/pages/app/Branches/parts/_shared";
 import { loadRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
@@ -157,27 +162,64 @@ export default function BranchesPage() {
   const [tracking, setTracking] = useState<TrackingFlag | null>(null);
   const [location, setLocation] = useState<LocationFlag | null>(null);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
+  // A single keyed feedback slot: one branch action runs at a time, tracked by
+  // its key through loading → success/error → idle (auto-revert). Living in the
+  // parent means the success check survives the post-action `reload()` remount.
+  const [feedback, setFeedback] = useState<{ key: string; state: ActionFeedbackState }>({
+    key: "",
+    state: "idle",
+  });
+  const revertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: byRepoAll, loading, reload } = useBranchesByRepo(repos);
 
-  const run = async (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => {
-    setBusyKey(key);
-    try {
-      await invoke(cmd, args);
-      toast.success(okMsg);
-      void dispatch(loadRepos());
-      reload();
-    } catch (err) {
-      const msg =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message?: unknown }).message)
-          : `${cmd} failed`;
-      toast.error(msg);
-    } finally {
-      setBusyKey(null);
-    }
-  };
+  useEffect(
+    () => () => {
+      if (revertTimer.current) clearTimeout(revertTimer.current);
+    },
+    [],
+  );
+
+  const run = useCallback(
+    async (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => {
+      if (revertTimer.current) clearTimeout(revertTimer.current);
+      setFeedback({ key, state: "loading" });
+      const start = performance.now();
+      const ensureMinLoading = async () => {
+        const remaining = ACTION_FEEDBACK_MIN_LOADING_MS - (performance.now() - start);
+        if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
+      };
+      try {
+        await invoke(cmd, args);
+        await ensureMinLoading();
+        toast.success(okMsg);
+        setFeedback({ key, state: "success" });
+        void dispatch(loadRepos());
+        reload();
+      } catch (err) {
+        await ensureMinLoading();
+        const msg =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : `${cmd} failed`;
+        toast.error(msg);
+        setFeedback({ key, state: "error" });
+      } finally {
+        // Guard on key identity: a slow action's orphaned revert timer must not
+        // idle-out a newer action's success/error that's still on screen.
+        revertTimer.current = setTimeout(
+          () => setFeedback((prev) => (prev.key === key ? { key: "", state: "idle" } : prev)),
+          ACTION_FEEDBACK_REVERT_MS,
+        );
+      }
+    },
+    [dispatch, reload],
+  );
+
+  const stateFor = useCallback(
+    (key: string): ActionFeedbackState => (feedback.key === key ? feedback.state : "idle"),
+    [feedback],
+  );
 
   const totals = useMemo(() => {
     let all = 0;
@@ -216,7 +258,7 @@ export default function BranchesPage() {
 
   const activeFilterCount = (tracking ? 1 : 0) + (location ? 1 : 0);
   const fetchAllKey = "__all__:fetch";
-  const fetchAllBusy = busyKey === fetchAllKey;
+  const fetchAllState = stateFor(fetchAllKey);
 
   return (
     <Root data-testid={TEST_IDS.branches.page}>
@@ -235,7 +277,7 @@ export default function BranchesPage() {
           />
           <FetchAllBtn
             type="button"
-            disabled={fetchAllBusy || repos.length === 0}
+            disabled={fetchAllState === "loading" || repos.length === 0}
             onClick={() =>
               void run(
                 fetchAllKey,
@@ -246,8 +288,12 @@ export default function BranchesPage() {
             }
             data-testid={TEST_IDS.branches.fetchAll}
           >
-            {fetchAllBusy ? <SpinIcon size={12} /> : <RefreshCw size={12} />}
-            {fetchAllBusy ? t("branches.actions.fetching") : t("branches.actions.fetch_all")}
+            <ActionFeedbackIcon
+              state={fetchAllState}
+              fallback={<RefreshCw size={12} />}
+              size={12}
+            />
+            {t("branches.actions.fetch_all")}
           </FetchAllBtn>
           <ToolbarBtn
             type="button"
@@ -347,7 +393,7 @@ export default function BranchesPage() {
             <Empty>{repos.length === 0 ? t("branches.no_repos") : t("branches.empty")}</Empty>
           ) : (
             byRepo.map((group) => (
-              <RepoGroup key={group.repo.id} group={group} busyKey={busyKey} run={run} t={t} />
+              <RepoGroup key={group.repo.id} group={group} stateFor={stateFor} run={run} t={t} />
             ))
           )}
         </Groups>

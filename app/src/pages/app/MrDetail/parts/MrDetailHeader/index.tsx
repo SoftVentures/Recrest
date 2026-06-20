@@ -11,11 +11,13 @@ import { Code, ExternalLink, GitBranch, GitMerge } from "lucide-react";
 import BrandIcon from "@/assets/icons/BrandIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import MrChip from "@/components/atoms/chips/MrChip";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import { ciFor } from "@/lib/constants/ciStates.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
 import {
   CiDot,
   CiPill,
@@ -42,7 +44,8 @@ interface Props {
   pr: PullRequest;
   repoName: string | null;
   effectiveTarget: string;
-  busy: "checkout" | "merge" | null;
+  checkoutState: ActionFeedbackState;
+  mergeState: ActionFeedbackState;
   targetChipRef: Ref<HTMLButtonElement>;
   onOpenTargetPopover: () => void;
   onOpenMergeModal: () => void;
@@ -54,7 +57,8 @@ export default function MrDetailHeader({
   pr,
   repoName,
   effectiveTarget,
-  busy,
+  checkoutState,
+  mergeState,
   targetChipRef,
   onOpenTargetPopover,
   onOpenMergeModal,
@@ -66,6 +70,7 @@ export default function MrDetailHeader({
   const ci = ciFor(pr.ciStatus);
   const hasChangeStats = pr.additions != null && pr.deletions != null;
   const dt = useDateTimeFormat();
+  const busy = checkoutState === "loading" || mergeState === "loading";
 
   return (
     <Header>
@@ -141,19 +146,15 @@ export default function MrDetailHeader({
         <PrimaryBtn
           type="button"
           onClick={onOpenMergeModal}
-          disabled={busy !== null || pr.draft}
+          disabled={busy || pr.draft}
           data-testid={TEST_IDS.mr.mergeBtn}
         >
-          <GitMerge size={13} />
-          <Box component="span">
-            {busy === "merge" ? tPrs("actions.merging") : tPrs("actions.merge")}
-          </Box>
+          <ActionFeedbackIcon state={mergeState} fallback={<GitMerge size={13} />} size={13} />
+          <Box component="span">{tPrs("actions.merge")}</Box>
         </PrimaryBtn>
-        <SecondaryBtn type="button" onClick={onCheckout} disabled={busy !== null}>
-          <Code size={13} />
-          <Box component="span">
-            {busy === "checkout" ? tPrs("actions.checkout_busy") : tPrs("actions.checkout")}
-          </Box>
+        <SecondaryBtn type="button" onClick={onCheckout} disabled={busy}>
+          <ActionFeedbackIcon state={checkoutState} fallback={<Code size={13} />} size={13} />
+          <Box component="span">{tPrs("actions.checkout")}</Box>
         </SecondaryBtn>
         <SecondaryBtn type="button" onClick={onOpenExternal}>
           {brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}

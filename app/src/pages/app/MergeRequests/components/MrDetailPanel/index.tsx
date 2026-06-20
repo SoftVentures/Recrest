@@ -15,6 +15,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import MrChip from "@/components/atoms/chips/MrChip";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import MergeMrModal, { type MergeMrSubmit } from "@/components/molecules/modals/MergeMrModal";
 import { ciFor } from "@/lib/constants/ciStates.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -22,6 +23,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
   ActionRow,
   Arrow,
@@ -80,7 +82,9 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
   const { t: tPrs } = useTranslation(I18nNamespace.PRS);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const [busy, setBusy] = useState<null | "checkout" | "merge">(null);
+  const checkout = useActionFeedback();
+  const merge = useActionFeedback();
+  const busy = checkout.state === "loading" || merge.state === "loading";
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const key = detailKey(repoId, pr.number);
   const detail = useAppSelector((s) => s.prs.detail[key]);
@@ -101,14 +105,13 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
 
   const onCheckout = async () => {
     if (!isTauri()) return;
-    setBusy("checkout");
     try {
-      await invoke(TauriCommand.GIT_CHECKOUT, { repoId, branch: pr.sourceBranch });
+      await checkout.run(() =>
+        invoke(TauriCommand.GIT_CHECKOUT, { repoId, branch: pr.sourceBranch }),
+      );
       toast.success(tPrs("checkout.success", { branch: pr.sourceBranch }));
     } catch {
       toast.error(tPrs("checkout.failed"));
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -126,70 +129,71 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
       toast.success(tPrs("detail.merge_modal.merged_ok"));
       return;
     }
-    setBusy("merge");
     try {
-      if (providerId) {
-        const { result } = await dispatch(
-          mergePr({
-            repoId,
-            prNumber: pr.number,
-            input: {
-              strategy: data.strategy,
-              commitTitle: data.title || null,
-              commitMessage: data.description || null,
-              deleteSourceBranch: data.deleteSourceBranch,
-            },
-          }),
-        ).unwrap();
-        toast.success(tPrs("detail.merge_modal.merged_ok"));
-        setMergeModalOpen(false);
-
-        const optimistic = repoPrs.map((p) =>
-          p.number === pr.number ? { ...p, state: "merged" as const } : p,
-        );
-        dispatch(setPrs({ repoId, prs: optimistic }));
-        void dispatch(loadPrDetail({ repoId, prNumber: pr.number }));
-        if (result.sourceBranchDeleted) {
-          toast.success(tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }));
-        }
-      } else {
-        const message = data.description.trim()
-          ? `${data.title}\n\n${data.description}`
-          : data.title;
-        await invoke(TauriCommand.GIT_MERGE, {
-          repoId,
-          source: pr.sourceBranch,
-          target: pr.targetBranch,
-          message,
-        });
-        toast.success(tPrs("detail.merge_modal.merged_ok"));
-        setMergeModalOpen(false);
-
-        if (data.deleteSourceBranch) {
-          try {
-            await invoke(TauriCommand.GIT_BRANCH_DELETE, {
+      await merge.run(async () => {
+        if (providerId) {
+          const { result } = await dispatch(
+            mergePr({
               repoId,
-              branch: pr.sourceBranch,
-            });
+              prNumber: pr.number,
+              input: {
+                strategy: data.strategy,
+                commitTitle: data.title || null,
+                commitMessage: data.description || null,
+                deleteSourceBranch: data.deleteSourceBranch,
+              },
+            }),
+          ).unwrap();
+          toast.success(tPrs("detail.merge_modal.merged_ok"));
+          setMergeModalOpen(false);
+
+          const optimistic = repoPrs.map((p) =>
+            p.number === pr.number ? { ...p, state: "merged" as const } : p,
+          );
+          dispatch(setPrs({ repoId, prs: optimistic }));
+          void dispatch(loadPrDetail({ repoId, prNumber: pr.number }));
+          if (result.sourceBranchDeleted) {
             toast.success(
               tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }),
             );
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            toast.error(
-              tPrs("detail.merge_modal.branch_delete_failed", {
-                source: pr.sourceBranch,
-                message: msg,
-              }),
-            );
+          }
+        } else {
+          const message = data.description.trim()
+            ? `${data.title}\n\n${data.description}`
+            : data.title;
+          await invoke(TauriCommand.GIT_MERGE, {
+            repoId,
+            source: pr.sourceBranch,
+            target: pr.targetBranch,
+            message,
+          });
+          toast.success(tPrs("detail.merge_modal.merged_ok"));
+          setMergeModalOpen(false);
+
+          if (data.deleteSourceBranch) {
+            try {
+              await invoke(TauriCommand.GIT_BRANCH_DELETE, {
+                repoId,
+                branch: pr.sourceBranch,
+              });
+              toast.success(
+                tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }),
+              );
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              toast.error(
+                tPrs("detail.merge_modal.branch_delete_failed", {
+                  source: pr.sourceBranch,
+                  message: msg,
+                }),
+              );
+            }
           }
         }
-      }
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(`${tPrs("detail.merge_modal.merge_failed")}: ${msg}`);
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -271,21 +275,13 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
         </HeaderTopRow>
 
         <ActionRow>
-          <PrimaryAction
-            type="button"
-            onClick={openMergeModal}
-            disabled={busy !== null || pr.draft}
-          >
-            <GitMerge size={13} />
-            <Box component="span">
-              {busy === "merge" ? tPrs("actions.merging") : tPrs("actions.merge")}
-            </Box>
+          <PrimaryAction type="button" onClick={openMergeModal} disabled={busy || pr.draft}>
+            <ActionFeedbackIcon state={merge.state} fallback={<GitMerge size={13} />} size={13} />
+            <Box component="span">{tPrs("actions.merge")}</Box>
           </PrimaryAction>
-          <GhostBtn type="button" onClick={() => void onCheckout()} disabled={busy !== null}>
-            <Code size={13} />
-            <Box component="span">
-              {busy === "checkout" ? tPrs("actions.checkout_busy") : tPrs("actions.checkout")}
-            </Box>
+          <GhostBtn type="button" onClick={() => void onCheckout()} disabled={busy}>
+            <ActionFeedbackIcon state={checkout.state} fallback={<Code size={13} />} size={13} />
+            <Box component="span">{tPrs("actions.checkout")}</Box>
           </GhostBtn>
         </ActionRow>
       </Header>
@@ -429,7 +425,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
         prBody={detail?.body ?? null}
         sourceBranch={pr.sourceBranch}
         targetBranch={pr.targetBranch}
-        busy={busy === "merge"}
+        busy={merge.state === "loading"}
         providerId={providerId}
         onCancel={() => setMergeModalOpen(false)}
         onConfirm={onConfirmMerge}

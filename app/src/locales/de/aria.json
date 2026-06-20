@@ -14,7 +14,8 @@
   "sidebar": {
     "primary": "Hauptnavigation",
     "expand": "Seitenleiste ausklappen",
-    "collapse": "Seitenleiste einklappen"
+    "collapse": "Seitenleiste einklappen",
+    "home": "Zum Dashboard"
   },
   "header": {
     "search": "Suche",

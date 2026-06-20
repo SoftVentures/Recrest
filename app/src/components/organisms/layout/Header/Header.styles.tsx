@@ -3,6 +3,10 @@ import { styled } from "@mui/material/styles";
 
 import KbdAtom from "@/components/atoms/inputs/Kbd";
 
+/** One full rotation of the refresh glyph. Shared so the min-spin guard in the
+ *  Header can require a whole number of rotations before showing the result. */
+export const HEADER_REFRESH_SPIN_MS = 900;
+
 export const TopBar = styled(Box)(({ theme }) => ({
   display: "flex",
   flexWrap: "nowrap",
@@ -190,7 +194,7 @@ export const RefreshButton = styled("button", { shouldForwardProp: (p) => p !== 
   "& svg": {
     transition: "transform 0.2s ease",
     ...(spinning && {
-      animation: "headerRefreshSpin 0.9s linear infinite",
+      animation: `headerRefreshSpin ${HEADER_REFRESH_SPIN_MS}ms linear infinite`,
     }),
   },
   "@keyframes headerRefreshSpin": {

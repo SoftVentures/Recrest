@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 
 import Kbd, { KbdSize } from "@/components/atoms/inputs/Kbd";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
+import { SHORTCUTS, SHORTCUT_GROUP, type ShortcutGroup } from "@/lib/constants/shortcuts.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 
@@ -13,85 +14,44 @@ const Keys = styled(Box)({
   gap: 4,
 }) as typeof Box;
 
-interface Row {
-  label: string;
-  keys: string[];
-}
+const SECTIONS: { group: ShortcutGroup; titleKey: string; testId: string }[] = [
+  {
+    group: SHORTCUT_GROUP.NAVIGATION,
+    titleKey: "settings.shortcuts.navigation",
+    testId: TEST_IDS.settings.shortcuts.navigation,
+  },
+  {
+    group: SHORTCUT_GROUP.ACTIONS,
+    titleKey: "settings.shortcuts.actions",
+    testId: TEST_IDS.settings.shortcuts.actions,
+  },
+];
 
 export function ShortcutsSection() {
   const { t } = useTranslation();
   const platform = usePlatform();
-  const fmt = (k: Parameters<typeof formatShortcut>[1]) => formatShortcut(platform, k);
-
-  const navigation: Row[] = [
-    { label: t("settings.shortcuts.jump"), keys: [fmt({ mod: true, key: "K" })] },
-    { label: t("settings.shortcuts.next_prev_repo"), keys: ["↓", "↑"] },
-    { label: t("settings.shortcuts.toggle_detail"), keys: [fmt({ mod: true, key: "]" })] },
-  ];
-
-  const gitOps: Row[] = [
-    { label: t("settings.shortcuts.pull"), keys: [fmt({ mod: true, shift: true, key: "P" })] },
-    { label: t("settings.shortcuts.fetch_all"), keys: [fmt({ mod: true, key: "F" })] },
-  ];
-
-  const editorOps: Row[] = [
-    { label: t("settings.shortcuts.open_editor"), keys: [fmt({ mod: true, key: "↵" })] },
-    { label: t("settings.shortcuts.open_terminal"), keys: [fmt({ mod: true, key: "T" })] },
-    {
-      label: t("settings.shortcuts.open_settings"),
-      keys: [fmt({ mod: true, key: "," })],
-    },
-  ];
 
   return (
     <>
-      <SettingsSection
-        title={t("settings.shortcuts.navigation")}
-        testId={TEST_IDS.settings.shortcuts.navigation}
-      >
-        {navigation.map((r) => (
-          <SettingsRow key={r.label} label={r.label}>
-            <Keys>
-              {r.keys.map((k, i) => (
-                <Kbd size={KbdSize.MD} key={i}>
-                  {k}
-                </Kbd>
-              ))}
-            </Keys>
-          </SettingsRow>
-        ))}
-      </SettingsSection>
-
-      <SettingsSection title={t("settings.shortcuts.git")} testId={TEST_IDS.settings.shortcuts.git}>
-        {gitOps.map((r) => (
-          <SettingsRow key={r.label} label={r.label}>
-            <Keys>
-              {r.keys.map((k, i) => (
-                <Kbd size={KbdSize.MD} key={i}>
-                  {k}
-                </Kbd>
-              ))}
-            </Keys>
-          </SettingsRow>
-        ))}
-      </SettingsSection>
-
-      <SettingsSection
-        title={t("settings.shortcuts.editor")}
-        testId={TEST_IDS.settings.shortcuts.editor}
-      >
-        {editorOps.map((r) => (
-          <SettingsRow key={r.label} label={r.label}>
-            <Keys>
-              {r.keys.map((k, i) => (
-                <Kbd size={KbdSize.MD} key={i}>
-                  {k}
-                </Kbd>
-              ))}
-            </Keys>
-          </SettingsRow>
-        ))}
-      </SettingsSection>
+      {SECTIONS.map((section) => (
+        <SettingsSection key={section.group} title={t(section.titleKey)} testId={section.testId}>
+          {SHORTCUTS.filter((s) => s.group === section.group).map((s) => {
+            // Single letters read better capitalised on the keycap; digits and
+            // punctuation are unaffected by toUpperCase().
+            const combo = formatShortcut(platform, {
+              ...s.combo,
+              key: s.combo.key.toUpperCase(),
+            });
+            return (
+              <SettingsRow key={s.id} label={t(s.labelKey)}>
+                <Keys>
+                  <Kbd size={KbdSize.MD}>{combo}</Kbd>
+                </Keys>
+              </SettingsRow>
+            );
+          })}
+        </SettingsSection>
+      ))}
     </>
   );
 }

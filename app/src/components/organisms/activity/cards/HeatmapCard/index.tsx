@@ -30,7 +30,10 @@ export interface Props {
  *  week-start preference. */
 const WEEKDAYS_MON_FIRST = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
 const WEEKDAYS_SUN_FIRST = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
+// Nivo only draws ticks at data columns (hours 0..23), so the end-of-day
+// marker is an overlay pinned to the plot's right edge (see HourEndCap).
 const AXIS_HOURS = ["0", "6", "12", "18"];
+const HOURS_IN_DAY = 24;
 
 function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
@@ -118,6 +121,7 @@ function HeatmapCard({ matrix, loading }: Props) {
           }
           onMouseLeave={hide}
         />
+        <HourEndCap component="span">{HOURS_IN_DAY}</HourEndCap>
         {portal}
       </Grid>
     </GeneralCard>
@@ -129,7 +133,21 @@ export default memo(HeatmapCard);
 
 const Grid = styled(Box)({
   height: 180,
+  position: "relative",
 });
+
+// "24" end-of-day cap aligned to the heatmap's right plot edge (chart right
+// margin is 4px) and to the bottom axis band (margin 20px), matching the nivo
+// hour-tick typography so it reads as the final tick after 18.
+const HourEndCap = styled(Box)(({ theme }) => ({
+  position: "absolute",
+  right: 0,
+  bottom: 2,
+  fontSize: 11,
+  lineHeight: 1,
+  color: theme.palette.text.information,
+  pointerEvents: "none",
+})) as typeof Box;
 
 // TODO(next-pass): unify with parts/ChartTooltip
 const Tooltip = styled(Box)(({ theme }) => ({

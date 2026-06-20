@@ -35,6 +35,7 @@ import GeneralIconButton, {
   IconButtonSize,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
@@ -47,6 +48,7 @@ import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
   BranchCard,
   BranchChip,
@@ -115,7 +117,9 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const openPrs = useMemo(() => prs.filter((p) => p.state === PrState.OPEN), [prs]);
   const brand = brandFromUrl(repo.remoteUrl);
   const openHost = useOpenHost(repo.remoteUrl);
-  const [busy, setBusy] = useState<TauriCommandName | null>(null);
+  const pull = useActionFeedback();
+  const fetch = useActionFeedback();
+  const busy = pull.state === "loading" || fetch.state === "loading";
   const [createOpen, setCreateOpen] = useState(false);
 
   const run = async (cmd: TauriCommandName, label: string) => {
@@ -127,16 +131,18 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     }
   };
 
-  const runGit = async (cmd: TauriCommandName, successKey: string, failKey: string) => {
+  const runGit = async (
+    fb: ReturnType<typeof useActionFeedback>,
+    cmd: TauriCommandName,
+    successKey: string,
+    failKey: string,
+  ) => {
     if (!isTauri() || busy) return;
-    setBusy(cmd);
     try {
-      await invoke(cmd, { repoId: repo.id });
+      await fb.run(() => invoke(cmd, { repoId: repo.id }));
       toast.success(t(successKey));
     } catch {
       toast.error(t(failKey));
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -219,25 +225,33 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
         <BranchQuick>
           <GhostBtn
             type="button"
-            disabled={busy !== null}
+            disabled={busy}
             onClick={() =>
-              void runGit(TauriCommand.GIT_PULL, "detail.toast_pulled", "detail.toast_pull_failed")
+              void runGit(
+                pull,
+                TauriCommand.GIT_PULL,
+                "detail.toast_pulled",
+                "detail.toast_pull_failed",
+              )
             }
           >
-            <ArrowDown size={11} /> {t("detail_pane.pull")}
+            <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={11} />} size={11} />{" "}
+            {t("detail_pane.pull")}
           </GhostBtn>
           <GhostBtn
             type="button"
-            disabled={busy !== null}
+            disabled={busy}
             onClick={() =>
               void runGit(
+                fetch,
                 TauriCommand.GIT_FETCH,
                 "detail.toast_fetched",
                 "detail.toast_fetch_failed",
               )
             }
           >
-            <RefreshCw size={11} /> {t("detail_pane.fetch")}
+            <ActionFeedbackIcon state={fetch.state} fallback={<RefreshCw size={11} />} size={11} />{" "}
+            {t("detail_pane.fetch")}
           </GhostBtn>
           <GhostBtn type="button" onClick={() => setCreateOpen(true)}>
             <Plus size={11} /> {t("detail_pane.branch")}

@@ -7,30 +7,32 @@ import { styled } from "@mui/material/styles";
 
 import { type BranchInfo, TauriCommand } from "@recrest/shared";
 
-import { GitBranch as BranchIcon, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GitBranch as BranchIcon, Trash2 } from "lucide-react";
 
 import GeneralIconButton, {
   IconButtonSize,
   IconButtonTone,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import BranchFilterChip from "@/components/atoms/chips/BranchFilterChip";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import IconSlot from "@/components/atoms/layout/IconSlot";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
 import DeleteBranchDialog from "@/pages/app/Branches/parts/DeleteBranchDialog";
 
 export interface BranchRowItemProps {
   repo: EnrichedRepo;
   branch: BranchInfo;
-  busyKey: string | null;
+  stateFor: (key: string) => ActionFeedbackState;
   run: (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => Promise<void>;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }
 
-export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowItemProps) {
+export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowItemProps) {
   const { t: tRepos } = useTranslation(I18nNamespace.REPOS);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const keyPrefix = `${repo.id}:${b.isRemote ? `${b.remote}/${b.name}` : b.name}`;
@@ -44,9 +46,9 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
   const checkoutKey = `${keyPrefix}:checkout`;
   const pullKey = `${keyPrefix}:pull`;
   const pushKey = `${keyPrefix}:push`;
-  const isCheckoutBusy = busyKey === checkoutKey;
-  const isPullBusy = busyKey === pullKey;
-  const isPushBusy = busyKey === pushKey;
+  const checkoutState = stateFor(checkoutKey);
+  const pullState = stateFor(pullKey);
+  const pushState = stateFor(pushKey);
 
   return (
     <Row>
@@ -85,7 +87,7 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="ghost"
-              disabled={isPullBusy}
+              disabled={pullState === "loading"}
               onClick={() =>
                 void run(
                   pullKey,
@@ -95,6 +97,11 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
                 )
               }
             >
+              <ActionFeedbackIcon
+                state={pullState}
+                fallback={<ArrowDown size={11} aria-hidden />}
+                size={11}
+              />
               {t("branches.actions.pull")}
             </RowBtn>
           )}
@@ -102,7 +109,7 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="ghost"
-              disabled={isPushBusy}
+              disabled={pushState === "loading"}
               onClick={() =>
                 void run(
                   pushKey,
@@ -112,6 +119,11 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
                 )
               }
             >
+              <ActionFeedbackIcon
+                state={pushState}
+                fallback={<ArrowUp size={11} aria-hidden />}
+                size={11}
+              />
               {t("branches.actions.push")}
             </RowBtn>
           )}
@@ -119,7 +131,7 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="primary"
-              disabled={isCheckoutBusy}
+              disabled={checkoutState === "loading"}
               data-testid={TEST_IDS.branches.checkout}
               onClick={() =>
                 void run(
@@ -130,7 +142,11 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
                 )
               }
             >
-              <BranchIcon size={10} aria-hidden />
+              <ActionFeedbackIcon
+                state={checkoutState}
+                fallback={<BranchIcon size={10} aria-hidden />}
+                size={10}
+              />
               {t("branches.actions.checkout")}
             </RowBtn>
           )}
@@ -148,7 +164,7 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="primary"
-              disabled={isCheckoutBusy}
+              disabled={checkoutState === "loading"}
               data-testid={TEST_IDS.branches.checkoutRemote}
               onClick={() =>
                 void run(
@@ -159,7 +175,11 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
                 )
               }
             >
-              <BranchIcon size={10} aria-hidden />
+              <ActionFeedbackIcon
+                state={checkoutState}
+                fallback={<BranchIcon size={10} aria-hidden />}
+                size={10}
+              />
               {t("branches.actions.checkout_remote")}
             </RowBtn>
           )}

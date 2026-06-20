@@ -34,13 +34,21 @@ import { type SearchResult, useSearchResults } from "@/hooks/useSearch";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { SearchKind } from "@/lib/constants/searchKinds.constants";
+import { SHORTCUTS, SHORTCUT_ID } from "@/lib/constants/shortcuts.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
+// Read the search combo from the shortcut registry so the footer hint can
+// never drift from the real ⌘K binding in useGlobalShortcuts.
+const SEARCH_COMBO = SHORTCUTS.find((s) => s.id === SHORTCUT_ID.SEARCH)?.combo;
+
 function OverallSearch() {
   const { t } = useTranslation();
   const platform = usePlatform();
+  const searchHint = SEARCH_COMBO
+    ? formatShortcut(platform, { ...SEARCH_COMBO, key: SEARCH_COMBO.key.toUpperCase() })
+    : "";
   const open = useAppSelector((s) => s.ui.searchOpen);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -91,20 +99,16 @@ function OverallSearch() {
     if (cursor >= results.length) setCursor(Math.max(0, results.length - 1));
   }, [cursor, results.length]);
 
+  // ⌘K/Ctrl+K (open) is bound centrally in useGlobalShortcuts; here we only
+  // close on Escape while the palette is open.
   useEffect(() => {
+    if (!open) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
-      const isOpen = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
-      if (isOpen) {
-        e.preventDefault();
-        dispatch(setSearchOpen(true));
-      }
-      if (e.key === KEYBOARD_KEYS.ESCAPE) {
-        dispatch(setSearchOpen(false));
-      }
+      if (e.key === KEYBOARD_KEYS.ESCAPE) dispatch(setSearchOpen(false));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch]);
+  }, [dispatch, open]);
 
   if (!open) return null;
 
@@ -205,7 +209,7 @@ function OverallSearch() {
             />
           )}
           <Kbds>
-            <Kbd>{formatShortcut(platform, { mod: true, key: KEYBOARD_KEYS.K })}</Kbd>
+            <Kbd>{searchHint}</Kbd>
             <Kbd>{KEYBOARD_KEYS.ESCAPE}</Kbd>
           </Kbds>
         </Head>
