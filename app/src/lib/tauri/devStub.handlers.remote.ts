@@ -43,7 +43,14 @@ export function remoteStub(cmd: string, a: Args, state: DevStubState): unknown |
       return undefined;
 
     case "list_providers":
-      return Object.values(seed.providers || {});
+      // Mirror the Rust debug behaviour (`oauth_visible`): any dev/demo build
+      // always surfaces the "Connect via browser" affordance so the simulated
+      // OAuth handshake is reachable. Only matters for disconnected providers
+      // (connected rows show "Disconnect" regardless).
+      return Object.values(seed.providers || {}).map((c) => ({
+        ...(c as Record<string, unknown>),
+        supportsOauth: true,
+      }));
 
     case "set_provider_token":
     case "set_provider_base_url":

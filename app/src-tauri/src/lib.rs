@@ -924,7 +924,7 @@ pub fn run() {
                         if s.starts_with(&callback_prefix) {
                             let _ = tauri::Emitter::emit(
                                 &deep_handle,
-                                "oauth://callback",
+                                commands::oauth::OAUTH_CALLBACK_EVENT,
                                 serde_json::json!({ "url": s }),
                             );
                         }

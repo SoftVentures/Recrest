@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -37,6 +37,7 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
 import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useOpenHost } from "@/hooks/useOpenHost";
@@ -114,6 +115,8 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const openPrs = useMemo(() => prs.filter((p) => p.state === PrState.OPEN), [prs]);
   const brand = brandFromUrl(repo.remoteUrl);
   const openHost = useOpenHost(repo.remoteUrl);
+  const [busy, setBusy] = useState<TauriCommandName | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const run = async (cmd: TauriCommandName, label: string) => {
     if (!isTauri()) return;
@@ -121,6 +124,19 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
       await invoke(cmd, { repoId: repo.id });
     } catch {
       toast.error(t("row_actions.toast_command_failed", { label }));
+    }
+  };
+
+  const runGit = async (cmd: TauriCommandName, successKey: string, failKey: string) => {
+    if (!isTauri() || busy) return;
+    setBusy(cmd);
+    try {
+      await invoke(cmd, { repoId: repo.id });
+      toast.success(t(successKey));
+    } catch {
+      toast.error(t(failKey));
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -201,13 +217,29 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           />
         </BranchTop>
         <BranchQuick>
-          <GhostBtn type="button">
+          <GhostBtn
+            type="button"
+            disabled={busy !== null}
+            onClick={() =>
+              void runGit(TauriCommand.GIT_PULL, "detail.toast_pulled", "detail.toast_pull_failed")
+            }
+          >
             <ArrowDown size={11} /> {t("detail_pane.pull")}
           </GhostBtn>
-          <GhostBtn type="button">
+          <GhostBtn
+            type="button"
+            disabled={busy !== null}
+            onClick={() =>
+              void runGit(
+                TauriCommand.GIT_FETCH,
+                "detail.toast_fetched",
+                "detail.toast_fetch_failed",
+              )
+            }
+          >
             <RefreshCw size={11} /> {t("detail_pane.fetch")}
           </GhostBtn>
-          <GhostBtn type="button">
+          <GhostBtn type="button" onClick={() => setCreateOpen(true)}>
             <Plus size={11} /> {t("detail_pane.branch")}
           </GhostBtn>
         </BranchQuick>
@@ -276,6 +308,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
         </FullView>
       </Footer>
       {openHost.modal}
+      <CreateBranchDialog open={createOpen} repoId={repo.id} onClose={() => setCreateOpen(false)} />
     </Pane>
   );
 }

@@ -6,6 +6,14 @@ use crate::AppState;
 use super::error::{CommandError, ProviderVerifyError};
 use crate::providers::verify::VerifiedAccount;
 
+/// Whether the Accounts UI should surface the "Connect via browser" affordance.
+/// Real client credentials gate it in release; debug builds always surface it so
+/// the simulated handshake in `oauth::begin_oauth`/`complete_oauth` is reachable
+/// for UI/flow testing without baked-in OAuth apps.
+const fn oauth_visible(real_support: bool) -> bool {
+    real_support || cfg!(debug_assertions)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderConnectionDto {
@@ -34,7 +42,7 @@ pub async fn list_providers(
             display_name: provider.display_name().to_string(),
             connected,
             username: provider.username().await.ok().flatten(),
-            supports_oauth: provider.supports_oauth(),
+            supports_oauth: oauth_visible(provider.supports_oauth()),
             base_url: provider.base_url().await,
         });
     }
@@ -58,7 +66,7 @@ pub async fn set_provider_token(
         display_name: provider.display_name().to_string(),
         connected: true,
         username,
-        supports_oauth: provider.supports_oauth(),
+        supports_oauth: oauth_visible(provider.supports_oauth()),
         base_url: provider.base_url().await,
     })
 }
@@ -103,7 +111,7 @@ pub async fn set_provider_base_url(
         display_name: provider.display_name().to_string(),
         connected,
         username: provider.username().await.ok().flatten(),
-        supports_oauth: provider.supports_oauth(),
+        supports_oauth: oauth_visible(provider.supports_oauth()),
         base_url: provider.base_url().await,
     })
 }

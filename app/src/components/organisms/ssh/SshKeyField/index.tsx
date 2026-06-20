@@ -151,7 +151,12 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
         })}
 
         {isCustom && (
-          <Option type="button" selected data-testid={TEST_IDS.ssh.option("custom")}>
+          <Option
+            type="button"
+            selected
+            data-testid={TEST_IDS.ssh.option("custom")}
+            onClick={() => void browse()}
+          >
             <OptionIcon>
               <KeyRound size={15} />
             </OptionIcon>

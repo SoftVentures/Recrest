@@ -119,7 +119,7 @@ function installStub(seed: Required_<AppSeed>): void {
         (c, a) => gitConfigStub(c, a, state),
         (c, a) => remoteStub(c, a, state),
         (c, a) => prDetailStub(c, a, state),
-        (c, a) => systemStub(c, a, state),
+        (c, a) => systemStub(c, a, state, reposCtx),
         (c, a) => pluginStub(c, a, pluginCtx),
       ];
     for (const h of handlers) {

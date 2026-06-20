@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { isTauri, openFolderInSystem } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 
@@ -139,7 +140,14 @@ export function PathRow({ label, path }: PathRowProps) {
         >
           {t("developer.build.copy")}
         </GeneralButton>
-        <GeneralButton size="sm" variant="outline" disabled={!path}>
+        <GeneralButton
+          size="sm"
+          variant="outline"
+          disabled={!path || !isTauri()}
+          onClick={() => {
+            if (path) void openFolderInSystem(path);
+          }}
+        >
           {t("developer.build.open")}
         </GeneralButton>
       </ButtonRow>

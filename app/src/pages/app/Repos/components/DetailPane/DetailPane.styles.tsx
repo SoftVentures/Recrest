@@ -172,6 +172,12 @@ export const GhostBtn = styled("button")(({ theme }) => ({
     backgroundColor: theme.palette.surface.interface.active,
     borderColor: theme.palette.border.hover,
   },
+  "&:disabled": {
+    opacity: 0.55,
+    cursor: "default",
+    backgroundColor: theme.palette.background.paper,
+    borderColor: theme.palette.divider,
+  },
 }));
 
 export const Section = styled(Box)(({ theme }) => ({

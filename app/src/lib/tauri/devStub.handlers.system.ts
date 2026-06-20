@@ -1,10 +1,15 @@
 // Dev:web stub handlers for settings, OAuth, window state, platform info,
 // notifications, updater hybrid + dev paths/build triple.
+import { OAUTH_CALLBACK_EVENT } from "@/lib/constants/events.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { UNHANDLED } from "@/lib/tauri/devStub.providers";
 import type { DevStubState } from "@/lib/tauri/devStub.state";
 
 type Args = Record<string, unknown>;
+
+interface SystemStubCtx {
+  emit: (event: string, payload: unknown) => void;
+}
 
 function detectPlatform(): "macos" | "linux" | "windows" {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
@@ -13,18 +18,46 @@ function detectPlatform(): "macos" | "linux" | "windows" {
   return "windows";
 }
 
-export function systemStub(cmd: string, a: Args, state: DevStubState): unknown | typeof UNHANDLED {
+export function systemStub(
+  cmd: string,
+  a: Args,
+  state: DevStubState,
+  ctx: SystemStubCtx,
+): unknown | typeof UNHANDLED {
   const seed = state.seed;
 
   switch (cmd) {
     case "notify":
       return undefined;
 
-    case "begin_oauth":
-      return { authorizationUrl: "about:blank", state: "stub" };
+    case "begin_oauth": {
+      // Simulate the browser round-trip: a moment after we "open the browser",
+      // the deep-link callback fires with an authorization code, exactly as the
+      // real `recrest://oauth/callback` redirect would. Lets the live demo run
+      // the full handshake without a real provider.
+      const oauthState = "stub-state";
+      setTimeout(() => {
+        ctx.emit(OAUTH_CALLBACK_EVENT, {
+          url: `recrest://oauth/callback?code=stub-code&state=${oauthState}`,
+        });
+      }, 400);
+      return { state: oauthState, supportsOauth: true };
+    }
 
-    case "complete_oauth":
+    case "complete_oauth": {
+      const providerId = String(a.providerId ?? "");
+      const providers = seed.providers as Record<string, Record<string, unknown>>;
+      const conn = providers[providerId];
+      if (conn) {
+        // Seed connection objects are frozen, so flip the pill by replacing the
+        // whole map (top-level `seed.*` is writable, mirroring `update_settings`).
+        seed.providers = {
+          ...providers,
+          [providerId]: { ...conn, connected: true, username: conn.username ?? "oauth-user" },
+        };
+      }
       return undefined;
+    }
 
     case "get_settings": {
       // Mirror prod persistence: overlay localStorage on top of the seed so a
