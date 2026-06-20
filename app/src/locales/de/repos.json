@@ -1,5 +1,12 @@
 {
   "title": "Repositories",
+  "connect_prompt": {
+    "title": "{{provider}} nicht verbunden",
+    "body": "Verbinde {{provider}} in den Einstellungen, damit Pull Requests, CI und Deployments hier auftauchen. Die Repo-Seite kannst du aber auch direkt im Browser öffnen.",
+    "connect": "{{provider}} verbinden",
+    "proceed": "Trotzdem öffnen",
+    "cancel": "Abbrechen"
+  },
   "actions": {
     "open_terminal_tooltip": "Terminal im Repository öffnen",
     "create_branch_tooltip": "Neuen Branch von HEAD erstellen",
@@ -250,7 +257,8 @@
   "detail_pane": {
     "open_in_terminal": "Im Terminal öffnen",
     "open_in_explorer": "Im Explorer öffnen",
-    "open_on_host": "Beim Host öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
     "pull": "Pull",
     "fetch": "Fetch",
     "branch": "Branch",
@@ -263,7 +271,8 @@
   },
   "row_actions": {
     "open_in_terminal": "Im Terminal öffnen",
-    "open_on_host": "Beim Host öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
     "no_remote": "Kein Remote konfiguriert",
     "open_in_explorer": "Im Explorer öffnen",
     "more": "Mehr",

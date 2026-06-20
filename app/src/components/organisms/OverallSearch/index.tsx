@@ -154,9 +154,11 @@ function OverallSearch() {
           <RowLabel component="span" variant="caption">
             {r.label}
           </RowLabel>
-          <RowHint component="span" variant="caption" className="row-hint">
-            {r.hint}
-          </RowHint>
+          {r.hint && (
+            <RowHint component="span" variant="caption" className="row-hint">
+              {r.hint}
+            </RowHint>
+          )}
         </Row>
       </Box>
     );

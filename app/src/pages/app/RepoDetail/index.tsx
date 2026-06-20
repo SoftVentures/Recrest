@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 
-import { AppRoute, PrState, type PullRequest, TauriCommand } from "@recrest/shared";
+import { AppRoute, PROVIDER_NAMES, PrState, type PullRequest, TauriCommand } from "@recrest/shared";
 
 import {
   ArrowDown,
@@ -40,9 +40,10 @@ import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
 import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
+import { invoke, isTauri, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
@@ -138,6 +139,11 @@ export default function RepoDetailPage() {
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
   const [commitDialogOpen, setCommitDialogOpen] = useState(false);
   const [sshOpen, setSshOpen] = useState(false);
+
+  const openHost = useOpenHost(repo?.remoteUrl ?? null);
+  const openHostLabel = openHost.provider
+    ? tAria("repo.open_on_provider", { provider: PROVIDER_NAMES[openHost.provider] })
+    : tAria("repo.open_on_host");
 
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
@@ -464,15 +470,18 @@ export default function RepoDetailPage() {
                 <Folder size={14} />
               </IconOnlyBtn>
             </GeneralTooltip>
-            <GeneralTooltip title={tAria("repo.open_on_host")}>
+            <GeneralTooltip
+              title={openHost.canOpen ? openHostLabel : tAria("repo.open_on_host_no_remote")}
+            >
               {/* span wrapper: a disabled <button> swallows pointer events, so
                   MUI needs an enabled element to anchor the tooltip on. */}
               <Box component="span">
                 <IconOnlyBtn
                   type="button"
-                  aria-label={tAria("repo.open_on_host")}
-                  disabled={!repo.remoteUrl}
-                  onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
+                  aria-label={openHostLabel}
+                  data-testid={TEST_IDS.repoDetail.openHost}
+                  disabled={!openHost.canOpen}
+                  onClick={openHost.open}
                 >
                   {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
                 </IconOnlyBtn>
@@ -563,6 +572,7 @@ export default function RepoDetailPage() {
         sshKeyPath={repo.sshKeyPath}
         onClose={() => setSshOpen(false)}
       />
+      {openHost.modal}
     </Root>
   );
 }

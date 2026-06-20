@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box, Divider, ListItemText, Menu, Typography } from "@mui/material";
+import { Box, Button, Divider, ListItemText, Menu, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { TauriCommand } from "@recrest/shared";
@@ -79,13 +79,13 @@ const Toolbar = styled(Box)({
   ...prefersReducedMotionGuard,
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-const ToolbarBtn = styled("button", {
+const ToolbarBtn = styled(Button, {
   shouldForwardProp: (p) => p !== "active",
 })<{ active?: boolean }>(({ theme, active }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
+  minWidth: 0,
   height: 32,
   padding: "0 12px",
   border: `1px solid ${theme.palette.divider}`,
@@ -94,6 +94,7 @@ const ToolbarBtn = styled("button", {
   borderRadius: 8,
   fontSize: 12,
   fontWeight: 500,
+  textTransform: "none",
   cursor: "pointer",
   fontFamily: "inherit",
   transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",

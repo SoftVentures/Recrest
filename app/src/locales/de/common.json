@@ -79,10 +79,15 @@
     "go_back": "Zurück",
     "confirm": "Bestätigen"
   },
+  "open_host": {
+    "failed_provider": "Öffnen in {{provider}} fehlgeschlagen",
+    "failed_generic": "Öffnen im Browser fehlgeschlagen"
+  },
   "context_menu": {
     "open_in_terminal": "Im Terminal öffnen",
     "open_in_explorer": "Im Explorer öffnen",
-    "open_on_host": "Auf Host öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
     "no_remote": "Kein Remote konfiguriert",
     "pin": "Anpinnen",
     "unpin": "Lösen",
@@ -369,7 +374,7 @@
       "reviewers": "Reviewer",
       "files": "Dateien",
       "timeline": "Timeline",
-      "open_on_host": "Auf Host öffnen"
+      "open_on_host": "Im Browser öffnen"
     },
     "filter_placeholder": "Merge Requests filtern…"
   },
@@ -413,11 +418,22 @@
       "fetch_tooltip": "Von allen Remotes fetchen",
       "fetching": "Fetche…",
       "fetched": "{{repo}} gefetcht",
-      "fetched_all": "Alle Repos gefetcht"
+      "fetched_all": "Alle Repos gefetcht",
+      "pulled": "Gezogen",
+      "pushed": "Gepusht",
+      "checked_out": "Zu „{{branch}}“ gewechselt",
+      "delete": "Branch löschen",
+      "deleted": "Branch „{{branch}}“ gelöscht"
     },
     "row": {
       "upstream_tracking": "verfolgt {{upstream}}",
       "no_upstream": "kein Upstream"
+    },
+    "delete": {
+      "title": "Branch löschen?",
+      "body": "Der lokale Branch „{{branch}}“ wird gelöscht. Rückgängig machen geht danach nur noch übers Git-Reflog.",
+      "body_unmerged": "„{{branch}}“ hat Commits, die in keinem Upstream liegen — die gehen beim Löschen unwiederbringlich verloren. Trotzdem löschen?",
+      "confirm": "Löschen"
     }
   },
   "activity": {

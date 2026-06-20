@@ -2,12 +2,13 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
 
 export const Pane = styled(Box)(({ theme }) => ({
   width: 360,
   flexShrink: 0,
   borderLeft: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: opaqueSurfaceBg(theme),
   display: "flex",
   flexDirection: "column",
   overflow: "auto",
@@ -105,7 +106,7 @@ export const BranchCard = styled(Box)(({ theme }) => ({
   padding: "12px 14px",
   backgroundColor:
     theme.palette.mode === "dark"
-      ? theme.palette.background.default
+      ? opaqueSurfaceBg(theme)
       : theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
@@ -324,7 +325,7 @@ export const Footer = styled(Box)(({ theme }) => ({
   flex: "0 0 auto",
   padding: "12px 16px 16px",
   borderTop: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: opaqueSurfaceBg(theme),
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility

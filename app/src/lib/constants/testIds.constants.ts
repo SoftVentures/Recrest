@@ -119,6 +119,7 @@ export const TEST_IDS = {
     avatarReset: "repo-detail-avatar-reset",
     mrRow: "repo-detail-mr-row",
     mrDrawer: "repo-detail-mr-drawer",
+    openHost: "repo-detail-open-host",
     ssh: {
       trigger: "repo-ssh-trigger",
       modal: "repo-ssh-modal",
@@ -317,6 +318,7 @@ export const TEST_IDS = {
     loadMore: "branches-load-more",
     checkout: "branch-checkout",
     checkoutRemote: "branch-checkout-remote",
+    delete: "branch-delete",
   },
 
   settings: {
@@ -487,6 +489,13 @@ export const TEST_IDS = {
     root: "confirm-dialog",
     cancel: "confirm-dialog-cancel",
     confirm: "confirm-dialog-confirm",
+  },
+
+  connectPrompt: {
+    root: "connect-prompt-modal",
+    connect: "connect-prompt-connect",
+    proceed: "connect-prompt-proceed",
+    cancel: "connect-prompt-cancel",
   },
 
   editor: {

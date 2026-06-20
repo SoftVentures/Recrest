@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
-import { TauriCommand, routeToRepo } from "@recrest/shared";
+import { PROVIDER_NAMES, TauriCommand, routeToRepo } from "@recrest/shared";
 
 import {
   Copy,
@@ -23,9 +23,11 @@ import IdeIcon from "@/assets/icons/IdeIcon";
 import ContextMenu from "@/components/molecules/menus/ContextMenu";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
+import { useOpenHost } from "@/hooks/useOpenHost";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openFolderInSystem } from "@/lib/tauri";
+import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
@@ -46,6 +48,8 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
   const { t } = useTranslation();
   const defaultIde = useDefaultIde();
   const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | null>(null);
+  const brand = brandFromUrl(repo.remoteUrl);
+  const openHost = useOpenHost(repo.remoteUrl);
 
   const ideLabel = defaultIde.name
     ? t("actions.open_in_named_ide", { ide: defaultIde.name })
@@ -69,11 +73,6 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
     } catch {
       toast.error(t("context_menu.terminal_failed"));
     }
-  };
-
-  const openRemote = () => {
-    if (repo.remoteUrl) void openExternal(repo.remoteUrl);
-    else toast.error(t("context_menu.no_remote"));
   };
 
   const onCopyPath = async () => {
@@ -142,10 +141,12 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
               },
               {
                 key: "open-host",
-                label: t("context_menu.open_on_host"),
+                label: brand
+                  ? t("context_menu.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+                  : t("context_menu.open_on_host"),
                 icon: <ExternalLink size={13} />,
-                disabled: !repo.remoteUrl,
-                onSelect: openRemote,
+                disabled: !openHost.canOpen,
+                onSelect: openHost.open,
               },
               {
                 key: "open-explorer",
@@ -210,6 +211,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmDelete()}
       />
+      {openHost.modal}
     </>
   );
 }

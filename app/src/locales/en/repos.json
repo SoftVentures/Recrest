@@ -1,5 +1,12 @@
 {
   "title": "Repositories",
+  "connect_prompt": {
+    "title": "{{provider}} not connected",
+    "body": "Connect {{provider}} in Settings so pull requests, CI and deployments show up here. You can still open the repo page in your browser right away.",
+    "connect": "Connect {{provider}}",
+    "proceed": "Open anyway",
+    "cancel": "Cancel"
+  },
   "actions": {
     "open_terminal_tooltip": "Open terminal at repository",
     "create_branch_tooltip": "Create a new branch from HEAD",
@@ -250,7 +257,8 @@
   "detail_pane": {
     "open_in_terminal": "Open in Terminal",
     "open_in_explorer": "Open in Explorer",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "pull": "Pull",
     "fetch": "Fetch",
     "branch": "Branch",
@@ -263,7 +271,8 @@
   },
   "row_actions": {
     "open_in_terminal": "Open in Terminal",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "no_remote": "No remote configured",
     "open_in_explorer": "Open in Explorer",
     "more": "More",

@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 
-import { type PullRequest, TauriCommand, routeToMr } from "@recrest/shared";
+import { PROVIDER_NAMES, type PullRequest, TauriCommand, routeToMr } from "@recrest/shared";
 
 import { Code, ExternalLink, GitBranch, GitMerge, Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -245,8 +245,16 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
           <HeaderCtrls>
             <GeneralIconButton
               size={IconButtonSize.MD}
-              aria-label={tAria("repo.open_on_host")}
-              tooltip={tPrs("actions.open_on_host")}
+              aria-label={
+                brand
+                  ? tAria("repo.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+                  : tAria("repo.open_on_host")
+              }
+              tooltip={
+                brand
+                  ? tPrs("actions.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+                  : tPrs("actions.open_on_host")
+              }
               onClick={() => void openExternal(pr.url)}
               icon={brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
             />

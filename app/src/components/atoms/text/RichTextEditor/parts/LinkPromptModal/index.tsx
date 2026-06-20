@@ -9,6 +9,7 @@ import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
 
 export interface LinkPromptModalProps {
   open: boolean;
@@ -27,7 +28,7 @@ const UrlInput = styled("input")(({ theme }) => ({
   padding: "0 12px",
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  background: theme.palette.background.default,
+  background: opaqueSurfaceBg(theme),
   color: theme.palette.text.primary,
   fontFamily: MONO_STACK,
   fontSize: 12,

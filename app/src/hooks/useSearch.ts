@@ -68,7 +68,10 @@ export function useSearchResults(query: string, options: SearchOptions): SearchR
         results.push({
           id: `nav:${item.path}`,
           label: item.label,
-          hint: item.path,
+          // No route hint: the desktop app has no address bar, so showing the
+          // internal path (e.g. "/dashboard") is noise — it's not something a
+          // user can type to navigate.
+          hint: "",
           kind: SearchKind.NAV,
           icon: item.icon,
           onSelect: () => {

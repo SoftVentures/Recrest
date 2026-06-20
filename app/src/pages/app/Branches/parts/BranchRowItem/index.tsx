@@ -1,12 +1,18 @@
+import { useState } from "react";
+
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { type BranchInfo, TauriCommand } from "@recrest/shared";
 
-import { GitBranch as BranchIcon } from "lucide-react";
+import { GitBranch as BranchIcon, Trash2 } from "lucide-react";
 
+import GeneralIconButton, {
+  IconButtonSize,
+  IconButtonTone,
+} from "@/components/atoms/buttons/GeneralIconButton";
 import BranchFilterChip from "@/components/atoms/chips/BranchFilterChip";
 import IconSlot from "@/components/atoms/layout/IconSlot";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
@@ -14,6 +20,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import DeleteBranchDialog from "@/pages/app/Branches/parts/DeleteBranchDialog";
 
 export interface BranchRowItemProps {
   repo: EnrichedRepo;
@@ -25,6 +32,7 @@ export interface BranchRowItemProps {
 
 export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowItemProps) {
   const { t: tRepos } = useTranslation(I18nNamespace.REPOS);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const keyPrefix = `${repo.id}:${b.isRemote ? `${b.remote}/${b.name}` : b.name}`;
   const dotTone: "current" | "clean" | "remote" | "neutral" = b.isCurrent
     ? "current"
@@ -79,7 +87,12 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
               tone="ghost"
               disabled={isPullBusy}
               onClick={() =>
-                void run(pullKey, "git_pull", { repoId: repo.id }, t("branches.actions.pull"))
+                void run(
+                  pullKey,
+                  TauriCommand.GIT_PULL,
+                  { repoId: repo.id },
+                  t("branches.actions.pulled"),
+                )
               }
             >
               {t("branches.actions.pull")}
@@ -91,7 +104,12 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
               tone="ghost"
               disabled={isPushBusy}
               onClick={() =>
-                void run(pushKey, "git_push", { repoId: repo.id }, t("branches.actions.push"))
+                void run(
+                  pushKey,
+                  TauriCommand.GIT_PUSH,
+                  { repoId: repo.id },
+                  t("branches.actions.pushed"),
+                )
               }
             >
               {t("branches.actions.push")}
@@ -108,13 +126,23 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
                   checkoutKey,
                   TauriCommand.GIT_CHECKOUT,
                   { repoId: repo.id, branch: b.name },
-                  t("branches.actions.checkout"),
+                  t("branches.actions.checked_out", { branch: b.name }),
                 )
               }
             >
               <BranchIcon size={10} aria-hidden />
               {t("branches.actions.checkout")}
             </RowBtn>
+          )}
+          {!b.isRemote && !b.isCurrent && (
+            <GeneralIconButton
+              size={IconButtonSize.SM}
+              tone={IconButtonTone.DANGER}
+              aria-label={t("branches.actions.delete")}
+              data-testid={TEST_IDS.branches.delete}
+              icon={<Trash2 size={13} aria-hidden />}
+              onClick={() => setDeleteOpen(true)}
+            />
           )}
           {b.isRemote && b.remote && (
             <RowBtn
@@ -127,7 +155,7 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
                   checkoutKey,
                   TauriCommand.GIT_CHECKOUT_REMOTE,
                   { repoId: repo.id, remote: b.remote, branch: b.name },
-                  t("branches.actions.checkout_remote"),
+                  t("branches.actions.checked_out", { branch: b.name }),
                 )
               }
             >
@@ -146,6 +174,16 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
           )}
         </Track>
       </Tail>
+      {!b.isRemote && !b.isCurrent && (
+        <DeleteBranchDialog
+          open={deleteOpen}
+          repoId={repo.id}
+          branch={b}
+          run={run}
+          t={t}
+          onClose={() => setDeleteOpen(false)}
+        />
+      )}
     </Row>
   );
 }
@@ -243,8 +281,7 @@ const Acts = styled(Box)({
   visibility: "hidden",
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-const RowBtn = styled("button", {
+const RowBtn = styled(Button, {
   shouldForwardProp: (p) => p !== "tone",
 })<{ tone?: "primary" | "ghost" }>(({ theme, tone = "ghost" }) => {
   const isDark = theme.palette.mode === "dark";
@@ -255,6 +292,7 @@ const RowBtn = styled("button", {
     display: "inline-flex",
     alignItems: "center",
     gap: 5,
+    minWidth: 0,
     height: 24,
     padding: "0 8px",
     border: "1px solid transparent",
@@ -262,6 +300,7 @@ const RowBtn = styled("button", {
     fontSize: 11,
     fontWeight: 600,
     fontFamily: "inherit",
+    textTransform: "none",
     cursor: "pointer",
     whiteSpace: "nowrap",
     transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",

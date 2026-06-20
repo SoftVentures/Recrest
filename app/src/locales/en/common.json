@@ -79,10 +79,15 @@
     "go_back": "Back",
     "confirm": "Confirm"
   },
+  "open_host": {
+    "failed_provider": "Failed to open in {{provider}}",
+    "failed_generic": "Failed to open in browser"
+  },
   "context_menu": {
     "open_in_terminal": "Open in Terminal",
     "open_in_explorer": "Open in Explorer",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "no_remote": "No remote configured",
     "pin": "Pin",
     "unpin": "Unpin",
@@ -369,7 +374,7 @@
       "reviewers": "Reviewers",
       "files": "Files",
       "timeline": "Timeline",
-      "open_on_host": "Open on host"
+      "open_on_host": "Open in browser"
     },
     "filter_placeholder": "Filter merge requests…"
   },
@@ -413,11 +418,22 @@
       "fetch_tooltip": "Fetch from all remotes",
       "fetching": "Fetching…",
       "fetched": "Fetched {{repo}}",
-      "fetched_all": "Fetched all repos"
+      "fetched_all": "Fetched all repos",
+      "pulled": "Pulled",
+      "pushed": "Pushed",
+      "checked_out": "Switched to “{{branch}}”",
+      "delete": "Delete branch",
+      "deleted": "Deleted branch “{{branch}}”"
     },
     "row": {
       "upstream_tracking": "tracks {{upstream}}",
       "no_upstream": "no upstream"
+    },
+    "delete": {
+      "title": "Delete branch?",
+      "body": "The local branch “{{branch}}” will be deleted. After this it can only be recovered via the git reflog.",
+      "body_unmerged": "“{{branch}}” has commits that aren't on any upstream — they'll be lost for good if you delete it. Delete anyway?",
+      "confirm": "Delete"
     }
   },
   "activity": {

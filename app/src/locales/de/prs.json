@@ -24,7 +24,8 @@
     "merging": "Wird gemerged…",
     "checkout": "Auschecken",
     "checkout_busy": "…",
-    "open_on_host": "Beim Anbieter öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
     "close": "Schließen"
   },
   "checkout": {

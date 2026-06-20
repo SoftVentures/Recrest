@@ -8,6 +8,7 @@ import { Box } from "@mui/material";
 
 import {
   AppRoute,
+  PROVIDER_NAMES,
   PrState,
   type PullRequest,
   TauriCommand,
@@ -38,6 +39,7 @@ import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
 import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
+import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
@@ -111,6 +113,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
   );
   const openPrs = useMemo(() => prs.filter((p) => p.state === PrState.OPEN), [prs]);
   const brand = brandFromUrl(repo.remoteUrl);
+  const openHost = useOpenHost(repo.remoteUrl);
 
   const run = async (cmd: TauriCommandName, label: string) => {
     if (!isTauri()) return;
@@ -172,8 +175,12 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
               size={IconButtonSize.MD}
               variant={IconButtonVariant.OUTLINE}
               aria-label={tAria("repo.open_remote")}
-              tooltip={t("detail_pane.open_on_host")}
-              onClick={() => void openExternal(repo.remoteUrl!)}
+              tooltip={
+                brand
+                  ? t("detail_pane.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+                  : t("detail_pane.open_on_host")
+              }
+              onClick={openHost.open}
               icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
             />
           )}
@@ -268,6 +275,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           <Maximize2 size={13} /> {t("detail_pane.open_full_view")}
         </FullView>
       </Footer>
+      {openHost.modal}
     </Pane>
   );
 }

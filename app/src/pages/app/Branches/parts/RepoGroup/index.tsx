@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { TauriCommand } from "@recrest/shared";
@@ -191,11 +191,11 @@ const GroupCount = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-const FetchBtn = styled("button")(({ theme }) => ({
+const FetchBtn = styled(Button)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
+  minWidth: 0,
   height: 24,
   padding: "0 8px",
   marginLeft: 4,
@@ -205,6 +205,7 @@ const FetchBtn = styled("button")(({ theme }) => ({
   color: theme.palette.text.secondary,
   fontSize: 11,
   fontWeight: 600,
+  textTransform: "none",
   cursor: "pointer",
   fontFamily: "inherit",
   transition: "background 120ms ease, color 120ms ease",
@@ -220,20 +221,22 @@ const List = styled(Box)({
   flexDirection: "column",
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-const LoadMore = styled("button")(({ theme }) => ({
+const LoadMore = styled(Button)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   width: "100%",
+  minWidth: 0,
   padding: "10px 16px",
   border: 0,
   borderTop: `1px solid ${theme.palette.divider}`,
+  borderRadius: 0,
   backgroundColor: "transparent",
   color: theme.palette.text.link,
   fontSize: 12,
   fontWeight: 600,
   fontVariantNumeric: "tabular-nums",
+  textTransform: "none",
   cursor: "pointer",
   fontFamily: "inherit",
   transition: "background 120ms ease, color 120ms ease",

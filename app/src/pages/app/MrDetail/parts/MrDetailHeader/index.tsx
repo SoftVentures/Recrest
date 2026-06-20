@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 
-import type { PullRequest } from "@recrest/shared";
+import { PROVIDER_NAMES, type PullRequest } from "@recrest/shared";
 
 import { Code, ExternalLink, GitBranch, GitMerge } from "lucide-react";
 
@@ -157,7 +157,11 @@ export default function MrDetailHeader({
         </SecondaryBtn>
         <SecondaryBtn type="button" onClick={onOpenExternal}>
           {brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
-          <Box component="span">{tPrs("actions.open_on_host")}</Box>
+          <Box component="span">
+            {brand
+              ? tPrs("actions.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+              : tPrs("actions.open_on_host")}
+          </Box>
         </SecondaryBtn>
       </HeaderActions>
     </Header>

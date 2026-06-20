@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 
-import { TauriCommand, type TauriCommandName } from "@recrest/shared";
+import { PROVIDER_NAMES, TauriCommand, type TauriCommandName } from "@recrest/shared";
 
 import {
   Copy,
@@ -25,10 +25,11 @@ import GeneralIconButton, {
 } from "@/components/atoms/buttons/GeneralIconButton";
 import OpenInIdeButton from "@/components/atoms/buttons/OpenInIdeButton";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
+import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openFolderInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import {
   DangerMenuIcon,
@@ -53,6 +54,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
   const { t } = useTranslation(I18nNamespace.REPOS);
   const dispatch = useAppDispatch();
   const brand = brandFromUrl(repo.remoteUrl);
+  const openHost = useOpenHost(repo.remoteUrl);
   const px = ICON_BUTTON_ICON_SIZES[iconSize];
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -67,20 +69,6 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
     } catch {
       toast.error(t("row_actions.toast_command_failed", { label }));
     }
-  };
-
-  const onOpenRemote = () => {
-    if (!repo.remoteUrl) {
-      toast.error(t("row_actions.toast_no_remote"));
-      return;
-    }
-    // Surface OS-handler failures (no app registered for the URL scheme,
-    // sandboxed shell, etc.) as a toast instead of silently swallowing the
-    // rejection — without this the user has no signal that the click did
-    // nothing.
-    openExternal(repo.remoteUrl).catch(() => {
-      toast.error(t("row_actions.toast_command_failed", { label: t("row_actions.open_on_host") }));
-    });
   };
 
   const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
@@ -137,9 +125,15 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.open_remote")}
-        tooltip={repo.remoteUrl ? t("row_actions.open_on_host") : t("row_actions.no_remote")}
-        onClick={onOpenRemote}
-        disabled={!repo.remoteUrl}
+        tooltip={
+          !repo.remoteUrl
+            ? t("row_actions.no_remote")
+            : brand
+              ? t("row_actions.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+              : t("row_actions.open_on_host")
+        }
+        onClick={openHost.open}
+        disabled={!openHost.canOpen}
         icon={brand ? <BrandIcon slug={brand} size={px} /> : <ExternalLink size={px} />}
       />
       <GeneralIconButton
@@ -220,6 +214,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmDelete()}
       />
+      {openHost.modal}
     </>
   );
 }
