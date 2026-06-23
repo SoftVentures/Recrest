@@ -26,7 +26,7 @@ export function Footer() {
               <h4>{t("footer.columns.product")}</h4>
               <a href="#privacy">{t("footer.links.overview")}</a>
               <a href="#privacy">{t("footer.links.privacy")}</a>
-              <a href="#download">{t("footer.links.download")}</a>
+              <a href="#/download">{t("footer.links.download")}</a>
             </div>
             <div className="footer-col">
               <h4>{t("footer.columns.project")}</h4>

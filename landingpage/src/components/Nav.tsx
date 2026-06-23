@@ -73,7 +73,7 @@ export function Nav({ theme, onToggleTheme }: Props) {
               {t("nav.github")}
             </a>
           ) : null}
-          <a href="#download" className="btn btn-primary btn-sm">
+          <a href="#/download" className="btn btn-primary btn-sm">
             {t("nav.download")}
           </a>
           {isNarrow ? (

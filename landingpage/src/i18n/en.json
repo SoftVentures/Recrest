@@ -148,6 +148,37 @@
   "a11y": {
     "skipToContent": "Skip to main content"
   },
+  "download": {
+    "title": "Download Recrest",
+    "subtitle": "Native desktop builds for macOS, Windows and Linux. Unsigned — see first-run instructions below.",
+    "detectedOs": "Your platform",
+    "downloadLabel": "Download ({{arch}})",
+    "osSub": {
+      "macos": "macOS 11 Big Sur or later · Apple Silicon and Intel",
+      "windows": "Windows 10/11 · x64 and ARM64",
+      "linux": "AppImage, .deb and .rpm · x64"
+    },
+    "install": {
+      "heading": "First-run instructions",
+      "macos": [
+        "Open Finder and go to Downloads.",
+        "Double-click the .dmg file to mount it.",
+        "Drag Recrest to your Applications folder.",
+        "On first launch macOS may block the app because it is unsigned. Right-click (or Ctrl-click) the app in Applications and choose \"Open\", then click \"Open\" in the dialog.",
+        "Alternatively, remove the quarantine flag in Terminal: xattr -d com.apple.quarantine /Applications/Recrest.app"
+      ],
+      "windows": [
+        "Run the downloaded .exe installer.",
+        "If Windows SmartScreen appears, click \"More info\" and then \"Run anyway\".",
+        "Follow the setup wizard and launch Recrest from the Start menu."
+      ],
+      "linux": [
+        "AppImage: chmod +x recrest-v*.AppImage, then run it directly — no installation needed.",
+        "Debian / Ubuntu (.deb): sudo dpkg -i recrest-v*.deb",
+        "Fedora / RHEL (.rpm): sudo rpm -i recrest-v*.rpm (or sudo dnf install ./recrest-v*.rpm)"
+      ]
+    }
+  },
   "legal": {
     "backToHome": "Back to homepage",
     "nav": {

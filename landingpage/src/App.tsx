@@ -6,10 +6,12 @@ import { Hero } from "./components/Hero";
 import { Nav } from "./components/Nav";
 import { Privacy } from "./components/Privacy";
 import { useDocumentLang } from "./hooks/useDocumentLang";
+import { useDownloadRoute } from "./hooks/useDownloadRoute";
 import { useLegalRoute } from "./hooks/useLegalRoute";
 import { useScrollReveal } from "./hooks/useScrollReveal";
 import { useTheme } from "./hooks/useTheme";
 import { Accessibility } from "./pages/Accessibility";
+import { DownloadPage } from "./pages/Download";
 import { Imprint } from "./pages/Imprint";
 import { LegalLayout } from "./pages/LegalLayout";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
@@ -17,9 +19,23 @@ import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 export function App() {
   const { theme, toggle } = useTheme();
   const route = useLegalRoute();
+  const isDownload = useDownloadRoute();
   const { t } = useTranslation();
   useScrollReveal();
   useDocumentLang();
+
+  if (isDownload) {
+    return (
+      <>
+        <a className="skip-link" href="#main">
+          {t("a11y.skipToContent")}
+        </a>
+        <Nav theme={theme} onToggleTheme={toggle} />
+        <DownloadPage />
+        <Footer />
+      </>
+    );
+  }
 
   if (route) {
     const body =

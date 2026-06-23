@@ -189,6 +189,145 @@
   padding-left: 4px;
 }
 
+/* ─── Download page ──────────────────────────────────────── */
+.download-main {
+  padding: 48px 0 96px;
+  min-height: calc(100vh - 62px);
+}
+
+.download-wrap {
+  max-width: 1040px;
+}
+
+.download-header {
+  margin-bottom: 40px;
+}
+
+.download-header h1 {
+  font-size: clamp(32px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-0);
+  margin: 0 0 10px;
+}
+
+.download-subtitle {
+  font-size: 15px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .download-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DownloadCard */
+.download-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 22px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.download-card--highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.download-card__detected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent-ink);
+  background: var(--accent-weak);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  align-self: flex-start;
+}
+
+.download-card__title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink-0);
+  margin: 0;
+}
+
+.download-card__sub {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.download-card__links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.download-card__btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* InstallInstructions */
+.install-instructions {
+  border-top: 1px solid var(--hairline);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.install-instructions__heading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+  margin: 0 0 8px;
+}
+
+.install-instructions__steps {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+.install-instructions__steps code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 1px 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--ink-1);
+}
+
 /* ─── Reset / base ───────────────────────────────────────── */
 *,
 *::before,
