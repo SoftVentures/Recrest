@@ -59,13 +59,17 @@ function sweep(files: string[], rx: RegExp): Hit[] {
   return hits;
 }
 
+// Path separators are normalised to `/` before this is tested, so a single
+// forward-slash pattern matches on both POSIX (CI) and Windows (local dev).
 const SOURCE_EXCLUDE = /\.(stories|test)\.|\/locales\/|\/devStub|test-setup|test-helpers/;
 
+const toPosix = (p: string): string => p.replace(/\\/g, "/");
+
 const localeJsonFiles = walk(join(appSrc, "locales"), (p) => p.endsWith(".json"));
-const tsxFiles = walk(appSrc, (p) => p.endsWith(".tsx") && !SOURCE_EXCLUDE.test(p));
+const tsxFiles = walk(appSrc, (p) => p.endsWith(".tsx") && !SOURCE_EXCLUDE.test(toPosix(p)));
 const tsAndTsxFiles = walk(
   appSrc,
-  (p) => (p.endsWith(".ts") || p.endsWith(".tsx")) && !SOURCE_EXCLUDE.test(p),
+  (p) => (p.endsWith(".ts") || p.endsWith(".tsx")) && !SOURCE_EXCLUDE.test(toPosix(p)),
 );
 const detectionScanFiles = [
   ...walk(

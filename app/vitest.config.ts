@@ -26,6 +26,7 @@ export default defineConfig({
   define: {
     __GIT_SHA__: JSON.stringify("test"),
     __BUILD_TIME__: JSON.stringify("1970-01-01T00:00:00.000Z"),
+    __APP_VERSION__: JSON.stringify("0.0.0-test"),
   },
   test: {
     env: { TZ: "Europe/Berlin" },

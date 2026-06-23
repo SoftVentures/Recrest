@@ -36,7 +36,7 @@ export function Nav({ theme, onToggleTheme }: Props) {
 
   const navLinks = (
     <>
-      <a href="#privacy" onClick={() => setOpen(false)}>
+      <a href="#main" onClick={() => setOpen(false)}>
         {t("nav.overview")}
       </a>
       <a href="#privacy" onClick={() => setOpen(false)}>
@@ -73,7 +73,7 @@ export function Nav({ theme, onToggleTheme }: Props) {
               {t("nav.github")}
             </a>
           ) : null}
-          <a href="#download" className="btn btn-primary btn-sm">
+          <a href="#/download" className="btn btn-primary btn-sm">
             {t("nav.download")}
           </a>
           {isNarrow ? (

@@ -1,8 +1,8 @@
 {
   "nav": {
     "overview": "Overview",
-    "privacy": "Privacy",
-    "contribute": "Contribute",
+    "privacy": "Local-first",
+    "contribute": "Open Source",
     "github": "GitHub",
     "download": "Download",
     "toggleTheme": "Toggle theme",
@@ -14,7 +14,6 @@
     "titleLine2": "In one calm, native dashboard.",
     "sub": "Recrest is a native desktop app that brings your <1>local Git repositories</1>, their working‑tree status, merge requests and CI checks from <3>GitHub</3>, <5>GitLab</5> and <7>Bitbucket</7> into a single, calm place.",
     "downloadFallback": "Download latest release",
-    "downloadForOs": "Download for {{os}}",
     "starOnGithub": "Star on GitHub",
     "versionHint": "Recrest v{{version}} · <1>all releases</1>",
     "metaPlatforms": "macOS · Windows · Linux",
@@ -68,8 +67,8 @@
     }
   },
   "privacy": {
-    "eyebrow": "Your code, your machine",
-    "title": "Built on Tauri. Runs entirely on your laptop.",
+    "eyebrow": "Local-first",
+    "title": "Nothing leaves your machine.",
     "body": "Recrest reads your Git repositories directly from disk and talks to GitHub, GitLab & Bitbucket APIs from your machine — nothing in between.",
     "stats": {
       "bundle": "native bundle",
@@ -104,9 +103,13 @@
     }
   },
   "contribute": {
-    "eyebrow": "Open source",
-    "title": "Built in the open. Help shape it.",
+    "eyebrow": "Open Source",
+    "title": "Built in the open. <1>Help shape</1> it.",
     "body": "Recrest is MIT‑licensed and developed on GitHub. Whether you fix a typo or rewrite the diff engine — you're welcome here.",
+    "facts": {
+      "license": "MIT licensed",
+      "prs": "PRs welcome"
+    },
     "ctaContribute": "Contribute on GitHub",
     "ctaRoadmap": "Read the roadmap",
     "ways": {
@@ -146,7 +149,43 @@
     "language": "Language"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "scrollToTop": "Scroll to top"
+  },
+  "download": {
+    "title": "Download Recrest",
+    "subtitle": "Native desktop builds for macOS, Windows and Linux.",
+    "disclaimer": {
+      "title": "Unsigned builds — and why",
+      "body": "Recrest is a free, open-source project, so we don't pay for Apple's Developer Program or a Windows EV code-signing certificate — the installers are not signed. On first launch your operating system (macOS Gatekeeper or Windows SmartScreen) will warn you as a result. The download is safe as long as you get it straight from our GitHub Releases using the buttons below. Each installer has its own first-run steps — follow the notes under your platform."
+    },
+    "detectedOs": "Your platform",
+    "downloadLabel": "Download ({{arch}})",
+    "osSub": {
+      "macos": "macOS 11 Big Sur or later · Apple Silicon and Intel",
+      "windows": "Windows 10/11 · x64 and ARM64",
+      "linux": "AppImage, .deb and .rpm · x64"
+    },
+    "install": {
+      "heading": "First-run instructions",
+      "macos": [
+        "Open Finder and go to Downloads.",
+        "Double-click the .dmg file to mount it.",
+        "Drag Recrest to your Applications folder.",
+        "On first launch macOS may block the app because it is unsigned. Right-click (or Ctrl-click) the app in Applications and choose Open, then click Open in the dialog.",
+        "Alternatively, remove the quarantine flag in Terminal: `xattr -d com.apple.quarantine /Applications/Recrest.app`"
+      ],
+      "windows": [
+        "Run the downloaded .exe installer.",
+        "If Windows SmartScreen appears, click More info and then Run anyway.",
+        "Follow the setup wizard and launch Recrest from the Start menu."
+      ],
+      "linux": [
+        "AppImage: `chmod +x recrest-v*.AppImage`, then run it directly — no installation needed.",
+        "Debian / Ubuntu (.deb): `sudo dpkg -i recrest-v*.deb`",
+        "Fedora / RHEL (.rpm): `sudo rpm -i recrest-v*.rpm` (or `sudo dnf install ./recrest-v*.rpm`)"
+      ]
+    }
   },
   "legal": {
     "backToHome": "Back to homepage",

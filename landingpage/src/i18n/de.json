@@ -1,8 +1,8 @@
 {
   "nav": {
     "overview": "Überblick",
-    "privacy": "Datenschutz",
-    "contribute": "Mitmachen",
+    "privacy": "Lokal-first",
+    "contribute": "Open Source",
     "github": "GitHub",
     "download": "Download",
     "toggleTheme": "Design umschalten",
@@ -14,7 +14,6 @@
     "titleLine2": "In einem ruhigen, nativen Dashboard.",
     "sub": "Recrest ist eine native Desktop-App, die deine <1>lokalen Git-Repositories</1>, deren Working-Tree-Status, Merge Requests und CI-Checks von <3>GitHub</3>, <5>GitLab</5> und <7>Bitbucket</7> an einem ruhigen Ort zusammenführt.",
     "downloadFallback": "Neuestes Release laden",
-    "downloadForOs": "Download für {{os}}",
     "starOnGithub": "Auf GitHub sternen",
     "versionHint": "Recrest v{{version}} · <1>alle Releases</1>",
     "metaPlatforms": "macOS · Windows · Linux",
@@ -68,8 +67,8 @@
     }
   },
   "privacy": {
-    "eyebrow": "Dein Code, deine Maschine",
-    "title": "Auf Tauri gebaut. Läuft komplett auf deinem Laptop.",
+    "eyebrow": "Lokal-first",
+    "title": "Nichts verlässt deine Maschine.",
     "body": "Recrest liest deine Git-Repositories direkt von der Festplatte und spricht mit GitHub, GitLab & Bitbucket APIs von deiner Maschine aus — nichts dazwischen.",
     "stats": {
       "bundle": "Natives Bundle",
@@ -105,8 +104,12 @@
   },
   "contribute": {
     "eyebrow": "Open Source",
-    "title": "Offen entwickelt. Hilf mit, es zu formen.",
+    "title": "Offen entwickelt. <1>Hilf mit</1>, es zu formen.",
     "body": "Recrest steht unter MIT-Lizenz und wird auf GitHub entwickelt. Ob du einen Typo fixt oder die Diff-Engine neu schreibst — du bist willkommen.",
+    "facts": {
+      "license": "MIT-Lizenz",
+      "prs": "PRs willkommen"
+    },
     "ctaContribute": "Auf GitHub mitmachen",
     "ctaRoadmap": "Roadmap lesen",
     "ways": {
@@ -146,7 +149,43 @@
     "language": "Sprache"
   },
   "a11y": {
-    "skipToContent": "Zum Hauptinhalt springen"
+    "skipToContent": "Zum Hauptinhalt springen",
+    "scrollToTop": "Nach oben scrollen"
+  },
+  "download": {
+    "title": "Recrest herunterladen",
+    "subtitle": "Native Desktop-Builds für macOS, Windows und Linux.",
+    "disclaimer": {
+      "title": "Unsignierte Builds – und warum",
+      "body": "Recrest ist ein kostenloses Open-Source-Projekt, daher zahlen wir weder für Apples Developer-Programm noch für ein Windows-EV-Zertifikat – die Installer sind nicht code-signiert. Beim ersten Start warnt dich dein Betriebssystem deshalb (macOS Gatekeeper bzw. Windows SmartScreen). Der Download ist sicher, solange du ihn direkt über die Buttons unten aus unseren GitHub-Releases beziehst. Jeder Installer hat eigene Erststart-Schritte – folge den Hinweisen unter deiner Plattform."
+    },
+    "detectedOs": "Deine Plattform",
+    "downloadLabel": "Herunterladen ({{arch}})",
+    "osSub": {
+      "macos": "macOS 11 Big Sur oder neuer - Apple Silicon und Intel",
+      "windows": "Windows 10/11 - x64 und ARM64",
+      "linux": "AppImage, .deb und .rpm - x64"
+    },
+    "install": {
+      "heading": "Erststart-Hinweise",
+      "macos": [
+        "Öffne den Finder und navigiere zu Downloads.",
+        "Doppelklicke die .dmg-Datei, um sie einzuhängen.",
+        "Ziehe Recrest in den Ordner Programme.",
+        "Beim ersten Start blockiert macOS die App möglicherweise, weil sie nicht signiert ist. Klicke mit der rechten Maustaste (oder Ctrl-Klick) auf die App in Programme und wähle Öffnen, dann im Dialog erneut Öffnen.",
+        "Alternativ kannst du das Quarantäne-Flag im Terminal entfernen: `xattr -d com.apple.quarantine /Applications/Recrest.app`"
+      ],
+      "windows": [
+        "Starte den heruntergeladenen .exe-Installer.",
+        "Erscheint der Windows SmartScreen-Hinweis, klicke auf Weitere Informationen und anschließend auf Trotzdem ausführen.",
+        "Folge dem Einrichtungsassistenten und starte Recrest über das Startmenü."
+      ],
+      "linux": [
+        "AppImage: `chmod +x recrest-v*.AppImage`, dann direkt ausführen – keine Installation nötig.",
+        "Debian / Ubuntu (.deb): `sudo dpkg -i recrest-v*.deb`",
+        "Fedora / RHEL (.rpm): `sudo rpm -i recrest-v*.rpm` (oder `sudo dnf install ./recrest-v*.rpm`)"
+      ]
+    }
   },
   "legal": {
     "backToHome": "Zurück zur Startseite",
