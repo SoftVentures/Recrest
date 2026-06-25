@@ -1,7 +1,6 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
-import { TEST_IDS } from "../../helpers/test-ids";
 
 /**
  * D.5: swipe gestures.
