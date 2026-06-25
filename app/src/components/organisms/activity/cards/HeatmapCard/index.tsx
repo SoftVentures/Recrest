@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
+import { WeekStart } from "@recrest/shared";
+
 import { ResponsiveHeatMap } from "@nivo/heatmap";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
@@ -14,6 +16,8 @@ import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useLocalePrefs, useResolvedLocale } from "@/lib/utils/datetime.utils";
+import { weekdayLabel } from "@/lib/utils/locale.utils";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -22,7 +26,12 @@ export interface Props {
   loading?: boolean;
 }
 
-const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+// Matrix rows are stored Monday-first (row 0=Mon..6=Sun); the display order is
+// rotated per the user's week-start preference. `weekdayLabel` indexes by JS
+// `getDay()` (0=Sun..6=Sat), so a storage row `r` maps to getDay `(r + 1) % 7`.
+const MON_FIRST_ROWS = [0, 1, 2, 3, 4, 5, 6];
+const SUN_FIRST_ROWS = [6, 0, 1, 2, 3, 4, 5];
+// Nivo only draws ticks at data columns (hours 0..23); we label every 6th hour.
 const AXIS_HOURS = ["0", "6", "12", "18"];
 
 function HeatmapCard({ matrix, loading }: Props) {
@@ -30,6 +39,9 @@ function HeatmapCard({ matrix, loading }: Props) {
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
   const { show, hide, portal } = useChartTooltip();
+  const { weekStart } = useLocalePrefs();
+  const locale = useResolvedLocale();
+  const sundayFirst = weekStart === WeekStart.SUNDAY;
   // Single-metric chart → follow the user's primary color, not a fixed accent.
   const accent = theme.palette.primary.main;
 
@@ -43,10 +55,17 @@ function HeatmapCard({ matrix, loading }: Props) {
     </Tooltip>
   );
 
-  const data = matrix.map((row, weekday) => ({
-    id: WEEKDAYS[weekday]!,
-    data: row.map((count, hour) => ({ x: String(hour), y: count })),
+  // Build the rows in display order with locale-aware weekday names. The axis
+  // uses the short label (compact left gutter); the tooltip uses the long name
+  // (`longByShort`) so a hovered cell reads e.g. "Tuesday 09:00".
+  const rowOrder = sundayFirst ? SUN_FIRST_ROWS : MON_FIRST_ROWS;
+  const shortLabel = (row: number) => weekdayLabel((row + 1) % 7, locale, "short");
+  const longLabel = (row: number) => weekdayLabel((row + 1) % 7, locale, "long");
+  const data = rowOrder.map((row) => ({
+    id: shortLabel(row),
+    data: (matrix[row] ?? []).map((count, hour) => ({ x: String(hour), y: count })),
   }));
+  const longByShort = new Map(rowOrder.map((row) => [shortLabel(row), longLabel(row)]));
 
   return (
     <GeneralCard
@@ -64,8 +83,7 @@ function HeatmapCard({ matrix, loading }: Props) {
         <ResponsiveHeatMap
           data={data}
           theme={nivoTheme}
-          margin={{ top: 4, right: 4, bottom: 20, left: 34 }}
-          forceSquare
+          margin={{ top: 4, right: 6, bottom: 26, left: 40 }}
           xInnerPadding={0.18}
           yInnerPadding={0.18}
           colors={{
@@ -100,7 +118,11 @@ function HeatmapCard({ matrix, loading }: Props) {
             show(
               e.clientX,
               e.clientY,
-              renderTip(String(cell.serieId), String(cell.data.x), Number(cell.value ?? 0)),
+              renderTip(
+                longByShort.get(String(cell.serieId)) ?? String(cell.serieId),
+                String(cell.data.x),
+                Number(cell.value ?? 0),
+              ),
             )
           }
           onMouseLeave={hide}
@@ -114,8 +136,14 @@ function HeatmapCard({ matrix, loading }: Props) {
 // memo: urgent page re-renders during chunk streaming must not re-layout Nivo.
 export default memo(HeatmapCard);
 
+// Fill the card body in both dimensions and reflow on resize (no forceSquare).
+// `flex: 1` claims the height the card row gives it (stretches on Activity's
+// equal-height rows); `minHeight` keeps a sensible floor on content-sized rows.
 const Grid = styled(Box)({
-  height: 180,
+  flex: "1 1 auto",
+  minHeight: 180,
+  minWidth: 0,
+  position: "relative",
 });
 
 // TODO(next-pass): unify with parts/ChartTooltip

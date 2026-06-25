@@ -14,7 +14,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
-import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
 
 interface Props {
@@ -51,6 +51,7 @@ function hostOf(url: string): string {
  *  otherwise so the parent grid doesn't show an empty card. */
 export default function DeploymentsCard({ repoId }: Props) {
   const { t } = useTranslation(I18nNamespace.PRS);
+  const dt = useDateTimeFormat();
   const [pages, setPages] = useState<PagesStatus | null>(null);
 
   useEffect(() => {
@@ -119,7 +120,9 @@ export default function DeploymentsCard({ repoId }: Props) {
         ) : null}
 
         {!pipelinesOnly && pages.lastDeployedAt && (
-          <Note>{t("deployments.last_deployed", { when: timeAgo(pages.lastDeployedAt) })}</Note>
+          <Note>
+            {t("deployments.last_deployed", { when: dt.formatTimestamp(pages.lastDeployedAt) })}
+          </Note>
         )}
       </Root>
     </GeneralCard>

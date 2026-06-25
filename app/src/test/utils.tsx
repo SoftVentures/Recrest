@@ -15,11 +15,13 @@ import { type ThemeId } from "@/lib/constants/theme.constants";
 import i18n from "@/locales";
 import type { RootState } from "@/store";
 import { activityReducer } from "@/store/reducers/activityReducer";
+import { branchesReducer } from "@/store/reducers/branchesReducer";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
 import { reposReducer } from "@/store/reducers/reposReducer";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
+import { shortcutsReducer } from "@/store/reducers/shortcutsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 import { getTheme } from "@/theme";
 
@@ -31,6 +33,8 @@ const testReducer = {
   prs: prsReducer,
   remoteImport: remoteImportReducer,
   activity: activityReducer,
+  branches: branchesReducer,
+  shortcuts: shortcutsReducer,
 };
 
 type PreloadedSlices = { [K in keyof RootState]?: Partial<RootState[K]> };
@@ -83,9 +87,7 @@ export function renderWithProviders(
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <MemoryRouter initialEntries={[opts?.route ?? "/"]}>
-            {ui}
-          </MemoryRouter>
+          <MemoryRouter initialEntries={[opts?.route ?? "/"]}>{ui}</MemoryRouter>
         </ThemeProvider>
       </I18nextProvider>
     </ReduxProvider>,

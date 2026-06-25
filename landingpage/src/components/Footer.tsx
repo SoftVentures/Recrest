@@ -26,14 +26,18 @@ export function Footer() {
               <h4>{t("footer.columns.product")}</h4>
               <a href="#privacy">{t("footer.links.overview")}</a>
               <a href="#privacy">{t("footer.links.privacy")}</a>
-              <a href="#download">{t("footer.links.download")}</a>
+              <a href="#/download">{t("footer.links.download")}</a>
             </div>
             <div className="footer-col">
               <h4>{t("footer.columns.project")}</h4>
               <a href={__REPO_URL__} target="_blank" rel="noreferrer noopener">
                 {t("footer.links.github")}
               </a>
-              <a href={`${__REPO_URL__}#roadmap`} target="_blank" rel="noreferrer noopener">
+              <a
+                href={`${__REPO_URL__}/blob/main/ROADMAP.md`}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
                 {t("footer.links.roadmap")}
               </a>
               <a href={`${__REPO_URL__}/issues`} target="_blank" rel="noreferrer noopener">

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 
 import { ResponsiveBar } from "@nivo/bar";
+import { linearGradientDef } from "@nivo/core";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { ChartArea } from "@/components/organisms/activity/cards/StackedChartCard/StackedChartCard.styles";
@@ -13,6 +14,7 @@ import { useChartTooltip } from "@/components/organisms/activity/cards/parts/Cha
 import type { StackedDay } from "@/lib/activityStats";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { shade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
@@ -57,6 +59,22 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
   const every = Math.max(1, Math.ceil(labels.length / 5));
   const tickValues = labels.filter((_, i) => i % every === 0);
 
+  // One vertical gradient per repo (lighter top → solid bottom), matching the
+  // other activity bar charts. Gradient ids are index-based so repo names with
+  // spaces/punctuation still yield valid SVG ids; `fill` matches each stack
+  // segment by its repo-name key.
+  const gradientDefs = repoNames.map((name, i) => {
+    const color = colorByRepo.get(name) ?? theme.palette.primary.main;
+    return linearGradientDef(`stackedGrad${i}`, [
+      { offset: 0, color: shade(color, 0.12) },
+      { offset: 100, color },
+    ]);
+  });
+  const gradientFill = repoNames.map((name, i) => ({
+    match: { id: name },
+    id: `stackedGrad${i}`,
+  }));
+
   // Full-day breakdown (every repo with commits, not just the hovered segment).
   const renderTip = (indexValue: string | number, rowData: Record<string, string | number>) => (
     <ChartTooltip
@@ -93,6 +111,8 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
           indexBy="day"
           theme={nivoTheme}
           colors={(bar) => colorByRepo.get(String(bar.id)) ?? theme.palette.primary.main}
+          defs={gradientDefs}
+          fill={gradientFill}
           margin={{ top: 8, right: 8, bottom: 28, left: 28 }}
           padding={0.35}
           borderRadius={2}

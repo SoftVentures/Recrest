@@ -8,8 +8,8 @@ import { useTheme } from "@mui/material/styles";
  * shrugging = generic empty).
  *
  * Stroke inherits `currentColor` so callers control the ink via CSS `color`.
- * Accent colours are pulled from the MUI theme so dark/light/oled/glassy all
- * tint the crest + cheeks consistently with the rest of the UI.
+ * Accent colours are pulled from the MUI theme so dark/light tint the
+ * crest + cheeks consistently with the rest of the UI.
  */
 export type MascotVariant = "snoozing" | "celebrating" | "searching" | "waving" | "shrugging";
 

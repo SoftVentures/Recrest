@@ -53,7 +53,7 @@ export function Hero() {
           />
         </p>
 
-        <div className="hero-cta" id="download">
+        <div className="hero-cta">
           <DownloadButton />
           <a
             href={__REPO_URL__}

@@ -34,19 +34,25 @@ const SHOULD_FORWARD = (prop: PropertyKey) => prop !== "collapsed";
 
 const StyledSelect = styled(Select, { shouldForwardProp: SHOULD_FORWARD })<StyledProps>(
   ({ theme, collapsed }) => ({
-    height: 32,
+    // Collapsed: a 38×38 chip that matches the sidebar's footer nav items
+    // (same square, border, transparent surface, hover tint). Expanded: a
+    // full-width labelled dropdown on the elevated surface.
+    height: collapsed ? 38 : 32,
     width: collapsed ? 38 : "100%",
     fontSize: 12,
-    backgroundColor: theme.palette.surface.interface.backElevation,
+    color: theme.palette.text.primary,
+    backgroundColor: collapsed ? "transparent" : theme.palette.surface.interface.backElevation,
     borderRadius: 8,
+    transition: "background-color 120ms ease, border-color 120ms ease",
     "& .MuiOutlinedInput-notchedOutline": {
       borderColor: theme.palette.divider,
     },
+    "&:hover": collapsed ? { backgroundColor: theme.palette.surface.interface.active } : undefined,
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: theme.palette.border.hover,
     },
     "& .MuiSelect-select": {
-      padding: collapsed ? 0 : "4px 10px",
+      padding: collapsed ? "0 !important" : "4px 10px",
       display: "flex",
       alignItems: "center",
       justifyContent: collapsed ? "center" : "flex-start",
@@ -54,12 +60,7 @@ const StyledSelect = styled(Select, { shouldForwardProp: SHOULD_FORWARD })<Style
       minHeight: "0 !important",
     },
     // Hide the dropdown caret when collapsed so the icon stays centred.
-    ...(collapsed
-      ? {
-          "& .MuiSelect-icon": { display: "none" },
-          "& .MuiSelect-select": { paddingRight: "0 !important" },
-        }
-      : {}),
+    "& .MuiSelect-icon": collapsed ? { display: "none" } : undefined,
   }),
 );
 

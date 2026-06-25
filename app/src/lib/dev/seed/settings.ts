@@ -43,6 +43,14 @@ export const SEED_SETTINGS: AppSettings = {
     codeFont: "jetbrains-mono",
     codeLigatures: "standard",
     fontSize: "md",
+    translucency: { enabled: false, intensity: 50, blurIntensity: 30 },
+    localePrefs: {
+      dateFormat: "relative",
+      timeFormat: "24h",
+      weekStart: "monday",
+      region: null,
+      timeZone: null,
+    },
   },
   accessibility: {
     dyslexiaFont: false,

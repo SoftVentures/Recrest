@@ -4,6 +4,7 @@ import { styled } from "@mui/material/styles";
 import { RefreshCw } from "lucide-react";
 
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
 
 export const ProvidersGrid = styled(Box)({
   display: "grid",
@@ -135,7 +136,10 @@ export const SectionHeaderBar = styled(Box)(({ theme }) => ({
   textTransform: "uppercase",
   letterSpacing: "0.06em",
   color: theme.palette.text.information,
-  backgroundColor: theme.palette.background.default,
+  // A sticky header must fully mask the rows scrolling beneath it, so it stays
+  // opaque even in translucency mode (where the glassy modal body's
+  // `background.default` is transparent and would bleed through as text-on-text).
+  backgroundColor: opaqueSurfaceBg(theme),
   borderBottom: `1px solid ${theme.palette.divider}`,
 })) as typeof Box;
 

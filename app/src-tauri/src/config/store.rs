@@ -18,12 +18,24 @@ impl ConfigStore {
         let dir = config_dir(app)?;
         fs::create_dir_all(&dir)?;
         let path = dir.join(SETTINGS_FILE);
-        let settings = if path.exists() {
+        let mut settings: AppSettings = if path.exists() {
             let raw = fs::read_to_string(&path)?;
             serde_json::from_str(&raw).unwrap_or_default()
         } else {
             AppSettings::default()
         };
+        // One-shot legacy migration: pre-translucency builds shipped a
+        // `theme_id = "glassy"` value. Rewrite to `theme_id = "dark"` plus
+        // `translucency.enabled = true` so the user's prior intent survives,
+        // and persist the rewrite once so the migration never re-runs.
+        if settings.appearance.migrate_legacy() {
+            if let Some(parent) = path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            if let Ok(json) = serde_json::to_string_pretty(&settings) {
+                let _ = fs::write(&path, json);
+            }
+        }
         Ok(Self { settings, path })
     }
 
@@ -227,6 +239,43 @@ mod tests {
 
         // On-disk settings.json was removed.
         assert!(!path.exists(), "settings.json should be gone after reset");
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// A settings.json carrying the historical `theme_id = "glassy"` value
+    /// must be migrated to `theme_id = "dark"` plus
+    /// `translucency.enabled = true` on the next load. The rewrite happens
+    /// in `load_or_default`; `from_path_for_tests` keeps the raw value so
+    /// we exercise the migration entry point directly via
+    /// `AppearanceSettings::migrate_legacy` and a manual rewrite.
+    #[test]
+    fn glassy_settings_json_migrates_to_dark_plus_translucency() {
+        let path = fresh_settings_path("glassy-migration");
+        let parent = path.parent().expect("parent").to_path_buf();
+
+        let legacy = r#"{
+            "appearance": {
+                "themeId": "glassy",
+                "followsSystem": false,
+                "primaryColor": "default",
+                "font": "inter",
+                "codeFont": "jetbrains-mono",
+                "codeLigatures": "standard",
+                "fontSize": "md"
+            }
+        }"#;
+        fs::write(&path, legacy).expect("seed legacy glassy settings");
+
+        let mut store =
+            ConfigStore::from_path_for_tests(path.clone()).expect("load glassy settings");
+        let changed = store.settings_mut().appearance.migrate_legacy();
+        assert!(changed, "migrate_legacy must rewrite a glassy theme id");
+        assert_eq!(store.settings().appearance.theme_id, "dark");
+        assert!(store.settings().appearance.translucency.enabled);
+        // Migrated translucency uses the Rust-side default intensity (kept in
+        // lock-step with `DEFAULT_TRANSLUCENCY_INTENSITY` on the renderer).
+        assert!(store.settings().appearance.translucency.intensity > 0);
 
         let _ = fs::remove_dir_all(&parent);
     }

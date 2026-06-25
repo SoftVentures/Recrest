@@ -5,6 +5,7 @@ pub mod github;
 pub mod gitlab;
 pub mod registry;
 pub mod r#trait;
+pub mod verify;
 
 /// Env-var the Plan-8 E2E harness uses to point every provider at its mock
 /// HTTP server without going through the keychain or settings.json. Value

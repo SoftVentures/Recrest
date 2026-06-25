@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isKnownProviderId, matchProviderFromRemote, parseOwnerRepo } from "./matching.js";
+import {
+  isKnownProviderId,
+  matchProviderFromRemote,
+  parseOwnerRepo,
+  remoteToWebUrl,
+} from "./matching.js";
 
 describe("matchProviderFromRemote", () => {
   it("detects GitHub", () => {
@@ -34,6 +39,38 @@ describe("parseOwnerRepo", () => {
 
   it("returns null on malformed input", () => {
     expect(parseOwnerRepo("not-a-url")).toBeNull();
+  });
+});
+
+describe("remoteToWebUrl", () => {
+  it("converts scp-like SSH to web URL", () => {
+    expect(remoteToWebUrl("git@github.com:foo/bar.git")).toBe("https://github.com/foo/bar");
+    expect(remoteToWebUrl("git@bitbucket.org:team/repo.git")).toBe(
+      "https://bitbucket.org/team/repo",
+    );
+  });
+
+  it("converts ssh:// scheme (with port + auth) to web URL", () => {
+    expect(remoteToWebUrl("ssh://git@gitlab.example.com:22/team/proj.git")).toBe(
+      "https://gitlab.example.com/team/proj",
+    );
+  });
+
+  it("normalises https clone URLs (strips .git)", () => {
+    expect(remoteToWebUrl("https://github.com/foo/bar.git")).toBe("https://github.com/foo/bar");
+    expect(remoteToWebUrl("http://gitlab.internal/team/proj")).toBe(
+      "https://gitlab.internal/team/proj",
+    );
+  });
+
+  it("passes through an already-web URL unchanged", () => {
+    expect(remoteToWebUrl("https://github.com/foo/bar")).toBe("https://github.com/foo/bar");
+  });
+
+  it("returns null for unparseable input", () => {
+    expect(remoteToWebUrl(null)).toBeNull();
+    expect(remoteToWebUrl("")).toBeNull();
+    expect(remoteToWebUrl("git@github.com:")).toBeNull();
   });
 });
 

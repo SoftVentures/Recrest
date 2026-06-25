@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
 
 import { useLocation } from "react-router-dom";
 
@@ -8,14 +8,15 @@ import { Box } from "@mui/material";
 
 import { PrState } from "@recrest/shared";
 
-import { BookPlus, FileSearch, RefreshCw, Search } from "lucide-react";
+import { BookPlus, RefreshCw, Search } from "lucide-react";
 
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import {
   AddRepoButton,
   AddRepoLabel,
   CenterSection,
-  FindAcrossButton,
+  HEADER_REFRESH_SPIN_MS,
   Kbd,
   LeftSection,
   Meta,
@@ -28,15 +29,13 @@ import {
 } from "@/components/organisms/layout/Header/Header.styles";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
 import { windowDaysOf } from "@/lib/activity/rangeBuckets";
+import { SHORTCUT_ID } from "@/lib/constants/shortcuts.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { resolveShortcuts } from "@/lib/utils/shortcuts.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
-import {
-  bumpRefreshNonce,
-  setFindDialogOpen,
-  setImportDialogOpen,
-  setSearchOpen,
-} from "@/store/actions/ui.actions";
+import { bumpRefreshNonce, setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectSelectedRange } from "@/store/selectors/activity.selectors";
 
@@ -137,42 +136,45 @@ function Header() {
   const reposLoading = useAppSelector((s) => s.repos.loading);
   const prsLoading = useAppSelector((s) => s.prs.loading);
   const repoItems = useAppSelector((s) => s.repos.items);
-  const searchKbd = formatShortcut(platform, { mod: true, key: "K" });
-  const [refreshing, setRefreshing] = useState(false);
+  const overrides = useAppSelector((s) => s.shortcuts.overrides);
+  // Resolve the displayed combos from the same registry the binding hook uses,
+  // including any user override, so the header hints can never drift from the
+  // real shortcuts.
+  const resolved = useMemo(() => resolveShortcuts(overrides), [overrides]);
+  const comboHint = (id: (typeof SHORTCUT_ID)[keyof typeof SHORTCUT_ID]) => {
+    const c = resolved.find((s) => s.id === id)?.combo;
+    return c ? formatShortcut(platform, { ...c, key: c.key.toUpperCase() }) : "";
+  };
+  const searchKbd = comboHint(SHORTCUT_ID.SEARCH);
+  const refresh = useActionFeedback();
 
-  // Spin lives as long as ANY refresh-related work is still in flight: our own
-  // dispatched promises, repo polling, PR polling — only then do we cut it off.
-  // A minimum of one full rotation (~900ms) keeps the feedback intentional even
-  // for cached/instant refreshes.
-  const startedAtRef = useRef<number>(0);
-  const spinning = refreshing || reposLoading || prsLoading;
-
-  useEffect(() => {
-    if (!refreshing) return;
-    if (reposLoading || prsLoading) return;
-    const elapsed = Date.now() - startedAtRef.current;
-    const minSpin = 900;
-    if (elapsed >= minSpin) {
-      setRefreshing(false);
-      return;
-    }
-    const t = window.setTimeout(() => setRefreshing(false), minSpin - elapsed);
-    return () => window.clearTimeout(t);
-  }, [refreshing, reposLoading, prsLoading]);
+  // Show the result glyph (check/cross) once a user-initiated refresh settles;
+  // until then the icon keeps the familiar spin. Background loads (poll, nonce
+  // bumps elsewhere) still spin via reposLoading/prsLoading but never flash a
+  // check — that's reserved for an explicit click on this button.
+  const showResult = refresh.state === "success" || refresh.state === "error";
+  const busy = refresh.state === "loading" || reposLoading || prsLoading;
+  const spinning = busy && !showResult;
 
   const onRefresh = () => {
-    if (spinning) return;
-    startedAtRef.current = Date.now();
-    setRefreshing(true);
+    if (busy) return;
     dispatch(bumpRefreshNonce());
     const repoIds = Object.keys(repoItems);
-    const promises: Promise<unknown>[] = [
-      dispatch(loadRepos()),
-      ...repoIds.map((id) => dispatch(fetchPullRequests(id))),
-    ];
-    void Promise.all(promises).finally(() => {
-      setRefreshing((cur) => cur);
-    });
+    // Hold the spin for at least two full rotations AND until the real fetch
+    // resolves — whichever is longer — before flashing the check. The refresh
+    // must actually complete, not just animate.
+    const minSpin = new Promise((r) => setTimeout(r, HEADER_REFRESH_SPIN_MS * 2));
+    void refresh
+      .run(async () => {
+        await Promise.all([
+          minSpin,
+          Promise.all([
+            dispatch(loadRepos()),
+            ...repoIds.map((id) => dispatch(fetchPullRequests(id))),
+          ]),
+        ]);
+      })
+      .catch(() => {});
   };
 
   const onAddRepo = () => {
@@ -183,8 +185,6 @@ function Header() {
   const searchLabel = t("actions.search");
   const searchPlaceholder = t("actions.search_placeholder");
   const refreshLabel = t("actions.refresh");
-  const findAcrossLabel = t("actions.find_across_repos");
-  const findAcrossKbd = formatShortcut(platform, { mod: true, shift: true, key: "F" });
 
   return (
     <TopBar data-testid={TEST_IDS.header.root}>
@@ -215,16 +215,6 @@ function Header() {
       </CenterSection>
 
       <RightSection>
-        <GeneralTooltip title={`${findAcrossLabel} · ${findAcrossKbd}`} arrow placement="bottom">
-          <FindAcrossButton
-            type="button"
-            aria-label={findAcrossLabel}
-            data-testid={TEST_IDS.header.btnFindAcross}
-            onClick={() => dispatch(setFindDialogOpen(true))}
-          >
-            <FileSearch size={16} aria-hidden />
-          </FindAcrossButton>
-        </GeneralTooltip>
         <GeneralTooltip title={refreshLabel} arrow placement="bottom">
           {/* Span wrap: `disabled` is dynamic (reposLoading toggles) and MUI Tooltip
               can't attach listeners to a disabled <button>. The inline-flex span
@@ -235,11 +225,19 @@ function Header() {
               type="button"
               aria-label={refreshLabel}
               data-testid={TEST_IDS.header.btnRefresh}
-              disabled={reposLoading}
+              disabled={busy}
               spinning={spinning}
               onClick={onRefresh}
             >
-              <RefreshCw size={16} aria-hidden />
+              {showResult ? (
+                <ActionFeedbackIcon
+                  state={refresh.state}
+                  fallback={<RefreshCw size={16} aria-hidden />}
+                  size={16}
+                />
+              ) : (
+                <RefreshCw size={16} aria-hidden />
+              )}
             </RefreshButton>
           </Box>
         </GeneralTooltip>

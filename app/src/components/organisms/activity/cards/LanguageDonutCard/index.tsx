@@ -9,7 +9,7 @@ import { ResponsivePie } from "@nivo/pie";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
-import type { LanguageSlice } from "@/lib/activityAggregates";
+import type { LangContributor, LanguageSlice } from "@/lib/activityAggregates";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
@@ -20,17 +20,34 @@ export interface Props {
   loading?: boolean;
 }
 
+// How many repos to list in the hover breakdown before collapsing the rest.
+const MAX_TOOLTIP_CONTRIBUTORS = 4;
+
 const Wrap = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "auto 1fr",
+  // Donut takes a clamped fraction of the card WIDTH (never more than ~38%) so
+  // the legend always keeps room for its percentage column; the legend fills
+  // the rest. `minmax(0, 1fr)` lets the legend track shrink instead of pushing
+  // the donut wider and clipping the percentages on a narrow card.
+  gridTemplateColumns: "minmax(88px, 38%) minmax(0, 1fr)",
   alignItems: "center",
   gap: 16,
+  flex: "1 1 auto",
+  minHeight: 0,
+  height: "100%",
 });
 
+// Square donut sized off the available WIDTH (its grid column), kept square via
+// aspect-ratio and capped at 200px so it neither collapses nor balloons.
+// Width-driven (not height-driven) sizing is what makes the card responsive: a
+// narrow card yields a smaller donut and a legible legend, rather than a
+// height-derived donut whose fixed width starves the legend's percentage column.
 const DonutArea = styled(Box)({
   position: "relative",
-  width: 120,
-  height: 120,
+  width: "100%",
+  maxWidth: 200,
+  aspectRatio: "1 / 1",
+  margin: "0 auto",
   flexShrink: 0,
 });
 
@@ -90,21 +107,84 @@ const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   height: 8,
   borderRadius: 8,
   backgroundColor: color,
+  flexShrink: 0,
 }));
 
 // TODO(next-pass): unify with parts/ChartTooltip
 const Tooltip = styled(Box)(({ theme }) => ({
   display: "flex",
-  alignItems: "center",
-  gap: 8,
+  flexDirection: "column",
+  gap: 6,
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   fontSize: 12,
-  padding: "6px 10px",
+  padding: "8px 10px",
   color: theme.palette.text.primary,
-  whiteSpace: "nowrap",
+  minWidth: 150,
+  maxWidth: 240,
 }));
+
+const TooltipHead = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+});
+
+const TooltipRepos = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: 3,
+  paddingTop: 6,
+  borderTop: `1px solid ${theme.palette.divider}`,
+}));
+
+const RepoRow = styled(Box)({
+  display: "flex",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+  gap: 12,
+  fontSize: 11,
+});
+
+const RepoName = styled(Box)(({ theme }) => ({
+  color: theme.palette.text.information,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+})) as typeof Box;
+
+const RepoPct = styled(Box)(({ theme }) => ({
+  color: theme.palette.text.primary,
+  fontVariantNumeric: "tabular-nums",
+  flexShrink: 0,
+})) as typeof Box;
+
+const MoreRow = styled(Box)(({ theme }) => ({
+  fontSize: 10.5,
+  color: theme.palette.text.information,
+}));
+
+/** Merge the per-repo contributor lists of several language slices (used when
+ *  the donut folds sub-3% languages into one "Other" wedge) into a single
+ *  breakdown, re-weighted by each slice's commit volume. */
+function mergeContributors(slices: readonly LanguageSlice[]): LangContributor[] {
+  const byRepo = new Map<string, { repoName: string; weight: number }>();
+  for (const slice of slices) {
+    for (const c of slice.contributors) {
+      const w = c.share * slice.commits;
+      const existing = byRepo.get(c.repoId);
+      if (existing) existing.weight += w;
+      else byRepo.set(c.repoId, { repoName: c.repoName, weight: w });
+    }
+  }
+  const total = [...byRepo.values()].reduce((a, b) => a + b.weight, 0) || 1;
+  return [...byRepo.entries()]
+    .map(([repoId, { repoName, weight }]) => ({ repoId, repoName, share: weight / total }))
+    .sort((a, b) => b.share - a.share);
+}
 
 function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
@@ -115,31 +195,35 @@ function LanguageDonutCard({ mix, loading }: Props) {
   const TAIL_THRESHOLD = 0.03;
   const legend = useMemo(() => {
     const result: LanguageSlice[] = [];
-    let otherCommits = 0;
-    let otherShare = 0;
-    let otherHits = 0;
+    const folded: LanguageSlice[] = [];
     for (const slice of mix) {
       if (slice.language === "Other" || slice.share < TAIL_THRESHOLD) {
-        otherCommits += slice.commits;
-        otherShare += slice.share;
-        otherHits += 1;
+        folded.push(slice);
         continue;
       }
       result.push(slice);
     }
-    if (otherHits > 0) {
+    if (folded.length > 0) {
       result.push({
-        language: otherHits === 1 ? "Other" : `Other (${otherHits})`,
+        language: folded.length === 1 ? "Other" : `Other (${folded.length})`,
         color: "#8a8a9a",
-        share: otherShare,
-        commits: otherCommits,
+        share: folded.reduce((a, b) => a + b.share, 0),
+        commits: folded.reduce((a, b) => a + b.commits, 0),
+        contributors: mergeContributors(folded),
       });
     }
     return result;
   }, [mix]);
   const totalCommits = Math.round(legend.reduce((a, b) => a + b.commits, 0));
   const data = useMemo(
-    () => legend.map((s) => ({ id: s.language, value: s.commits, color: s.color, share: s.share })),
+    () =>
+      legend.map((s) => ({
+        id: s.language,
+        value: s.commits,
+        color: s.color,
+        share: s.share,
+        contributors: s.contributors,
+      })),
     [legend],
   );
   return (
@@ -167,21 +251,41 @@ function LanguageDonutCard({ mix, loading }: Props) {
             enableArcLabels={false}
             enableArcLinkLabels={false}
             tooltip={() => <></>}
-            onMouseMove={(datum, e) =>
+            onMouseMove={(datum, e) => {
+              const contributors = datum.data.contributors ?? [];
               show(
                 e.clientX,
                 e.clientY,
                 <Tooltip>
-                  <Swatch color={datum.color} />
-                  <Box component="span">
-                    {t("activity.cards.language_tooltip", {
-                      language: datum.id,
-                      percent: Math.round((datum.data.share ?? 0) * 100),
-                    })}
-                  </Box>
+                  <TooltipHead>
+                    <Swatch color={datum.color} />
+                    <Box component="span">
+                      {t("activity.cards.language_tooltip", {
+                        language: datum.id,
+                        percent: Math.round((datum.data.share ?? 0) * 100),
+                      })}
+                    </Box>
+                  </TooltipHead>
+                  {contributors.length > 0 && (
+                    <TooltipRepos>
+                      {contributors.slice(0, MAX_TOOLTIP_CONTRIBUTORS).map((c) => (
+                        <RepoRow key={c.repoId}>
+                          <RepoName component="span">{c.repoName}</RepoName>
+                          <RepoPct component="span">{Math.round(c.share * 100)}%</RepoPct>
+                        </RepoRow>
+                      ))}
+                      {contributors.length > MAX_TOOLTIP_CONTRIBUTORS && (
+                        <MoreRow>
+                          {t("activity.cards.language_more", {
+                            count: contributors.length - MAX_TOOLTIP_CONTRIBUTORS,
+                          })}
+                        </MoreRow>
+                      )}
+                    </TooltipRepos>
+                  )}
                 </Tooltip>,
-              )
-            }
+              );
+            }}
             onMouseLeave={hide}
           />
           <Centre>

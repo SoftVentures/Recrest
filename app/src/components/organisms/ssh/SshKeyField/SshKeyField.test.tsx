@@ -32,7 +32,7 @@ describe("SshKeyField", () => {
     expect(onChange).toHaveBeenCalledWith("/home/u/.ssh/id_rsa");
   });
 
-  it("the ssh-agent option calls onChange(null)", async () => {
+  it("the automatic option calls onChange(null)", async () => {
     const onChange = vi.fn();
     const { findByTestId } = renderWithProviders(
       <SshKeyField value="/home/u/.ssh/id_ed25519" onChange={onChange} />,

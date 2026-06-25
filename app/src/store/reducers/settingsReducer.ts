@@ -6,16 +6,20 @@ import {
   DEFAULT_FONT,
   DEFAULT_FONT_SIZE,
   DEFAULT_LIGATURE_MODE,
+  DEFAULT_LOCALE_SETTINGS,
   POLLING_INTERVAL_MAX_MS,
   POLLING_INTERVAL_MIN_MS,
+  migrateDateFormat,
 } from "@recrest/shared";
 
 import { StorageKey } from "@/lib/constants/storage.constants";
 import {
   DEFAULT_PRIMARY_COLOR,
   DEFAULT_THEME_ID,
+  DEFAULT_TRANSLUCENCY,
   THEMES,
-  type ThemeId,
+  THEME_MODE_QUERY,
+  ThemeId,
 } from "@/lib/constants/theme.constants";
 import {
   deleteCustomFont,
@@ -23,11 +27,15 @@ import {
   loadDetectedIdes,
   loadDetectedShells,
   loadDetectedTerminals,
+  loadDiscoveredIdes,
+  loadDiscoveredTerminals,
   loadSettings,
   saveSettings,
+  setBlurIntensity,
   setCodeFont,
   setCodeLigatures,
   setCrashReporting,
+  setDateFormat,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
@@ -44,9 +52,15 @@ import {
   setPollingIntervalMinutes,
   setPrimaryColor,
   setReducedMotion,
+  setRegion,
   setThemeId,
+  setTimeFormat,
+  setTimeZone,
+  setTranslucencyEnabled,
+  setTranslucencyIntensity,
   setUnderlineLinks,
   setUpdateMode,
+  setWeekStart,
   syncSystemTheme,
   uploadCustomFont,
 } from "@/store/actions/settings.actions";
@@ -68,7 +82,7 @@ function mapBackendTheme(theme: string | null | undefined): ThemeId {
   if (KNOWN_THEME_IDS.has(theme as ThemeId)) return theme as ThemeId;
   if (theme === "system") {
     if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      return window.matchMedia(THEME_MODE_QUERY).matches ? ThemeId.DARK : ThemeId.LIGHT;
     }
     return DEFAULT_THEME_ID;
   }
@@ -91,8 +105,7 @@ function resolveBootTheme(): { themeId: ThemeId; followsSystem: boolean } {
     return { themeId: DEFAULT_THEME_ID, followsSystem: true };
   }
   const matchesDark =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+    typeof window.matchMedia === "function" && window.matchMedia(THEME_MODE_QUERY).matches;
   let stored: string | null = null;
   let follows: string | null = null;
   try {
@@ -102,12 +115,24 @@ function resolveBootTheme(): { themeId: ThemeId; followsSystem: boolean } {
     /* localStorage blocked — fall through to system */
   }
   if (follows === "true") {
-    return { themeId: matchesDark ? "dark" : "light", followsSystem: true };
+    return { themeId: matchesDark ? ThemeId.DARK : ThemeId.LIGHT, followsSystem: true };
   }
-  if (stored === "light" || stored === "dark" || stored === "oled" || stored === "glassy") {
+  // Legacy migrations: historical "glassy" and "oled" theme ids are
+  // rewritten to "dark" here so renderer boot already lands on a valid
+  // ThemeId. Translucency state survives via `recrest:translucency-enabled`
+  // (anti-flash inline script) + the backend snapshot.
+  if (stored === "glassy" || stored === "oled") {
+    return { themeId: ThemeId.DARK, followsSystem: false };
+  }
+  if (stored === ThemeId.LIGHT || stored === ThemeId.DARK) {
     return { themeId: stored, followsSystem: false };
   }
-  return { themeId: matchesDark ? "dark" : "light", followsSystem: true };
+  return { themeId: matchesDark ? ThemeId.DARK : ThemeId.LIGHT, followsSystem: true };
+}
+
+function clampIntensity(raw: number): number {
+  if (!Number.isFinite(raw)) return DEFAULT_TRANSLUCENCY.intensity;
+  return Math.min(100, Math.max(0, Math.round(raw)));
 }
 
 const BOOT_THEME = resolveBootTheme();
@@ -144,10 +169,14 @@ const initialState: SettingsState = {
   updates: {
     mode: "manual",
   },
+  translucency: { ...DEFAULT_TRANSLUCENCY },
+  localePrefs: { ...DEFAULT_LOCALE_SETTINGS },
   backend: null,
   detectedTerminals: null,
   detectedShells: null,
   detectedIdes: null,
+  discoveredTerminals: null,
+  discoveredIdes: null,
   customFonts: [],
   loading: false,
   error: null,
@@ -165,9 +194,40 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
   // yet (the Rust side `#[serde(default)]` fills the new substructs).
   const appearance = payload.appearance;
   if (appearance) {
-    state.themeId = KNOWN_THEME_IDS.has(appearance.themeId as ThemeId)
-      ? (appearance.themeId as ThemeId)
-      : DEFAULT_THEME_ID;
+    // When followsSystem is on, the persisted themeId is stale by definition —
+    // it reflects whatever the OS was at last save, not what the OS is right
+    // now. Re-derive from matchMedia so a boot under a flipped system theme
+    // hydrates to the right colour without ThemeWrapper's effect having to
+    // race against this `applyBackend` write. The Rust-side OS-truth read in
+    // ThemeWrapper still corrects the WKWebView cold-start quirk afterwards.
+    // Renderer-side belt-and-suspenders for the backend's glassy migration:
+    // even if a downstream store wrote `themeId === "glassy"` between the
+    // backend rewrite and the renderer hydrating, we still land in a valid
+    // state — pretend the value was always "dark" and lift translucency.
+    const legacyGlassy = (appearance.themeId as string) === "glassy";
+    const legacyOled = (appearance.themeId as string) === "oled";
+    if (appearance.followsSystem) {
+      // Keep the in-memory themeId. It was either:
+      //   - seeded by `resolveBootTheme()` from matchMedia at cold boot, or
+      //   - set authoritatively by `syncSystemTheme(...)` from the
+      //     `followSystemTheme` thunk's Rust-side OS read.
+      // Re-reading `matchMedia` here would clobber the second case, since
+      // `saveSettings.fulfilled` races against the thunk's `GET_SYSTEM_DARK_MODE`
+      // await — if the backend write resolves first, this branch used to
+      // overwrite the correct value with WKWebView's (often stale) matchMedia
+      // read. Trusting state preserves whichever path won the race; the
+      // ThemeWrapper effect's GET_SYSTEM_DARK_MODE still corrects cold-boot
+      // cases asynchronously.
+      if (!KNOWN_THEME_IDS.has(state.themeId)) {
+        state.themeId = DEFAULT_THEME_ID;
+      }
+    } else if (legacyGlassy || legacyOled) {
+      state.themeId = ThemeId.DARK;
+    } else {
+      state.themeId = KNOWN_THEME_IDS.has(appearance.themeId as ThemeId)
+        ? (appearance.themeId as ThemeId)
+        : DEFAULT_THEME_ID;
+    }
     state.followsSystem = appearance.followsSystem;
     state.primaryColor = appearance.primaryColor;
     state.font = appearance.font;
@@ -175,6 +235,38 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
     state.codeFont = appearance.codeFont ?? DEFAULT_CODE_FONT;
     state.codeLigatures = appearance.codeLigatures ?? DEFAULT_LIGATURE_MODE;
     state.fontSize = appearance.fontSize;
+    // Old settings.json predating the translucency split won't carry it.
+    if (legacyGlassy) {
+      state.translucency = {
+        enabled: true,
+        intensity: DEFAULT_TRANSLUCENCY.intensity,
+        blurIntensity: DEFAULT_TRANSLUCENCY.blurIntensity,
+      };
+    } else {
+      state.translucency = appearance.translucency
+        ? {
+            enabled: !!appearance.translucency.enabled,
+            intensity: clampIntensity(appearance.translucency.intensity),
+            // Older settings predating the blur-slider split won't carry
+            // `blurIntensity` — fall back to the renderer default.
+            blurIntensity: clampIntensity(
+              appearance.translucency.blurIntensity ?? DEFAULT_TRANSLUCENCY.blurIntensity,
+            ),
+          }
+        : { ...DEFAULT_TRANSLUCENCY };
+    }
+    // Old settings.json predating the locale-prefs split won't carry it.
+    state.localePrefs = appearance.localePrefs
+      ? {
+          // `migrateDateFormat` rewrites the legacy "absolute" value (and any
+          // unknown string) to a valid concrete preset.
+          dateFormat: migrateDateFormat(appearance.localePrefs.dateFormat),
+          timeFormat: appearance.localePrefs.timeFormat ?? DEFAULT_LOCALE_SETTINGS.timeFormat,
+          weekStart: appearance.localePrefs.weekStart ?? DEFAULT_LOCALE_SETTINGS.weekStart,
+          region: appearance.localePrefs.region ?? null,
+          timeZone: appearance.localePrefs.timeZone ?? null,
+        }
+      : { ...DEFAULT_LOCALE_SETTINGS };
   } else {
     // Legacy fallback: old settings.json without `appearance` — derive from
     // the top-level `theme` slot like the pre-Phase-2 reducer did.
@@ -210,7 +302,23 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
 export const settingsReducer = createReducer(initialState, (builder) => {
   builder
     .addCase(setThemeId, (state, action) => {
-      state.themeId = action.payload;
+      // Defensive migrations: if a legacy "glassy" / "oled" id ever
+      // reaches this reducer (e.g. persisted state from a stale tab),
+      // promote it to a valid id (and to the orthogonal translucency
+      // effect for glassy) rather than writing an invalid value.
+      const payload = action.payload as string;
+      if (payload === "glassy") {
+        state.themeId = ThemeId.DARK;
+        state.translucency = {
+          enabled: true,
+          intensity: DEFAULT_TRANSLUCENCY.intensity,
+          blurIntensity: DEFAULT_TRANSLUCENCY.blurIntensity,
+        };
+      } else if (payload === "oled") {
+        state.themeId = ThemeId.DARK;
+      } else {
+        state.themeId = action.payload;
+      }
       // Switching to a specific theme implicitly leaves "follow system" mode.
       state.followsSystem = false;
     })
@@ -226,11 +334,11 @@ export const settingsReducer = createReducer(initialState, (builder) => {
         if (
           typeof window !== "undefined" &&
           typeof window.matchMedia === "function" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches
+          window.matchMedia(THEME_MODE_QUERY).matches
         ) {
-          state.themeId = "dark";
+          state.themeId = ThemeId.DARK;
         } else {
-          state.themeId = "light";
+          state.themeId = ThemeId.LIGHT;
         }
       }
     })
@@ -298,6 +406,30 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     .addCase(setUpdateMode, (state, action) => {
       state.updates.mode = action.payload;
     })
+    .addCase(setTranslucencyEnabled, (state, action) => {
+      state.translucency.enabled = action.payload;
+    })
+    .addCase(setTranslucencyIntensity, (state, action) => {
+      state.translucency.intensity = clampIntensity(action.payload);
+    })
+    .addCase(setBlurIntensity, (state, action) => {
+      state.translucency.blurIntensity = clampIntensity(action.payload);
+    })
+    .addCase(setDateFormat, (state, action) => {
+      state.localePrefs.dateFormat = action.payload;
+    })
+    .addCase(setTimeFormat, (state, action) => {
+      state.localePrefs.timeFormat = action.payload;
+    })
+    .addCase(setWeekStart, (state, action) => {
+      state.localePrefs.weekStart = action.payload;
+    })
+    .addCase(setRegion, (state, action) => {
+      state.localePrefs.region = action.payload;
+    })
+    .addCase(setTimeZone, (state, action) => {
+      state.localePrefs.timeZone = action.payload;
+    })
     .addCase(loadSettings.pending, (state) => {
       state.loading = true;
       state.error = null;
@@ -324,6 +456,12 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     .addCase(loadDetectedIdes.fulfilled, (state, action) => {
       state.detectedIdes = action.payload;
     })
+    .addCase(loadDiscoveredTerminals.fulfilled, (state, action) => {
+      state.discoveredTerminals = action.payload;
+    })
+    .addCase(loadDiscoveredIdes.fulfilled, (state, action) => {
+      state.discoveredIdes = action.payload;
+    })
     .addCase(loadCustomFonts.fulfilled, (state, action) => {
       state.customFonts = action.payload;
     })
@@ -344,6 +482,7 @@ export {
   loadSettings,
   saveSettings,
   setCrashReporting,
+  setDateFormat,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
@@ -361,9 +500,15 @@ export {
   setPollingIntervalMinutes,
   setPrimaryColor,
   setReducedMotion,
+  setRegion,
   setThemeId,
+  setBlurIntensity,
+  setTimeFormat,
+  setTranslucencyEnabled,
+  setTranslucencyIntensity,
   setUnderlineLinks,
   setUpdateMode,
+  setWeekStart,
 } from "@/store/actions/settings.actions";
 
 export type { SettingsState } from "@/store/types/settings.types";

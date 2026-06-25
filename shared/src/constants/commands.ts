@@ -20,12 +20,16 @@ export const TauriCommand = {
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
   SET_REPO_LOGO: "set_repo_logo",
+  SET_REPO_LOGO_SVG: "set_repo_logo_svg",
   CLEAR_REPO_LOGO: "clear_repo_logo",
   OPEN_IN_IDE: "open_in_ide",
   OPEN_FILE_IN_IDE: "open_file_in_ide",
   DETECT_IDES: "detect_ides",
   DETECT_SHELLS: "detect_shells",
   DETECT_TERMINALS: "detect_terminals",
+  LIST_TERMINALS: "list_terminals",
+  LIST_IDES: "list_ides",
+  TEST_CUSTOM_TERMINAL: "test_custom_terminal",
   OPEN_TERMINAL: "open_terminal",
   SSH_UNLOCK_KEY: "ssh_unlock_key",
   SET_REPO_SSH_KEY: "set_repo_ssh_key",
@@ -36,6 +40,7 @@ export const TauriCommand = {
   GIT_FETCH: "git_fetch",
   GIT_FETCH_ALL: "git_fetch_all",
   GIT_PULL: "git_pull",
+  GIT_PULL_ALL: "git_pull_all",
   GIT_PUSH: "git_push",
   GIT_CHECKOUT: "git_checkout",
   GIT_CHECKOUT_REMOTE: "git_checkout_remote",
@@ -86,6 +91,8 @@ export const TauriCommand = {
   TRIGGER_WORKFLOW: "trigger_workflow",
   CANCEL_WORKFLOW_RUN: "cancel_workflow_run",
   GET_PAGES_STATUS: "get_pages_status",
+  PING_PROVIDER: "ping_provider",
+  VERIFY_CREDENTIALS: "verify_credentials",
   LIST_PR_EVENTS: "list_pr_events",
   LIST_CHECK_RUNS: "list_check_runs",
 
@@ -109,9 +116,18 @@ export const TauriCommand = {
   // window
   SET_CAPTION_BUTTON_BOUNDS: "set_caption_button_bounds",
 
+  // theme — orthogonal translucency effect (replaced the old glassy theme).
+  // `set_translucency` swaps the OS-level vibrancy/liquid-glass effect on/off
+  // with the given intensity; `supports_translucency` is a static capability
+  // probe used to hide the UI on platforms where it is a no-op.
+  SET_TRANSLUCENCY: "set_translucency",
+  SUPPORTS_TRANSLUCENCY: "supports_translucency",
+
   // system
   GET_PLATFORM_INFO: "get_platform_info",
   GET_SYSTEM_DARK_MODE: "get_system_dark_mode",
+  GET_SYSTEM_FACTS: "get_system_facts",
+  GET_DATA_SIZES: "get_data_sizes",
   CHECK_GIT: "check_git",
   UPDATE_TRAY_BADGE: "update_tray_badge",
 

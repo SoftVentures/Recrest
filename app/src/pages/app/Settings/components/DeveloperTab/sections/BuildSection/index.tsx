@@ -10,6 +10,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
   Card,
   FactKey,
@@ -27,6 +28,28 @@ interface DevPaths {
   logDir: string | null;
   binaryDir: string | null;
   workspaceRoot: string | null;
+}
+
+function FactCopyButton({ value, label }: { value: string; label: string }) {
+  const feedback = useActionFeedback();
+  return (
+    <GeneralButton
+      size="sm"
+      variant="outline"
+      feedbackState={feedback.state}
+      onClick={() => {
+        void feedback
+          .run(async () => {
+            await navigator.clipboard?.writeText(value);
+          })
+          .catch(() => {
+            /* feedback already reflects the failure */
+          });
+      }}
+    >
+      {label}
+    </GeneralButton>
+  );
 }
 
 export function BuildSection() {
@@ -110,13 +133,7 @@ export function BuildSection() {
               <FactVal>
                 <Box component="span">{r.value}</Box>
                 {r.copyable && r.value !== dash && (
-                  <GeneralButton
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigator.clipboard?.writeText(r.value)}
-                  >
-                    {t("developer.build.copy")}
-                  </GeneralButton>
+                  <FactCopyButton value={r.value} label={t("developer.build.copy")} />
                 )}
               </FactVal>
             </FactRow>

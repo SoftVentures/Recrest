@@ -37,7 +37,7 @@ fn detect() -> GitInfo {
     }
 }
 
-fn parse_version(stdout: &str) -> Option<String> {
+pub(crate) fn parse_version(stdout: &str) -> Option<String> {
     // Expected: "git version 2.42.0" (+ optional suffix on macOS / Windows).
     let trimmed = stdout.trim();
     let rest = trimmed.strip_prefix("git version ")?;

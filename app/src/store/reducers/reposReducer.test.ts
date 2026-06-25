@@ -237,7 +237,7 @@ describe("reposReducer", () => {
 
   it("removes a repo on deleteRepo.fulfilled", () => {
     const start = withRepo(repo({ id: "r1" }));
-    const next = reposReducer(start, deleteRepo.fulfilled("r1", "internal-id", "r1"));
+    const next = reposReducer(start, deleteRepo.fulfilled("r1", "internal-id", { repoId: "r1" }));
     expect(next.items["r1"]).toBeUndefined();
   });
 

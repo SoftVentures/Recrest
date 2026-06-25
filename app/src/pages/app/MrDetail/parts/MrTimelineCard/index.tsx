@@ -5,7 +5,7 @@ import type { TimelineEvent } from "@recrest/shared";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
-import { formatDateTime } from "@/lib/utils/dateFormat.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import { Empty } from "@/pages/app/MrDetail/MrDetail.styles";
 import {
   Muted,
@@ -23,6 +23,7 @@ interface Props {
 
 export default function MrTimelineCard({ events, loading }: Props) {
   const { t: tPrs } = useTranslation(I18nNamespace.PRS);
+  const dt = useDateTimeFormat();
 
   return (
     <GeneralCard title={tPrs("detail.section_timeline")} sub={`${events?.length ?? 0}`} flushHeight>
@@ -45,7 +46,7 @@ export default function MrTimelineCard({ events, loading }: Props) {
                   </Muted>
                 )}
                 <Muted component="span" variant="caption">
-                  · {formatDateTime(evt.at)}
+                  · {dt.formatAbsolute(evt.at)}
                 </Muted>
               </TimelineHead>
               {evt.body && <TimelineBody>{evt.body}</TimelineBody>}

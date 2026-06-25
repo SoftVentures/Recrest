@@ -187,7 +187,7 @@ describe("prsReducer", () => {
   it("purges repo-scoped state on deleteRepo.fulfilled but keeps other repos", () => {
     let state = prsReducer(initial(), setPrs({ repoId: "r1", prs: [pr({ number: 1 })] }));
     state = prsReducer(state, setPrs({ repoId: "r2", prs: [pr({ number: 2 })] }));
-    const next = prsReducer(state, deleteRepo.fulfilled("r1", "internal-id", "r1"));
+    const next = prsReducer(state, deleteRepo.fulfilled("r1", "internal-id", { repoId: "r1" }));
     expect(next.items["r1"]).toBeUndefined();
     expect(next.items["r2"]).toBeDefined();
   });

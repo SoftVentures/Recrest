@@ -55,11 +55,45 @@ const FILES: FileDiff[] = [
   },
 ];
 
+function bigFile(path: string, lines: number): FileDiff {
+  return {
+    path,
+    oldPath: null,
+    status: "modified",
+    hunks: [
+      {
+        oldStart: 1,
+        oldLines: lines,
+        newStart: 1,
+        newLines: lines,
+        lines: Array.from({ length: lines }, (_, i) => ({
+          kind: "context" as const,
+          content: `line ${i}`,
+          oldLineNo: i + 1,
+          newLineNo: i + 1,
+        })),
+      },
+    ],
+  };
+}
+
 describe("DiffView", () => {
   it("renders one file block with all hunk lines", () => {
     const { getAllByTestId } = renderWithProviders(<DiffView files={FILES} />);
     expect(getAllByTestId(TEST_IDS.mr.diff.file)).toHaveLength(1);
     expect(getAllByTestId(TEST_IDS.mr.diff.line)).toHaveLength(4);
+  });
+
+  it("collapses a file larger than the render budget by default, expanding on click", () => {
+    const { getAllByTestId, queryAllByTestId } = renderWithProviders(
+      <DiffView files={[bigFile("src/huge.ts", 400)]} />,
+    );
+    // Header is present but no lines are mounted while collapsed.
+    expect(getAllByTestId(TEST_IDS.mr.diff.file)).toHaveLength(1);
+    expect(queryAllByTestId(TEST_IDS.mr.diff.line)).toHaveLength(0);
+    // Expanding renders the lines on demand.
+    fireEvent.click(getAllByTestId(TEST_IDS.mr.diff.fileToggle)[0]!);
+    expect(queryAllByTestId(TEST_IDS.mr.diff.line)).toHaveLength(400);
   });
 
   it("does not show comment affordances when onComment is absent", () => {

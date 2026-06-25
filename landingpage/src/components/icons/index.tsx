@@ -1,6 +1,17 @@
 import type { ReactElement, SVGProps } from "react";
 
-import { siBitbucket, siGithub, siGitlab, siRss, siTauri } from "simple-icons";
+import {
+  siApple,
+  siBitbucket,
+  siGithub,
+  siGitlab,
+  siLinux,
+  siReact,
+  siRss,
+  siRust,
+  siTauri,
+  siTypescript,
+} from "simple-icons";
 
 import { SimpleIcon } from "./SimpleIcon";
 
@@ -38,6 +49,46 @@ export const TauriIcon: Icon = ({ width = 16, height = 16, ...rest }) => (
 
 export const RssIcon: Icon = ({ width = 16, height = 16, ...rest }) => (
   <SimpleIcon icon={siRss} size={Number(width)} height={height} {...rest} />
+);
+
+/* ─── Platform brand marks ────────────────────────────── */
+
+export const AppleIcon: Icon = ({ width = 20, height = 20, ...rest }) => (
+  <SimpleIcon icon={siApple} size={Number(width)} height={height} {...rest} />
+);
+
+export const LinuxIcon: Icon = ({ width = 20, height = 20, ...rest }) => (
+  <SimpleIcon icon={siLinux} size={Number(width)} height={height} {...rest} />
+);
+
+// simple-icons dropped the Microsoft/Windows logos for trademark reasons, so
+// the Windows brand mark is the classic four-pane logo inlined here.
+export const WindowsIcon: Icon = ({ width = 20, height = 20, ...rest }) => (
+  <svg
+    width={width}
+    height={height}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    role="img"
+    aria-label="Windows"
+    {...rest}
+  >
+    <path d="M0 3.449 9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
+  </svg>
+);
+
+/* ─── Tech brand marks ───────────────────────────────── */
+
+export const RustIcon: Icon = ({ width = 16, height = 16, ...rest }) => (
+  <SimpleIcon icon={siRust} size={Number(width)} height={height} {...rest} />
+);
+
+export const ReactIcon: Icon = ({ width = 16, height = 16, ...rest }) => (
+  <SimpleIcon icon={siReact} size={Number(width)} height={height} {...rest} />
+);
+
+export const TypeScriptIcon: Icon = ({ width = 16, height = 16, ...rest }) => (
+  <SimpleIcon icon={siTypescript} size={Number(width)} height={height} {...rest} />
 );
 
 /* ─── UI icons (custom — not available in simple-icons) ── */
@@ -205,6 +256,25 @@ export const ServerIcon: Icon = (props) => (
     <rect x={2} y={14} width={20} height={7} rx={1} />
     <line x1={6} y1={6.5} x2={6.01} y2={6.5} />
     <line x1={6} y1={17.5} x2={6.01} y2={17.5} />
+  </svg>
+);
+
+export const ScaleIcon: Icon = (props) => (
+  <svg viewBox="0 0 24 24" {...defaults} {...props}>
+    <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+    <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+    <path d="M7 21h10" />
+    <path d="M12 3v18" />
+    <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
+  </svg>
+);
+
+export const GitPullRequestIcon: Icon = (props) => (
+  <svg viewBox="0 0 24 24" {...defaults} {...props}>
+    <circle cx={18} cy={18} r={3} />
+    <circle cx={6} cy={6} r={3} />
+    <path d="M13 6h3a2 2 0 0 1 2 2v7" />
+    <line x1={6} y1={9} x2={6} y2={21} />
   </svg>
 );
 

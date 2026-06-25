@@ -21,6 +21,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { errorMessage } from "@/lib/utils/error.utils";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { gitCloneUrl, loadRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -62,8 +63,12 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
       setSubFolder("");
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(t("add_modal.toast_clone_failed", { ns: I18nNamespace.REPOS, message: msg }));
+      toast.error(
+        t("add_modal.toast_clone_failed", {
+          ns: I18nNamespace.REPOS,
+          message: errorMessage(err),
+        }),
+      );
     } finally {
       setBusy(false);
     }

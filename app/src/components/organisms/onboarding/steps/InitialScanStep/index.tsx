@@ -134,7 +134,10 @@ function InitialScanStep({ onBack, onNext }: InitialScanStepProps) {
             <SubSummary component="p">{t("scan.empty")}</SubSummary>
           ) : (
             <Summary component="p">
-              {t("scan.summary", { count: repos.length, pathCount: scanPaths.length })}
+              {t("scan.summary_template", {
+                repos: t("scan.summary_repos", { count: repos.length }),
+                paths: t("scan.summary_paths", { count: scanPaths.length }),
+              })}
             </Summary>
           )}
         </ScanState>

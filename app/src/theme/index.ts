@@ -14,7 +14,6 @@ import {
   EFFECTS_TOKENS,
   FORMATTING_COLORS,
   LIGHT_THEME_COLORS,
-  OLED_COLORS,
   type PrimaryColorScheme,
   THEMES,
   type ThemeId,
@@ -28,6 +27,11 @@ export interface AccessibilityOptions {
   primaryColor?: PrimaryColorScheme | null;
   font?: FontSelection;
   fontSize?: FontSizeId;
+  /** When true, the orthogonal translucency effect is active. The theme nulls
+   *  out the canvas-level `background.default` so the OS vibrancy layer can
+   *  composite through; styled surfaces (Sidebar, Cards) keep their opaque
+   *  backgrounds and provide visible UI structure on top. */
+  translucent?: boolean;
 }
 
 /**
@@ -116,7 +120,6 @@ const baseTheme = {
 export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
   const meta = getThemeById(themeId);
   const isDark = meta.mode === "dark";
-  const { isOled, isGlassy } = meta;
 
   // `font` is the new source of truth. The legacy `dyslexiaFont` boolean
   // still wins when explicitly set so callers that only flip the toggle
@@ -136,23 +139,16 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
   // reaches for the accent automatically picks up the brighter variant.
   const primaryMain = isDark ? primary.LIGHT : primary.MAIN;
 
-  // Surface palette source — OLED overrides dark slots with pure-black variants.
-  const C = isOled ? OLED_COLORS : isDark ? DARK_THEME_COLORS : LIGHT_THEME_COLORS;
+  // Surface palette source — picked by the active theme mode.
+  const C = isDark ? DARK_THEME_COLORS : LIGHT_THEME_COLORS;
   const F = isDark ? FORMATTING_COLORS.DARK : FORMATTING_COLORS.LIGHT;
 
-  // Glassy: surfaces become semi-transparent so Tauri vibrancy shows through.
-  const surfaceAlpha = (hex: string, a: number) => {
-    if (!isGlassy) return hex;
-    if (hex.startsWith("#") && hex.length === 7) {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${a})`;
-    }
-    return hex;
-  };
-
-  const effects = isGlassy ? EFFECTS_TOKENS.GLASSY : EFFECTS_TOKENS.NONE;
+  // Translucency is orthogonal to theme now — surface alpha-blending happens
+  // at runtime in the renderer (driven by `appearance.translucency.enabled`).
+  // Themes themselves stay opaque, so background blocks read solid hex
+  // values; the OS-level vibrancy effect provides the see-through under any
+  // theme.
+  const effects = EFFECTS_TOKENS.NONE;
 
   const theme = createTheme({
     ...baseTheme,
@@ -195,8 +191,12 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
         dark: BASE_THEME_COLORS.INFO.DARK,
       },
       background: {
-        default: isGlassy ? "transparent" : C.APP_BG,
-        paper: isGlassy ? surfaceAlpha(C.SURFACE_1, 0.6) : C.SURFACE_1,
+        // Canvas: transparent when translucency is on so the OS vibrancy
+        // material composites through the main content area. Styled surfaces
+        // (Sidebar, Cards, Header) keep their opaque palette and provide UI
+        // structure on top of the glass.
+        default: opts?.translucent ? "transparent" : C.APP_BG,
+        paper: C.SURFACE_1,
       },
       text: {
         default: C.INK_1,
@@ -243,18 +243,16 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
           ctaContrast: "#ffffff",
         },
         interface: {
-          base: isGlassy ? surfaceAlpha(C.SURFACE_1, 0.6) : C.SURFACE_1,
-          background: isGlassy ? "transparent" : C.APP_BG,
-          content: isGlassy ? surfaceAlpha(C.CANVAS, 0.55) : C.CANVAS,
+          base: C.SURFACE_1,
+          background: C.APP_BG,
+          content: C.CANVAS,
           backElevation: C.SURFACE_2,
           active: C.SURFACE_HOVER,
-          // Sidebar becomes translucent in Glassy so the native acrylic shows
-          // through the left nav too; opaque in every other theme.
-          dark: isGlassy ? surfaceAlpha(C.SIDEBAR_BG, 0.6) : C.SIDEBAR_BG,
-          navigation: isGlassy ? surfaceAlpha(C.SIDEBAR_BG, 0.6) : C.SIDEBAR_BG,
-          // Titlebar strip — always opaque (never alpha'd), so the window
-          // controls keep a solid backdrop in Glassy instead of bleeding the
-          // acrylic through. Matches `background.paper` in the opaque themes.
+          dark: C.SIDEBAR_BG,
+          navigation: C.SIDEBAR_BG,
+          // Titlebar strip — always opaque (never alpha'd) so the window
+          // controls keep a solid backdrop even under translucency, instead
+          // of bleeding the acrylic through. Matches `background.paper`.
           chrome: C.SURFACE_1,
           overlay: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(17, 17, 22, 0.4)",
           disabled: C.SURFACE_3,

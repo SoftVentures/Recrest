@@ -27,8 +27,7 @@ import {
 } from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/ProvidersPanel.styles";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { formatDateShort } from "@/lib/utils/dateFormat.utils";
-import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 
 const FlushCheckbox = styled(Checkbox)({ padding: 0 });
 
@@ -54,6 +53,7 @@ export function RepoRowCard({
 }: RepoRowCardProps): ReactNode {
   const { t } = useTranslation(I18nNamespace.REPOS);
   const theme = useTheme();
+  const dt = useDateTimeFormat();
   const updatedIso = repo.pushedAt ?? repo.updatedAt;
   const displayName =
     groupPrefix && repo.fullName.startsWith(`${groupPrefix}/`)
@@ -95,10 +95,10 @@ export function RepoRowCard({
       {updatedIso && (
         <RepoUpdatedColumn title={updatedIso}>
           <RepoUpdatedRelative component="span" variant="caption">
-            {timeAgo(updatedIso)}
+            {dt.formatRelative(updatedIso)}
           </RepoUpdatedRelative>
           <RepoUpdatedAbsolute component="span" variant="caption">
-            {formatDateShort(updatedIso)}
+            {dt.formatAbsolute(updatedIso, false)}
           </RepoUpdatedAbsolute>
         </RepoUpdatedColumn>
       )}

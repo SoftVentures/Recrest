@@ -34,7 +34,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
-import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 
 interface Props {
   repoId: string;
@@ -60,6 +60,7 @@ function isCancelable(run: WorkflowRun): boolean {
 
 export default function CiCard({ repoId }: Props) {
   const { t } = useTranslation(I18nNamespace.PRS);
+  const dt = useDateTimeFormat();
   const [workflows, setWorkflows] = useState<Workflow[] | null>(null);
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,7 +198,7 @@ export default function CiCard({ repoId }: Props) {
                     <RunTitle>{t("ci.run_number", { n: run.runNumber })}</RunTitle>
                     <RunMeta>
                       {run.conclusion ?? run.status}
-                      {run.actor ? ` · ${run.actor}` : ""} · {timeAgo(run.createdAt)}
+                      {run.actor ? ` · ${run.actor}` : ""} · {dt.formatTimestamp(run.createdAt)}
                     </RunMeta>
                   </RunMain>
                   {isCancelable(run) && (

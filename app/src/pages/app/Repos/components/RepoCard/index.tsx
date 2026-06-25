@@ -10,6 +10,7 @@ import { GitBranch } from "lucide-react";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
+import IconSlot from "@/components/atoms/layout/IconSlot";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
 import RepoContextMenu from "@/components/molecules/menus/RepoContextMenu";
 import { useContextMenu } from "@/hooks/useContextMenu";
@@ -82,7 +83,9 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
         <Path>{repo.path}</Path>
         <BranchRow>
           <BranchChip>
-            <GitBranch size={11} />
+            <IconSlot>
+              <GitBranch size={11} />
+            </IconSlot>
             <BranchText component="span">{repo.status.branch ?? "—"}</BranchText>
           </BranchChip>
           <AheadBehind ahead={repo.status.ahead} behind={repo.status.behind} variant="compact" />

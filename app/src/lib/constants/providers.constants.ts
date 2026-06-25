@@ -38,3 +38,14 @@ export const PROVIDER_BRAND_ICONS = {
   gitlab: siGitlab,
   bitbucket: siBitbucket,
 } as const satisfies Record<ProviderId, SimpleIcon>;
+
+/** Example URLs surfaced as `placeholder=` on the Accounts → base-URL
+ *  input. Self-hosted hint for each provider so the user knows the field
+ *  accepts an Enterprise / self-managed root (not just the cloud default).
+ *  Not user-visible copy — the i18next gate skips `placeholder` attribs
+ *  when the value comes from a constant. */
+export const PROVIDER_BASE_URL_PLACEHOLDERS = {
+  github: "https://github.acme.com",
+  gitlab: "https://gitlab.example.com",
+  bitbucket: "https://api.bitbucket.org/2.0",
+} as const satisfies Record<ProviderId, string>;

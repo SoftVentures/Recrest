@@ -76,7 +76,20 @@ export function usePageSwipe({ threshold = 80, enabled = true }: PageSwipeOption
       const guarded: EventListener = (e) => {
         const origin = e.target as HTMLElement | null;
         if (origin?.closest('[role="dialog"]')) return;
-        listener(e);
+        try {
+          listener(e);
+        } catch (err) {
+          // use-gesture occasionally throws `InvalidStateError` from
+          // `setPointerCapture` when the pointerdown target has been
+          // detached mid-gesture (modal close, route change, focus flip
+          // during Stage Manager). The throw bubbles up to a window
+          // `onerror`, which makes the dev log look like something broke
+          // even though the gesture is just no-oping. Swallow the
+          // documented benign case; rethrow anything else.
+          if (!(err instanceof DOMException && err.name === "InvalidStateError")) {
+            throw err;
+          }
+        }
       };
       target.addEventListener(evt, guarded, { passive: true });
       subs.push(() => target.removeEventListener(evt, guarded));

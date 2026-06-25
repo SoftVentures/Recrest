@@ -1,36 +1,40 @@
+import { useState } from "react";
+
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { type BranchInfo, TauriCommand } from "@recrest/shared";
 
-import { GitBranch as BranchIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, GitBranch as BranchIcon, Trash2 } from "lucide-react";
 
+import GeneralIconButton, {
+  IconButtonSize,
+  IconButtonTone,
+} from "@/components/atoms/buttons/GeneralIconButton";
 import BranchFilterChip from "@/components/atoms/chips/BranchFilterChip";
-import {
-  PAGE_DUR_SM,
-  PAGE_EASE,
-  pgRise,
-  prefersReducedMotionGuard,
-  staggerNthOfType,
-} from "@/lib/animations/pageAnimations";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
+import IconSlot from "@/components/atoms/layout/IconSlot";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
+import DeleteBranchDialog from "@/pages/app/Branches/parts/DeleteBranchDialog";
 
 export interface BranchRowItemProps {
   repo: EnrichedRepo;
   branch: BranchInfo;
-  busyKey: string | null;
+  stateFor: (key: string) => ActionFeedbackState;
   run: (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => Promise<void>;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }
 
-export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowItemProps) {
+export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowItemProps) {
   const { t: tRepos } = useTranslation(I18nNamespace.REPOS);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const keyPrefix = `${repo.id}:${b.isRemote ? `${b.remote}/${b.name}` : b.name}`;
   const dotTone: "current" | "clean" | "remote" | "neutral" = b.isCurrent
     ? "current"
@@ -42,15 +46,17 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
   const checkoutKey = `${keyPrefix}:checkout`;
   const pullKey = `${keyPrefix}:pull`;
   const pushKey = `${keyPrefix}:push`;
-  const isCheckoutBusy = busyKey === checkoutKey;
-  const isPullBusy = busyKey === pullKey;
-  const isPushBusy = busyKey === pushKey;
+  const checkoutState = stateFor(checkoutKey);
+  const pullState = stateFor(pullKey);
+  const pushState = stateFor(pushKey);
 
   return (
     <Row>
       <Dot tone={dotTone} />
       <NameCell>
-        <BranchIcon size={13} aria-hidden />
+        <IconSlot size={16} tone="information">
+          <BranchIcon size={13} aria-hidden />
+        </IconSlot>
         <Box component="span">{b.isRemote ? `${b.remote}/${b.name}` : b.name}</Box>
         {b.isCurrent && (
           <BranchFilterChip tone="current">{t("branches.tag.current")}</BranchFilterChip>
@@ -81,11 +87,21 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="ghost"
-              disabled={isPullBusy}
+              disabled={pullState === "loading"}
               onClick={() =>
-                void run(pullKey, "git_pull", { repoId: repo.id }, t("branches.actions.pull"))
+                void run(
+                  pullKey,
+                  TauriCommand.GIT_PULL,
+                  { repoId: repo.id },
+                  t("branches.actions.pulled"),
+                )
               }
             >
+              <ActionFeedbackIcon
+                state={pullState}
+                fallback={<ArrowDown size={11} aria-hidden />}
+                size={11}
+              />
               {t("branches.actions.pull")}
             </RowBtn>
           )}
@@ -93,11 +109,21 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="ghost"
-              disabled={isPushBusy}
+              disabled={pushState === "loading"}
               onClick={() =>
-                void run(pushKey, "git_push", { repoId: repo.id }, t("branches.actions.push"))
+                void run(
+                  pushKey,
+                  TauriCommand.GIT_PUSH,
+                  { repoId: repo.id },
+                  t("branches.actions.pushed"),
+                )
               }
             >
+              <ActionFeedbackIcon
+                state={pushState}
+                fallback={<ArrowUp size={11} aria-hidden />}
+                size={11}
+              />
               {t("branches.actions.push")}
             </RowBtn>
           )}
@@ -105,37 +131,55 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
             <RowBtn
               type="button"
               tone="primary"
-              disabled={isCheckoutBusy}
+              disabled={checkoutState === "loading"}
               data-testid={TEST_IDS.branches.checkout}
               onClick={() =>
                 void run(
                   checkoutKey,
                   TauriCommand.GIT_CHECKOUT,
                   { repoId: repo.id, branch: b.name },
-                  t("branches.actions.checkout"),
+                  t("branches.actions.checked_out", { branch: b.name }),
                 )
               }
             >
-              <BranchIcon size={10} aria-hidden />
+              <ActionFeedbackIcon
+                state={checkoutState}
+                fallback={<BranchIcon size={10} aria-hidden />}
+                size={10}
+              />
               {t("branches.actions.checkout")}
             </RowBtn>
+          )}
+          {!b.isRemote && !b.isCurrent && (
+            <GeneralIconButton
+              size={IconButtonSize.SM}
+              tone={IconButtonTone.DANGER}
+              aria-label={t("branches.actions.delete")}
+              data-testid={TEST_IDS.branches.delete}
+              icon={<Trash2 size={13} aria-hidden />}
+              onClick={() => setDeleteOpen(true)}
+            />
           )}
           {b.isRemote && b.remote && (
             <RowBtn
               type="button"
               tone="primary"
-              disabled={isCheckoutBusy}
+              disabled={checkoutState === "loading"}
               data-testid={TEST_IDS.branches.checkoutRemote}
               onClick={() =>
                 void run(
                   checkoutKey,
                   TauriCommand.GIT_CHECKOUT_REMOTE,
                   { repoId: repo.id, remote: b.remote, branch: b.name },
-                  t("branches.actions.checkout_remote"),
+                  t("branches.actions.checked_out", { branch: b.name }),
                 )
               }
             >
-              <BranchIcon size={10} aria-hidden />
+              <ActionFeedbackIcon
+                state={checkoutState}
+                fallback={<BranchIcon size={10} aria-hidden />}
+                size={10}
+              />
               {t("branches.actions.checkout_remote")}
             </RowBtn>
           )}
@@ -143,11 +187,23 @@ export function BranchRowItem({ repo, branch: b, busyKey, run, t }: BranchRowIte
         <Track>
           {b.ahead > 0 && <Trk tone="ahead">↑{b.ahead}</Trk>}
           {b.behind > 0 && <Trk tone="behind">↓{b.behind}</Trk>}
-          {b.ahead === 0 && b.behind === 0 && !b.isRemote && (
+          {/* "in sync" only makes sense against an upstream — a branch with no
+              upstream already says so in the middle column, so show nothing. */}
+          {!b.isRemote && !!b.upstream && b.ahead === 0 && b.behind === 0 && (
             <Trk tone="even">{tRepos("branches.track_even")}</Trk>
           )}
         </Track>
       </Tail>
+      {!b.isRemote && !b.isCurrent && (
+        <DeleteBranchDialog
+          open={deleteOpen}
+          repoId={repo.id}
+          branch={b}
+          run={run}
+          t={t}
+          onClose={() => setDeleteOpen(false)}
+        />
+      )}
     </Row>
   );
 }
@@ -171,9 +227,9 @@ const Row = styled(Box)(({ theme }) => ({
   "&:focus-within [data-row-acts]": {
     visibility: "visible",
   },
-  animation: `${pgRise} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
-  ...staggerNthOfType({ step: 40, count: 10, base: 80 }),
-  ...prefersReducedMotionGuard,
+  // No per-row entrance animation: rows render instantly with their group's
+  // fade. Animating every row (with a stagger cascade) janked on repos with
+  // many branches and made the tab feel slow to settle.
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
@@ -209,10 +265,6 @@ const NameCell = styled(Box)(({ theme }) => ({
   fontFamily: MONO_STACK,
   fontSize: 12.5,
   color: theme.palette.text.primary,
-  "& > svg": {
-    color: theme.palette.text.information,
-    flexShrink: 0,
-  },
   "& > span:first-of-type": {
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -249,8 +301,7 @@ const Acts = styled(Box)({
   visibility: "hidden",
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-const RowBtn = styled("button", {
+const RowBtn = styled(Button, {
   shouldForwardProp: (p) => p !== "tone",
 })<{ tone?: "primary" | "ghost" }>(({ theme, tone = "ghost" }) => {
   const isDark = theme.palette.mode === "dark";
@@ -261,6 +312,7 @@ const RowBtn = styled("button", {
     display: "inline-flex",
     alignItems: "center",
     gap: 5,
+    minWidth: 0,
     height: 24,
     padding: "0 8px",
     border: "1px solid transparent",
@@ -268,6 +320,7 @@ const RowBtn = styled("button", {
     fontSize: 11,
     fontWeight: 600,
     fontFamily: "inherit",
+    textTransform: "none",
     cursor: "pointer",
     whiteSpace: "nowrap",
     transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",

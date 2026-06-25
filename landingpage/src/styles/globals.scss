@@ -189,6 +189,190 @@
   padding-left: 4px;
 }
 
+/* ─── Download page ──────────────────────────────────────── */
+.download-main {
+  padding: 48px 0 96px;
+  min-height: calc(100vh - 62px);
+}
+
+.download-wrap {
+  max-width: 1040px;
+}
+
+.download-header {
+  margin-bottom: 40px;
+}
+
+.download-header h1 {
+  font-size: clamp(32px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-0);
+  margin: 0 0 10px;
+}
+
+.download-subtitle {
+  font-size: 15px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.download-disclaimer {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--amber-weak);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin: 0 0 28px;
+}
+.download-disclaimer__icon {
+  flex-shrink: 0;
+  display: flex;
+  margin-top: 1px;
+  color: var(--amber);
+}
+.download-disclaimer__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.download-disclaimer__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-0);
+  margin: 0;
+}
+.download-disclaimer__body {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 80ch;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .download-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DownloadCard */
+.download-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 22px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.download-card--highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.download-card__detected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent-ink);
+  background: var(--accent-weak);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  align-self: flex-start;
+}
+
+.download-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink-0);
+  margin: 0;
+}
+
+.download-card__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--ink-0);
+}
+
+.download-card__sub {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.download-card__links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.download-card__btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* InstallInstructions */
+.install-instructions {
+  border-top: 1px solid var(--hairline);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.install-instructions__heading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+  margin: 0 0 8px;
+}
+
+.install-instructions__steps {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+.install-instructions__steps code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 1px 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--ink-1);
+}
+
 /* ─── Reset / base ───────────────────────────────────────── */
 *,
 *::before,
@@ -594,8 +778,23 @@ section.tight {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--accent);
+  color: var(--accent-ink);
   margin-bottom: 12px;
+}
+
+/* Open-Source section label (variant B) — solid, theme-adaptive pill */
+.os-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--canvas);
+  background: var(--ink-0);
+  border-radius: var(--radius-pill);
+  padding: 7px 15px;
+  margin-bottom: 18px;
 }
 
 /* ─── Privacy — v2 (data flow + cards) ─────────────────── */
@@ -709,7 +908,7 @@ section.tight {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 .df-lane-recrest {
   border-color: var(--accent);
@@ -755,31 +954,37 @@ section.tight {
   gap: 14px;
   flex: 1;
 }
-.df-recrest-tauri {
-  width: 56px;
-  height: 56px;
+.df-recrest-logo {
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background: var(--accent-weak);
-  color: var(--accent-ink);
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
   animation: tauriFloat 3.4s ease-in-out infinite;
 }
-.df-recrest-chips {
+.df-tech {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   width: 100%;
 }
-.df-chip {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--ink-2);
-  padding: 3px 8px;
+.df-tech-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-1);
+  padding: 6px 10px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  text-align: center;
+}
+.df-tech-card svg {
+  flex-shrink: 0;
+  color: var(--ink-1);
 }
 
 .df-remotes {
@@ -822,8 +1027,8 @@ section.tight {
   stroke-dasharray: 3 4;
 }
 .df-path-arrow {
-  stroke: var(--ink-3);
-  stroke-width: 1.5;
+  stroke: var(--border-strong);
+  stroke-width: 1.25;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -847,35 +1052,35 @@ section.tight {
 }
 
 .df-no-server {
-  margin-top: 18px;
+  margin-top: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
 }
-.df-no-server-line {
+.df-no-server::before,
+.df-no-server::after {
+  content: "";
   flex: 1;
-  max-width: 140px;
-  height: 1px;
-  background: repeating-linear-gradient(to right, var(--border-strong) 0 6px, transparent 6px 12px);
+  max-width: 96px;
+  border-top: 1px dashed color-mix(in srgb, var(--ink-4) 55%, transparent);
 }
 .df-no-server-tag {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: var(--radius-pill);
   background: var(--surface-2);
-  color: var(--ink-3);
-  font-size: 11.5px;
+  color: var(--ink-2);
+  font-size: 12px;
   font-weight: 500;
-  border: 1px dashed var(--border-strong);
-  text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--red) 60%, transparent);
-  text-decoration-thickness: 1.5px;
+  border: 1px solid var(--border-strong);
+  white-space: nowrap;
 }
 .df-no-server-tag svg {
-  text-decoration: none;
+  color: var(--ink-3);
+  flex-shrink: 0;
 }
 
 /* Privacy property cards */
@@ -910,6 +1115,12 @@ section.tight {
   display: grid;
   place-items: center;
   margin-bottom: 12px;
+}
+/* Key (card 2) + feather (card 3) read on the "/" diagonal; mirror them to the
+   "\" (top-left → bottom-right) so all four card icons share one diagonal. */
+.privacy-card:nth-child(2) .privacy-card-ico svg,
+.privacy-card:nth-child(3) .privacy-card-ico svg {
+  transform: scaleX(-1);
 }
 .privacy-card strong {
   color: var(--ink-0);
@@ -1239,17 +1450,53 @@ section.tight {
   position: relative;
 }
 .contribute h2 {
-  font-size: clamp(28px, 3.4vw, 40px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: clamp(32px, 4.6vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
   margin: 0 0 16px;
   color: var(--ink-0);
+}
+.contribute h2 .ac {
+  color: var(--accent);
 }
 .contribute p {
   color: var(--ink-2);
   max-width: 560px;
-  margin: 0 auto 32px;
+  margin: 0 auto 20px;
   font-size: 15.5px;
+}
+.contrib-facts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto 28px;
+}
+.contrib-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-1);
+  background: var(--canvas);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 6px 13px;
+}
+.contrib-fact svg {
+  flex-shrink: 0;
+  color: var(--ink-1);
+}
+.contrib-fact-tech {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.contrib-fact-sep {
+  color: var(--ink-3);
 }
 .contrib-ways {
   display: grid;
@@ -1273,6 +1520,7 @@ section.tight {
 .contrib-way:hover {
   transform: translateY(-3px);
   border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--accent-weak) 50%, var(--canvas));
   box-shadow: var(--shadow-pop);
 }
 .contrib-way .cw-ico {
@@ -1721,4 +1969,47 @@ footer {
   .screenshot-frame {
     transform: none !important;
   }
+}
+
+/* Floating scroll-to-top brand button */
+.scroll-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--canvas);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px) scale(0.92);
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.2s ease;
+}
+.scroll-top.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.scroll-top:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px) scale(1.05);
+}
+.scroll-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.scroll-top svg {
+  width: 22px;
+  height: 22px;
 }

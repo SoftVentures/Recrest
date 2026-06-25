@@ -6,7 +6,6 @@ import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import {
   bumpRefreshNonce,
   setActiveView,
-  setFindDialogOpen,
   setImportDialogOpen,
   setOnboardingOverride,
   setPinnedRepos,
@@ -48,11 +47,6 @@ describe("uiReducer", () => {
   it("sets the import dialog open flag", () => {
     const next = uiReducer(initial(), setImportDialogOpen(true));
     expect(next.importDialogOpen).toBe(true);
-  });
-
-  it("sets the find dialog open flag", () => {
-    const next = uiReducer(initial(), setFindDialogOpen(true));
-    expect(next.findDialogOpen).toBe(true);
   });
 
   it("bumps the refresh nonce", () => {

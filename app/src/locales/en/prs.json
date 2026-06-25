@@ -21,10 +21,9 @@
   },
   "actions": {
     "merge": "Merge",
-    "merging": "Merging…",
     "checkout": "Checkout",
-    "checkout_busy": "…",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "close": "Close"
   },
   "checkout": {

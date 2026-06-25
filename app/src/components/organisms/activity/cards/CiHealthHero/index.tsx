@@ -18,6 +18,7 @@ import {
   Root,
 } from "@/components/organisms/activity/cards/CiHealthHero/CiHealthHero.styles";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { GAUGE_FAIL, GAUGE_OTHER, GAUGE_PASS } from "@/lib/charts/palette";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 
 interface Props {
@@ -50,9 +51,9 @@ function CiHealthHero({ summaries }: Props) {
     total === 0
       ? [{ id: "empty", value: 1, color: theme.palette.surface.interface.backElevation }]
       : [
-          { id: "passed", value: passed, color: theme.palette.success.main },
-          { id: "failed", value: failing, color: theme.palette.error.main },
-          { id: "other", value: other, color: theme.palette.warning.main },
+          { id: "passed", value: passed, color: GAUGE_PASS },
+          { id: "failed", value: failing, color: GAUGE_FAIL },
+          { id: "other", value: other, color: GAUGE_OTHER },
         ].filter((s) => s.value > 0);
 
   return (
@@ -80,16 +81,16 @@ function CiHealthHero({ summaries }: Props) {
         {total > 0 && (
           <Legend>
             <LegendItem component="span" variant="caption">
-              <LegendDot color={theme.palette.success.main} />
+              <LegendDot color={GAUGE_PASS} />
               {t("activity.hero.ci_legend_passed", { count: passed })}
             </LegendItem>
             <LegendItem component="span" variant="caption">
-              <LegendDot color={theme.palette.error.main} />
+              <LegendDot color={GAUGE_FAIL} />
               {t("activity.hero.ci_legend_failed", { count: failing })}
             </LegendItem>
             {other > 0 && (
               <LegendItem component="span" variant="caption">
-                <LegendDot color={theme.palette.warning.main} />
+                <LegendDot color={GAUGE_OTHER} />
                 {t("activity.hero.ci_legend_other", { count: other })}
               </LegendItem>
             )}

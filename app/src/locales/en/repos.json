@@ -1,5 +1,12 @@
 {
   "title": "Repositories",
+  "connect_prompt": {
+    "title": "{{provider}} not connected",
+    "body": "Connect {{provider}} in Settings so pull requests, CI and deployments show up here. You can still open the repo page in your browser right away.",
+    "connect": "Connect {{provider}}",
+    "proceed": "Open anyway",
+    "cancel": "Cancel"
+  },
   "actions": {
     "open_terminal_tooltip": "Open terminal at repository",
     "create_branch_tooltip": "Create a new branch from HEAD",
@@ -12,7 +19,19 @@
     "reset_aria": "Reset to auto-detected repository avatar",
     "upload_error": "Avatar upload failed",
     "uploaded": "Avatar updated",
-    "reset_done": "Avatar reset"
+    "reset_done": "Avatar reset",
+    "menu_upload": "Upload image",
+    "menu_design": "Design your own",
+    "designer": {
+      "title": "Design avatar",
+      "subtitle": "Pick a background and an icon",
+      "background_label": "Background",
+      "icon_label": "Icon",
+      "icon_search": "Search icons",
+      "icon_empty": "No icons match your search.",
+      "preview_label": "Preview",
+      "save": "Use avatar"
+    }
   },
   "summary": {
     "total": "Total",
@@ -40,7 +59,7 @@
     "clean": "clean",
     "close": "Close",
     "open_full_view": "Open full view",
-    "files": "{{count}} file",
+    "files_one": "{{count}} file",
     "files_other": "{{count}} files",
     "last_commit": "Last commit",
     "open_prs": "Open merge requests",
@@ -69,11 +88,8 @@
     "not_found_title": "Repository not found",
     "not_found_desc": "No repo with id \"{{id}}\".",
     "pull": "Pull",
-    "pulling": "Pulling…",
     "push": "Push",
-    "pushing": "Pushing…",
     "fetch": "Fetch",
-    "fetching": "Fetching…",
     "toast_fetched": "Fetched",
     "toast_fetch_failed": "Fetch failed",
     "toast_pulled": "Pulled",
@@ -102,17 +118,6 @@
     "cancel": "Cancel",
     "created": "Created '{{name}}'"
   },
-  "find_across": {
-    "title": "Find across repositories",
-    "placeholder": "Search file contents…",
-    "no_results": "No matches",
-    "hint": "Searches all tracked repositories. Type at least two characters.",
-    "all_repos": "All repositories",
-    "searching": "Searching…",
-    "count_one": "{{count}} result",
-    "count_other": "{{count}} results",
-    "result_aria": "{{repo}} — {{path}}:{{line}}"
-  },
   "stats": {
     "ahead_behind": "Ahead / Behind",
     "ahead_behind_sub": "across origin",
@@ -120,9 +125,11 @@
     "changed_files_one": "{{count}} file",
     "changed_files_other": "{{count}} files",
     "commits_14d": "Commits · last {{days}} days",
-    "commits_14d_sub": "peak {{count}}",
+    "commits_14d_sub": "peak {{peak}}",
     "open_mrs": "Open merge requests",
-    "open_mrs_sub": "{{count}} draft",
+    "open_mrs_sub_zero": "No drafts",
+    "open_mrs_sub_one": "{{count}} draft",
+    "open_mrs_sub_other": "{{count}} drafts",
     "last_commit": "Last commit",
     "last_commit_empty": "no provider connected"
   },
@@ -175,7 +182,7 @@
     "staged_files_other": "{{count}} staged files",
     "subject_label": "Subject",
     "subject_placeholder": "Summarize the change in one line",
-    "subject_counter": "{{count}}/{{limit}}",
+    "subject_counter": "{{length}}/{{limit}}",
     "body_label": "Body (optional)",
     "body_placeholder": "Why this change? Any context that won't be obvious from the diff?",
     "insert_template": "Template",
@@ -194,7 +201,9 @@
     "clone_dest_placeholder": "/Users/you/Code",
     "clone_sub_placeholder": "e.g. my-fork",
     "local_path_placeholder": "/Users/you/Code/my-repo",
-    "selected": "{{count}} selected",
+    "selected_zero": "None selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
     "badge_private": "private",
     "badge_fork": "fork",
     "badge_archived": "archived",
@@ -209,10 +218,11 @@
     "toast_cloned_count_one": "Cloned {{count}} repository",
     "toast_cloned_count_other": "Cloned {{count}} repositories",
     "toast_some_clones_failed": "Some clones failed",
-    "import_submit": "Import {{count}}"
+    "import_submit_one": "Import {{count}}",
+    "import_submit_other": "Import {{count}}"
   },
   "branches": {
-    "track_even": "even"
+    "track_even": "in sync"
   },
   "changes": {
     "expand_aria": "Expand changed files",
@@ -221,7 +231,6 @@
     "files_other": "{{count}} files",
     "open": "Open",
     "pull": "Pull",
-    "pulling": "Pulling…",
     "toast_desktop_only": "Available in the desktop app",
     "toast_pulled": "Pulled",
     "toast_pull_failed": "Pull failed",
@@ -239,12 +248,14 @@
     "clean": "clean",
     "files_meta_one": "{{count}} file",
     "files_meta_other": "{{count}} files",
-    "card_files_meta": "· {{count}} files"
+    "card_files_meta_one": "· {{count}} file",
+    "card_files_meta_other": "· {{count}} files"
   },
   "detail_pane": {
     "open_in_terminal": "Open in Terminal",
     "open_in_explorer": "Open in Explorer",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "pull": "Pull",
     "fetch": "Fetch",
     "branch": "Branch",
@@ -257,7 +268,8 @@
   },
   "row_actions": {
     "open_in_terminal": "Open in Terminal",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "no_remote": "No remote configured",
     "open_in_explorer": "Open in Explorer",
     "more": "More",
@@ -272,13 +284,17 @@
     "delete_title": "Delete \"{{name}}\" from disk?",
     "delete_desc": "Moves \"{{path}}\" to your system trash and stops Recrest from tracking it. You can restore from trash.",
     "delete_action": "Move to Trash",
+    "delete_permanent_title": "Couldn't move to trash — delete permanently?",
+    "delete_permanent_desc": "\"{{path}}\" couldn't be moved to the system trash — it may be disabled for this location, or a file is in use. Permanently delete the folder instead? This cannot be undone.",
+    "delete_permanent_action": "Delete permanently",
     "toast_no_remote": "No remote configured",
     "toast_path_copied": "Path copied",
     "toast_copy_failed": "Couldn't copy",
-    "toast_command_failed": "{{label}} failed",
+    "toast_command_failed": "{{label}} failed: {{message}}",
     "toast_removed": "{{name}} removed",
     "toast_forget_failed": "Forget failed",
     "toast_trashed": "{{name}} moved to trash",
+    "toast_deleted_permanently": "{{name}} permanently deleted",
     "toast_delete_failed": "Delete failed: {{message}}"
   },
   "toolbar": {

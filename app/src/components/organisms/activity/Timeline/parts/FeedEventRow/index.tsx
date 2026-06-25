@@ -30,7 +30,8 @@ export interface FeedEventRowProps {
 export function FeedEventRow({ event, today }: FeedEventRowProps) {
   const { t } = useTranslation();
   const day = daysAgo(event.at, today);
-  const when = day >= 0 ? relativeWhen(event.at, day) : "";
+  const whenLabel = day >= 0 ? relativeWhen(event.at, day) : null;
+  const when = whenLabel ? t(whenLabel.key, { count: whenLabel.count }) : "";
 
   if (event.kind === FeedEventKind.COMMIT) {
     const url = commitUrl(event.repo?.remoteUrl, event.data.sha);
@@ -115,10 +116,6 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
   const s = event.data;
   const failingTone: "check-ok" | "check-fail" = s.failed > 0 ? "check-fail" : "check-ok";
   const Icon = s.failed > 0 ? ShieldAlert : ShieldCheck;
-  const failedLabel =
-    s.failed === 1
-      ? t("activity.feed.failing_checks_one", { count: s.failed })
-      : t("activity.feed.failing_checks_other", { count: s.failed });
   return (
     <FeedItem>
       <FeedIcon tone={failingTone}>
@@ -126,7 +123,8 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
       </FeedIcon>
       <Box />
       <FeedMsg component="span" variant="caption">
-        {failedLabel} · {t("activity.feed.passing", { count: s.passed })}
+        {s.failed > 0 && <>{t("activity.feed.failing_checks", { count: s.failed })} · </>}
+        {t("activity.feed.passing", { count: s.passed })}
       </FeedMsg>
       <FeedMeta component="span" variant="caption">
         {event.repo && <RepoAvatar repo={event.repo} size={14} radius={3} />}

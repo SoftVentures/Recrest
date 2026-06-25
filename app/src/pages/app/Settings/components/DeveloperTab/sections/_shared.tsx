@@ -5,7 +5,9 @@ import { styled } from "@mui/material/styles";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { isTauri, revealPathInSystem } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 
 export const ButtonRow = styled(Box)({
   display: "inline-flex",
@@ -111,6 +113,7 @@ interface PathRowProps {
 
 export function PathRow({ label, path }: PathRowProps) {
   const { t } = useTranslation(I18nNamespace.SETTINGS);
+  const copyFeedback = useActionFeedback();
   const dash = "—";
   return (
     <FactRow>
@@ -123,11 +126,28 @@ export function PathRow({ label, path }: PathRowProps) {
           size="sm"
           variant="outline"
           disabled={!path}
-          onClick={() => path && navigator.clipboard?.writeText(path)}
+          feedbackState={copyFeedback.state}
+          onClick={() => {
+            if (!path) return;
+            void copyFeedback
+              .run(async () => {
+                await navigator.clipboard?.writeText(path);
+              })
+              .catch(() => {
+                /* feedback hook already reflects the failure */
+              });
+          }}
         >
           {t("developer.build.copy")}
         </GeneralButton>
-        <GeneralButton size="sm" variant="outline" disabled={!path}>
+        <GeneralButton
+          size="sm"
+          variant="outline"
+          disabled={!path || !isTauri()}
+          onClick={() => {
+            if (path) void revealPathInSystem(path);
+          }}
+        >
           {t("developer.build.open")}
         </GeneralButton>
       </ButtonRow>

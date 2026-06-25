@@ -24,7 +24,9 @@ use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::ScreenToClient;
 use windows::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, HTCLIENT, HTCLOSE, HTMAXBUTTON, HTMINBUTTON, WM_NCHITTEST,
+    GetClientRect, GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_STYLE, HTCLIENT, HTCLOSE,
+    HTMAXBUTTON, HTMINBUTTON, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+    WM_NCHITTEST, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_SYSMENU,
 };
 
 /// Unique identifier for our subclass. Picked from the high range to avoid
@@ -129,6 +131,37 @@ unsafe extern "system" fn subclass_proc(
         }
     }
     DefSubclassProc(hwnd, msg, wparam, lparam)
+}
+
+/// Windows 11 only opens the Snap-Layouts flyout for a window that actually
+/// carries the maximize-box capability style. A borderless window
+/// (`decorations: false`) — especially one whose decorations were toggled at
+/// runtime — can end up without `WS_MAXIMIZEBOX`, so returning `HTMAXBUTTON`
+/// from the hit-test is necessary but NOT sufficient: the OS won't surface the
+/// flyout unless the style is present. Re-assert the caption capability styles
+/// (no `WS_CAPTION`/`WS_DLGFRAME`, so Tauri's borderless `WM_NCCALCSIZE` still
+/// strips the visual frame) and force a frame re-evaluation so the OS picks up
+/// the change. Idempotent — no-ops once the styles are already set.
+pub fn ensure_caption_styles(hwnd: HWND) {
+    // SAFETY: `hwnd` is Tauri's verified main-window handle; the style read /
+    // write pair only flips capability bits and never resizes/moves.
+    unsafe {
+        let current = GetWindowLongPtrW(hwnd, GWL_STYLE);
+        let wanted = (WS_MAXIMIZEBOX.0 | WS_MINIMIZEBOX.0 | WS_SYSMENU.0) as isize;
+        if current & wanted == wanted {
+            return;
+        }
+        SetWindowLongPtrW(hwnd, GWL_STYLE, current | wanted);
+        let _ = SetWindowPos(
+            hwnd,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        );
+    }
 }
 
 /// Install the WM_NCHITTEST subclass on `hwnd`. Idempotent: calling this

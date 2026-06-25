@@ -28,3 +28,21 @@ pub fn configure(cmd: &mut Command) -> &mut Command {
     let _ = cmd;
     cmd
 }
+
+/// Give a child its own **visible** console window. The inverse of [`configure`]:
+/// use it for a console-subsystem program the user explicitly asked to see
+/// (a `cmd.exe` / PowerShell terminal). A GUI-subsystem Recrest has no console,
+/// so a console child spawned without `CREATE_NEW_CONSOLE` inherits "no console"
+/// and runs invisibly — `spawn()` succeeds but no window ever appears. GUI
+/// terminals (Windows Terminal, WezTerm, …) draw their own window and must NOT
+/// get this flag, or they'd pop an extra empty console. No-op off Windows.
+pub fn with_new_console(cmd: &mut Command) -> &mut Command {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+        cmd.creation_flags(CREATE_NEW_CONSOLE);
+    }
+    let _ = cmd;
+    cmd
+}

@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
 
-import { AppRoute, PrState, type PullRequest, TauriCommand } from "@recrest/shared";
+import { AppRoute, PROVIDER_NAMES, PrState, type PullRequest, TauriCommand } from "@recrest/shared";
 
 import {
   ArrowDown,
@@ -25,6 +25,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
@@ -40,10 +41,12 @@ import WorkingCopyPanel from "@/components/organisms/repos/WorkingCopyPanel";
 import { useRangeActivity } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
+import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
+import { invoke, isTauri, revealPathInSystem } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import ActivityChart from "@/pages/app/Dashboard/parts/ActivityChart";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
 import {
@@ -87,7 +90,7 @@ import {
 } from "@/pages/app/RepoDetail/RepoDetail.styles";
 import { detailKey, fetchPullRequests, loadPrDiff } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
-import { bumpRefreshNonce } from "@/store/actions/ui.actions";
+import { bumpRefreshNonce, setSelectedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 // Shared spring for the card grid: cells animate to their new size/slot when
@@ -133,11 +136,26 @@ export default function RepoDetailPage() {
     [byRepo, repoId],
   );
 
-  const [busy, setBusy] = useState<null | "pull" | "push" | "fetch">(null);
+  const pull = useActionFeedback();
+  const push = useActionFeedback();
+  const fetch = useActionFeedback();
+  const busy = pull.state === "loading" || push.state === "loading" || fetch.state === "loading";
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
   const [commitDialogOpen, setCommitDialogOpen] = useState(false);
   const [sshOpen, setSshOpen] = useState(false);
+
+  const openHost = useOpenHost(repo?.remoteUrl ?? null);
+  const openHostLabel = openHost.provider
+    ? tAria("repo.open_on_provider", { provider: PROVIDER_NAMES[openHost.provider] })
+    : tAria("repo.open_on_host");
+
+  // Reflect the repo being viewed as the app-wide "selected repo" so cross-page
+  // consumers (e.g. the search palette's "Repo" tab) target it — visiting this
+  // page via a deep link, not just clicking a repo row, must set it too.
+  useEffect(() => {
+    if (repoId) dispatch(setSelectedRepo(repoId));
+  }, [dispatch, repoId]);
 
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));
@@ -177,11 +195,10 @@ export default function RepoDetailPage() {
     [repo],
   );
 
-  const doFetch = useCallback(async () => {
+  const doFetch = async () => {
     if (!repo) return;
-    setBusy("fetch");
     try {
-      await invoke(TauriCommand.GIT_FETCH, { repoId: repo.id });
+      await fetch.run(() => invoke(TauriCommand.GIT_FETCH, { repoId: repo.id }));
       toast.success(t("detail.toast_fetched", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -190,16 +207,13 @@ export default function RepoDetailPage() {
         (err as { message?: string })?.message ??
           t("detail.toast_fetch_failed", { ns: I18nNamespace.REPOS }),
       );
-    } finally {
-      setBusy(null);
     }
-  }, [dispatch, repo, t]);
+  };
 
-  const doPull = useCallback(async () => {
+  const doPull = async () => {
     if (!repo) return;
-    setBusy("pull");
     try {
-      await invoke(TauriCommand.GIT_PULL, { repoId: repo.id });
+      await pull.run(() => invoke(TauriCommand.GIT_PULL, { repoId: repo.id }));
       toast.success(t("detail.toast_pulled", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -208,16 +222,13 @@ export default function RepoDetailPage() {
         (err as { message?: string })?.message ??
           t("detail.toast_pull_failed", { ns: I18nNamespace.REPOS }),
       );
-    } finally {
-      setBusy(null);
     }
-  }, [dispatch, repo, t]);
+  };
 
-  const doPush = useCallback(async () => {
+  const doPush = async () => {
     if (!repo) return;
-    setBusy("push");
     try {
-      await invoke(TauriCommand.GIT_PUSH, { repoId: repo.id });
+      await push.run(() => invoke(TauriCommand.GIT_PUSH, { repoId: repo.id }));
       toast.success(t("detail.toast_pushed", { ns: I18nNamespace.REPOS }));
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
@@ -226,10 +237,8 @@ export default function RepoDetailPage() {
         (err as { message?: string })?.message ??
           t("detail.toast_push_failed", { ns: I18nNamespace.REPOS }),
       );
-    } finally {
-      setBusy(null);
     }
-  }, [dispatch, repo, t]);
+  };
 
   if (!repo) {
     return (
@@ -464,15 +473,18 @@ export default function RepoDetailPage() {
                 <Folder size={14} />
               </IconOnlyBtn>
             </GeneralTooltip>
-            <GeneralTooltip title={tAria("repo.open_on_host")}>
+            <GeneralTooltip
+              title={openHost.canOpen ? openHostLabel : tAria("repo.open_on_host_no_remote")}
+            >
               {/* span wrapper: a disabled <button> swallows pointer events, so
                   MUI needs an enabled element to anchor the tooltip on. */}
               <Box component="span">
                 <IconOnlyBtn
                   type="button"
-                  aria-label={tAria("repo.open_on_host")}
-                  disabled={!repo.remoteUrl}
-                  onClick={() => repo.remoteUrl && void openExternal(repo.remoteUrl)}
+                  aria-label={openHostLabel}
+                  data-testid={TEST_IDS.repoDetail.openHost}
+                  disabled={!openHost.canOpen}
+                  onClick={openHost.open}
                 >
                   {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
                 </IconOnlyBtn>
@@ -488,23 +500,21 @@ export default function RepoDetailPage() {
                 <KeyRound size={14} />
               </IconOnlyBtn>
             </GeneralTooltip>
-            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPull()}>
-              <ArrowDown size={13} />
-              {busy === "pull"
-                ? t("detail.pulling", { ns: I18nNamespace.REPOS })
-                : t("detail.pull", { ns: I18nNamespace.REPOS })}
+            <SecondaryBtn type="button" disabled={busy} onClick={() => void doPull()}>
+              <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={13} />} size={13} />
+              {t("detail.pull", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
-            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doPush()}>
-              <ArrowUp size={13} />
-              {busy === "push"
-                ? t("detail.pushing", { ns: I18nNamespace.REPOS })
-                : t("detail.push", { ns: I18nNamespace.REPOS })}
+            <SecondaryBtn type="button" disabled={busy} onClick={() => void doPush()}>
+              <ActionFeedbackIcon state={push.state} fallback={<ArrowUp size={13} />} size={13} />
+              {t("detail.push", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
-            <SecondaryBtn type="button" disabled={busy !== null} onClick={() => void doFetch()}>
-              <RefreshCw size={13} />
-              {busy === "fetch"
-                ? t("detail.fetching", { ns: I18nNamespace.REPOS })
-                : t("detail.fetch", { ns: I18nNamespace.REPOS })}
+            <SecondaryBtn type="button" disabled={busy} onClick={() => void doFetch()}>
+              <ActionFeedbackIcon
+                state={fetch.state}
+                fallback={<RefreshCw size={13} />}
+                size={13}
+              />
+              {t("detail.fetch", { ns: I18nNamespace.REPOS })}
             </SecondaryBtn>
             <SecondaryBtn type="button" onClick={() => setBranchDialogOpen(true)}>
               <Plus size={13} />
@@ -563,6 +573,7 @@ export default function RepoDetailPage() {
         sshKeyPath={repo.sshKeyPath}
         onClose={() => setSshOpen(false)}
       />
+      {openHost.modal}
     </Root>
   );
 }

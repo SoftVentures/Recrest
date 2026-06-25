@@ -1,15 +1,17 @@
+import type { LocaleSettings } from "../constants/locale.js";
 import type { FontSelection, FontSizeId, LigatureMode } from "../constants/ui.js";
 
 export type ThemeMode = "light" | "dark" | "system";
 
-/** Renderer-side theme variant — includes `oled` and `glassy` on top of the
- *  legacy `ThemeMode` (which only spans light/dark/system). Lives on
- *  `appearance.themeId` so the backend can persist the user's last pick.
+/** Renderer-side theme variant. Lives on `appearance.themeId` so the
+ *  backend can persist the user's last pick.
  *
- *  Kept as a plain string union here (the richer `ThemeId` constant union
- *  lives in `@/lib/constants/theme.constants` on the renderer side, and is
- *  a strict subset of this one). */
-export type ThemeIdValue = "light" | "dark" | "oled" | "glassy";
+ *  Translucency used to ride here as `glassy` and a high-contrast pure-
+ *  black variant rode as `oled`; both retired into orthogonal toggles
+ *  (`appearance.translucency` + the accessibility `highContrast` flag),
+ *  so the slot is now light/dark only. The Rust side migrates legacy
+ *  values on load — `glassy` → `dark` + translucency on, `oled` → `dark`. */
+export type ThemeIdValue = "light" | "dark";
 
 /** Accent color scheme — must match the keys of `PRIMARY_COLOR_SCHEMES`
  *  in `app/src/lib/constants/theme.constants.ts`. */
@@ -29,6 +31,23 @@ export interface NotificationSettings {
   mergeReady: boolean;
 }
 
+/** Window-translucency effect — orthogonal to `themeId`. When `enabled` the
+ *  backend asks the OS to render the window with native vibrancy / liquid
+ *  glass; the user controls two independent dials:
+ *   - `intensity` (= transparency): 0 = fully opaque theme tint, 100 = no
+ *     tint at all (pure OS material exposure).
+ *   - `blurIntensity`: extra CSS `backdrop-filter: blur(...)` layered on top
+ *     of the OS material's natural blur. 0 = no extra blur (pure material),
+ *     100 = max blur (~30 px). */
+export interface TranslucencySettings {
+  enabled: boolean;
+  /** 0 (faintest) .. 100 (strongest). Clamped at every entry point. */
+  intensity: number;
+  /** Extra backdrop-filter blur layered on top of the OS material. 0..100,
+   *  mapped to 0..30 px. Clamped at every entry point. */
+  blurIntensity: number;
+}
+
 /** Renderer-scoped appearance tokens, persisted via the Tauri backend so
  *  every Recrest surface reads them from a single source of truth. */
 export interface AppearanceSettings {
@@ -46,6 +65,12 @@ export interface AppearanceSettings {
   /** Ligature rendering mode for code surfaces — independent of `codeFont`. */
   codeLigatures: LigatureMode;
   fontSize: FontSizeId;
+  /** Orthogonal translucency effect — any theme can be made translucent. */
+  translucency: TranslucencySettings;
+  /** Locale-aware rendering preferences (date / time format, week start,
+   *  optional BCP-47 region override). Lives under `appearance` so the
+   *  whole renderer-scoped preference bag stays in one substruct. */
+  localePrefs: LocaleSettings;
 }
 
 /** A user-uploaded font, stored under `<app_data>/fonts/` and registered at

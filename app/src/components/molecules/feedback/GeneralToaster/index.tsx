@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 
 /**
  * Thin sonner wrapper that picks colours from the active MUI theme so the
- * toast surface matches the app palette in light/dark/oled/glassy modes.
+ * toast surface matches the app palette in light/dark modes.
  */
 function GeneralToaster() {
   const theme = useTheme();

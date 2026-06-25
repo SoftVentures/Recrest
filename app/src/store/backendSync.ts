@@ -1,14 +1,24 @@
 import type { Middleware } from "@reduxjs/toolkit";
 
-import type { AppSettings, ThemeMode } from "@recrest/shared";
+import {
+  type AppSettings,
+  DEFAULT_LOCALE_SETTINGS,
+  type DateFormat,
+  StorageKey,
+  type ThemeMode,
+  type TimeFormat,
+  type WeekStart,
+} from "@recrest/shared";
 
-import type { ThemeId } from "@/lib/constants/theme.constants";
+import { DEFAULT_TRANSLUCENCY, ThemeId } from "@/lib/constants/theme.constants";
 import { isTauri } from "@/lib/tauri";
 import {
   saveSettings,
+  setBlurIntensity,
   setCodeFont,
   setCodeLigatures,
   setCrashReporting,
+  setDateFormat,
   setDesktopAutoStart,
   setDesktopCloseToTray,
   setDesktopStartMinimized,
@@ -25,9 +35,15 @@ import {
   setPollingIntervalMinutes,
   setPrimaryColor,
   setReducedMotion,
+  setRegion,
   setThemeId,
+  setTimeFormat,
+  setTimeZone,
+  setTranslucencyEnabled,
+  setTranslucencyIntensity,
   setUnderlineLinks,
   setUpdateMode,
+  setWeekStart,
 } from "@/store/actions/settings.actions";
 import {
   setPinnedRepos,
@@ -51,14 +67,11 @@ import {
  *     calls — `isTauri()` is just a fast pre-check so we don't pay the
  *     dynamic-import cost on every keystroke.
  */
-// `oled` and `glassy` are renderer-only theme variants — the Rust side only
-// knows light / dark / system. Collapsing dark-like variants to "dark" keeps
-// the on-disk theme value sane (used for window icon swap, native menubar)
-// without losing the renderer-side flavour, which still lives in the
-// persisted `themeId` slot under `localStorage`.
+// The Rust side's legacy top-level `theme` slot only knows
+// light / dark / system. Mirror the renderer's `themeId` (light | dark)
+// straight through; the richer slot lives in `appearance.themeId`.
 function themeIdToBackend(id: ThemeId): ThemeMode {
-  if (id === "light") return "light";
-  return "dark";
+  return id === ThemeId.LIGHT ? "light" : "dark";
 }
 
 export const settingsBackendSync: Middleware = (store) => (next) => (action) => {
@@ -120,8 +133,9 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
     // Two-field write: the legacy top-level `theme` slot stays in sync so
     // older builds + native menu-bar hooks keep reading the correct value,
     // and the renderer-rich `appearance.themeId` records the actual choice
-    // (light/dark/oled/glassy). `setThemeId` also flips followsSystem off
-    // in the reducer, so we mirror that to the backend.
+    // (light/dark). `setThemeId` also flips followsSystem off in the
+    // reducer, so we mirror that to the backend. Translucency is orthogonal
+    // now — no IPC needed when the theme alone changes.
     dispatch(
       saveSettings({
         theme: themeIdToBackend(a.payload),
@@ -135,6 +149,33 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
         appearance: appearancePatch(state, { followsSystem: a.payload }),
       }),
     );
+  } else if (
+    setTranslucencyEnabled.match(a) ||
+    setTranslucencyIntensity.match(a) ||
+    setBlurIntensity.match(a)
+  ) {
+    // All three translucency dials share one persistence path: ThemeWrapper
+    // owns the OS-level apply (single root-effect + ref-dedup so font /
+    // size changes don't re-fire IPC); here we only mirror the full triple
+    // to the backend so the next launch hydrates with the latest values.
+    const fresh = store.getState() as StoreState;
+    const next = fresh.settings.translucency;
+    dispatch(
+      saveSettings({
+        appearance: appearancePatch(fresh, {
+          translucency: {
+            enabled: next.enabled,
+            intensity: next.intensity,
+            blurIntensity: next.blurIntensity,
+          },
+        }),
+      }),
+    );
+    // Mirror all three dials to localStorage so the cold-boot anti-flash
+    // script in index.html can paint the glass layer with the user's
+    // actual values on frame 1 — without these, a fresh launch shows
+    // ~1 second of transparent desktop while the JS bundle loads.
+    persistTranslucency(next.enabled, next.intensity, next.blurIntensity);
   } else if (setPrimaryColor.match(a)) {
     dispatch(saveSettings({ appearance: appearancePatch(state, { primaryColor: a.payload }) }));
   } else if (setFont.match(a)) {
@@ -229,6 +270,18 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
     );
   } else if (setUpdateMode.match(a)) {
     dispatch(saveSettings({ autoUpdate: a.payload }));
+  } else if (
+    setDateFormat.match(a) ||
+    setTimeFormat.match(a) ||
+    setWeekStart.match(a) ||
+    setRegion.match(a) ||
+    setTimeZone.match(a)
+  ) {
+    // Read the freshly-written value off state (the middleware already ran
+    // the reducer above) so the backend gets the merged localePrefs block,
+    // not a stale snapshot.
+    const fresh = store.getState() as StoreState;
+    dispatch(saveSettings({ appearance: appearancePatch(fresh, {}) }));
   }
 
   return result;
@@ -260,6 +313,14 @@ type StoreState = {
     highContrast: boolean;
     reducedMotion: boolean;
     underlineLinks: boolean;
+    translucency: { enabled: boolean; intensity: number; blurIntensity: number };
+    localePrefs: {
+      dateFormat: DateFormat;
+      timeFormat: TimeFormat;
+      weekStart: WeekStart;
+      region: string | null;
+      timeZone: string | null;
+    };
   };
   ui: {
     sidebarCollapsed: boolean;
@@ -288,6 +349,22 @@ function appearancePatch(
     codeFont: s.codeFont as AppSettings["appearance"]["codeFont"],
     codeLigatures: s.codeLigatures,
     fontSize: s.fontSize as AppSettings["appearance"]["fontSize"],
+    translucency: s.translucency
+      ? {
+          enabled: s.translucency.enabled,
+          intensity: s.translucency.intensity,
+          blurIntensity: s.translucency.blurIntensity,
+        }
+      : { ...DEFAULT_TRANSLUCENCY },
+    localePrefs: s.localePrefs
+      ? {
+          dateFormat: s.localePrefs.dateFormat,
+          timeFormat: s.localePrefs.timeFormat,
+          weekStart: s.localePrefs.weekStart,
+          region: s.localePrefs.region,
+          timeZone: s.localePrefs.timeZone,
+        }
+      : { ...DEFAULT_LOCALE_SETTINGS },
     ...patch,
   };
 }
@@ -319,6 +396,26 @@ function notificationsPatchFromState(
 ) {
   const current = store.getState().settings.notifications;
   return { ...current, [field]: value };
+}
+
+/**
+ * Mirror the full translucency triple (enabled + intensity + blurIntensity)
+ * into `localStorage` so the anti-flash inline script in `index.html` can
+ * paint the glass `::before` layer with the user's actual values on the
+ * very first paint — without this, frame 1 of a fresh launch shows the
+ * raw transparent window for ~1 second until the JS bundle loads, then
+ * the settings "pop in" (user-observed: "transparent then desktop, then
+ * gray shadows, then the blur applies").
+ */
+function persistTranslucency(enabled: boolean, intensity: number, blurIntensity: number): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(StorageKey.TRANSLUCENCY_ENABLED, enabled ? "true" : "false");
+    window.localStorage.setItem(StorageKey.TRANSLUCENCY_INTENSITY, String(intensity));
+    window.localStorage.setItem(StorageKey.TRANSLUCENCY_BLUR, String(blurIntensity));
+  } catch {
+    /* localStorage blocked — non-fatal; one extra flicker next boot */
+  }
 }
 
 async function applyAutostart(enable: boolean): Promise<void> {

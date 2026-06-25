@@ -111,10 +111,7 @@ function ReviewQueueCard({ entries, loading }: Props) {
         <List data-testid={TEST_IDS.activity.cards.reviewQueueList}>
           {entries.map((e) => {
             const age = Math.round(e.ageDays);
-            const ageLabel =
-              age === 1
-                ? t("activity.cards.age_days_one", { count: age })
-                : t("activity.cards.age_days_other", { count: age });
+            const ageLabel = t("activity.cards.age_days", { count: age });
             const open = () => void openExternal(e.url);
             return (
               <Item key={`${e.repoId}#${e.number}`} type="button" onClick={open}>

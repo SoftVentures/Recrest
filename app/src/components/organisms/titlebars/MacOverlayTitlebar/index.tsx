@@ -1,7 +1,15 @@
+import { useState } from "react";
+
+import { useTranslation } from "react-i18next";
+
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { Menu as MenuIcon } from "lucide-react";
+
+import AppMenu from "@/components/organisms/titlebars/AppMenu";
 import { isRealTauri } from "@/hooks/usePlatform";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 /**
@@ -25,7 +33,7 @@ const Bar = styled(Box)(({ theme }) => ({
   // 84px left reservation so brand never collides with system traffic lights
   // (lights sit at x=14 with ~58px combined width → ~72px right edge).
   paddingLeft: 84,
-  paddingRight: 12,
+  paddingRight: 8,
   backgroundColor: theme.palette.mode === "dark" ? "#1c1e26" : "#f4f6f8",
   borderBottom: `1px solid ${theme.palette.border.separator ?? theme.palette.divider}`,
   WebkitUserSelect: "none",
@@ -57,9 +65,45 @@ const Light = styled(Box, {
   boxShadow: "inset 0 0 0 0.5px rgba(0, 0, 0, 0.2)",
 }));
 
+// Empty, draggable middle so the whole strip moves the window — the menu
+// button below opts out of the drag region so it stays clickable.
+const Spacer = styled(Box)({ flex: 1, height: "100%" });
+
+// eslint-disable-next-line no-restricted-syntax -- native <button> required: a focusable caption-bar control that must NOT be a tauri drag region
+const MenuButton = styled("button")(({ theme }) => ({
+  width: 28,
+  height: 28,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: 0,
+  // Circular hover/focus highlight (vertically centred in the 38px bar, clear
+  // of the ~10px rounded window corner) — a rounded RECT here clashed with the
+  // macOS window corner radius and read as two mismatched radii.
+  borderRadius: "50%",
+  background: "transparent",
+  color: theme.palette.text.secondary,
+  cursor: "pointer",
+  flexShrink: 0,
+  transition: "background-color 0.12s ease, color 0.12s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+    color: theme.palette.text.primary,
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 1,
+  },
+}));
+
 function MacOverlayTitlebar() {
+  const { t } = useTranslation(I18nNamespace.COMMON);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const closeMenu = () => setMenuAnchor(null);
+
   // No brand mark / name / version in the chrome itself — that bar is just
-  // OS chrome + drag region; brand lives in the sidebar where it belongs.
+  // OS chrome + drag region; brand lives in the sidebar. The only control is
+  // the right-aligned app-menu button (mirrors the Windows titlebar's menu).
   return (
     <Bar data-tauri-drag-region data-testid={TEST_IDS.titlebar.mac}>
       {!isRealTauri() && (
@@ -69,6 +113,17 @@ function MacOverlayTitlebar() {
           <Light tone="max" />
         </FauxLights>
       )}
+      <Spacer data-tauri-drag-region />
+      <MenuButton
+        type="button"
+        aria-label={t("titlebar.app_menu")}
+        title={t("titlebar.app_menu")}
+        data-testid={TEST_IDS.titlebar.menu}
+        onClick={(e) => setMenuAnchor(e.currentTarget)}
+      >
+        <MenuIcon size={15} aria-hidden />
+      </MenuButton>
+      <AppMenu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} />
     </Bar>
   );
 }

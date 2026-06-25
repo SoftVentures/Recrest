@@ -81,15 +81,28 @@ describe("providersReducer", () => {
     expect(next.connections["gitlab"]?.baseUrl).toBe("https://gl.example.com");
   });
 
-  it("removes a connection on clearProviderToken.fulfilled", () => {
+  it("marks a connection disconnected on clearProviderToken.fulfilled while keeping capability flags", () => {
     const seeded = providersReducer(
       initial(),
-      upsertConnection(connection({ providerId: "github" })),
+      upsertConnection(
+        connection({
+          providerId: "gitlab",
+          connected: true,
+          username: "octocat",
+          supportsOauth: true,
+          baseUrl: "https://gitlab.example.com",
+        }),
+      ),
     );
     const next = providersReducer(
       seeded,
-      clearProviderToken.fulfilled("github", "internal-id", "github"),
+      clearProviderToken.fulfilled("gitlab", "internal-id", "gitlab"),
     );
-    expect(next.connections["github"]).toBeUndefined();
+    // Entry survives so the Accounts row keeps its OAuth dropdown + self-hosted URL.
+    expect(next.connections["gitlab"]).toBeDefined();
+    expect(next.connections["gitlab"]?.connected).toBe(false);
+    expect(next.connections["gitlab"]?.username).toBeNull();
+    expect(next.connections["gitlab"]?.supportsOauth).toBe(true);
+    expect(next.connections["gitlab"]?.baseUrl).toBe("https://gitlab.example.com");
   });
 });

@@ -10,9 +10,12 @@ import { type GitInfo, type PlatformInfo, TauriCommand } from "@recrest/shared";
 import { Bug, FileText, Scale } from "lucide-react";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
+import SystemInfoPanel from "@/components/molecules/SystemInfoPanel";
+import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
-import { formatBuildTime, gitDescription } from "@/lib/utils/about.utils";
+import { formatBuildTime, gitDescription, prettyArch } from "@/lib/utils/about.utils";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import ContributorsSection from "@/pages/app/Settings/components/AboutTab/parts/ContributorsSection";
 import LinkItem from "@/pages/app/Settings/components/AboutTab/parts/LinkItem";
 import { GithubGlyph } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow/ProviderRow.styles";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
@@ -132,7 +135,7 @@ export function AboutSection() {
     },
     {
       key: t("settings.about.arch"),
-      value: platform?.arch ?? DASH,
+      value: prettyArch(platform?.arch),
       mono: true,
     },
     {
@@ -169,6 +172,12 @@ export function AboutSection() {
             </FactRow>
           ))}
         </GeneralCard>
+      </SettingsSection>
+
+      <ContributorsSection />
+
+      <SettingsSection title={t("sections.system", { ns: I18nNamespace.SETTINGS })}>
+        <SystemInfoPanel />
       </SettingsSection>
 
       <SettingsSection title={t("settings.about.links_title")}>

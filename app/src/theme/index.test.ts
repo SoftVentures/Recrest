@@ -16,20 +16,6 @@ describe("getTheme", () => {
     expect(theme.palette.border.default).toBeDefined();
   });
 
-  it("Glassy uses transparent background + backdrop blur", () => {
-    const theme = getTheme("glassy");
-    expect(theme.palette.background.default).toBe("transparent");
-    expect(theme.effects.backdropBlur).toContain("blur(");
-    expect(theme.effects.backdropSaturate).toBe("180%");
-  });
-
-  it("OLED uses pure black background", () => {
-    const theme = getTheme("oled");
-    expect(theme.palette.background.default).toBe("#000000");
-    // Surfaces still pure-black; mode remains "dark" so MUI's dark-mode component logic kicks in.
-    expect(theme.palette.mode).toBe("dark");
-  });
-
   it("Light keeps standard light background", () => {
     const theme = getTheme("light");
     expect(theme.palette.mode).toBe("light");

@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 
-export function useScrollReveal(selector = ".reveal"): void {
+// `revealKey` re-runs the observer setup whenever the rendered view changes
+// (e.g. returning from #/download or a legal route to the home view). Without
+// it the hook observes `.reveal` elements only on first mount, so the
+// re-mounted home sections would stay at opacity 0 forever after navigating
+// back. See landingpage download-route work.
+export function useScrollReveal(selector = ".reveal", revealKey?: unknown): void {
   useEffect(() => {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const elements = document.querySelectorAll<HTMLElement>(selector);
@@ -24,5 +29,5 @@ export function useScrollReveal(selector = ".reveal"): void {
 
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [selector]);
+  }, [selector, revealKey]);
 }

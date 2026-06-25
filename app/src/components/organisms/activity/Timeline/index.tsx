@@ -8,6 +8,7 @@ import {
   type CheckRunSummary,
   type PrEvent,
   PrEventKind,
+  type ProviderId,
   type RecentCommit,
 } from "@recrest/shared";
 
@@ -44,6 +45,9 @@ export interface Props {
   checkRuns: readonly CheckRunSummary[];
   today: Date;
   reposById: Map<string, EnrichedRepo>;
+  /** Selected range in days — the feed must span the same window as the rest of
+   *  the page (a 90-day selection must not be silently clamped to 14). */
+  windowDays?: number;
 }
 
 type FilterKind = FeedFilterKind;
@@ -66,26 +70,38 @@ interface DayGroup {
   prsOpened: number;
   prsMerged: number;
   checksFailed: number;
+  /** Dominant provider across the day's failing check runs. `null` when mixed
+   *  (so the chip falls back to the provider-agnostic "checks failed" wording). */
+  checksProvider: ProviderId | null;
   events: FeedEvent[];
 }
 
-function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
+function Timeline({
+  commits,
+  prEvents,
+  checkRuns,
+  today,
+  reposById,
+  windowDays = ACTIVITY_DAYS,
+}: Props) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterKind>(FeedFilterKind.ALL);
   const [cap, setCap] = useState(TIMELINE_RENDER_CAP);
 
   const groups = useMemo<DayGroup[]>(() => {
-    const buckets: DayGroup[] = Array.from({ length: ACTIVITY_DAYS }, (_, day) => ({
+    const buckets: DayGroup[] = Array.from({ length: windowDays }, (_, day) => ({
       day,
       commits: 0,
       prsOpened: 0,
       prsMerged: 0,
       checksFailed: 0,
+      checksProvider: null,
       events: [],
     }));
+    const providerTallies = new Map<number, Map<ProviderId, number>>();
 
     for (const c of commits) {
-      const d = daysAgo(c.timestamp, today);
+      const d = daysAgo(c.timestamp, today, windowDays);
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
@@ -99,7 +115,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
     }
 
     for (const e of prEvents) {
-      const d = daysAgo(e.timestamp, today);
+      const d = daysAgo(e.timestamp, today, windowDays);
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
@@ -131,11 +147,20 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
     }
     for (const s of mergedChecks.values()) {
       const noonIso = `${s.day}T12:00:00Z`;
-      const d = daysAgo(noonIso, today);
+      const d = daysAgo(noonIso, today, windowDays);
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
       g.checksFailed += s.failed;
+      const provider = reposById.get(s.repoId)?.providerId ?? null;
+      if (provider) {
+        let tally = providerTallies.get(d);
+        if (!tally) {
+          tally = new Map();
+          providerTallies.set(d, tally);
+        }
+        tally.set(provider, (tally.get(provider) ?? 0) + s.failed);
+      }
       g.events.push({
         kind: FeedEventKind.CHECK,
         at: noonIso,
@@ -144,11 +169,22 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
       });
     }
 
+    for (const [d, tally] of providerTallies) {
+      const g = buckets[d];
+      if (!g) continue;
+      // Only label the chip with a provider when the day's failing checks all
+      // come from a single provider; mixed days stay on the default wording.
+      if (tally.size === 1) {
+        const first = tally.keys().next().value;
+        g.checksProvider = first ?? null;
+      }
+    }
+
     for (const g of buckets) {
       g.events.sort((a, b) => (a.at < b.at ? 1 : -1));
     }
     return buckets.filter((g) => g.commits + g.prsOpened + g.prsMerged + g.checksFailed > 0);
-  }, [commits, prEvents, checkRuns, today, reposById]);
+  }, [commits, prEvents, checkRuns, today, reposById, windowDays]);
 
   const totals = useMemo(() => {
     let cs = 0;
@@ -248,56 +284,54 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
         </Empty>
       ) : (
         <Wrap>
-          {visibleGroups.map((g) => (
-            <DayCard key={g.day} data-testid={TEST_IDS.activity.timeline.day}>
-              <DayHead>
-                <DayTitle>{dayLabel(g.day)}</DayTitle>
-                <ChipRow>
-                  {g.commits > 0 &&
-                    filter !== FeedFilterKind.PRS &&
-                    filter !== FeedFilterKind.CHECKS && (
-                      <Chip tone="neutral">
-                        {g.commits === 1
-                          ? t("activity.timeline.chip_commits_one", { count: g.commits })
-                          : t("activity.timeline.chip_commits_other", { count: g.commits })}
-                      </Chip>
-                    )}
-                  {g.prsMerged > 0 &&
-                    filter !== FeedFilterKind.COMMITS &&
-                    filter !== FeedFilterKind.CHECKS && (
-                      <Chip tone="ok">
-                        {g.prsMerged === 1
-                          ? t("activity.timeline.chip_prs_merged_one", { count: g.prsMerged })
-                          : t("activity.timeline.chip_prs_merged_other", { count: g.prsMerged })}
-                      </Chip>
-                    )}
-                  {g.prsOpened > 0 &&
-                    filter !== FeedFilterKind.COMMITS &&
-                    filter !== FeedFilterKind.CHECKS && (
-                      <Chip tone="info">
-                        {g.prsOpened === 1
-                          ? t("activity.timeline.chip_prs_opened_one", { count: g.prsOpened })
-                          : t("activity.timeline.chip_prs_opened_other", { count: g.prsOpened })}
-                      </Chip>
-                    )}
-                  {g.checksFailed > 0 &&
-                    filter !== FeedFilterKind.COMMITS &&
-                    filter !== FeedFilterKind.PRS && (
-                      <Chip tone="err">
-                        {g.checksFailed === 1
-                          ? `${g.checksFailed} check failed`
-                          : `${g.checksFailed} checks failed`}
-                      </Chip>
-                    )}
-                </ChipRow>
-              </DayHead>
-              <Feed>
-                {g.events.slice(0, MAX_ROWS_PER_DAY).map((ev, idx) => (
-                  <FeedEventRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
-                ))}
-              </Feed>
-            </DayCard>
-          ))}
+          {visibleGroups.map((g) => {
+            const dayDescriptor = dayLabel(g.day);
+            return (
+              <DayCard key={g.day} data-testid={TEST_IDS.activity.timeline.day}>
+                <DayHead>
+                  <DayTitle>{t(dayDescriptor.key, { count: dayDescriptor.count })}</DayTitle>
+                  <ChipRow>
+                    {g.commits > 0 &&
+                      filter !== FeedFilterKind.PRS &&
+                      filter !== FeedFilterKind.CHECKS && (
+                        <Chip tone="neutral">
+                          {t("activity.timeline.chip_commits", { count: g.commits })}
+                        </Chip>
+                      )}
+                    {g.prsMerged > 0 &&
+                      filter !== FeedFilterKind.COMMITS &&
+                      filter !== FeedFilterKind.CHECKS && (
+                        <Chip tone="ok">
+                          {t("activity.timeline.chip_prs_merged", { count: g.prsMerged })}
+                        </Chip>
+                      )}
+                    {g.prsOpened > 0 &&
+                      filter !== FeedFilterKind.COMMITS &&
+                      filter !== FeedFilterKind.CHECKS && (
+                        <Chip tone="info">
+                          {t("activity.timeline.chip_prs_opened", { count: g.prsOpened })}
+                        </Chip>
+                      )}
+                    {g.checksFailed > 0 &&
+                      filter !== FeedFilterKind.COMMITS &&
+                      filter !== FeedFilterKind.PRS && (
+                        <Chip tone="err">
+                          {t(
+                            `activity.timeline.chip_checks_failed_${g.checksProvider ?? "default"}` as const,
+                            { count: g.checksFailed },
+                          )}
+                        </Chip>
+                      )}
+                  </ChipRow>
+                </DayHead>
+                <Feed>
+                  {g.events.slice(0, MAX_ROWS_PER_DAY).map((ev, idx) => (
+                    <FeedEventRow key={`${ev.kind}-${idx}`} event={ev} today={today} />
+                  ))}
+                </Feed>
+              </DayCard>
+            );
+          })}
           {hiddenCount > 0 && (
             <ShowMore>
               <GeneralButton

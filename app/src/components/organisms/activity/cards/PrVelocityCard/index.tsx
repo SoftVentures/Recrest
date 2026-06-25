@@ -6,6 +6,7 @@ import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
 import { ResponsiveBar } from "@nivo/bar";
+import { linearGradientDef } from "@nivo/core";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartTooltip";
@@ -13,7 +14,9 @@ import { useChartTooltip } from "@/components/organisms/activity/cards/parts/Cha
 import type { VelocityDay } from "@/lib/activityAggregates";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { DIFF_ADDED, hueDistance, shade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useResolvedLocale } from "@/lib/utils/datetime.utils";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -23,9 +26,13 @@ export interface Props {
   loading?: boolean;
 }
 
+// flex-grow inside GeneralCard's column so the chart fills whatever height the
+// grid row stretches the card to (its row-mates are taller), with a 140px floor
+// so it never collapses. ResponsiveBar reads the computed flex height.
 const ChartWrap = styled(Box)({
   width: "100%",
-  height: 140,
+  flex: "1 1 auto",
+  minHeight: 140,
 });
 
 const Legend = styled(Box)(({ theme }) => ({
@@ -48,16 +55,28 @@ const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   width: 8,
   height: 8,
   borderRadius: "50%",
-  backgroundColor: color,
+  // Mirror the bar's vertical gradient (lighter top → solid bottom).
+  background: `linear-gradient(180deg, ${shade(color, 0.12)}, ${color})`,
 }));
 
+// Nivo gradient ids — referenced by both the `defs` and `fill` props below.
+const OPENED_GRADIENT = "prVelocityOpened";
+const MERGED_GRADIENT = "prVelocityMerged";
+
 function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const locale = useResolvedLocale();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
   const { show, move, hide, portal } = useChartTooltip();
   const openedColor = theme.palette.primary.main;
-  const mergedColor = theme.palette.success.main;
+  // DIFF_ADDED is the curated vivid green — the `success.main` token reads
+  // muddy/dark at chart-fill size (see palette.ts). But "opened" uses the
+  // user-chosen primary accent, which can itself be green; if so the two
+  // series collapse to the same hue. Fall back to the (mode-aware) info blue
+  // whenever the accent sits too close to the merge green to stay distinct.
+  const mergedColor =
+    hueDistance(openedColor, DIFF_ADDED) < 40 ? theme.palette.info.main : DIFF_ADDED;
   const openedLabel = t("activity.cards.pr_velocity_opened");
   const mergedLabel = t("activity.cards.pr_velocity_merged");
 
@@ -65,7 +84,7 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
   // Newest-first buckets → reverse for chronological left-to-right.
   const buckets = bucketDays(rows, (r) => r.day, size).reverse();
   const data = buckets.map((b) => ({
-    x: dayLabel(b.newestDay, i18n.language),
+    x: dayLabel(b.newestDay, locale),
     [openedLabel]: b.rows.reduce((a, r) => a + r.opened, 0),
     [mergedLabel]: b.rows.reduce((a, r) => a + r.merged, 0),
   }));
@@ -107,6 +126,20 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
           groupMode="grouped"
           theme={nivoTheme}
           colors={(bar) => colorByKey[String(bar.id)] ?? theme.palette.primary.main}
+          defs={[
+            linearGradientDef(OPENED_GRADIENT, [
+              { offset: 0, color: shade(openedColor, 0.12) },
+              { offset: 100, color: openedColor },
+            ]),
+            linearGradientDef(MERGED_GRADIENT, [
+              { offset: 0, color: shade(mergedColor, 0.12) },
+              { offset: 100, color: mergedColor },
+            ]),
+          ]}
+          fill={[
+            { match: { id: openedLabel }, id: OPENED_GRADIENT },
+            { match: { id: mergedLabel }, id: MERGED_GRADIENT },
+          ]}
           margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
           padding={0.3}
           innerPadding={2}

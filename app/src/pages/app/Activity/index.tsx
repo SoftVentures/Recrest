@@ -10,7 +10,6 @@ import { styled } from "@mui/material/styles";
 import LazyMount from "@/components/atoms/LazyMount";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
-import ActivitySourceToggle from "@/components/atoms/buttons/ActivitySourceToggle";
 import GeneralCircularLoader, {
   CircularLoaderSize,
 } from "@/components/atoms/loaders/GeneralCircularLoader";
@@ -73,7 +72,6 @@ import {
 import {
   ACTIVITY_URL_PARAM_SINCE,
   ACTIVITY_URL_PARAM_UNTIL,
-  ActivitySource,
 } from "@/lib/constants/activity.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import {
@@ -263,7 +261,6 @@ export default function ActivityPage() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const repos = useEnrichedRepos();
-  const connections = useAppSelector((s) => s.providers.connections);
   const range = useAppSelector(selectSelectedRange);
 
   // Number of whole days the selected range spans; every windowed aggregation
@@ -324,31 +321,9 @@ export default function ActivityPage() {
 
   const [selectedRepo, setSelectedRepo] = useState<string>("all");
   const [selectedAuthor, setSelectedAuthor] = useState<string>("all");
-  const [source, setSource] = useState<ActivitySource>(ActivitySource.ALL);
-
-  // "Remote" scopes every aggregation to repos backed by a connected provider;
-  // "all" keeps every scanned repo. `scopedRepoIds` stays null in "all" mode so
-  // the per-item membership checks below short-circuit.
-  const remoteRepoIds = useMemo(
-    () =>
-      new Set(
-        repos.filter((r) => r.providerId && connections[r.providerId]?.connected).map((r) => r.id),
-      ),
-    [repos, connections],
-  );
-  const scopedRepoIds = source === ActivitySource.REMOTE ? remoteRepoIds : null;
-  const scopedRepos = useMemo(
-    () => (scopedRepoIds ? repos.filter((r) => scopedRepoIds.has(r.id)) : repos),
-    [repos, scopedRepoIds],
-  );
-
-  // A repo picked before switching to "remote" may not be in the remote set;
-  // drop the stale selection so the page doesn't silently render nothing.
-  useEffect(() => {
-    if (selectedRepo !== "all" && scopedRepoIds && !scopedRepoIds.has(selectedRepo)) {
-      setSelectedRepo("all");
-    }
-  }, [scopedRepoIds, selectedRepo]);
+  // The All/Remote source toggle was removed — Activity always spans every
+  // scanned repo (no provider-scoped subset).
+  const scopedRepos = repos;
 
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const reposById = useMemo(() => {
@@ -366,42 +341,38 @@ export default function ActivityPage() {
   const filteredCommits = useMemo(
     () =>
       commits.filter((c) => {
-        if (scopedRepoIds && !scopedRepoIds.has(c.repoId)) return false;
         if (selectedRepo !== "all" && c.repoId !== selectedRepo) return false;
         if (selectedAuthor !== "all" && c.author !== selectedAuthor) return false;
         return true;
       }),
-    [commits, selectedRepo, selectedAuthor, scopedRepoIds],
+    [commits, selectedRepo, selectedAuthor],
   );
 
   const filteredPrEvents = useMemo(
     () =>
       prEvents.filter((e) => {
-        if (scopedRepoIds && !scopedRepoIds.has(e.repoId)) return false;
         if (selectedRepo !== "all" && e.repoId !== selectedRepo) return false;
         return true;
       }),
-    [prEvents, selectedRepo, scopedRepoIds],
+    [prEvents, selectedRepo],
   );
 
   const filteredCheckRuns = useMemo(
     () =>
       checkRuns.filter((s) => {
-        if (scopedRepoIds && !scopedRepoIds.has(s.repoId)) return false;
         if (selectedRepo !== "all" && s.repoId !== selectedRepo) return false;
         return true;
       }),
-    [checkRuns, selectedRepo, scopedRepoIds],
+    [checkRuns, selectedRepo],
   );
 
   const filteredPrsByRepo = useMemo(() => {
     const entries = Object.entries(prsByRepo).filter(([repoId]) => {
-      if (scopedRepoIds && !scopedRepoIds.has(repoId)) return false;
       if (selectedRepo !== "all" && repoId !== selectedRepo) return false;
       return true;
     });
     return Object.fromEntries(entries);
-  }, [prsByRepo, selectedRepo, scopedRepoIds]);
+  }, [prsByRepo, selectedRepo]);
 
   // Defer the heavy chart inputs so a range-preset click paints the picker
   // state immediately and the ~20 chart/insight recomputes catch up in a
@@ -421,11 +392,12 @@ export default function ActivityPage() {
   const rangeBusy = commitsLoading || deferredWindowDays !== windowDays;
 
   const authorOptions = useMemo(() => {
-    const scoped = scopedRepoIds
-      ? deferredAllCommits.filter((c) => scopedRepoIds.has(c.repoId))
-      : deferredAllCommits;
+    const scoped =
+      selectedRepo === "all"
+        ? deferredAllCommits
+        : deferredAllCommits.filter((c) => c.repoId === selectedRepo);
     const buckets = computeLeaderboard(
-      selectedRepo === "all" ? scoped : scoped.filter((c) => c.repoId === selectedRepo),
+      scoped,
       today,
       Number.POSITIVE_INFINITY,
       {},
@@ -435,7 +407,7 @@ export default function ActivityPage() {
       deferredWindowDays,
     );
     return buckets.map((b) => ({ key: b.author, name: b.author, email: b.email }));
-  }, [deferredAllCommits, selectedRepo, today, deferredWindowDays, scopedRepoIds]);
+  }, [deferredAllCommits, selectedRepo, today, deferredWindowDays]);
 
   const stats = useMemo(
     () => computeActivityStats(deferredCommits, today, allRepoIds, deferredWindowDays),
@@ -481,12 +453,15 @@ export default function ActivityPage() {
     () => ({
       streaks: computeStreaks(deferredCommits, today),
       trend: computeTrend(deferredCommits, 30, today),
-      topAuthors: computeTopAuthorsByPeriod(deferredCommits, 30, 3, today),
+      // Top authors follow the selected range so the count matches the author
+      // dropdown and the "Aktive Autor:innen" KPI — a hard-coded 30-day period
+      // showed 3 authors while a 7-day range had only 2 active.
+      topAuthors: computeTopAuthorsByPeriod(deferredCommits, deferredWindowDays, 3, today),
       weekday: computeMostActiveDayOfWeek(deferredCommits),
       avgPerWeek: computeAvgCommitsPerWeek(deferredCommits),
       gap: computeLongestGap(deferredCommits),
     }),
-    [deferredCommits, today],
+    [deferredCommits, today, deferredWindowDays],
   );
 
   // Sparkline for the CommitsHero — daily commit counts, today at index 0.
@@ -533,7 +508,6 @@ export default function ActivityPage() {
                 aria-label={t("activity.loading", { defaultValue: "Loading activity…" })}
               />
             )}
-            <ActivitySourceToggle value={source} onChange={setSource} />
             <FilterSelect
               value={selectedRepo}
               size="small"
@@ -602,7 +576,7 @@ export default function ActivityPage() {
           <Span cols={4}>
             <TopAuthorsInsightCard
               authors={insights.topAuthors}
-              periodDays={30}
+              periodDays={deferredWindowDays}
               loading={commitsBusy}
             />
           </Span>
@@ -705,6 +679,7 @@ export default function ActivityPage() {
             checkRuns={deferredCheckRuns}
             today={today}
             reposById={reposById}
+            windowDays={deferredWindowDays}
           />
         </LazyMount>
       </Page>

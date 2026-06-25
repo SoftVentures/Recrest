@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 import { Box, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { Check, ExternalLink, Info, PlugZap, Server } from "lucide-react";
+import { Check, Info, PlugZap, Server } from "lucide-react";
 
 import BrandIcon from "@/assets/icons/BrandIcon";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
+import PatHelpPanel from "@/components/molecules/PatHelpPanel";
 import {
   StepBody,
   StepContent,
@@ -27,15 +28,18 @@ import {
   type ProviderId,
 } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { openExternal } from "@/lib/tauri";
-import { tokenCreateUrlFor } from "@/lib/utils/providerToken.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { setProviderBaseUrl, setProviderToken } from "@/store/actions/providers.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export interface ConnectProviderStepProps {
   onBack: () => void;
   onNext: () => void;
+  /** Notifies the wizard which provider the user has highlighted. The wizard
+   *  uses this to decide whether the next step is `GitlabVariantStep`. */
+  onProviderChange?: (providerId: ProviderId) => void;
+  initialProviderId?: ProviderId;
 }
 
 // Self-hosted base-URL placeholders mirror the Settings → Accounts editor: the
@@ -149,18 +153,24 @@ const ConnectedBadge = styled(Box)(({ theme }) => ({
   color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Box;
 
-function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
+function ConnectProviderStep({
+  onBack,
+  onNext,
+  onProviderChange,
+  initialProviderId,
+}: ConnectProviderStepProps) {
   const { t } = useTranslation(I18nNamespace.ONBOARDING);
   const dispatch = useAppDispatch();
   const connections = useAppSelector((s) => s.providers.connections);
 
-  const [providerId, setProviderId] = useState<ProviderId>(Provider.GITHUB);
+  const [providerId, setProviderId] = useState<ProviderId>(initialProviderId ?? Provider.GITHUB);
   const [token, setToken] = useState("");
   const [username, setUsername] = useState("");
   const [baseUrlExpanded, setBaseUrlExpanded] = useState(false);
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const connectFeedback = useActionFeedback();
 
   const connection = connections[providerId];
   const connected = !!connection?.connected;
@@ -183,6 +193,7 @@ function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
     setBaseUrlExpanded(false);
     setBaseUrlDraft("");
     setError(null);
+    onProviderChange?.(id);
   };
 
   const cancelBaseUrl = () => {
@@ -212,13 +223,15 @@ function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
     setSubmitting(true);
     setError(null);
     try {
-      await dispatch(
-        setProviderToken({
-          providerId,
-          token: token.trim(),
-          username: requiresUsername ? username.trim() : null,
-        }),
-      ).unwrap();
+      await connectFeedback.run(async () => {
+        await dispatch(
+          setProviderToken({
+            providerId,
+            token: token.trim(),
+            username: requiresUsername ? username.trim() : null,
+          }),
+        ).unwrap();
+      });
       setToken("");
       setUsername("");
     } catch (err) {
@@ -361,6 +374,7 @@ function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
                 startIcon={<PlugZap size={14} />}
                 onClick={() => void onConnect()}
                 loading={submitting}
+                feedbackState={connectFeedback.state}
                 disabled={!token.trim() || submitting || (requiresUsername && !username.trim())}
                 data-testid={TEST_IDS.onboarding.providerConnect}
               >
@@ -368,19 +382,7 @@ function ConnectProviderStep({ onBack, onNext }: ConnectProviderStepProps) {
               </GeneralButton>
             </InputRow>
 
-            <LinkRow>
-              <GeneralButton
-                variant="link"
-                size="sm"
-                startIcon={<ExternalLink size={12} />}
-                onClick={() =>
-                  void openExternal(tokenCreateUrlFor(providerId, connection?.baseUrl))
-                }
-                data-testid={TEST_IDS.onboarding.providerTokenHelp}
-              >
-                {t("connectProvider.token_help", { name: providerName })}
-              </GeneralButton>
-            </LinkRow>
+            <PatHelpPanel provider={providerId} baseUrl={connection?.baseUrl ?? ""} />
 
             {error && <ErrorText component="p">{error}</ErrorText>}
           </Form>

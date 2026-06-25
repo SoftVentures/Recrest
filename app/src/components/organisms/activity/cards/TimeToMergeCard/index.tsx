@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { MergeBucket } from "@/lib/activityAggregates";
+import { barGradient } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
 interface Props {
@@ -51,7 +52,7 @@ const Fill = styled(Box, { shouldForwardProp: (p) => p !== "width" })<{ width: n
   ({ theme, width }) => ({
     width: `${width}%`,
     height: "100%",
-    backgroundColor: theme.palette.primary.main,
+    backgroundImage: barGradient(theme.palette.primary.main),
   }),
 );
 
