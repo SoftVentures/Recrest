@@ -17,7 +17,7 @@ use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager,
+    AppHandle, LogicalSize, Manager,
 };
 // Click-routing types are only used on Windows + Linux, where the tray's
 // left-click brings the window forward. macOS follows the menu-bar
@@ -662,6 +662,15 @@ pub fn run() {
                 // separately below).
                 #[cfg(not(target_os = "macos"))]
                 let _ = window.set_decorations(false);
+                // Belt-and-suspenders: enforce the minimum window size at
+                // runtime. The `tauri.dev.conf.json` overlay replaces (not
+                // deep-merges) the `windows[]` entry by label, so the dev build
+                // drops `minWidth`/`minHeight` and the window becomes freely
+                // resizable below the desktop-only floor. Setting it here keeps
+                // dev and prod identical regardless of conf-merge semantics.
+                // Keep in lock-step with `tauri.conf.json` (1100×720, the
+                // documented desktop-only minimum).
+                let _ = window.set_min_size(Some(LogicalSize::new(1100.0, 720.0)));
                 // Belt-and-suspenders: explicitly hide the window here in
                 // case the `visible: false` config-overlay merge didn't
                 // apply (Tauri's `tauri.dev.conf.json` deep-merge for
@@ -1171,6 +1180,7 @@ pub fn run() {
         commands::git_ops::git_fetch_all,
         commands::git_ops::git_pull,
         commands::git_ops::git_push,
+        commands::git_ops::git_pull_all,
         commands::git_ops::git_checkout,
         commands::git_ops::git_checkout_remote,
         commands::git_ops::git_list_branches,
@@ -1273,6 +1283,7 @@ pub fn run() {
         commands::git_ops::git_fetch_all,
         commands::git_ops::git_pull,
         commands::git_ops::git_push,
+        commands::git_ops::git_pull_all,
         commands::git_ops::git_checkout,
         commands::git_ops::git_checkout_remote,
         commands::git_ops::git_list_branches,

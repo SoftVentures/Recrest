@@ -40,6 +40,7 @@ export const TauriCommand = {
   GIT_FETCH: "git_fetch",
   GIT_FETCH_ALL: "git_fetch_all",
   GIT_PULL: "git_pull",
+  GIT_PULL_ALL: "git_pull_all",
   GIT_PUSH: "git_push",
   GIT_CHECKOUT: "git_checkout",
   GIT_CHECKOUT_REMOTE: "git_checkout_remote",

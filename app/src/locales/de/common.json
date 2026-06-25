@@ -326,12 +326,13 @@
       "open_ide_tooltip": "Zuletzt aktives Repo in der Standard-IDE öffnen",
       "open_ide_error": "Repo konnte nicht in der IDE geöffnet werden",
       "recent_commits": "Letzte Commits",
-      "create_branch": "Branch erstellen",
       "pull_all": "Alle pullen",
-      "coming_soon": "Demnächst verfügbar",
       "fetched_one": "{{count}} Repo gefetcht",
       "fetched_other": "{{count}} Repos gefetcht",
-      "fetch_all_error": "Fetch fehlgeschlagen"
+      "fetch_all_error": "Fetch fehlgeschlagen",
+      "pulled_one": "{{count}} Repo gepullt",
+      "pulled_other": "{{count}} Repos gepullt",
+      "pull_all_error": "Pull fehlgeschlagen"
     }
   },
   "titlebar": {

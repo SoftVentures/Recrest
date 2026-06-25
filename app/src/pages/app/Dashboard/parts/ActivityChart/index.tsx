@@ -65,21 +65,28 @@ export function ActivityChart({ agg, maxDay, title, meta, unit }: ActivityChartP
           const dayLabel = spanLabel(ago);
           const isActive = hovered === i;
           return (
-            <GeneralTooltip
-              key={i}
-              open={isActive}
-              title={
-                <TooltipBody>
-                  <TooltipMain>{t("dash.activity.commits", { count: v })}</TooltipMain>
-                  <TooltipSub>{dayLabel}</TooltipSub>
-                </TooltipBody>
-              }
-              placement="top"
-            >
-              <BarColumn>
+            <BarColumn key={i}>
+              {/* Tooltip anchors to the bar itself (not the full-height column),
+                  so it sits just above each bar's top edge and rides up/down
+                  with the bar's height as the pointer sweeps across. */}
+              <GeneralTooltip
+                open={isActive}
+                title={
+                  <TooltipBody>
+                    <TooltipMain>{t("dash.activity.commits", { count: v })}</TooltipMain>
+                    <TooltipSub>{dayLabel}</TooltipSub>
+                  </TooltipBody>
+                }
+                placement="top"
+                slotProps={{
+                  popper: {
+                    modifiers: [{ name: "offset", options: { offset: [0, 8] } }],
+                  },
+                }}
+              >
                 <Bar active={isActive} heightPct={(v / maxDay) * 100} index={i} />
-              </BarColumn>
-            </GeneralTooltip>
+              </GeneralTooltip>
+            </BarColumn>
           );
         })}
       </Chart>
@@ -156,36 +163,35 @@ const barGrow = keyframes`
 
 const Bar = styled(Box, {
   shouldForwardProp: (prop) => prop !== "heightPct" && prop !== "index" && prop !== "active",
-})<{ heightPct: number; index: number; active: boolean }>(
-  ({ theme, heightPct, index, active }) => ({
+})<{ heightPct: number; index: number; active: boolean }>(({ theme, heightPct, index, active }) => {
+  const p = theme.palette.primary.main;
+  return {
     width: "100%",
     // Floor so a bucket with a few commits still reads as a real bar, not "0".
     minHeight: heightPct > 0 ? 7 : 0,
-    height: active ? "100%" : `${heightPct}%`,
-    backgroundColor: active
-      ? theme.palette.primary.main
-      : `color-mix(in srgb, ${theme.palette.primary.main} 18%, transparent)`,
-    backgroundImage: active
-      ? "none"
-      : `radial-gradient(circle, color-mix(in srgb, ${theme.palette.primary.main} 55%, transparent) 0.6px, transparent 1px)`,
-    backgroundSize: "7px 7px",
-    border: `1px solid ${
-      active
-        ? theme.palette.primary.main
-        : `color-mix(in srgb, ${theme.palette.primary.main} 65%, transparent)`
-    }`,
+    // Height reflects the actual value and stays put on hover — hovering only
+    // brightens the gradient + adds a glow, it never inflates the bar.
+    height: `${heightPct}%`,
+    borderRadius: "6px 6px 0 0",
+    border: `1px solid color-mix(in srgb, ${p} ${active ? 90 : 45}%, transparent)`,
     borderBottom: 0,
-    borderRadius: "8px 8px 0 0",
+    // Vertical primary-colour gradient: brighter at the top, fading toward the
+    // base, so the bar reads with depth instead of a flat block.
+    backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${p} ${
+      active ? 100 : 70
+    }%, transparent) 0%, color-mix(in srgb, ${p} ${active ? 55 : 22}%, transparent) 100%)`,
+    boxShadow: active
+      ? `0 0 0 1px color-mix(in srgb, ${p} 55%, transparent), 0 6px 18px -6px color-mix(in srgb, ${p} 70%, transparent)`
+      : "none",
     transformOrigin: "bottom",
     animation: `${barGrow} 360ms cubic-bezier(0.22, 1, 0.36, 1) both`,
     animationDelay: `${index * 28}ms`,
-    transition:
-      "background-color 0.12s ease, border-color 0.12s ease, height 0.16s cubic-bezier(0.22, 1, 0.36, 1)",
+    transition: "background-image 0.14s ease, border-color 0.14s ease, box-shadow 0.16s ease",
     'html[data-reduced-motion="true"] &': {
       animation: "none",
     },
-  }),
-);
+  };
+});
 
 const ChartAxis = styled(Box)(({ theme }) => ({
   display: "flex",

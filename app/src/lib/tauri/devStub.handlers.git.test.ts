@@ -61,6 +61,14 @@ describe("gitStub — git_fetch_all", () => {
   });
 });
 
+describe("gitStub — git_pull_all", () => {
+  it("returns the number of seed repos", () => {
+    const state = freshState();
+    const result = gitStub("git_pull_all", {}, state);
+    expect(result).toBe(DEFAULT_SEED.repos.length);
+  });
+});
+
 describe("gitStub — git_list_branches", () => {
   it("returns an array of three branch objects for a known repo", () => {
     const state = freshState();

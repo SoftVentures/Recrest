@@ -326,12 +326,13 @@
       "open_ide_tooltip": "Open the most recently active repo in your default IDE",
       "open_ide_error": "Could not open the repo in your IDE",
       "recent_commits": "Recent commits",
-      "create_branch": "Create branch",
       "pull_all": "Pull all",
-      "coming_soon": "Coming soon",
       "fetched_one": "Fetched {{count}} repo",
       "fetched_other": "Fetched {{count}} repos",
-      "fetch_all_error": "Fetch all failed"
+      "fetch_all_error": "Fetch all failed",
+      "pulled_one": "Pulled {{count}} repo",
+      "pulled_other": "Pulled {{count}} repos",
+      "pull_all_error": "Pull all failed"
     }
   },
   "titlebar": {

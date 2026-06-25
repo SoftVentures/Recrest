@@ -339,6 +339,46 @@ pub async fn git_fetch_all(state: State<'_, AppState>) -> Result<u32, CommandErr
     Ok(ok)
 }
 
+/// Fire-and-forget pull across every registered repo. Mirrors `git_fetch_all`:
+/// each repo fetches `origin` and fast-forwards its current branch, and failures
+/// on individual repos are swallowed (and logged) so one repo with diverged
+/// history (or no upstream) doesn't block the rest. Returns the number of repos
+/// whose pull returned `Ok`.
+#[tauri::command]
+pub async fn git_pull_all(state: State<'_, AppState>) -> Result<u32, CommandError> {
+    let config = state.config.lock().await;
+    let settings = config.settings();
+    let repos: Vec<(String, PathBuf, Option<String>, Option<String>, bool)> = settings
+        .repos
+        .values()
+        .map(|r| {
+            let (key_path, allow_agent_fallback) = resolve_ssh_key(settings, r);
+            (
+                r.id.clone(),
+                r.path.clone(),
+                r.provider_id.clone(),
+                key_path,
+                allow_agent_fallback,
+            )
+        })
+        .collect();
+    drop(config);
+
+    let mut ok = 0u32;
+    for (repo_id, path, provider_id, key_path, allow_agent_fallback) in repos {
+        let ssh = ssh_creds_for(&state, &repo_id, key_path, allow_agent_fallback).await;
+        let result =
+            tokio::task::spawn_blocking(move || pull_blocking(&path, provider_id.as_deref(), ssh))
+                .await;
+        match result {
+            Ok(Ok(())) => ok += 1,
+            Ok(Err(e)) => tracing::debug!("pull_all: one repo skipped: {e:?}"),
+            Err(e) => tracing::debug!("pull_all: spawn_blocking failed: {e}"),
+        }
+    }
+    Ok(ok)
+}
+
 /// Returns every local + remote branch for a given repository, with
 /// ahead/behind counts vs upstream and last-commit metadata. Replaces the
 /// synthetic data the UI used to make up from `RepoStatusDto.branch`.

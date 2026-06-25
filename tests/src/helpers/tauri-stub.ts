@@ -412,6 +412,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "git_branch_create":
         return resolveStatus(args?.repoId);
       case "git_fetch_all":
+      case "git_pull_all":
         return SEED.repos.length;
       case "git_list_branches":
         return [

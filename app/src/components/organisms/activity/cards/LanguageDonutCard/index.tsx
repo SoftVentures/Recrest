@@ -25,26 +25,29 @@ const MAX_TOOLTIP_CONTRIBUTORS = 4;
 
 const Wrap = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "auto 1fr",
+  // Donut takes a clamped fraction of the card WIDTH (never more than ~38%) so
+  // the legend always keeps room for its percentage column; the legend fills
+  // the rest. `minmax(0, 1fr)` lets the legend track shrink instead of pushing
+  // the donut wider and clipping the percentages on a narrow card.
+  gridTemplateColumns: "minmax(88px, 38%) minmax(0, 1fr)",
   alignItems: "center",
   gap: 16,
-  // Fill the card's body so the donut can grow into whatever height the grid
-  // row stretches the card to (its row-mate, the stacked chart, is taller).
   flex: "1 1 auto",
   minHeight: 0,
   height: "100%",
 });
 
-// Square donut sized off the available card height: grows when the row is tall,
-// floors at 120px so it never collapses and caps at 220px so it stays a donut
-// rather than swallowing the legend. aspect-ratio keeps width == height so the
-// `auto` grid column tracks it.
+// Square donut sized off the available WIDTH (its grid column), kept square via
+// aspect-ratio and capped at 200px so it neither collapses nor balloons.
+// Width-driven (not height-driven) sizing is what makes the card responsive: a
+// narrow card yields a smaller donut and a legible legend, rather than a
+// height-derived donut whose fixed width starves the legend's percentage column.
 const DonutArea = styled(Box)({
   position: "relative",
-  height: "100%",
+  width: "100%",
+  maxWidth: 200,
   aspectRatio: "1 / 1",
-  minHeight: 120,
-  maxHeight: 220,
+  margin: "0 auto",
   flexShrink: 0,
 });
 

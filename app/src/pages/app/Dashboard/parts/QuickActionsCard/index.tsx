@@ -9,15 +9,7 @@ import { styled } from "@mui/material/styles";
 
 import { AppRoute, TauriCommand } from "@recrest/shared";
 
-import {
-  Activity,
-  Code2,
-  GitBranch,
-  GitPullRequest,
-  Plus,
-  RefreshCw,
-  Terminal,
-} from "lucide-react";
+import { Activity, ArrowDownToLine, Code2, Plus, RefreshCw, Terminal } from "lucide-react";
 import { toast } from "sonner";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
@@ -33,10 +25,9 @@ import { loadRepos } from "@/store/reducers/reposReducer";
 import { bumpRefreshNonce, setImportDialogOpen } from "@/store/reducers/uiReducer";
 
 /**
- * 8-button quick-actions grid shown on the dashboard. Mirrors the old
- * `a-dash-quick` block: each action either fires a Tauri command, opens a
- * dialog, or navigates to a route. Disabled actions stay visible (greyed)
- * with a "coming soon" tooltip so the surface area stays consistent.
+ * Quick-actions grid shown on the dashboard. Each action either fires a Tauri
+ * command (fetch/pull all), opens a dialog, or navigates to a route. "Fetch
+ * all" and "Pull all" form the first row and run across every scanned repo.
  */
 function QuickActionsCard() {
   const { t } = useTranslation();
@@ -46,6 +37,7 @@ function QuickActionsCard() {
   const { commits: recentCommits } = useActivityCommits();
 
   const fetchAll = useActionFeedback();
+  const pullAll = useActionFeedback();
 
   const onFetchAll = async () => {
     if (!isTauri()) return;
@@ -56,6 +48,18 @@ function QuickActionsCard() {
       dispatch(bumpRefreshNonce());
     } catch {
       toast.error(t("dash.quick.fetch_all_error"));
+    }
+  };
+
+  const onPullAll = async () => {
+    if (!isTauri()) return;
+    try {
+      const ok = await pullAll.run(() => invoke<number>(TauriCommand.GIT_PULL_ALL));
+      toast.success(t("dash.quick.pulled", { count: ok }));
+      void dispatch(loadRepos());
+      dispatch(bumpRefreshNonce());
+    } catch {
+      toast.error(t("dash.quick.pull_all_error"));
     }
   };
 
@@ -95,7 +99,6 @@ function QuickActionsCard() {
   };
 
   const onRecentCommits = () => navigate(AppRoute.ACTIVITY);
-  const onCreateBranch = () => navigate(AppRoute.BRANCHES);
 
   return (
     <GeneralCard title={t("dash.quick.title")}>
@@ -104,9 +107,23 @@ function QuickActionsCard() {
           type="button"
           onClick={() => void onFetchAll()}
           disabled={fetchAll.state === "loading"}
+          data-testid={TEST_IDS.dashboard.qa.fetchAll}
         >
           <ActionFeedbackIcon state={fetchAll.state} fallback={<RefreshCw size={14} />} size={14} />
           <Box component="span">{t("dash.quick.fetch_all")}</Box>
+        </QBtn>
+        <QBtn
+          type="button"
+          onClick={() => void onPullAll()}
+          disabled={pullAll.state === "loading" || repos.length === 0}
+          data-testid={TEST_IDS.dashboard.qa.pullAll}
+        >
+          <ActionFeedbackIcon
+            state={pullAll.state}
+            fallback={<ArrowDownToLine size={14} />}
+            size={14}
+          />
+          <Box component="span">{t("dash.quick.pull_all")}</Box>
         </QBtn>
         <GeneralTooltip title={t("dash.quick.clone_tooltip")} placement="top">
           <QBtn type="button" onClick={onOpenImport} data-testid={TEST_IDS.dashboard.qa.clone}>
@@ -143,28 +160,6 @@ function QuickActionsCard() {
           <Activity size={14} />
           <Box component="span">{t("dash.quick.recent_commits")}</Box>
         </QBtn>
-        <QBtn
-          type="button"
-          onClick={onCreateBranch}
-          data-testid={TEST_IDS.dashboard.qa.createBranch}
-        >
-          <GitBranch size={14} />
-          <Box component="span">{t("dash.quick.create_branch")}</Box>
-        </QBtn>
-        <GeneralTooltip title={t("dash.quick.coming_soon")} placement="top">
-          {/* `aria-disabled` (rather than the native `disabled` attr) keeps
-              pointer events alive so the tooltip still fires on hover.
-              Click is no-op'd via preventDefault. */}
-          <QBtn
-            type="button"
-            aria-disabled
-            onClick={(e) => e.preventDefault()}
-            data-testid={TEST_IDS.dashboard.qa.pullAll}
-          >
-            <GitPullRequest size={14} />
-            <Box component="span">{t("dash.quick.pull_all")}</Box>
-          </QBtn>
-        </GeneralTooltip>
       </Grid>
     </GeneralCard>
   );
@@ -173,8 +168,14 @@ function QuickActionsCard() {
 export default QuickActionsCard;
 
 const Grid = styled(Box)({
+  // Fill the card's height (it stretches to its grid-row neighbour, e.g. the
+  // heatmap) and let the button rows share that space via `1fr` auto-rows, so
+  // the actions grow to fill the box instead of leaving dead space below.
+  flex: 1,
+  minHeight: 0,
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
+  gridAutoRows: "1fr",
   gap: 6,
 }) as typeof Box;
 
@@ -183,6 +184,7 @@ const QBtn = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: 8,
+  minHeight: 38,
   padding: "8px 10px",
   borderRadius: 8,
   cursor: "pointer",

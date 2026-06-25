@@ -84,12 +84,12 @@ export const TEST_IDS = {
     page: "dashboard-page",
     activityAxis: "dash-activity-axis",
     qa: {
+      fetchAll: "dash-qa-fetch-all",
+      pullAll: "dash-qa-pull-all",
       clone: "dash-qa-clone",
       workspace: "dash-qa-workspace",
       openIde: "dash-qa-open-ide",
       recentCommits: "dash-qa-recent-commits",
-      createBranch: "dash-qa-create-branch",
-      pullAll: "dash-qa-pull-all",
     },
   },
 
