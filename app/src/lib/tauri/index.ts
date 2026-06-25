@@ -107,6 +107,7 @@ export async function openExternal(url: string): Promise<void> {
 }
 
 /**
+ * audit:ignore-fact — example version in docstring, not a fact.
  * Returns the Tauri runtime version (e.g. "2.1.0"). Wraps the direct
  * `@tauri-apps/api/app` import so component code stays inside the
  * `@/lib/tauri` boundary. No-ops to `null` outside Tauri.
@@ -123,9 +124,13 @@ export async function getTauriRuntimeVersion(): Promise<string | null> {
 }
 
 /**
- * Reveal a path (file or directory) in the OS file browser, selecting the
- * item. Thin wrapper over `@tauri-apps/plugin-opener`'s `revealItemInDir` so
- * component code doesn't import the plugin directly. No-ops outside Tauri.
+ * Reveal a path in the OS file browser by selecting it in its parent directory
+ * (uses the opener plugin's `reveal_item_in_dir`, which never opens/executes
+ * the item — only highlights it). No-ops outside Tauri.
+ *
+ * To open a *repo* folder's contents, call the `open_in_explorer` Tauri command
+ * with a `repoId` instead — it resolves the path backend-side, so the frontend
+ * never needs the broad `opener:allow-open-path` capability.
  */
 export async function revealPathInSystem(path: string): Promise<void> {
   if (!isTauri() || !path) return;

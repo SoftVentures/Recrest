@@ -27,6 +27,7 @@ import RangeSelect from "@/components/atoms/RangeSelect";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import {
   Aside,
+  BrandLink,
   BrandMark,
   BrandName,
   BrandRow,
@@ -43,6 +44,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS, navCountTestId, navTestId } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { presetKeyFromRange } from "@/lib/utils/activityRange.utils";
 import { fetchOldestCommitDate, setSelectedRange } from "@/store/actions/activity.actions";
 import { toggleSidebar } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -175,8 +177,15 @@ function Sidebar() {
       style={{ paddingLeft: padX, paddingRight: padX }}
     >
       <BrandRow>
-        <BrandMark collapsed={collapsed} />
-        {!collapsed && <BrandName>{t("app.name")}</BrandName>}
+        <BrandLink
+          to={AppRoute.DASHBOARD}
+          end
+          data-testid={TEST_IDS.sidebar.brandHome}
+          aria-label={t("sidebar.home", { ns: I18nNamespace.ARIA })}
+        >
+          <BrandMark collapsed={collapsed} />
+          {!collapsed && <BrandName>{t("app.name")}</BrandName>}
+        </BrandLink>
       </BrandRow>
 
       <Nav collapsed={collapsed}>
@@ -242,12 +251,26 @@ function Sidebar() {
 
       <Footer collapsed={collapsed}>
         <RangeRow collapsed={collapsed}>
-          <RangeSelect
-            value={range}
-            onChange={(r) => dispatch(setSelectedRange(r))}
-            oldestDate={oldest}
-            variant={collapsed ? "collapsed" : "expanded"}
-          />
+          {(() => {
+            const rangeSelect = (
+              <RangeSelect
+                value={range}
+                onChange={(r) => dispatch(setSelectedRange(r))}
+                oldestDate={oldest}
+                variant={collapsed ? "collapsed" : "expanded"}
+              />
+            );
+            if (!collapsed) return rangeSelect;
+            const presetKey = presetKeyFromRange(range, oldest);
+            const rangeLabel = presetKey
+              ? t(`activity.range.preset_${presetKey}`)
+              : t("activity.range.preset_all");
+            return (
+              <GeneralTooltip title={rangeLabel} placement="right" arrow>
+                <Box>{rangeSelect}</Box>
+              </GeneralTooltip>
+            );
+          })()}
         </RangeRow>
         {(() => {
           const settingsLabel = t("nav.settings");

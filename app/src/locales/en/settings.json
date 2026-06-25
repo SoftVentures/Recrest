@@ -2,18 +2,13 @@
   "title": "Settings",
   "brand_name": "Recrest",
   "version_prefix": "v{{version}}",
+  "_comment_shortcuts_detected": "audit:ignore-fact — 'Detected:' is the user-visible label; {{platform}} interpolates the real value",
   "shortcuts_detected": "· Detected: {{platform}}",
   "notifications_test_button": "Test",
   "font_groups": {
     "sans": "Sans",
     "monospace": "Monospace",
     "custom": "Custom"
-  },
-  "storage_facts": {
-    "os_label": "Operating system:",
-    "os_value": "macos 15.0 (x86_64)",
-    "git_label": "Git:",
-    "git_value": "2.44.0"
   },
   "sections": {
     "general": "System",
@@ -24,7 +19,22 @@
     "providers": "Providers",
     "sources": "Scan sources",
     "ide": "IDE",
-    "diagnostics": "Diagnostics"
+    "diagnostics": "Diagnostics",
+    "system": "System"
+  },
+  "system": {
+    "title": "System",
+    "os": "Operating system",
+    "git": "Git",
+    "app": "Recrest"
+  },
+  "storage": {
+    "facts_title": "Data on disk",
+    "facts": {
+      "settings": "Settings file",
+      "cache": "Cache",
+      "tokens": "Dev tokens"
+    }
   },
   "fields": {
     "theme": "Theme",
@@ -50,10 +60,9 @@
     "title": "Appearance",
     "themeSelect": "Theme",
     "themes": {
+      "system": "System",
       "light": "Light",
-      "dark": "Dark",
-      "oled": "OLED",
-      "glassy": "Glassy"
+      "dark": "Dark"
     },
     "accent": "Accent color",
     "dyslexiaFont": "Dyslexia-friendly font"
@@ -65,7 +74,7 @@
     "xl": "Extra large"
   },
   "accent": {
-    "coral": "Coral",
+    "coral": "Coral Orange",
     "blue": "Blue",
     "green": "Green",
     "purple": "Purple",
@@ -180,7 +189,7 @@
       "build": "Build",
       "updater_playground": "Updater playground",
       "notifications": "Notifications playground",
-      "storage": "Storage",
+      "storage": "Data & Cache",
       "ipc": "IPC & Debug",
       "i18n": "i18n",
       "flags": "Feature flags",

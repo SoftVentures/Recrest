@@ -7,7 +7,6 @@ export const setSidebarCollapsed = createAction<boolean>("ui/setSidebarCollapsed
 export const setSearchOpen = createAction<boolean>("ui/setSearchOpen");
 export const setActiveView = createAction<ActiveView>("ui/setActiveView");
 export const setImportDialogOpen = createAction<boolean>("ui/setImportDialogOpen");
-export const setFindDialogOpen = createAction<boolean>("ui/setFindDialogOpen");
 export const bumpRefreshNonce = createAction("ui/bumpRefreshNonce");
 export const setUpdaterBanner = createAction<UpdaterBannerState | null>("ui/setUpdaterBanner");
 export const togglePinnedRepo = createAction<string>("ui/togglePinnedRepo");

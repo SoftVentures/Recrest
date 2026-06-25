@@ -79,6 +79,15 @@ fn auto_detect_terminal() -> Option<String> {
     })
 }
 
+/// Windows console-subsystem terminals: launched from the GUI app they need
+/// their own console window (see `process::with_new_console`), otherwise the
+/// spawn succeeds but nothing is visible. GUI terminals (`windows-terminal`,
+/// `wezterm`, `alacritty`, `hyper`) draw their own window and are excluded.
+#[cfg(windows)]
+fn is_console_terminal(id: &str) -> bool {
+    matches!(id, "cmd" | "powershell")
+}
+
 /// Opens a terminal at `path`, honoring the user's `TerminalSettings`.
 /// Resolution order: explicit `custom_command` → chosen `id` → auto-detect.
 pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandError> {
@@ -113,6 +122,12 @@ pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandEr
     c.args(&plan.args);
     if let Some(cwd) = &plan.cwd {
         c.current_dir(cwd);
+    }
+    // A console terminal launched from the windowless GUI process needs its own
+    // console, or it spawns invisibly (and exits) — `spawn()` still returns Ok.
+    #[cfg(windows)]
+    if is_console_terminal(&id) {
+        super::process::with_new_console(&mut c);
     }
     c.spawn()
         .map(|_| ())
@@ -431,6 +446,40 @@ pub fn detect_terminals() -> Vec<TerminalDetectionDto> {
 #[tauri::command]
 pub fn detect_shells() -> Vec<ShellDetectionDto> {
     detect_shells_with(detectable_shells(), binary_on_path)
+}
+
+/// IPC: spawn a user-provided custom terminal command at `cwd` to verify it
+/// launches. Treats a successful `spawn()` as success because most terminal
+/// emulators detach into a long-running GUI process — waiting on the child
+/// would hang the call. Failure to spawn (binary missing, permissions, etc.)
+/// returns `CommandError::internal` with the underlying OS error.
+#[tauri::command]
+pub async fn test_custom_terminal(command: String, cwd: String) -> Result<(), CommandError> {
+    let trimmed = command.trim();
+    if trimmed.is_empty() {
+        return Err(CommandError::bad_request("empty command"));
+    }
+    let mut parts = trimmed.split_whitespace();
+    let bin = parts
+        .next()
+        .ok_or_else(|| CommandError::bad_request("empty command"))?;
+    let args: Vec<&str> = parts.collect();
+
+    let cwd_path = if cwd.trim().is_empty() {
+        dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
+    } else {
+        PathBuf::from(cwd)
+    };
+
+    // No CREATE_NO_WINDOW configuration: the user *wants* a terminal window
+    // to open — this command exists to verify the custom command actually
+    // launches one. Spawning is treated as success because terminal emulators
+    // detach into a long-running GUI process; waiting on the child would hang.
+    let mut cmd = tokio::process::Command::new(bin);
+    cmd.args(&args).current_dir(&cwd_path);
+    cmd.spawn()
+        .map(|_| ())
+        .map_err(|e| CommandError::internal(format!("spawn failed: {e}")))
 }
 
 #[cfg(test)]

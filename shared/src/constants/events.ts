@@ -33,6 +33,18 @@ export const SETTINGS_RESET_EVENT = "settings://reset";
  *  Payload: `CommitsChunkPayload`. */
 export const ACTIVITY_COMMITS_CHUNK_EVENT = "activity://commits-chunk";
 
+/** Renderer notification that the Tauri window regained focus. Emitted from
+ *  `on_window_event(Focused(true))`. Used to warm WebKit's backdrop-filter
+ *  compositor before the user-visible paint, so Stage Manager swap-in /
+ *  Cmd-Tab focus regain doesn't show a "transparent → shadow → blur"
+ *  staged sequence. */
+export const WINDOW_FOCUSED_EVENT = "recrest://window-focused";
+
+/** Inverse of `WINDOW_FOCUSED_EVENT` — fires on `Focused(false)` so the
+ *  renderer can run the same compositor probe BEFORE the OS captures the
+ *  window's snapshot used for Stage Manager / Mission Control thumbnails. */
+export const WINDOW_BLURRED_EVENT = "recrest://window-blurred";
+
 export const EventChannel = {
   REPO_STATUS: REPO_STATUS_EVENT,
   UPDATER_AVAILABLE: UPDATER_AVAILABLE_EVENT,
@@ -41,6 +53,8 @@ export const EventChannel = {
   CLONE_PROGRESS: CLONE_PROGRESS_EVENT,
   SETTINGS_RESET: SETTINGS_RESET_EVENT,
   ACTIVITY_COMMITS_CHUNK: ACTIVITY_COMMITS_CHUNK_EVENT,
+  WINDOW_FOCUSED: WINDOW_FOCUSED_EVENT,
+  WINDOW_BLURRED: WINDOW_BLURRED_EVENT,
 } as const;
 
 export type EventChannelName = (typeof EventChannel)[keyof typeof EventChannel];

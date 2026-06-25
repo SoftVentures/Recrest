@@ -1,28 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
-import { type BranchInfo, EventChannel, TauriCommand } from "@recrest/shared";
+import { EventChannel } from "@recrest/shared";
 
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, listen } from "@/lib/tauri";
+import { listen } from "@/lib/tauri";
 import type { BranchesByRepo } from "@/pages/app/Branches/parts/_shared";
+import { loadBranches } from "@/store/actions/branches.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 /**
- * Loads `git_list_branches` for every supplied repo in parallel and re-runs on
- * `REPO_STATUS` events so the panel stays current with concurrent git activity.
+ * Branches for the supplied repos, cached in the Redux `branches` slice so the
+ * tab renders instantly on re-entry instead of re-fetching everything each
+ * mount. Stale-while-revalidate: cached branches stay visible while a fresh
+ * `loadBranches` runs in the background (on mount, on repo-set change, on
+ * `REPO_STATUS` events, and on manual `reload()`).
  *
- * Returns `{ data, loading, reload }` — `reload()` triggers a manual refresh
- * (used after the page issues a fetch/push/pull and wants to surface the new
- * tracking state immediately).
+ * `loading` is true only while a load is in flight AND nothing is cached yet
+ * for the visible repos — so a re-visit with cached data shows no spinner.
  */
 export function useBranchesByRepo(repos: EnrichedRepo[]): {
   data: BranchesByRepo[];
   loading: boolean;
   reload: () => void;
 } {
-  const [data, setData] = useState<BranchesByRepo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [nonce, setNonce] = useState(0);
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const dispatch = useAppDispatch();
+  const byRepoId = useAppSelector((s) => s.branches.byRepoId);
+  const loadingRepoIds = useAppSelector((s) => s.branches.loadingRepoIds);
 
   const repoIdsKey = useMemo(
     () =>
@@ -32,44 +35,33 @@ export function useBranchesByRepo(repos: EnrichedRepo[]): {
         .join("|"),
     [repos],
   );
+  // Stable per repo set (the sorted key), so `reload` / the effects don't
+  // re-fire on every parent re-render that hands us a new array identity.
+  const repoIds = useMemo(() => (repoIdsKey ? repoIdsKey.split("|") : []), [repoIdsKey]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    void (async () => {
-      const results = await Promise.all(
-        repos.map(async (repo) => {
-          try {
-            const branches = await invoke<BranchInfo[]>(TauriCommand.GIT_LIST_BRANCHES, {
-              repoId: repo.id,
-            });
-            return { repo, branches };
-          } catch {
-            return { repo, branches: [] as BranchInfo[] };
-          }
-        }),
-      );
-      if (cancelled) return;
-      setData(results);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repoIdsKey, nonce]);
+  // One dispatch per repo → the store fills in (and the UI renders) each group
+  // the instant its repo resolves, rather than blocking on the slowest one.
+  const reload = useCallback(() => {
+    for (const id of repoIds) void dispatch(loadBranches(id));
+  }, [dispatch, repoIds]);
+
+  useEffect(() => reload(), [reload]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     void (async () => {
-      unlisten = await listen<{ repoId: string }>(EventChannel.REPO_STATUS, () => {
-        reload();
-      });
+      unlisten = await listen<{ repoId: string }>(EventChannel.REPO_STATUS, () => reload());
     })();
-    return () => {
-      unlisten?.();
-    };
+    return () => unlisten?.();
   }, [reload]);
+
+  const data = useMemo<BranchesByRepo[]>(
+    () => repos.map((repo) => ({ repo, branches: byRepoId[repo.id] ?? [] })),
+    [repos, byRepoId],
+  );
+
+  const hasCache = repos.some((r) => byRepoId[r.id] !== undefined);
+  const loading = loadingRepoIds.length > 0 && !hasCache;
 
   return { data, loading, reload };
 }

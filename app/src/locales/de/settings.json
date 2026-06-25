@@ -2,18 +2,13 @@
   "title": "Einstellungen",
   "brand_name": "Recrest",
   "version_prefix": "v{{version}}",
+  "_comment_shortcuts_detected": "audit:ignore-fact — 'Erkannt:' is the user-visible label; {{platform}} interpolates the real value",
   "shortcuts_detected": "· Erkannt: {{platform}}",
   "notifications_test_button": "Test",
   "font_groups": {
     "sans": "Sans",
     "monospace": "Monospace",
     "custom": "Eigene"
-  },
-  "storage_facts": {
-    "os_label": "Betriebssystem:",
-    "os_value": "macos 15.0 (x86_64)",
-    "git_label": "Git:",
-    "git_value": "2.44.0"
   },
   "sections": {
     "general": "System",
@@ -24,7 +19,22 @@
     "providers": "Provider",
     "sources": "Scan-Quellen",
     "ide": "IDE",
-    "diagnostics": "Diagnose"
+    "diagnostics": "Diagnose",
+    "system": "System"
+  },
+  "system": {
+    "title": "System",
+    "os": "Betriebssystem",
+    "git": "Git",
+    "app": "Recrest"
+  },
+  "storage": {
+    "facts_title": "Auf der Festplatte",
+    "facts": {
+      "settings": "Einstellungsdatei",
+      "cache": "Cache",
+      "tokens": "Dev-Tokens"
+    }
   },
   "fields": {
     "theme": "Design",
@@ -50,10 +60,9 @@
     "title": "Darstellung",
     "themeSelect": "Theme",
     "themes": {
+      "system": "System",
       "light": "Hell",
-      "dark": "Dunkel",
-      "oled": "OLED",
-      "glassy": "Glasig"
+      "dark": "Dunkel"
     },
     "accent": "Akzentfarbe",
     "dyslexiaFont": "Legasthenie-Schrift"
@@ -65,7 +74,7 @@
     "xl": "Sehr groß"
   },
   "accent": {
-    "coral": "Koralle",
+    "coral": "Korallenorange",
     "blue": "Blau",
     "green": "Grün",
     "purple": "Violett",
@@ -180,7 +189,7 @@
       "build": "Build",
       "updater_playground": "Updater-Spielwiese",
       "notifications": "Notification-Spielwiese",
-      "storage": "Speicher",
+      "storage": "Daten & Cache",
       "ipc": "IPC & Debug",
       "i18n": "i18n",
       "flags": "Feature-Flags",

@@ -154,6 +154,14 @@ export default tseslint.config(
     rules: {
       ...reactPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // eslint-plugin-react-hooks v7 added a batch of strict opinion rules
+      // (`set-state-in-effect`, `immutability`, `static-components`, `refs`)
+      // that flag patterns the codebase deliberately uses. Opting back in
+      // would need a broader refactor than this dependency bump.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/static-components": "off",
+      "react-hooks/refs": "off",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],

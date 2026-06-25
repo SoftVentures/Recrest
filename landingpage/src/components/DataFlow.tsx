@@ -1,6 +1,22 @@
 import { useTranslation } from "react-i18next";
 
-import { BitbucketIcon, FolderIcon, GithubIcon, GitlabIcon, ServerIcon, TauriIcon } from "./icons";
+import {
+  BitbucketIcon,
+  BrandMark,
+  FolderIcon,
+  GithubIcon,
+  GitlabIcon,
+  RustIcon,
+  ServerIcon,
+  TauriIcon,
+  TypeScriptIcon,
+} from "./icons";
+
+const TECH = [
+  { key: "rust", Icon: RustIcon, name: "Rust" },
+  { key: "tauri", Icon: TauriIcon, name: "Tauri" },
+  { key: "typescript", Icon: TypeScriptIcon, name: "TypeScript" },
+] as const;
 
 type Props = { className?: string };
 
@@ -29,11 +45,10 @@ export function DataFlow({ className }: Props) {
       </div>
 
       <div className="df-no-server" role="note">
-        <div className="df-no-server-line" />
-        <div className="df-no-server-tag">
+        <span className="df-no-server-tag">
           <ServerIcon width={14} height={14} />
-          <span>{t("privacy.dataFlow.noServer")}</span>
-        </div>
+          {t("privacy.dataFlow.noServer")}
+        </span>
       </div>
     </div>
   );
@@ -68,13 +83,16 @@ function RecrestLane({ label }: { label: string }) {
     <div className="df-lane df-lane-recrest">
       <div className="df-lane-head">{label}</div>
       <div className="df-recrest-body">
-        <div className="df-recrest-tauri" title="Tauri runtime">
-          <TauriIcon width={26} height={26} />
+        <div className="df-recrest-logo" title="Recrest">
+          <BrandMark width={30} height={30} />
         </div>
-        <div className="df-recrest-chips">
-          <span className="df-chip">read</span>
-          <span className="df-chip">watch</span>
-          <span className="df-chip">render</span>
+        <div className="df-tech">
+          {TECH.map(({ key, Icon, name }) => (
+            <span className="df-tech-card" key={key}>
+              <Icon width={14} height={14} />
+              {name}
+            </span>
+          ))}
         </div>
       </div>
     </div>

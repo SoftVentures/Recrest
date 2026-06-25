@@ -18,6 +18,7 @@ export function gitStub(cmd: string, a: Args, state: DevStubState): unknown | ty
       return resolveStatus(seed, a.repoId as string | undefined);
 
     case "git_fetch_all":
+    case "git_pull_all":
       return seed.repos.length;
 
     case "git_list_branches": {

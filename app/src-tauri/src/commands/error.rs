@@ -1,6 +1,27 @@
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
+/// Structured error variant for `verify_credentials`. Serializes with a
+/// kebab-case `kind` tag so the renderer can switch on `err.kind` and render
+/// a precise, localized message rather than guessing from a generic string.
+///
+/// Layered intentionally so each kind maps to a distinct UI affordance:
+/// transport (NetworkUnreachable / TlsError), auth (Unauthorized /
+/// Forbidden), server side (ServerError), identity (NotProviderResponse —
+/// the URL responded but didn't look like the expected provider), and
+/// fallback (Unknown).
+#[derive(Serialize, Debug, Clone)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum ProviderVerifyError {
+    NetworkUnreachable { message: String },
+    TlsError { message: String },
+    Unauthorized,
+    Forbidden { message: String },
+    ServerError { status: u16 },
+    NotProviderResponse { hint: String },
+    Unknown { message: String },
+}
+
 /// Error type returned to the frontend. Always serializes as `{ kind, message }`
 /// so the UI can discriminate without parsing strings.
 #[derive(Debug, Error)]

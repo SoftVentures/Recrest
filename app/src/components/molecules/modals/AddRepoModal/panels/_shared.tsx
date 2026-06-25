@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
+
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 export const SecondaryBtn = styled("button")(({ theme }) => ({
   height: 32,
@@ -46,7 +48,7 @@ export const Footer = styled(Box)(({ theme }) => ({
   gap: 8,
   padding: "12px 20px 16px",
   borderTop: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: opaqueSurfaceBg(theme),
   flexShrink: 0,
 })) as typeof Box;
 

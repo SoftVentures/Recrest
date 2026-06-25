@@ -8,6 +8,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { clearMissingI18nKeys, getMissingI18nKeys } from "@/locales";
 import { ButtonRow } from "@/pages/app/Settings/components/DeveloperTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
@@ -15,6 +16,7 @@ import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/Se
 export function I18nSection() {
   const { t, i18n } = useTranslation(I18nNamespace.SETTINGS);
   const [highlight, setHighlight] = useState(false);
+  const copyFeedback = useActionFeedback();
 
   useEffect(() => {
     try {
@@ -24,18 +26,22 @@ export function I18nSection() {
     }
   }, [highlight]);
 
-  const copyMissing = async () => {
+  const copyMissing = () => {
     const keys = getMissingI18nKeys();
     if (keys.length === 0) {
       toast.info(t("developer.i18n.copy_missing_empty"));
-      return;
+      return Promise.resolve();
     }
-    try {
-      await navigator.clipboard?.writeText(JSON.stringify(keys, null, 2));
-      toast.success(t("developer.i18n.copy_missing_count", { count: keys.length }));
-    } catch {
-      toast.error(t("developer.i18n.copy_failed"));
-    }
+    return copyFeedback
+      .run(async () => {
+        await navigator.clipboard?.writeText(JSON.stringify(keys, null, 2));
+      })
+      .then(() => {
+        toast.success(t("developer.i18n.copy_missing_count", { count: keys.length }));
+      })
+      .catch(() => {
+        toast.error(t("developer.i18n.copy_failed"));
+      });
   };
 
   const clearMissing = () => {
@@ -64,6 +70,7 @@ export function I18nSection() {
             size="sm"
             variant="outline"
             data-testid={TEST_IDS.settings.developer.i18n.copyMissing}
+            feedbackState={copyFeedback.state}
             onClick={() => void copyMissing()}
           >
             {t("developer.build.copy")}

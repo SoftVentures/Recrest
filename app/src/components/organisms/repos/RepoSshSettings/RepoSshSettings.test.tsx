@@ -38,7 +38,7 @@ describe("RepoSshSettings", () => {
     );
   });
 
-  it("selecting ssh-agent clears the key (keyPath: null)", async () => {
+  it("selecting automatic clears the key (keyPath: null)", async () => {
     const { findByTestId } = renderWithProviders(
       <RepoSshSettings repoId="r1" sshKeyPath="/home/u/.ssh/id_ed25519" />,
     );

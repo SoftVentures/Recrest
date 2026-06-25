@@ -124,7 +124,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
     activeProvider ? (s.remoteImport.organizations[activeProvider] ?? NO_ORGS) : NO_ORGS,
   );
 
-  // GitLab returns groups with path-style slugs (`benova/infrastructure`).
+  // GitLab returns groups with path-style slugs (`northwind/infrastructure`).
   // We render subgroups indented under their parent when the parent is also in
   // the list, so navigation mirrors the actual group hierarchy instead of a
   // flat list of slashed display names.

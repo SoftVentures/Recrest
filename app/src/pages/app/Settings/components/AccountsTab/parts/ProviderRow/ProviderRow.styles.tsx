@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
@@ -96,53 +96,6 @@ export const ActionGroup = styled(Box)({
   gap: 6,
 }) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-export const Btn = styled("button", { shouldForwardProp: (p) => p !== "variant" })<{
-  variant?: "primary" | "ghost" | "outline";
-}>(({ theme, variant }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  height: 28,
-  padding: "0 10px",
-  borderRadius: 8,
-  fontSize: 11.5,
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  border:
-    variant === "outline"
-      ? `1px solid ${theme.palette.divider}`
-      : variant === "ghost"
-        ? `1px solid transparent`
-        : `1px solid ${theme.palette.surface.button.cta}`,
-  backgroundColor:
-    variant === "outline"
-      ? theme.palette.surface.interface.base
-      : variant === "ghost"
-        ? "transparent"
-        : theme.palette.surface.button.cta,
-  color:
-    variant === "outline"
-      ? theme.palette.text.primary
-      : variant === "ghost"
-        ? theme.palette.text.secondary
-        : theme.palette.surface.button.ctaContrast,
-  "&:hover": {
-    backgroundColor:
-      variant === "outline"
-        ? theme.palette.surface.interface.active
-        : variant === "ghost"
-          ? theme.palette.surface.interface.active
-          : theme.palette.surface.button.ctaHover,
-    borderColor:
-      variant === "outline" || variant === "ghost"
-        ? theme.palette.border.hover
-        : theme.palette.surface.button.ctaHover,
-  },
-  "&:disabled": { opacity: 0.55, cursor: "not-allowed" },
-}));
-
 export const Username = styled(Box)(({ theme }) => ({
   marginTop: 6,
   fontSize: 11.5,
@@ -181,12 +134,12 @@ export const ApiChange = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const Form = styled(Box)(({ theme }) => ({
-  marginTop: 10,
-  paddingTop: 10,
+  marginTop: 12,
+  paddingTop: 12,
   borderTop: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: theme.spacing(1.25),
 })) as typeof Box;
 
 export const FormHint = styled(Typography)(({ theme }) => ({
@@ -195,82 +148,40 @@ export const FormHint = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.information,
 })) as typeof Typography;
 
-export const Scopes = styled(Box)({
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  flexWrap: "wrap",
-  fontSize: 11,
-}) as typeof Box;
-
-export const ScopesLabel = styled(Typography)(({ theme }) => ({
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-})) as typeof Typography;
-
-export const Scope = styled(Box)(({ theme }) => ({
-  fontFamily: MONO_STACK,
-  fontSize: 10.5,
-  padding: "2px 6px",
-  borderRadius: 8,
-  border: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.surface.interface.backElevation,
-  color: theme.palette.text.secondary,
-})) as typeof Box;
-
-// eslint-disable-next-line no-restricted-syntax -- native <button> required so openExternal can be wired without an <a href> that Tauri would try to load inside the app window
-export const TokenCreateLink = styled("button")(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  background: "none",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
-  fontSize: 11.5,
-  color: toneText(theme, StatusTone.PRIMARY),
-  textDecoration: "underline",
-  textUnderlineOffset: 2,
-  fontFamily: "inherit",
-  "&:hover": { textDecoration: "none" },
-  "&:focus-visible": {
-    outline: `2px solid ${theme.palette.primary.main}`,
-    outlineOffset: 2,
-    borderRadius: 2,
-  },
-}));
-
-export const Field = styled(Box)({
+export const Field = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-}) as typeof Box;
+  gap: theme.spacing(0.5),
+})) as typeof Box;
 
-// eslint-disable-next-line no-restricted-syntax -- semantic <label> required to associate text with the adjacent <input>
-export const Label = styled("label")(({ theme }) => ({
-  fontSize: 11.5,
-  color: theme.palette.text.primary,
-  fontWeight: 500,
-}));
-
-// eslint-disable-next-line no-restricted-syntax -- native <input> required for form semantics + autofocus
-export const TextInput = styled("input")(({ theme }) => ({
+export const TextInput = styled(TextField)({
+  flex: 1,
+  minWidth: 0,
   width: "100%",
-  height: 30,
-  padding: "0 10px",
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.primary,
-  fontSize: 12,
-  fontFamily: MONO_STACK,
-  outline: "none",
-  "&::placeholder": { color: theme.palette.text.informationLight },
-  "&:focus": { borderColor: theme.palette.border.hover },
-}));
+});
 
-export const InputRow = styled(Box)({
+export const InputRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-}) as typeof Box;
+  gap: theme.spacing(1),
+})) as typeof Box;
+
+export const SaveRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  marginTop: theme.spacing(0.5),
+})) as typeof Box;
+
+export const ErrorText = styled(Typography)(({ theme }) => ({
+  margin: 0,
+  fontSize: 12,
+  color: toneText(theme, StatusTone.ERROR),
+})) as typeof Typography;
+
+export const SuccessText = styled(Typography)(({ theme }) => ({
+  margin: 0,
+  fontSize: 12,
+  color: toneText(theme, StatusTone.SUCCESS),
+})) as typeof Typography;

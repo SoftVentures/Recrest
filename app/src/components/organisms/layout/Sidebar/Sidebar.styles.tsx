@@ -52,6 +52,21 @@ export const BrandRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 })) as typeof Box;
 
+export const BrandLink = styled(NavLink)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing(1),
+  textDecoration: "none",
+  color: "inherit",
+  padding: theme.spacing(0.5),
+  borderRadius: 8,
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 2,
+  },
+}));
+
 export const BrandMark = styled(Logo, { shouldForwardProp: SHOULD_FORWARD })<CollapsibleProps>(
   ({ collapsed }) => ({
     width: collapsed ? 32 : 40,
@@ -97,9 +112,7 @@ export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemPr
   forceBorder,
 }) => {
   // `surface.interface.active` is the canonical hover/active surface token
-  // and stays distinct from the navigation bg across every theme (light,
-  // dark AND oled — `surface.interface.base` collapses to pure black in
-  // oled which would leave the active state invisible against the sidebar).
+  // and stays distinct from the navigation bg across light and dark themes.
   const activeBg = theme.palette.surface.interface.active;
   const borderColor = active
     ? theme.palette.primary.main

@@ -7,6 +7,8 @@ import { styled } from "@mui/material/styles";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { useResolvedLocale } from "@/lib/utils/datetime.utils";
+import { weekdayLabel } from "@/lib/utils/locale.utils";
 
 interface Props {
   weekday: { day: number; count: number } | null;
@@ -28,14 +30,9 @@ const Caption = styled(Box)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 }));
 
-// 2024-01-07 is a Sunday, so adding a JS getDay() offset (0=Sun..6=Sat)
-// yields a date whose weekday matches that offset — locale-aware label.
-function weekdayLabel(day: number, locale: string): string {
-  return new Date(2024, 0, 7 + day).toLocaleDateString(locale, { weekday: "long" });
-}
-
 function ActiveWeekdayInsightCard({ weekday, loading }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const locale = useResolvedLocale();
   return (
     <GeneralCard
       title={t("activity.insights.active_weekday_title")}
@@ -44,9 +41,7 @@ function ActiveWeekdayInsightCard({ weekday, loading }: Props) {
       skeleton="rows"
       testId={TEST_IDS.activity.cards.insights.activeWeekday}
     >
-      <Value>
-        {weekday ? weekdayLabel(weekday.day, i18n.language) : t("activity.insights.empty")}
-      </Value>
+      <Value>{weekday ? weekdayLabel(weekday.day, locale) : t("activity.insights.empty")}</Value>
       <Caption>{weekday ? `${weekday.count} ${t("activity.commits")}` : ""}</Caption>
     </GeneralCard>
   );

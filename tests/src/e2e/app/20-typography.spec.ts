@@ -35,16 +35,23 @@ test.describe("app / typography (Plan 05)", () => {
     expect(await rootCssVar(page, "--recrest-font-mono")).toContain("Fira");
   });
 
-  test("ligature mode off / stylistic drives --recrest-code-ligatures", async ({ page }) => {
+  test("ligature switch toggles standard / off via --recrest-code-ligatures", async ({ page }) => {
     await page.goto(AppRoute.SETTINGS);
+    await expect(page.getByTestId(TEST_IDS.settings.panel("general"))).toBeVisible();
 
-    await pickFromSelect(page, G.codeLigaturesSelect, G.codeLigaturesOption("off"));
+    // Default is "standard" (DEFAULT_LIGATURE_MODE) — the switch starts on.
+    await expect(page.locator("html")).toHaveAttribute("data-code-ligatures", "standard");
+    expect(await rootCssVar(page, "--recrest-code-ligatures")).toBe('"liga" 1, "calt" 1');
+
+    // Toggle off.
+    await page.getByTestId(G.codeLigaturesSwitch).click();
     await expect(page.locator("html")).toHaveAttribute("data-code-ligatures", "off");
     expect(await rootCssVar(page, "--recrest-code-ligatures")).toBe('"liga" 0, "calt" 0, "dlig" 0');
 
-    await pickFromSelect(page, G.codeLigaturesSelect, G.codeLigaturesOption("stylistic"));
-    await expect(page.locator("html")).toHaveAttribute("data-code-ligatures", "stylistic");
-    expect(await rootCssVar(page, "--recrest-code-ligatures")).toContain("ss01");
+    // Toggle back on.
+    await page.getByTestId(G.codeLigaturesSwitch).click();
+    await expect(page.locator("html")).toHaveAttribute("data-code-ligatures", "standard");
+    expect(await rootCssVar(page, "--recrest-code-ligatures")).toBe('"liga" 1, "calt" 1');
   });
 
   test("UI-font switch is independent of the code font", async ({ page }) => {

@@ -99,29 +99,6 @@ export const DARK_THEME_COLORS = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OLED_COLORS — pure-black overrides for OLED displays.
-// Inherits everything from DARK; only surface/background/border slots change.
-// Goal: pixels turn off on OLED panels, not WCAG contrast.
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const OLED_COLORS = {
-  ...DARK_THEME_COLORS,
-  APP_BG: "#000000",
-  CANVAS: "#000000",
-  SURFACE: "#000000",
-  SURFACE_1: "#000000",
-  SURFACE_2: "#0a0a0a",
-  SURFACE_3: "#141414",
-  SURFACE_HOVER: "#1a1a1a",
-  SIDEBAR_BG: "#000000",
-  BORDER: "#1a1a1a",
-  BORDER_STRONG: "#2a2a2a",
-  HAIRLINE: "rgba(255, 255, 255, 0.06)",
-  BRAND_BG: "#000000",
-  BRAND_BORDER: "#1a1a1a",
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────────
 // BASE_THEME_COLORS — mode-independent semantic slots
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -261,12 +238,18 @@ export const FORMATTING_COLORS = {
 // EFFECTS_TOKENS — non-color theme effects (blur, ambient shadow)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Backdrop-effect tokens. Translucency is an orthogonal toggle now (any theme
+ * can be translucent), so `TRANSLUCENT` replaces the old `GLASSY` token and
+ * lights up whenever `appearance.translucency.enabled` is true regardless of
+ * `themeId`.
+ */
 export const EFFECTS_TOKENS = {
   NONE: {
     backdropBlur: "blur(0)",
     backdropSaturate: "100%",
   },
-  GLASSY: {
+  TRANSLUCENT: {
     backdropBlur: "blur(20px) saturate(180%)",
     backdropSaturate: "180%",
   },
@@ -280,26 +263,67 @@ export interface AppTheme {
   id: string;
   label: string;
   mode: ThemeMode;
-  /** OLED-optimised — pure #000 surfaces so OLED pixels can switch off.
-   *  Not an accessibility (WCAG-contrast) setting. */
-  isOled: boolean;
-  /** Transparent app window — relies on the OS vibrancy layer underneath. */
-  isGlassy: boolean;
 }
 
 export const ThemeId = {
   LIGHT: "light",
   DARK: "dark",
-  OLED: "oled",
-  GLASSY: "glassy",
 } as const;
 export type ThemeId = (typeof ThemeId)[keyof typeof ThemeId];
 
 export const THEMES = [
-  { id: ThemeId.LIGHT, label: "Light", mode: "light", isOled: false, isGlassy: false },
-  { id: ThemeId.DARK, label: "Dark", mode: "dark", isOled: false, isGlassy: false },
-  { id: ThemeId.OLED, label: "OLED", mode: "dark", isOled: true, isGlassy: false },
-  { id: ThemeId.GLASSY, label: "Glassy", mode: "dark", isOled: false, isGlassy: true },
+  { id: ThemeId.LIGHT, label: "Light", mode: "light" },
+  { id: ThemeId.DARK, label: "Dark", mode: "dark" },
 ] as const satisfies readonly AppTheme[];
 
 export const DEFAULT_THEME_ID: ThemeId = ThemeId.LIGHT;
+
+/** Default transparency slider value (0..100, higher = more see-through).
+ *  50 = balanced default. Mirrors `default_translucency_intensity` on the
+ *  Rust side — keep in lock-step. */
+export const DEFAULT_TRANSLUCENCY_INTENSITY = 50;
+
+/** Default backdrop-blur slider value (0..100 → mapped to 0..30 px in CSS).
+ *  30 starts the effect at a noticeable but not overwhelming level. Mirrors
+ *  `default_blur_intensity` on the Rust side. */
+export const DEFAULT_BLUR_INTENSITY = 30;
+
+/** Maximum backdrop-filter blur in CSS pixels at slider = 100. Mirror this
+ *  constant in CSS via `--translucency-blur-px` set from `ThemeWrapper`. */
+export const MAX_BLUR_PX = 30;
+
+/**
+ * Default translucency state — orthogonal to theme. Mirrors
+ * `TranslucencySettings::default()` on the Rust side: off by default;
+ * intensity + blur tuned so the effect is clearly visible the first time
+ * the user flips it on.
+ */
+export const DEFAULT_TRANSLUCENCY = {
+  enabled: false,
+  intensity: DEFAULT_TRANSLUCENCY_INTENSITY,
+  blurIntensity: DEFAULT_BLUR_INTENSITY,
+} as const;
+
+/** HTML attribute carrying the resolved theme mode (`light` | `dark`). Read
+ *  by non-MUI CSS selectors, the E2E theme spec, and the anti-flash inline
+ *  script in `index.html` (which is the documented exception that mirrors
+ *  this literal because it runs before any module loads). */
+export const THEME_ATTRIBUTE = "data-theme";
+
+/** HTML attribute carrying the user's specific theme id (granular —
+ *  distinguishes e.g. `dark` vs. future variants from the high-level mode
+ *  in `THEME_ATTRIBUTE`). */
+export const THEME_ID_ATTRIBUTE = "data-theme-id";
+
+/** matchMedia query for the OS dark-mode preference. Single source of truth
+ *  for every renderer-side `matchMedia` call that reads system appearance. */
+export const THEME_MODE_QUERY = "(prefers-color-scheme: dark)";
+
+/**
+ * Root-element class applied for one paint cycle while the renderer reconciles
+ * the OS-truth theme value at boot. The matching CSS rule in `globals.css`
+ * suppresses all transitions while the class is present so the surface flip
+ * from the anti-flash painted value to the OS-truth value doesn't show a
+ * highlighted/cross-faded frame.
+ */
+export const THEME_NO_TRANSITIONS_CLASS = "recrest-no-transitions";

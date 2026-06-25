@@ -32,6 +32,7 @@ import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { invoke, isTauri } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 
 const PageRoot = styled(Box)({
   display: "flex",
@@ -189,10 +190,10 @@ interface ChangesRowProps {
 function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
   const navigate = useNavigate();
   const { t } = useTranslation(I18nNamespace.REPOS);
-  const [busy, setBusy] = useState<"commit" | "pull" | null>(null);
+  const pull = useActionFeedback();
   const ctx = useContextMenu();
 
-  const onCommit = async () => {
+  const onCommit = () => {
     if (!isTauri()) {
       toast.info(t("changes.toast_desktop_only"));
       return;
@@ -203,14 +204,11 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
   const onPull = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isTauri()) return;
-    setBusy("pull");
     try {
-      await invoke(TauriCommand.GIT_PULL, { repoId: repo.id });
+      await pull.run(() => invoke(TauriCommand.GIT_PULL, { repoId: repo.id }));
       toast.success(t("changes.toast_pulled"));
     } catch (err) {
       toast.error((err as { message?: string })?.message ?? t("changes.toast_pull_failed"));
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -259,10 +257,10 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
           <GeneralButton
             variant="outline"
             size="sm"
-            disabled={busy !== null}
+            disabled={pull.state === "loading"}
             onClick={(e) => {
               e.stopPropagation();
-              void onCommit();
+              onCommit();
             }}
           >
             {t("changes.open")}
@@ -270,10 +268,10 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
           <GeneralButton
             variant="ghost"
             size="sm"
-            disabled={busy !== null}
+            feedbackState={pull.state}
             onClick={(e) => void onPull(e)}
           >
-            {busy === "pull" ? t("changes.pulling") : t("changes.pull")}
+            {t("changes.pull")}
           </GeneralButton>
         </Actions>
       </RowHeader>

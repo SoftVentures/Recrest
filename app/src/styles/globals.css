@@ -102,3 +102,59 @@ html[data-underline-links="true"] a {
   text-decoration: underline !important;
   text-underline-offset: 2px;
 }
+
+/* Translucency — when the user enables the orthogonal Translucency toggle,
+   `<html data-translucent="true">` tells these rules to null out the
+   high-level surfaces (html, body, #root) so the fixed-position ::before
+   glass layer is what the user sees as the canvas tint. AppFrame +
+   MainSlot use `palette.background.default` which getTheme sets to
+   "transparent" when translucent — same idea, ::before shows through. */
+html[data-translucent="true"],
+html[data-translucent="true"] body,
+html[data-translucent="true"] #root {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Glass layer — a `position: fixed` pseudo-element behind everything.
+
+   It carries ONLY the rgba tint (`--translucency-bg`, intensity slider, written
+   by `ThemeWrapper`) that washes the blurred desktop with the active palette
+   colour. The BLUR itself is an OS compositor material on both supported
+   platforms — `NSVisualEffectView` on macOS, the Acrylic material on Windows
+   (see `commands::theme::apply_translucency`). There is deliberately NO CSS
+   `backdrop-filter` here: it can't blur the desktop behind a transparent window
+   (Chromium only blurs pixels inside its own compositor; the desktop is
+   composited by the OS), and on WKWebView it also flickers/shimmers on scroll.
+
+   NO `transition` on background-color: on Stage-Manager wake the browser would
+   otherwise ramp from the default over the duration, reading as the setting
+   "applying gradually". A hard snap is less jarring. */
+html[data-translucent="true"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--translucency-bg, transparent);
+}
+
+/* Windows: the OS deactivates the Acrylic backdrop when the window loses focus,
+   leaving a gray fallback (microsoft/terminal#3497). `ThemeWrapper` sets
+   `data-window-blurred` while unfocused; paint the app's opaque background over
+   the gray so the inactive window reads as a normal solid window — like Windows
+   Terminal. No-op on macOS, where the vibrancy view stays active. */
+html[data-translucent="true"][data-window-blurred="true"]::before {
+  background-color: var(--translucency-bg-opaque, var(--translucency-bg));
+}
+
+/* Boot theme-flash suppression. Class is added on <html> by ThemeWrapper for
+   one paint cycle while the OS-truth theme value is reconciled, so the
+   surface flip doesn't show a cross-fade frame. Keep the class name in sync
+   with `THEME_NO_TRANSITIONS_CLASS` in `lib/constants/theme.constants.ts`. */
+.recrest-no-transitions,
+.recrest-no-transitions *,
+.recrest-no-transitions *::before,
+.recrest-no-transitions *::after {
+  transition: none !important;
+}

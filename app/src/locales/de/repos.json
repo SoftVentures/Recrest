@@ -1,5 +1,12 @@
 {
   "title": "Repositories",
+  "connect_prompt": {
+    "title": "{{provider}} nicht verbunden",
+    "body": "Verbinde {{provider}} in den Einstellungen, damit Pull Requests, CI und Deployments hier auftauchen. Die Repo-Seite kannst du aber auch direkt im Browser öffnen.",
+    "connect": "{{provider}} verbinden",
+    "proceed": "Trotzdem öffnen",
+    "cancel": "Abbrechen"
+  },
   "actions": {
     "open_terminal_tooltip": "Terminal im Repository öffnen",
     "create_branch_tooltip": "Neuen Branch von HEAD erstellen",
@@ -12,7 +19,19 @@
     "reset_aria": "Repository-Avatar auf Auto-Erkennung zurücksetzen",
     "upload_error": "Avatar-Upload fehlgeschlagen",
     "uploaded": "Avatar aktualisiert",
-    "reset_done": "Avatar zurückgesetzt"
+    "reset_done": "Avatar zurückgesetzt",
+    "menu_upload": "Bild hochladen",
+    "menu_design": "Selbst gestalten",
+    "designer": {
+      "title": "Avatar gestalten",
+      "subtitle": "Hintergrund und Icon wählen",
+      "background_label": "Hintergrund",
+      "icon_label": "Icon",
+      "icon_search": "Icons durchsuchen",
+      "icon_empty": "Keine Icons passen zur Suche.",
+      "preview_label": "Vorschau",
+      "save": "Avatar übernehmen"
+    }
   },
   "summary": {
     "total": "Gesamt",
@@ -40,7 +59,7 @@
     "clean": "sauber",
     "close": "Schließen",
     "open_full_view": "Vollansicht öffnen",
-    "files": "{{count}} Datei",
+    "files_one": "{{count}} Datei",
     "files_other": "{{count}} Dateien",
     "last_commit": "Letzter Commit",
     "open_prs": "Offene Merge Requests",
@@ -69,11 +88,8 @@
     "not_found_title": "Repository nicht gefunden",
     "not_found_desc": "Kein Repo mit ID \"{{id}}\".",
     "pull": "Pull",
-    "pulling": "Zieht…",
     "push": "Push",
-    "pushing": "Pusht…",
     "fetch": "Fetch",
-    "fetching": "Holt…",
     "toast_fetched": "Geholt",
     "toast_fetch_failed": "Fetch fehlgeschlagen",
     "toast_pulled": "Gezogen",
@@ -102,17 +118,6 @@
     "cancel": "Abbrechen",
     "created": "'{{name}}' erstellt"
   },
-  "find_across": {
-    "title": "Über alle Repositories suchen",
-    "placeholder": "Dateiinhalte durchsuchen…",
-    "no_results": "Keine Treffer",
-    "hint": "Durchsucht alle erfassten Repositories. Mindestens zwei Zeichen.",
-    "all_repos": "Alle Repositories",
-    "searching": "Suche läuft…",
-    "count_one": "{{count}} Treffer",
-    "count_other": "{{count}} Treffer",
-    "result_aria": "{{repo}} — {{path}}:{{line}}"
-  },
   "stats": {
     "ahead_behind": "Voraus / Hinterher",
     "ahead_behind_sub": "gegenüber origin",
@@ -120,9 +125,11 @@
     "changed_files_one": "{{count}} Datei",
     "changed_files_other": "{{count}} Dateien",
     "commits_14d": "Commits · letzte {{days}} Tage",
-    "commits_14d_sub": "Spitze {{count}}",
+    "commits_14d_sub": "Spitze {{peak}}",
     "open_mrs": "Offene Merge-Requests",
-    "open_mrs_sub": "{{count}} Entwurf",
+    "open_mrs_sub_zero": "Keine Entwürfe",
+    "open_mrs_sub_one": "{{count}} Entwurf",
+    "open_mrs_sub_other": "{{count}} Entwürfe",
     "last_commit": "Letzter Commit",
     "last_commit_empty": "kein Provider verbunden"
   },
@@ -175,7 +182,7 @@
     "staged_files_other": "{{count}} gestagete Dateien",
     "subject_label": "Betreff",
     "subject_placeholder": "Die Änderung in einer Zeile zusammenfassen",
-    "subject_counter": "{{count}}/{{limit}}",
+    "subject_counter": "{{length}}/{{limit}}",
     "body_label": "Beschreibung (optional)",
     "body_placeholder": "Warum diese Änderung? Kontext, der aus dem Diff nicht hervorgeht?",
     "insert_template": "Vorlage",
@@ -194,7 +201,9 @@
     "clone_dest_placeholder": "/Users/du/Code",
     "clone_sub_placeholder": "z. B. mein-fork",
     "local_path_placeholder": "/Users/du/Code/mein-repo",
-    "selected": "{{count}} ausgewählt",
+    "selected_zero": "Keine ausgewählt",
+    "selected_one": "{{count}} ausgewählt",
+    "selected_other": "{{count}} ausgewählt",
     "badge_private": "privat",
     "badge_fork": "Fork",
     "badge_archived": "archiviert",
@@ -209,10 +218,11 @@
     "toast_cloned_count_one": "{{count}} Repository geklont",
     "toast_cloned_count_other": "{{count}} Repositories geklont",
     "toast_some_clones_failed": "Einige Klon-Vorgänge sind fehlgeschlagen",
-    "import_submit": "{{count}} importieren"
+    "import_submit_one": "{{count}} importieren",
+    "import_submit_other": "{{count}} importieren"
   },
   "branches": {
-    "track_even": "gleich"
+    "track_even": "synchron"
   },
   "changes": {
     "expand_aria": "Geänderte Dateien aufklappen",
@@ -221,7 +231,6 @@
     "files_other": "{{count}} Dateien",
     "open": "Öffnen",
     "pull": "Pull",
-    "pulling": "Zieht…",
     "toast_desktop_only": "In der Desktop-App verfügbar",
     "toast_pulled": "Gezogen",
     "toast_pull_failed": "Pull fehlgeschlagen",
@@ -239,12 +248,14 @@
     "clean": "sauber",
     "files_meta_one": "{{count}} Datei",
     "files_meta_other": "{{count}} Dateien",
-    "card_files_meta": "· {{count}} Dateien"
+    "card_files_meta_one": "· {{count}} Datei",
+    "card_files_meta_other": "· {{count}} Dateien"
   },
   "detail_pane": {
     "open_in_terminal": "Im Terminal öffnen",
     "open_in_explorer": "Im Explorer öffnen",
-    "open_on_host": "Beim Host öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
     "pull": "Pull",
     "fetch": "Fetch",
     "branch": "Branch",
@@ -257,7 +268,8 @@
   },
   "row_actions": {
     "open_in_terminal": "Im Terminal öffnen",
-    "open_on_host": "Beim Host öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
     "no_remote": "Kein Remote konfiguriert",
     "open_in_explorer": "Im Explorer öffnen",
     "more": "Mehr",
@@ -272,13 +284,17 @@
     "delete_title": "\"{{name}}\" von der Festplatte löschen?",
     "delete_desc": "Verschiebt \"{{path}}\" in den Papierkorb deines Systems und beendet die Verfolgung durch Recrest. Du kannst es aus dem Papierkorb wiederherstellen.",
     "delete_action": "In den Papierkorb",
+    "delete_permanent_title": "Papierkorb nicht möglich — endgültig löschen?",
+    "delete_permanent_desc": "„{{path}}“ konnte nicht in den Papierkorb verschoben werden — eventuell ist er für diesen Ort deaktiviert oder eine Datei ist in Benutzung. Stattdessen den Ordner endgültig löschen? Das kann nicht rückgängig gemacht werden.",
+    "delete_permanent_action": "Endgültig löschen",
     "toast_no_remote": "Kein Remote konfiguriert",
     "toast_path_copied": "Pfad kopiert",
     "toast_copy_failed": "Kopieren nicht möglich",
-    "toast_command_failed": "{{label}} fehlgeschlagen",
+    "toast_command_failed": "{{label}} fehlgeschlagen: {{message}}",
     "toast_removed": "{{name}} entfernt",
     "toast_forget_failed": "Vergessen fehlgeschlagen",
     "toast_trashed": "{{name}} in den Papierkorb verschoben",
+    "toast_deleted_permanently": "{{name}} endgültig gelöscht",
     "toast_delete_failed": "Löschen fehlgeschlagen: {{message}}"
   },
   "toolbar": {

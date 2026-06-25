@@ -14,7 +14,8 @@
   "sidebar": {
     "primary": "Hauptnavigation",
     "expand": "Seitenleiste ausklappen",
-    "collapse": "Seitenleiste einklappen"
+    "collapse": "Seitenleiste einklappen",
+    "home": "Zum Dashboard"
   },
   "header": {
     "search": "Suche",
@@ -36,7 +37,9 @@
     "open_in_terminal": "Im Terminal öffnen",
     "open_in_explorer": "Im Explorer öffnen",
     "open_remote": "Remote öffnen",
-    "open_on_host": "Auf Host öffnen",
+    "open_on_host": "Im Browser öffnen",
+    "open_on_provider": "In {{provider}} öffnen",
+    "open_on_host_no_remote": "Kein Remote konfiguriert",
     "open_folder": "Ordner öffnen",
     "open_terminal": "Terminal öffnen",
     "more_actions": "Weitere Aktionen",
@@ -58,5 +61,10 @@
   },
   "dashboard": {
     "main": "Dashboard-Inhalt"
+  },
+  "feedback": {
+    "loading": "Wird geladen…",
+    "success": "Erledigt",
+    "error": "Fehlgeschlagen"
   }
 }

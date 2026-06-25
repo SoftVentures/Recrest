@@ -470,7 +470,7 @@ impl GitProvider for GitlabProvider {
             if let Some(start) = pos.start {
                 let differs = start.side != pos.end.side || pos.start_line() != pos.anchor_line();
                 if differs {
-                    let sha = format!("{:x}", Sha1::digest(path.as_bytes()));
+                    let sha = hex::encode(Sha1::digest(path.as_bytes()));
                     let boundary = |a: &CommentAnchor| {
                         serde_json::json!({
                             "line_code": format!(
@@ -1008,6 +1008,67 @@ fn map_project(p: GlProject) -> RemoteRepositoryDto {
             .map(|n| n.path.clone())
             .unwrap_or_default(),
         owner_avatar_url: p.namespace.and_then(|n| n.avatar_url),
+    }
+}
+
+/// Authenticated GET `<base>/api/v4/user` against an arbitrary GitLab-flavoured
+/// base URL. `base_url` may be either the host root (`https://gitlab.com`) or
+/// an already-suffixed API URL (`https://gitlab.com/api/v4`); the function
+/// strips a trailing `/api/v4` so callers don't have to care which shape the
+/// caller stored.
+pub async fn verify_with_base(
+    base_url: &str,
+    token: &str,
+) -> Result<super::verify::VerifiedAccount, crate::commands::error::ProviderVerifyError> {
+    use crate::commands::error::ProviderVerifyError;
+    let trimmed = base_url.trim_end_matches('/');
+    let trimmed = trimmed.strip_suffix("/api/v4").unwrap_or(trimmed);
+    let url = format!("{}/api/v4/user", trimmed);
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(ProviderVerifyError::Unknown {
+                message: format!("client build: {e}"),
+            })
+        }
+    };
+    let resp = client
+        .get(&url)
+        .header("PRIVATE-TOKEN", token)
+        .header("User-Agent", "Recrest")
+        .send()
+        .await
+        .map_err(super::verify::map_reqwest_err)?;
+    match resp.status().as_u16() {
+        200 => {
+            let txt = resp.text().await.unwrap_or_default();
+            let json: serde_json::Value = serde_json::from_str(&txt).map_err(|_| {
+                ProviderVerifyError::NotProviderResponse {
+                    hint: "response body was not JSON — base URL does not look like GitLab"
+                        .into(),
+                }
+            })?;
+            let username = json
+                .get("username")
+                .and_then(|v| v.as_str())
+                .ok_or(ProviderVerifyError::NotProviderResponse {
+                    hint: "no username field — base URL does not look like GitLab".into(),
+                })?;
+            Ok(super::verify::VerifiedAccount {
+                login: username.to_string(),
+            })
+        }
+        401 => Err(ProviderVerifyError::Unauthorized),
+        403 => Err(ProviderVerifyError::Forbidden {
+            message: "token lacks read_api / read_user scope".into(),
+        }),
+        s @ 500..=599 => Err(ProviderVerifyError::ServerError { status: s }),
+        s => Err(ProviderVerifyError::Unknown {
+            message: format!("unexpected status {s}"),
+        }),
     }
 }
 
@@ -1719,5 +1780,53 @@ mod tests {
             .unwrap();
         assert!(result.merged);
         assert_eq!(result.merge_sha.as_deref(), Some("deadbeef"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_verify_returns_username_on_200() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/api/v4/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"username":"alice"}"#))
+            .mount(&server)
+            .await;
+        let account = super::verify_with_base(&server.uri(), "good-token")
+            .await
+            .unwrap();
+        assert_eq!(account.login, "alice");
+    }
+
+    #[tokio::test]
+    async fn gitlab_verify_returns_unauthorized_on_401() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/api/v4/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+        let err = super::verify_with_base(&server.uri(), "bad-token")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::Unauthorized
+        ));
+    }
+
+    #[tokio::test]
+    async fn gitlab_verify_flags_non_gitlab_body() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/api/v4/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("<html>not json</html>"))
+            .mount(&server)
+            .await;
+        let err = super::verify_with_base(&server.uri(), "tok")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::NotProviderResponse { .. }
+        ));
     }
 }

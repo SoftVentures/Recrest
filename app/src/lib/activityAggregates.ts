@@ -249,11 +249,21 @@ export function computeAuthorClock(commits: readonly RecentCommit[]): number[] {
   return hours;
 }
 
+export interface LangContributor {
+  repoId: string;
+  repoName: string;
+  /** This repo's share *within* the language (contributors sum to 1). */
+  share: number;
+}
+
 export interface LanguageSlice {
   language: string;
   color: string;
   share: number;
   commits: number;
+  /** Which repos make up this language, biggest first — drives the hover
+   *  breakdown ("who contributes how much to TypeScript"). */
+  contributors: LangContributor[];
 }
 
 /** Aliases + extension bucketing. GitHub reports dialects (TSX, JSX, SCSS) as
@@ -409,12 +419,16 @@ export function computeLanguageMix(
   commits: readonly RecentCommit[],
   reposById: Map<string, EnrichedRepo>,
 ): LanguageSlice[] {
-  const byLang = new Map<string, { color: string; weight: number }>();
-  const add = (rawKey: string, weight: number) => {
+  const byLang = new Map<string, { color: string; weight: number; byRepo: Map<string, number> }>();
+  const add = (rawKey: string, weight: number, repoId: string) => {
     const bucket = bucketize(rawKey);
-    const existing = byLang.get(bucket.name);
-    if (existing) existing.weight += weight;
-    else byLang.set(bucket.name, { color: bucket.color, weight });
+    let entry = byLang.get(bucket.name);
+    if (!entry) {
+      entry = { color: bucket.color, weight: 0, byRepo: new Map() };
+      byLang.set(bucket.name, entry);
+    }
+    entry.weight += weight;
+    entry.byRepo.set(repoId, (entry.byRepo.get(repoId) ?? 0) + weight);
   };
 
   for (const c of commits) {
@@ -422,20 +436,28 @@ export function computeLanguageMix(
     const shares = repo?.langShares ?? {};
     const shareEntries = Object.entries(shares);
     if (shareEntries.length > 0) {
-      for (const [lang, share] of shareEntries) add(lang, share);
+      for (const [lang, share] of shareEntries) add(lang, share, c.repoId);
     } else {
       const fallback = repo?.lang ?? "Other";
-      add(fallback, 1);
+      add(fallback, 1, c.repoId);
     }
   }
   const total = [...byLang.values()].reduce((a, b) => a + b.weight, 0) || 1;
   const rows: LanguageSlice[] = [];
-  for (const [language, { color, weight }] of byLang) {
+  for (const [language, { color, weight, byRepo }] of byLang) {
+    const contributors: LangContributor[] = [...byRepo.entries()]
+      .map(([repoId, w]) => ({
+        repoId,
+        repoName: reposById.get(repoId)?.name ?? repoId,
+        share: weight > 0 ? w / weight : 0,
+      }))
+      .sort((a, b) => b.share - a.share);
     rows.push({
       language,
       color,
       share: weight / total,
       commits: Math.round(weight * 100) / 100,
+      contributors,
     });
   }
   rows.sort((a, b) => b.share - a.share);

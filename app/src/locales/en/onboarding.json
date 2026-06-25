@@ -14,8 +14,6 @@
     "theme_system": "System",
     "theme_light": "Light",
     "theme_dark": "Dark",
-    "theme_oled": "OLED",
-    "theme_glassy": "Glassy",
     "language": "Language",
     "language_desc": "Used for the interface.",
     "auto_start": "Start with system",
@@ -35,7 +33,7 @@
     "list_empty": "No folders added yet.",
     "next": "Continue",
     "back": "Back",
-    "at_least_one": "Add at least one folder to continue."
+    "at_least_one_hint": "Add at least one folder to continue."
   },
   "connectProvider": {
     "title": "Connect a Git host",
@@ -58,11 +56,38 @@
     "connected": "{{name}} connected.",
     "failed": "Could not connect. Check the token and try again."
   },
+  "gitlab": {
+    "variant_title": "GitLab edition",
+    "variant_body": "Are you using GitLab.com or your own server?",
+    "cloud": "GitLab.com (cloud)",
+    "cloud_sub": "Use the public gitlab.com instance.",
+    "self_hosted": "Self-hosted GitLab",
+    "self_hosted_sub": "Point Recrest at your own GitLab server. We'll verify it's reachable.",
+    "domain_label": "Server URL",
+    "domain_hint": "Hostname or full URL — e.g. gitlab.example.com or https://gitlab.example.com.",
+    "domain_placeholder": "gitlab.example.com",
+    "empty_domain": "Enter the server URL of your GitLab instance.",
+    "unreachable": "Could not reach the server. {{error}}",
+    "not_gitlab": "The server responded, but doesn't look like GitLab. Double-check the URL.",
+    "detected": "GitLab {{version}} detected.",
+    "back": "Back",
+    "next": "Continue"
+  },
+  "crashReports": {
+    "label": "Send anonymised crash reports",
+    "hint": "Helps us fix bugs. No repo content, paths, tokens or git data leave your machine."
+  },
+  "wizard": {
+    "back": "Back"
+  },
   "scan": {
     "title": "Scanning your folders",
     "scanning": "Looking for repositories…",
-    "summary_one": "Found {{count}} repository in {{pathCount}} folder.",
-    "summary_other": "Found {{count}} repositories in {{pathCount}} folders.",
+    "summary_repos_one": "{{count}} repository",
+    "summary_repos_other": "{{count}} repositories",
+    "summary_paths_one": "{{count}} folder",
+    "summary_paths_other": "{{count}} folders",
+    "summary_template": "Found {{repos}} in {{paths}}.",
     "empty": "No repositories found. You can add more folders later in Settings.",
     "back": "Back",
     "next": "Continue"

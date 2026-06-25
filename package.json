@@ -1,6 +1,6 @@
 {
   "name": "recrest",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "private": true,
   "description": "Recrest — A lightweight developer dashboard built with Tauri.",
   "license": "MIT",
@@ -43,13 +43,16 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
-    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "husky": "^9.1.6",
-    "lint-staged": "^15.2.10",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.3.3",
-    "typescript": "^5.6.3"
+    "typescript": "^6.0.3"
+  },
+  "resolutions": {
+    "@tauri-apps/api": "^2.11.0"
   },
   "repository": {
     "type": "git",
@@ -72,12 +75,12 @@
     ]
   },
   "engines": {
-    "node": "22.20.0",
+    "node": "22.22.3",
     "yarn": "1.22.22"
   },
   "packageManager": "yarn@1.22.22",
   "volta": {
-    "node": "22.20.0",
+    "node": "22.22.3",
     "yarn": "1.22.22"
   }
 }

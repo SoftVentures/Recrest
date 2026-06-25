@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 
 import { useSearchParams } from "react-router-dom";
 
@@ -38,8 +38,10 @@ import { AboutSection } from "@/pages/app/Settings/components/AboutTab";
 import { AccountsSection } from "@/pages/app/Settings/components/AccountsTab";
 import {
   AccessibilitySection,
-  AppearanceSection,
+  DesignSection,
   DesktopSection,
+  FontsSection,
+  LanguageSection,
   NotificationsSection,
   SystemSection,
   UpdatesSection,
@@ -224,6 +226,13 @@ const PageIntro = styled(Typography)(({ theme }) => ({
   margin: 0,
 })) as typeof Typography;
 
+const SectionDivider = styled(Box)(({ theme }) => ({
+  height: 1,
+  width: "100%",
+  backgroundColor: theme.palette.divider,
+  margin: `${theme.spacing(1)} 0`,
+}));
+
 const KNOWN_TAB_IDS = new Set<TabId>([
   "general",
   "accounts",
@@ -249,6 +258,28 @@ function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryTab = searchParams.get(SETTINGS_TAB_QUERY_PARAM) as TabId | null;
   const tab: TabId = queryTab && KNOWN_TAB_IDS.has(queryTab) ? queryTab : SettingsTab.GENERAL;
+
+  // The General tab has seven sections; mounting them all in one synchronous
+  // pass produced a long main-thread task (~150ms+ in dev, worse on the Tauri
+  // debug build with its discovery IPC) during which clicks on the topmost
+  // control (the theme dropdown) were dropped. We render the light top sections
+  // immediately and defer the heavier ones — incl. SystemSection's IDE/terminal
+  // discovery — to the next frame, so the page is interactive on first paint.
+  const [mountHeavySections, setMountHeavySections] = useState(false);
+  useEffect(() => {
+    if (tab !== "general") {
+      setMountHeavySections(false);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setMountHeavySections(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [tab]);
 
   const setTab = useCallback(
     (next: TabId) => {
@@ -307,12 +338,17 @@ function SettingsPage() {
               <PageH2 component="h2">{t("settings.general.title")}</PageH2>
               <PageIntro>{t("settings.general.intro")}</PageIntro>
             </PageHead>
-            <AppearanceSection />
-            <AccessibilitySection />
-            <SystemSection />
-            <DesktopSection />
-            <NotificationsSection />
-            <UpdatesSection />
+            <DesignSection />
+            <LanguageSection />
+            {mountHeavySections && (
+              <>
+                <FontsSection />
+                <AccessibilitySection />
+                <SystemSection />
+                <DesktopSection />
+                <NotificationsSection />
+              </>
+            )}
           </PageInner>
         )}
         {tab === "accounts" && (
@@ -363,6 +399,8 @@ function SettingsPage() {
               <PageH2 component="h2">{t("settings.storage.title")}</PageH2>
               <PageIntro>{t("settings.storage.intro")}</PageIntro>
             </PageHead>
+            <UpdatesSection />
+            <SectionDivider />
             <StorageSection />
           </PageInner>
         )}

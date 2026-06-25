@@ -1,4 +1,4 @@
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
@@ -26,11 +26,24 @@ export default defineConfig({
   define: {
     __GIT_SHA__: JSON.stringify("test"),
     __BUILD_TIME__: JSON.stringify("1970-01-01T00:00:00.000Z"),
+    __APP_VERSION__: JSON.stringify("0.0.0-test"),
   },
   test: {
     env: { TZ: "Europe/Berlin" },
     environment: "jsdom",
     globals: true,
+    deps: {
+      optimizer: {
+        web: {
+          // MUI 9.1 added internal/Transition.mjs which directory-imports
+          // `react-transition-group/TransitionGroupContext`. Node's strict
+          // ESM loader rejects directory imports; pre-bundle MUI through
+          // esbuild so the directory path is resolved at build time.
+          enabled: true,
+          include: ["@mui/material", "@mui/icons-material", "react-transition-group"],
+        },
+      },
+    },
     // V8 coverage instrumentation roughly doubles per-test wall time under
     // `test:coverage` (now the CI gate); a few heavier component specs brush
     // past the 5s default and flake. 15s absorbs the overhead without masking

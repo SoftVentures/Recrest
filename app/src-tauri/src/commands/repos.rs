@@ -630,6 +630,21 @@ pub async fn load_logo_bytes(
 /// always picking a real graphic, not a browser shortcut.
 const UPLOAD_EXTENSIONS: &[&str] = &["svg", "png", "webp", "jpg", "jpeg", "gif"];
 
+/// Guards a `repo_id` before it is interpolated into a logo filename. Repo ids
+/// are server-minted UUIDs (`Uuid::new_v4`), so a strict alphanumeric + `-`/`_`
+/// allowlist accepts every legitimate id while rejecting path separators and
+/// `..` segments — closing the path-traversal vector on `<dir>/<repo_id>.<ext>`.
+fn validate_repo_id(repo_id: &str) -> Result<(), CommandError> {
+    if repo_id.is_empty()
+        || !repo_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(CommandError::bad_request("invalid repo id"));
+    }
+    Ok(())
+}
+
 fn custom_logo_dir(app: &AppHandle) -> Result<PathBuf, CommandError> {
     if let Some(root) = crate::identity::test_profile_root() {
         return Ok(root.join("repo-logos"));
@@ -651,6 +666,7 @@ pub async fn set_repo_logo(
     repo_id: String,
     source_path: String,
 ) -> Result<RepoDto, CommandError> {
+    validate_repo_id(&repo_id)?;
     let source = PathBuf::from(&source_path);
     let source_canon = std::fs::canonicalize(&source)
         .map_err(|e| CommandError::not_found(format!("source image not found: {e}")))?;
@@ -700,6 +716,69 @@ pub async fn set_repo_logo(
     let dest = dest_dir.join(format!("{repo_id}.{ext}"));
     std::fs::copy(&source_canon, &dest)
         .map_err(|e| CommandError::internal(format!("copy image failed: {e}")))?;
+
+    let mut config = state.config.lock().await;
+    let record = config
+        .settings_mut()
+        .repos
+        .get_mut(&repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+    record.custom_logo_path = Some(dest.clone());
+    let record_snapshot = record.clone();
+    config.save(&app)?;
+    drop(config);
+
+    let status = status::read_status(&record_snapshot.path)?;
+    Ok(RepoDto::from_record(&record_snapshot, status))
+}
+
+/// Writes a designer-generated SVG into `<app_data>/repo-logos/<repo_id>.svg`
+/// and records it as the custom avatar. Mirrors `set_repo_logo` but takes the
+/// SVG markup directly (the avatar designer builds an icon-on-gradient SVG in
+/// the frontend) instead of copying a picked file. Stale non-SVG overrides for
+/// this repo are cleaned up so an uploaded PNG doesn't shadow the new design.
+#[tauri::command]
+pub async fn set_repo_logo_svg(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+    svg: String,
+) -> Result<RepoDto, CommandError> {
+    validate_repo_id(&repo_id)?;
+    let trimmed = svg.trim_start();
+    if !trimmed.starts_with("<svg") && !trimmed.starts_with("<?xml") {
+        return Err(CommandError::bad_request("payload is not an SVG document"));
+    }
+    if svg.is_empty() {
+        return Err(CommandError::bad_request("svg is empty"));
+    }
+    if svg.len() as u64 > logo::MAX_LOGO_BYTES {
+        return Err(CommandError::bad_request(format!(
+            "svg too large ({} bytes, max {})",
+            svg.len(),
+            logo::MAX_LOGO_BYTES
+        )));
+    }
+
+    let dest_dir = custom_logo_dir(&app)?;
+    std::fs::create_dir_all(&dest_dir)
+        .map_err(|e| CommandError::internal(format!("create repo-logos dir failed: {e}")))?;
+
+    // Wipe stale non-SVG overrides for this repo (e.g. a previously uploaded
+    // PNG) so the new design isn't left sitting next to an old raster file.
+    for stale_ext in UPLOAD_EXTENSIONS {
+        if *stale_ext == "svg" {
+            continue;
+        }
+        let stale = dest_dir.join(format!("{repo_id}.{stale_ext}"));
+        if stale.exists() {
+            let _ = std::fs::remove_file(&stale);
+        }
+    }
+
+    let dest = dest_dir.join(format!("{repo_id}.svg"));
+    std::fs::write(&dest, svg.as_bytes())
+        .map_err(|e| CommandError::internal(format!("write svg failed: {e}")))?;
 
     let mut config = state.config.lock().await;
     let record = config
@@ -902,26 +981,29 @@ fn validate_trash_path(path: &std::path::Path) -> Result<(), CommandError> {
     Ok(())
 }
 
-/// Move a repository's folder to the OS trash (macOS Trash, Windows
-/// Recycle Bin, freedesktop Trash on Linux) and unregister it from
-/// settings. Sequencing matters:
+/// Delete a repository's folder and unregister it from settings. Sequencing
+/// matters:
 ///   1. Validate the path (defensive — see `validate_trash_path`).
 ///   2. Unsubscribe the watcher first, so the impending delete doesn't
 ///      produce a flurry of spurious `repo://status` events.
-///   3. Move the folder to trash. If this fails we abort and leave the
-///      settings entry intact — the user shouldn't end up with a
-///      half-deleted state.
+///   3. Remove the folder. If this fails we abort and leave the settings
+///      entry intact — the user shouldn't end up with a half-deleted state.
 ///   4. Remove from settings + persist.
 ///
-/// The operation is reversible from the OS file manager — we never
-/// permanently delete from this command. A separate "purge" affordance
-/// would have to be added explicitly if irrecoverable deletion is ever
-/// needed.
+/// `permanent` selects the removal strategy:
+///   - `false` (default UI path): move to the OS trash (macOS Trash, Windows
+///     Recycle Bin, freedesktop Trash) — reversible from the file manager.
+///   - `true`: irreversibly `remove_dir_all`. Only reached after the trash
+///     attempt fails (e.g. the Recycle Bin is disabled for the drive or a
+///     file is locked) and the user explicitly confirms the irreversible
+///     fallback in a second dialog. The same `validate_trash_path` guards
+///     apply, so a permanent delete can't target a near-root / non-repo path.
 #[tauri::command]
 pub async fn delete_repo(
     app: AppHandle,
     state: State<'_, AppState>,
     repo_id: String,
+    permanent: bool,
 ) -> Result<(), CommandError> {
     let config = state.config.lock().await;
     let path = config
@@ -941,9 +1023,19 @@ pub async fn delete_repo(
         let _ = watcher.unwatch_repo(&path).await;
     }
 
-    trash::delete(&path).map_err(|e| {
-        CommandError::internal(format!("failed to move {} to trash: {}", path.display(), e))
-    })?;
+    if permanent {
+        std::fs::remove_dir_all(&path).map_err(|e| {
+            CommandError::internal(format!(
+                "failed to permanently delete {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+    } else {
+        trash::delete(&path).map_err(|e| {
+            CommandError::internal(format!("failed to move {} to trash: {}", path.display(), e))
+        })?;
+    }
 
     let mut config = state.config.lock().await;
     let settings = config.settings_mut();

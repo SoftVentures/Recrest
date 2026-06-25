@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { TauriCommand } from "@recrest/shared";
@@ -8,34 +8,44 @@ import { TauriCommand } from "@recrest/shared";
 import { ChevronDown, RefreshCw } from "lucide-react";
 
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import {
   PAGE_DUR_MD,
   PAGE_EASE,
   pgZoom,
   prefersReducedMotionGuard,
-  staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
 import BranchRowItem from "@/pages/app/Branches/parts/BranchRowItem";
-import { type BranchesByRepo, SpinIcon } from "@/pages/app/Branches/parts/_shared";
+import { type BranchesByRepo } from "@/pages/app/Branches/parts/_shared";
+
+// Branches render in pages of this size per repo group — a "+N entries" row
+// reveals the next page. Keeps repos with hundreds of branches from rendering
+// every row at once (the cause of the load jank).
+const BRANCH_PAGE_SIZE = 25;
 
 export interface RepoGroupProps {
   group: BranchesByRepo;
-  busyKey: string | null;
+  stateFor: (key: string) => ActionFeedbackState;
   run: (key: string, cmd: string, args: Record<string, unknown>, okMsg: string) => Promise<void>;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }
 
-export function RepoGroup({ group, busyKey, run, t }: RepoGroupProps) {
+export function RepoGroup({ group, stateFor, run, t }: RepoGroupProps) {
   const { repo, branches } = group;
   const [collapsed, setCollapsed] = useState(false);
+  const [visible, setVisible] = useState(BRANCH_PAGE_SIZE);
   const fetchKey = `${repo.id}:fetch`;
-  const isFetching = busyKey === fetchKey;
+  const fetchState = stateFor(fetchKey);
   const open = !collapsed;
 
   const toggle = () => setCollapsed((c) => !c);
+
+  const shown = branches.slice(0, visible);
+  const remaining = branches.length - shown.length;
 
   return (
     <GroupCard
@@ -76,7 +86,7 @@ export function RepoGroup({ group, busyKey, run, t }: RepoGroupProps) {
         </GroupHandle>
         <FetchBtn
           type="button"
-          disabled={isFetching}
+          disabled={fetchState === "loading"}
           onClick={(e) => {
             e.stopPropagation();
             void run(
@@ -87,22 +97,31 @@ export function RepoGroup({ group, busyKey, run, t }: RepoGroupProps) {
             );
           }}
         >
-          {isFetching ? <SpinIcon size={12} /> : <RefreshCw size={12} />}
-          {isFetching ? t("branches.actions.fetching") : t("branches.actions.fetch")}
+          <ActionFeedbackIcon state={fetchState} fallback={<RefreshCw size={12} />} size={12} />
+          {t("branches.actions.fetch")}
         </FetchBtn>
       </GroupHead>
       {open && (
         <List>
-          {branches.map((b) => (
+          {shown.map((b) => (
             <BranchRowItem
               key={(b.isRemote ? `r:${b.remote}/` : "l:") + b.name}
               repo={repo}
               branch={b}
-              busyKey={busyKey}
+              stateFor={stateFor}
               run={run}
               t={t}
             />
           ))}
+          {remaining > 0 && (
+            <LoadMore
+              type="button"
+              data-testid={TEST_IDS.branches.loadMore}
+              onClick={() => setVisible((v) => v + BRANCH_PAGE_SIZE)}
+            >
+              {t("branches.load_more", { count: Math.min(BRANCH_PAGE_SIZE, remaining) })}
+            </LoadMore>
+          )}
         </List>
       )}
     </GroupCard>
@@ -116,8 +135,10 @@ const GroupCard = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   overflow: "hidden",
+  // Quick fade-in, no per-card stagger delay: with progressive loading each
+  // card mounts as its repo resolves, so a stagger delay would hold an
+  // already-loaded group invisible. Snap it in instead.
   animation: `${pgZoom} ${PAGE_DUR_MD}ms ${PAGE_EASE} both`,
-  ...staggerNthOfType({ step: 80, count: 8 }),
   ...prefersReducedMotionGuard,
 })) as typeof Box;
 
@@ -172,11 +193,11 @@ const GroupCount = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
 
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-const FetchBtn = styled("button")(({ theme }) => ({
+const FetchBtn = styled(Button)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
+  minWidth: 0,
   height: 24,
   padding: "0 8px",
   marginLeft: 4,
@@ -186,6 +207,7 @@ const FetchBtn = styled("button")(({ theme }) => ({
   color: theme.palette.text.secondary,
   fontSize: 11,
   fontWeight: 600,
+  textTransform: "none",
   cursor: "pointer",
   fontFamily: "inherit",
   transition: "background 120ms ease, color 120ms ease",
@@ -200,3 +222,31 @@ const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
 }) as typeof Box;
+
+const LoadMore = styled(Button)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  minWidth: 0,
+  padding: "10px 16px",
+  border: 0,
+  borderTop: `1px solid ${theme.palette.divider}`,
+  borderRadius: 0,
+  backgroundColor: "transparent",
+  color: theme.palette.text.link,
+  fontSize: 12,
+  fontWeight: 600,
+  fontVariantNumeric: "tabular-nums",
+  textTransform: "none",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  transition: "background 120ms ease, color 120ms ease",
+  "&:hover": {
+    backgroundColor: theme.palette.surface.interface.active,
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: -2,
+  },
+}));

@@ -1,6 +1,7 @@
 mod auth;
 mod commands;
 mod config;
+mod discovery;
 mod git;
 mod identity;
 mod platform;
@@ -16,7 +17,7 @@ use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager,
+    AppHandle, LogicalSize, Manager,
 };
 // Click-routing types are only used on Windows + Linux, where the tray's
 // left-click brings the window forward. macOS follows the menu-bar
@@ -80,6 +81,98 @@ fn tray_icon_bytes(dark: bool) -> &'static [u8] {
         TRAY_ICON_LIGHT
     }
 }
+
+/// Disable WKWebView's window-occlusion detection.
+///
+/// WKWebView, by default, treats a window hidden by Stage Manager (or
+/// covered by another app) as "occluded" and throttles / purges its
+/// rendering buffer to save power. Disabling it keeps the webview rendering
+/// when backgrounded, so its content (and any Stage Manager thumbnail) stays
+/// fresh and there's no blank webview on refocus.
+///
+/// NOTE: this does NOT fix the Stage Manager black-flicker in the
+/// translucent area — that was conclusively traced to the OS vibrancy
+/// material (NSVisualEffectView/NSGlassEffectView) flashing during the
+/// swap-in animation, which is an unfixable macOS Tahoe behaviour (see
+/// `commands::theme::apply_translucency` and the tracking issue). We keep
+/// this call anyway because not purging the webview is the correct
+/// behaviour for an always-glanceable dashboard.
+///
+/// `_setWindowOcclusionDetectionEnabled:NO` is a private WebKit selector;
+/// we guard with `respondsToSelector:` so a future WebKit that drops it
+/// degrades gracefully. (Recrest ships outside the Mac App Store, so the
+/// private-API review restriction doesn't apply.) We descend the NSWindow's
+/// view hierarchy to find the WKWebView because wry/tao don't expose it.
+#[cfg(target_os = "macos")]
+fn disable_webview_occlusion_detection(window: &tauri::WebviewWindow) {
+    use objc2::runtime::{AnyClass, AnyObject, Bool, Sel};
+    use objc2::{msg_send, sel};
+
+    let Ok(raw_handle) = window.ns_window() else {
+        tracing::warn!("[macos] occlusion: ns_window() failed");
+        return;
+    };
+    if raw_handle.is_null() {
+        return;
+    }
+    let handle_addr = raw_handle as usize;
+    let _ = window.run_on_main_thread(move || {
+        if handle_addr == 0 {
+            return;
+        }
+        unsafe {
+            let ns_window = handle_addr as *mut AnyObject;
+            let content_view: *mut AnyObject = msg_send![ns_window, contentView];
+            if content_view.is_null() {
+                return;
+            }
+            let Some(webview_class) = AnyClass::get(c"WKWebView") else {
+                tracing::warn!("[macos] occlusion: WKWebView class not found");
+                return;
+            };
+            // Recursively find the WKWebView in the view tree.
+            fn find_webview(
+                view: *mut AnyObject,
+                class: &AnyClass,
+            ) -> Option<*mut AnyObject> {
+                if view.is_null() {
+                    return None;
+                }
+                unsafe {
+                    let is_webview: Bool = msg_send![view, isKindOfClass: class];
+                    if is_webview.as_bool() {
+                        return Some(view);
+                    }
+                    let subviews: *mut AnyObject = msg_send![view, subviews];
+                    if subviews.is_null() {
+                        return None;
+                    }
+                    let count: usize = msg_send![subviews, count];
+                    for i in 0..count {
+                        let sub: *mut AnyObject = msg_send![subviews, objectAtIndex: i];
+                        if let Some(found) = find_webview(sub, class) {
+                            return Some(found);
+                        }
+                    }
+                }
+                None
+            }
+
+            let Some(webview) = find_webview(content_view, webview_class) else {
+                tracing::warn!("[macos] occlusion: WKWebView not found in view tree");
+                return;
+            };
+            let sel_occlusion: Sel = sel!(_setWindowOcclusionDetectionEnabled:);
+            let responds: Bool = msg_send![webview, respondsToSelector: sel_occlusion];
+            if responds.as_bool() {
+                let _: () = msg_send![webview, _setWindowOcclusionDetectionEnabled: false];
+            } else {
+                tracing::warn!("[macos] occlusion: WKWebView does not respond to selector");
+            }
+        }
+    });
+}
+
 
 #[cfg(target_os = "macos")]
 fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
@@ -276,7 +369,7 @@ fn windows_uses_dark_mode() -> bool {
         if RegOpenKeyExW(
             HKEY_CURRENT_USER,
             PCWSTR(subkey.as_ptr()),
-            0,
+            Some(0),
             KEY_READ,
             &mut hkey,
         )
@@ -338,14 +431,18 @@ fn apply_windows_theme_icon(app: &AppHandle) {
         if let Ok(raw) = window.hwnd() {
             let hwnd = HWND(raw.0 as *mut _);
             unsafe {
-                let small_hicon =
-                    SendMessageW(hwnd, WM_GETICON, WPARAM(ICON_SMALL as usize), LPARAM(0));
+                let small_hicon = SendMessageW(
+                    hwnd,
+                    WM_GETICON,
+                    Some(WPARAM(ICON_SMALL as usize)),
+                    Some(LPARAM(0)),
+                );
                 if small_hicon.0 != 0 {
                     SendMessageW(
                         hwnd,
                         WM_SETICON,
-                        WPARAM(ICON_BIG as usize),
-                        LPARAM(small_hicon.0),
+                        Some(WPARAM(ICON_BIG as usize)),
+                        Some(LPARAM(small_hicon.0)),
                     );
                 }
             }
@@ -539,15 +636,69 @@ pub fn run() {
                 }
             }
 
-            // Window title carries the dev/prod marker. `tauri.conf.json`
-            // hard-codes "Recrest" and the `tauri.dev.conf.json` overlay
-            // can't safely replace `app.windows[]` (array-replace would
-            // require duplicating every Window property), so we set the
-            // title at runtime via `identity::current_tray_tooltip()` —
+            // Window title carries the dev/prod marker for the taskbar /
+            // window switcher. `tauri.conf.json` hard-codes "Recrest" and the
+            // `tauri.dev.conf.json` overlay can't safely replace `app.windows[]`,
+            // so we set it at runtime via `identity::current_tray_tooltip()` —
             // same string that goes on the tray, kept in one place.
+            //
+            // macOS is the exception: the Overlay titlebar paints the window
+            // title next to the traffic lights, where we want nothing (brand
+            // lives in the sidebar). So macOS gets an empty title.
             if let Some(window) = handle.get_webview_window("main") {
+                #[cfg(target_os = "macos")]
+                let _ = window.set_title("");
+                #[cfg(not(target_os = "macos"))]
                 let _ = window.set_title(identity::current_tray_tooltip());
+                // Belt-and-suspenders: the `tauri.dev.conf.json` overlay's
+                // `windows[]` entry omits `decorations: false`, and Tauri's
+                // by-label array merge for window config is unreliable (the
+                // same reason `visible: false` needs the explicit hide below).
+                // In the dev build that lets `decorations` fall back to its
+                // `true` default, so the NATIVE Windows/Linux title bar paints
+                // on top of our custom titlebar — two stacked title bars. Force
+                // it off at runtime for the non-macOS chrome. macOS keeps
+                // decorations on deliberately (Overlay traffic-lights, set
+                // separately below).
+                #[cfg(not(target_os = "macos"))]
+                let _ = window.set_decorations(false);
+                // Belt-and-suspenders: enforce the minimum window size at
+                // runtime. The `tauri.dev.conf.json` overlay replaces (not
+                // deep-merges) the `windows[]` entry by label, so the dev build
+                // drops `minWidth`/`minHeight` and the window becomes freely
+                // resizable below the desktop-only floor. Setting it here keeps
+                // dev and prod identical regardless of conf-merge semantics.
+                // Keep in lock-step with `tauri.conf.json` (1100×720, the
+                // documented desktop-only minimum).
+                let _ = window.set_min_size(Some(LogicalSize::new(1100.0, 720.0)));
+                // Belt-and-suspenders: explicitly hide the window here in
+                // case the `visible: false` config-overlay merge didn't
+                // apply (Tauri's `tauri.dev.conf.json` deep-merge for
+                // arrays-of-objects-by-label is not well-documented and
+                // we cannot trust it for boot-critical behaviour). With
+                // this explicit `hide()` the window stays off-screen from
+                // process start until JS's `getCurrentWebviewWindow().show()`
+                // fires, regardless of conf-merge semantics.
+                let _ = window.hide();
             }
+
+            // Safety net for the JS-driven `window.show()` in `main.tsx`.
+            // The window config has `visible: false` so the cold-boot
+            // sequence (transparent → window-shadow → backdrop-filter
+            // engaging) never reaches the user; JS calls `show()` after
+            // React's first paint. If the bundle fails to load (network
+            // hiccup in dev, broken build, …) we'd otherwise leave the
+            // window invisible forever — this 3 s deadline guarantees
+            // the user sees *something* even in the worst case.
+            let safety_handle = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                if let Some(window) = safety_handle.get_webview_window("main") {
+                    if !window.is_visible().unwrap_or(true) {
+                        let _ = window.show();
+                    }
+                }
+            });
 
             let mut config = ConfigStore::load_or_default(&handle)?;
             // Reconcile on boot: drop auto-discovered repos that no longer sit
@@ -677,6 +828,29 @@ pub fn run() {
                 }
             }
 
+            // Snapshot the persisted translucency settings before `config`
+            // moves into the AppState so the boot replay below can re-apply
+            // the OS vibrancy material on the freshly-created main window. We
+            // ALSO snapshot the resolved dark/light bit so the vibrancy view's
+            // appearance matches the active theme on first paint.
+            let translucency_enabled = config.settings().appearance.translucency.enabled;
+            let translucency_intensity = config.settings().appearance.translucency.intensity;
+            let translucency_dark = {
+                let appearance = &config.settings().appearance;
+                if appearance.follows_system {
+                    #[cfg(target_os = "macos")]
+                    {
+                        macos_system_dark().unwrap_or(false)
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        false
+                    }
+                } else {
+                    appearance.theme_id == "dark"
+                }
+            };
+
             let state = AppState {
                 config: Arc::new(Mutex::new(config)),
                 providers: Arc::new(registry),
@@ -689,7 +863,6 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 use tauri::TitleBarStyle;
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
                 // (Process name is set at the very top of `run()` — calling
                 // it here would be too late, the Dock has already captured
@@ -698,10 +871,27 @@ pub fn run() {
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.set_decorations(true);
                     let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
-                    // Vibrancy is applied unconditionally — the Glassy theme makes
-                    // the React surfaces translucent so it shows through; opaque
-                    // themes simply cover it.
-                    let _ = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None);
+                    // Force the WebView's native backing layer to fully
+                    // transparent so that during Stage-Manager / Cmd-Tab
+                    // re-focus events macOS doesn't briefly composite an
+                    // opaque WKWebView background between the OS window flip
+                    // and the next React paint. Without this, the user sees
+                    // a white-then-translucent flash every time the app
+                    // regains focus. Safe under any theme — React paints its
+                    // own surfaces on top so an opaque theme still looks
+                    // opaque, but the WebView itself never contributes a
+                    // background colour.
+                    let _ = window.set_background_color(None);
+                    // Keep the webview rendering when backgrounded / in a
+                    // Stage Manager group so its content stays fresh and it
+                    // never shows a blank layer on refocus.
+                    disable_webview_occlusion_detection(&window);
+                    // No unconditional vibrancy — the orthogonal translucency
+                    // effect toggles NSVisualEffectView on/off via
+                    // `set_translucency` (window-vibrancy). Leaving vibrancy
+                    // permanently on under opaque themes was wasteful (the
+                    // compositor still blurs the window buffer behind solid
+                    // React surfaces).
                 }
 
                 // Defer the initial icon set by 500ms so NSApp.effectiveAppearance
@@ -724,11 +914,21 @@ pub fn run() {
                 spawn_macos_appearance_poller(handle.clone());
             }
 
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::apply_acrylic;
+            // Re-apply the OS vibrancy material on boot if the user had
+            // translucency on last session. Without this the first React
+            // render fires the `set_translucency` IPC but macOS' window
+            // snapshot is captured BEFORE that lands — a transparent first
+            // frame in Stage Manager / Dock previews. Applying it here in Rust
+            // setup keeps the NSVisualEffectView attached from the moment the
+            // window's NSWindow is composed.
+            if translucency_enabled {
                 if let Some(window) = handle.get_webview_window("main") {
-                    let _ = apply_acrylic(&window, None);
+                    let _ = commands::theme::apply_translucency(
+                        &handle,
+                        &window,
+                        translucency_intensity,
+                        translucency_dark,
+                    );
                 }
             }
 
@@ -749,7 +949,7 @@ pub fn run() {
                         if s.starts_with(&callback_prefix) {
                             let _ = tauri::Emitter::emit(
                                 &deep_handle,
-                                "oauth://callback",
+                                commands::oauth::OAUTH_CALLBACK_EVENT,
                                 serde_json::json!({ "url": s }),
                             );
                         }
@@ -857,6 +1057,10 @@ pub fn run() {
                     match window.hwnd() {
                         Ok(hwnd) => {
                             let raw = windows::Win32::Foundation::HWND(hwnd.0 as *mut _);
+                            // Re-assert WS_MAXIMIZEBOX so Windows 11 surfaces the
+                            // Snap-Layouts flyout when the hit-test reports
+                            // HTMAXBUTTON over our custom maximize button.
+                            platform::windows::ensure_caption_styles(raw);
                             platform::windows::install_subclass(raw);
                         }
                         Err(err) => tracing::warn!("could not get main HWND for subclass: {err}"),
@@ -873,6 +1077,22 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            // Focus events power the renderer's compositor-warmup probe
+            // (see `main.tsx`). DOM `focus` / `blur` aren't reliable inside
+            // a WKWebView host — Tauri's native `WindowEvent::Focused` is.
+            // We emit a synthetic FE event the renderer can listen to.
+            if let tauri::WindowEvent::Focused(focused) = event {
+                let _ = tauri::Emitter::emit(
+                    window,
+                    if *focused {
+                        "recrest://window-focused"
+                    } else {
+                        "recrest://window-blurred"
+                    },
+                    (),
+                );
+            }
+
             #[cfg(windows)]
             if let tauri::WindowEvent::ThemeChanged(_) = event {
                 // OS theme flipped (light↔dark). Re-apply both window and
@@ -941,12 +1161,16 @@ pub fn run() {
         commands::repos::get_oldest_commit_date,
         commands::repos::load_logo_bytes,
         commands::repos::set_repo_logo,
+        commands::repos::set_repo_logo_svg,
         commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::repos::open_file_in_ide,
         commands::ide::detect_ides,
         commands::terminal::detect_terminals,
         commands::terminal::detect_shells,
+        commands::terminal::test_custom_terminal,
+        commands::discovery::list_terminals,
+        commands::discovery::list_ides,
         commands::repos::open_terminal,
         commands::ssh::ssh_unlock_key,
         commands::ssh::set_repo_ssh_key,
@@ -956,6 +1180,7 @@ pub fn run() {
         commands::git_ops::git_fetch_all,
         commands::git_ops::git_pull,
         commands::git_ops::git_push,
+        commands::git_ops::git_pull_all,
         commands::git_ops::git_checkout,
         commands::git_ops::git_checkout_remote,
         commands::git_ops::git_list_branches,
@@ -999,6 +1224,8 @@ pub fn run() {
         commands::providers::trigger_workflow,
         commands::providers::cancel_workflow_run,
         commands::providers::get_pages_status,
+        commands::providers::ping_provider,
+        commands::providers::verify_credentials,
         commands::activity::list_pr_events,
         commands::activity::list_check_runs,
         commands::notifications::notify,
@@ -1013,7 +1240,11 @@ pub fn run() {
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::system::get_system_dark_mode,
+        commands::system::get_system_facts,
+        commands::system::get_data_sizes,
         commands::git_info::check_git,
+        commands::theme::set_translucency,
+        commands::theme::supports_translucency,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
         commands::update::install_update,
@@ -1033,12 +1264,16 @@ pub fn run() {
         commands::repos::get_oldest_commit_date,
         commands::repos::load_logo_bytes,
         commands::repos::set_repo_logo,
+        commands::repos::set_repo_logo_svg,
         commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::repos::open_file_in_ide,
         commands::ide::detect_ides,
         commands::terminal::detect_terminals,
         commands::terminal::detect_shells,
+        commands::terminal::test_custom_terminal,
+        commands::discovery::list_terminals,
+        commands::discovery::list_ides,
         commands::repos::open_terminal,
         commands::ssh::ssh_unlock_key,
         commands::ssh::set_repo_ssh_key,
@@ -1048,6 +1283,7 @@ pub fn run() {
         commands::git_ops::git_fetch_all,
         commands::git_ops::git_pull,
         commands::git_ops::git_push,
+        commands::git_ops::git_pull_all,
         commands::git_ops::git_checkout,
         commands::git_ops::git_checkout_remote,
         commands::git_ops::git_list_branches,
@@ -1091,6 +1327,8 @@ pub fn run() {
         commands::providers::trigger_workflow,
         commands::providers::cancel_workflow_run,
         commands::providers::get_pages_status,
+        commands::providers::ping_provider,
+        commands::providers::verify_credentials,
         commands::activity::list_pr_events,
         commands::activity::list_check_runs,
         commands::notifications::notify,
@@ -1105,7 +1343,11 @@ pub fn run() {
         commands::window::set_caption_button_bounds,
         commands::system::get_platform_info,
         commands::system::get_system_dark_mode,
+        commands::system::get_system_facts,
+        commands::system::get_data_sizes,
         commands::git_info::check_git,
+        commands::theme::set_translucency,
+        commands::theme::supports_translucency,
         commands::tray::update_tray_badge,
         commands::update::check_for_update,
         commands::update::install_update,

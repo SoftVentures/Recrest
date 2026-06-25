@@ -37,11 +37,11 @@ export const TEST_IDS = {
     searchTrigger: "search-trigger",
     btnRefresh: "btn-refresh",
     btnAddRepo: "btn-add-repo",
-    btnFindAcross: "btn-find-across",
   },
 
   sidebar: {
     root: "sidebar",
+    brandHome: "sidebar-brand-home",
     foldBtn: "sidebar-fold-btn",
     navSettings: "nav-settings",
     nav: navTestId,
@@ -70,6 +70,13 @@ export const TEST_IDS = {
     input: "search-overlay-input",
     clear: "search-overlay-clear",
     row: <T extends string>(kind: T) => `search-row-${kind}` as const,
+    tab: <T extends string>(id: T) => `search-tab-${id}` as const,
+    scopeSelect: "search-scope-select",
+    scopeOption: <T extends string>(id: T) => `search-scope-option-${id}` as const,
+    contentGroup: <T extends string>(id: T) => `search-content-group-${id}` as const,
+    contentRow: <T extends string>(id: T) => `search-content-row-${id}` as const,
+    contentEmpty: "search-content-empty",
+    contentHint: "search-content-hint",
   },
 
   // --- Pages
@@ -77,12 +84,12 @@ export const TEST_IDS = {
     page: "dashboard-page",
     activityAxis: "dash-activity-axis",
     qa: {
+      fetchAll: "dash-qa-fetch-all",
+      pullAll: "dash-qa-pull-all",
       clone: "dash-qa-clone",
       workspace: "dash-qa-workspace",
       openIde: "dash-qa-open-ide",
       recentCommits: "dash-qa-recent-commits",
-      createBranch: "dash-qa-create-branch",
-      pullAll: "dash-qa-pull-all",
     },
   },
 
@@ -117,8 +124,15 @@ export const TEST_IDS = {
     back: "repo-detail-back",
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
+    avatarMenu: "repo-avatar-menu",
+    avatarDesigner: "repo-avatar-designer",
+    avatarDesignerSave: "repo-avatar-designer-save",
+    avatarDesignerSearch: "repo-avatar-designer-search",
+    avatarDesignerBg: (id: string) => `repo-avatar-designer-bg-${id}` as const,
+    avatarDesignerIcon: (id: string) => `repo-avatar-designer-icon-${id}` as const,
     mrRow: "repo-detail-mr-row",
     mrDrawer: "repo-detail-mr-drawer",
+    openHost: "repo-detail-open-host",
     ssh: {
       trigger: "repo-ssh-trigger",
       modal: "repo-ssh-modal",
@@ -226,6 +240,7 @@ export const TEST_IDS = {
     },
     diff: {
       file: "mr-diff-file",
+      fileToggle: "mr-diff-file-toggle",
       line: "mr-diff-line",
       commentBtn: "mr-diff-comment-btn",
       composer: "mr-diff-composer",
@@ -314,8 +329,10 @@ export const TEST_IDS = {
     fetchAll: "branches-fetch-all",
     filterTrigger: "branches-filter-trigger",
     group: "branches-group",
+    loadMore: "branches-load-more",
     checkout: "branch-checkout",
     checkoutRemote: "branch-checkout-remote",
+    delete: "branch-delete",
   },
 
   settings: {
@@ -328,15 +345,18 @@ export const TEST_IDS = {
     general: {
       themeSelect: "settings-theme-select",
       localeSelect: "settings-locale-select",
+      dateFormatSelect: "settings-date-format-select",
+      timeFormatSelect: "settings-time-format-select",
+      weekStartSelect: "settings-week-start-select",
+      countrySelect: "settings-country-select",
+      timeZoneSelect: "settings-timezone-select",
       accentSwatches: "settings-accent-swatches",
       accentChip: <T extends string>(id: T) => `accent-chip-${id}` as const,
       fontSelect: "settings-font-select",
       fontOption: <T extends string>(id: T) => `settings-font-option-${id}` as const,
       codeFontSelect: "settings-code-font-select",
       codeFontOption: <T extends string>(id: T) => `settings-code-font-option-${id}` as const,
-      codeLigaturesSelect: "settings-code-ligatures-select",
-      codeLigaturesOption: <T extends string>(mode: T) =>
-        `settings-code-ligatures-option-${mode}` as const,
+      codeLigaturesSwitch: "settings-code-ligatures-switch",
       fontSizeSelect: "settings-font-size-select",
       customFontUpload: "settings-custom-font-upload",
       customFontDelete: <T extends string>(id: T) => `settings-custom-font-delete-${id}` as const,
@@ -344,12 +364,15 @@ export const TEST_IDS = {
       a11yHighContrast: "settings-a11y-high-contrast",
       a11yReducedMotion: "settings-a11y-reduced-motion",
       a11yUnderlineLinks: "settings-a11y-underline-links",
+      translucencyToggle: "settings-translucency-toggle",
+      translucencyIntensitySlider: "settings-translucency-intensity-slider",
       pollingInput: "settings-polling-input",
       defaultIdeSelect: "settings-default-ide-select",
       defaultTerminalSelect: "settings-default-terminal-select",
       defaultShellSelect: "settings-default-shell-select",
       terminalProfileInput: "settings-terminal-profile-input",
       terminalCustomCommandInput: "settings-terminal-custom-command-input",
+      terminalCustomCommandTest: "settings-terminal-custom-command-test",
       desktopAutoStart: "settings-desktop-auto-start",
       desktopStartMinimized: "settings-desktop-start-minimized",
       desktopCloseToTray: "settings-desktop-close-to-tray",
@@ -366,12 +389,25 @@ export const TEST_IDS = {
 
     shortcuts: {
       navigation: "settings-shortcuts-navigation",
-      git: "settings-shortcuts-git",
-      editor: "settings-shortcuts-editor",
+      actions: "settings-shortcuts-actions",
+      row: <T extends string>(id: T) => `settings-shortcut-row-${id}` as const,
+      edit: <T extends string>(id: T) => `settings-shortcut-edit-${id}` as const,
+      reset: <T extends string>(id: T) => `settings-shortcut-reset-${id}` as const,
+      recording: <T extends string>(id: T) => `settings-shortcut-recording-${id}` as const,
+      feedback: <T extends string>(id: T) => `settings-shortcut-feedback-${id}` as const,
+      resetAll: "settings-shortcuts-reset-all",
     },
 
     storage: {
       crashReporting: "settings-storage-crash-reporting",
+      systemPanel: "settings-storage-system-panel",
+      systemOs: "settings-storage-system-os",
+      systemGit: "settings-storage-system-git",
+      systemApp: "settings-storage-system-app",
+      dataSizesPanel: "settings-storage-data-sizes-panel",
+      dataSizesSettings: "settings-storage-data-sizes-settings",
+      dataSizesCache: "settings-storage-data-sizes-cache",
+      dataSizesTokens: "settings-storage-data-sizes-tokens",
     },
 
     accounts: {
@@ -382,6 +418,11 @@ export const TEST_IDS = {
       tokenInput: "settings-accounts-token-input",
       usernameInput: "settings-accounts-username-input",
       tokenSave: "settings-accounts-token-save",
+      verifyButton: "settings-accounts-verify",
+      baseUrlInput: "settings-accounts-base-url-input",
+      baseUrlReset: "settings-accounts-base-url-reset",
+      testConnection: "settings-accounts-test-connection",
+      errorMessage: "settings-accounts-error",
     },
 
     integrations: {
@@ -390,6 +431,14 @@ export const TEST_IDS = {
       scanAdd: "settings-scan-add",
       scanRemove: <T extends string>(path: T) => `settings-scan-remove-${path}` as const,
       scanDefaultRadio: <T extends string>(path: T) => `settings-scan-default-${path}` as const,
+    },
+
+    about: {
+      contributors: "settings-about-contributors",
+      contributorsLoading: "settings-about-contributors-loading",
+      contributorsError: "settings-about-contributors-error",
+      contributorRow: <T extends string>(login: T) =>
+        `settings-about-contributor-${login}` as const,
     },
 
     developer: {
@@ -464,6 +513,13 @@ export const TEST_IDS = {
     root: "confirm-dialog",
     cancel: "confirm-dialog-cancel",
     confirm: "confirm-dialog-confirm",
+  },
+
+  connectPrompt: {
+    root: "connect-prompt-modal",
+    connect: "connect-prompt-connect",
+    proceed: "connect-prompt-proceed",
+    cancel: "connect-prompt-cancel",
   },
 
   editor: {
@@ -558,17 +614,6 @@ export const TEST_IDS = {
     },
   },
 
-  findAcrossDialog: {
-    root: "find-across-dialog",
-    input: "find-across-input",
-    clear: "find-across-clear",
-    repoFilter: "find-across-repo-filter",
-    list: "find-across-list",
-    group: <T extends string>(id: T) => `find-across-group-${id}` as const,
-    row: <T extends string>(id: T) => `find-across-row-${id}` as const,
-    empty: "find-across-empty",
-  },
-
   changedFilesList: {
     root: "changed-files-list",
     row: "changed-files-row",
@@ -632,9 +677,18 @@ export const TEST_IDS = {
     providerBaseUrlSave: "onboarding-provider-base-url-save",
     providerConnect: "onboarding-provider-connect",
     providerConnected: "onboarding-provider-connected",
+    patHelpDocs: "onboarding-pat-help-docs",
+    patHelpCreate: "onboarding-pat-help-create",
+    gitlabVariantCloud: "onboarding-gitlab-variant-cloud",
+    gitlabVariantSelf: "onboarding-gitlab-variant-self",
+    gitlabVariantDomain: "onboarding-gitlab-variant-domain",
+    gitlabVariantNext: "onboarding-gitlab-variant-next",
+    gitlabVariantBack: "onboarding-gitlab-variant-back",
+    crashReportsToggle: "onboarding-crash-reports-toggle",
     scanNext: "onboarding-scan-next",
     scanBack: "onboarding-scan-back",
     doneFinish: "onboarding-done-finish",
+    wizardBack: "onboarding-wizard-back",
   },
 
   emptyState: "empty-state",

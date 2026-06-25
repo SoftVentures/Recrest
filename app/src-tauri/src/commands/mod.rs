@@ -4,6 +4,7 @@ pub mod clone;
 pub mod dev;
 #[cfg(debug_assertions)]
 pub mod dev_log;
+pub mod discovery;
 pub mod error;
 pub mod fonts;
 pub mod git_config;
@@ -22,6 +23,7 @@ pub mod settings;
 pub mod ssh;
 pub mod system;
 pub mod terminal;
+pub mod theme;
 pub mod tray;
 pub mod update;
 pub mod window;

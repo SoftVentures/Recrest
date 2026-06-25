@@ -7,7 +7,13 @@ import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { PrState, type PullRequest, TauriCommand, routeToMr } from "@recrest/shared";
+import {
+  PROVIDER_NAMES,
+  PrState,
+  type PullRequest,
+  TauriCommand,
+  routeToMr,
+} from "@recrest/shared";
 
 import {
   Code,
@@ -38,6 +44,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
 import { detailKey } from "@/store/actions/prs.actions";
@@ -254,6 +261,7 @@ export function MrRow({
   const stateLabel = tPrs(isDraft ? "state.draft" : `state.${pr.state}`);
   const StateIcon = STATE_ICON[stateTone];
   const { position, onContextMenu, onClose } = useContextMenu();
+  const brand = brandFromUrl(pr.url);
 
   // Provider stats first; otherwise derive from the preloaded diff cache
   // (MergeRequests page fires `loadPrDiff` for every visible MR on mount,
@@ -427,7 +435,9 @@ export function MrRow({
               },
               {
                 key: "open-host",
-                label: t("context_menu.open_on_host"),
+                label: brand
+                  ? t("context_menu.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+                  : t("context_menu.open_on_host"),
                 icon: <ExternalLink size={13} />,
                 onSelect: () => void openExternal(pr.url),
               },

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import RepoRowCard from "@/components/molecules/modals/AddRepoModal/panels/ProvidersPanel/parts/RepoRowCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { renderWithTheme } from "@/test/utils";
+import { renderWithProviders } from "@/test/utils";
 
 const sampleRepo: RemoteRepository = {
   id: "1",
@@ -31,7 +31,7 @@ const sampleRepo: RemoteRepository = {
 describe("RepoRowCard", () => {
   it("toggles selection when the checkbox is clicked", () => {
     const onToggle = vi.fn();
-    const { getByTestId } = renderWithTheme(
+    const { getByTestId } = renderWithProviders(
       <RepoRowCard repo={sampleRepo} selected={false} alreadyLocal={false} onToggle={onToggle} />,
     );
     const checkbox = getByTestId(TEST_IDS.addRepoDialog.rowCheckbox);

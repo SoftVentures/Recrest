@@ -412,6 +412,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "git_branch_create":
         return resolveStatus(args?.repoId);
       case "git_fetch_all":
+      case "git_pull_all":
         return SEED.repos.length;
       case "git_list_branches":
         return [
@@ -580,6 +581,20 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return null;
       case "check_git":
         return { installed: true, version: "2.44.0" };
+      case "get_system_facts":
+        return {
+          os: "test",
+          arch: "test",
+          appVersion: "0.0.0",
+          osVersion: undefined,
+          gitVersion: undefined,
+        };
+      case "get_data_sizes":
+        return {
+          settingsBytes: 2_048,
+          cacheBytes: 1_572_864,
+          tokensBytes: 256,
+        };
       case "update_tray_badge":
         return undefined;
 

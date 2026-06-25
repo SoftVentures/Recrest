@@ -12,6 +12,14 @@ vi.mock("@tauri-apps/api/event", () => ({
   emit: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Tests must never hit the network. Components that load remote data on mount
+// (e.g. the Settings → About contributors list, which fetches the GitHub API)
+// resolve deterministically into their error/empty branch with this stub.
+// Individual tests can override it via `vi.spyOn(globalThis, "fetch")`.
+globalThis.fetch = vi.fn(() =>
+  Promise.reject(new Error("network disabled in tests")),
+) as unknown as typeof fetch;
+
 // jsdom does not implement `matchMedia`; libraries like `sonner` detect
 // `prefers-reduced-motion` / `prefers-color-scheme` via this API and crash
 // without a shim.
@@ -40,4 +48,12 @@ if (typeof window !== "undefined" && typeof window.ResizeObserver === "undefined
   }
   (window as unknown as { ResizeObserver: typeof ResizeObserverShim }).ResizeObserver =
     ResizeObserverShim;
+}
+
+// TipTap's placeholder extension calls ProseMirror's `posAtCoords` on mount,
+// which invokes `document.elementFromPoint`. jsdom does not implement that
+// CSSOM-View API; without a shim the editor throws synchronously during
+// `Editor.createView` and any test mounting a TipTap surface fails.
+if (typeof document !== "undefined" && typeof document.elementFromPoint !== "function") {
+  (document as unknown as { elementFromPoint: () => Element | null }).elementFromPoint = () => null;
 }

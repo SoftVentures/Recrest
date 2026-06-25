@@ -25,6 +25,7 @@ import {
   scanForRepos,
   setGroups,
   setRepoLogo,
+  setRepoLogoSvg,
   setRepoSshKey,
   setScanPaths,
   upsertRepo,
@@ -94,6 +95,9 @@ export const reposReducer = createReducer(initialState, (builder) => {
       state.items[action.payload.id] = action.payload;
     })
     .addCase(setRepoLogo.fulfilled, (state, action) => {
+      state.items[action.payload.id] = action.payload;
+    })
+    .addCase(setRepoLogoSvg.fulfilled, (state, action) => {
       state.items[action.payload.id] = action.payload;
     })
     .addCase(clearRepoLogo.fulfilled, (state, action) => {
@@ -190,6 +194,7 @@ export {
   scanForRepos,
   setGroups,
   setRepoLogo,
+  setRepoLogoSvg,
   setRepoSshKey,
   setScanPaths,
   upsertRepo,

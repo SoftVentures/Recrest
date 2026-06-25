@@ -268,7 +268,7 @@ function CommitDialog({ open, repoId, onClose }: CommitDialogProps) {
               </FieldLabel>
               <SubjectCounter tone={counterTone} variant="caption">
                 {t("commit_dialog.subject_counter", {
-                  count: subjectLen,
+                  length: subjectLen,
                   limit: SUBJECT_SOFT_LIMIT,
                 })}
               </SubjectCounter>

@@ -14,6 +14,7 @@ import GeneralIconButton, {
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
+import IconSlot from "@/components/atoms/layout/IconSlot";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
 import RepoContextMenu from "@/components/molecules/menus/RepoContextMenu";
 import { useContextMenu } from "@/hooks/useContextMenu";
@@ -107,7 +108,9 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       <BranchCell>
         {repo.status.branch && (
           <BranchChip>
-            <GitBranch size={11} />
+            <IconSlot>
+              <GitBranch size={11} />
+            </IconSlot>
             <BranchText component="span">{repo.status.branch}</BranchText>
           </BranchChip>
         )}

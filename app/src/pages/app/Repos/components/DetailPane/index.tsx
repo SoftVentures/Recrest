@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +8,7 @@ import { Box } from "@mui/material";
 
 import {
   AppRoute,
+  PROVIDER_NAMES,
   PrState,
   type PullRequest,
   TauriCommand,
@@ -34,16 +35,21 @@ import GeneralIconButton, {
   IconButtonSize,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
+import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
+import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
 import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useDefaultIde } from "@/hooks/useDefaultIde";
+import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, revealPathInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
-import { timeAgo } from "@/lib/utils/timeAgo.utils";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import { errorMessage } from "@/lib/utils/error.utils";
+import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
   BranchCard,
   BranchChip,
@@ -97,6 +103,7 @@ export interface DetailPaneProps {
 export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const { t: tAria } = useTranslation(I18nNamespace.ARIA);
   const { t } = useTranslation(I18nNamespace.REPOS);
+  const dt = useDateTimeFormat();
   const ide = useDefaultIde();
   const ideLabel = ide.name
     ? tAria("actions.open_in_named_ide", { ns: I18nNamespace.COMMON, ide: ide.name })
@@ -110,13 +117,33 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
   );
   const openPrs = useMemo(() => prs.filter((p) => p.state === PrState.OPEN), [prs]);
   const brand = brandFromUrl(repo.remoteUrl);
+  const openHost = useOpenHost(repo.remoteUrl);
+  const pull = useActionFeedback();
+  const fetch = useActionFeedback();
+  const busy = pull.state === "loading" || fetch.state === "loading";
+  const [createOpen, setCreateOpen] = useState(false);
 
   const run = async (cmd: TauriCommandName, label: string) => {
     if (!isTauri()) return;
     try {
       await invoke(cmd, { repoId: repo.id });
+    } catch (err) {
+      toast.error(t("row_actions.toast_command_failed", { label, message: errorMessage(err) }));
+    }
+  };
+
+  const runGit = async (
+    fb: ReturnType<typeof useActionFeedback>,
+    cmd: TauriCommandName,
+    successKey: string,
+    failKey: string,
+  ) => {
+    if (!isTauri() || busy) return;
+    try {
+      await fb.run(() => invoke(cmd, { repoId: repo.id }));
+      toast.success(t(successKey));
     } catch {
-      toast.error(t("row_actions.toast_command_failed", { label }));
+      toast.error(t(failKey));
     }
   };
 
@@ -163,7 +190,9 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_explorer")}
             tooltip={t("detail_pane.open_in_explorer")}
-            onClick={() => void revealPathInSystem(repo.path)}
+            onClick={() =>
+              void run(TauriCommand.OPEN_IN_EXPLORER, t("detail_pane.open_in_explorer"))
+            }
             icon={<Folder size={13} />}
           />
           {repo.remoteUrl && (
@@ -171,8 +200,12 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
               size={IconButtonSize.MD}
               variant={IconButtonVariant.OUTLINE}
               aria-label={tAria("repo.open_remote")}
-              tooltip={t("detail_pane.open_on_host")}
-              onClick={() => void openExternal(repo.remoteUrl!)}
+              tooltip={
+                brand
+                  ? t("detail_pane.open_on_provider", { provider: PROVIDER_NAMES[brand] })
+                  : t("detail_pane.open_on_host")
+              }
+              onClick={openHost.open}
               icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
             />
           )}
@@ -193,13 +226,37 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           />
         </BranchTop>
         <BranchQuick>
-          <GhostBtn type="button">
-            <ArrowDown size={11} /> {t("detail_pane.pull")}
+          <GhostBtn
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void runGit(
+                pull,
+                TauriCommand.GIT_PULL,
+                "detail.toast_pulled",
+                "detail.toast_pull_failed",
+              )
+            }
+          >
+            <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={11} />} size={11} />{" "}
+            {t("detail_pane.pull")}
           </GhostBtn>
-          <GhostBtn type="button">
-            <RefreshCw size={11} /> {t("detail_pane.fetch")}
+          <GhostBtn
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void runGit(
+                fetch,
+                TauriCommand.GIT_FETCH,
+                "detail.toast_fetched",
+                "detail.toast_fetch_failed",
+              )
+            }
+          >
+            <ActionFeedbackIcon state={fetch.state} fallback={<RefreshCw size={11} />} size={11} />{" "}
+            {t("detail_pane.fetch")}
           </GhostBtn>
-          <GhostBtn type="button">
+          <GhostBtn type="button" onClick={() => setCreateOpen(true)}>
             <Plus size={11} /> {t("detail_pane.branch")}
           </GhostBtn>
         </BranchQuick>
@@ -227,7 +284,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                         {c.sha.slice(0, 7)}
                       </CommitSha>
                       <Box component="span">·</Box>
-                      <Box component="span">{timeAgo(c.timestamp)}</Box>
+                      <Box component="span">{dt.formatTimestamp(c.timestamp)}</Box>
                     </CommitMeta>
                   </CommitText>
                 </CommitItem>
@@ -267,6 +324,8 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           <Maximize2 size={13} /> {t("detail_pane.open_full_view")}
         </FullView>
       </Footer>
+      {openHost.modal}
+      <CreateBranchDialog open={createOpen} repoId={repo.id} onClose={() => setCreateOpen(false)} />
     </Pane>
   );
 }

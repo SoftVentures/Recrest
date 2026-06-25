@@ -14,7 +14,8 @@
   "sidebar": {
     "primary": "Primary",
     "expand": "Expand sidebar",
-    "collapse": "Collapse sidebar"
+    "collapse": "Collapse sidebar",
+    "home": "Go to dashboard"
   },
   "header": {
     "search": "Search",
@@ -36,7 +37,9 @@
     "open_in_terminal": "Open in Terminal",
     "open_in_explorer": "Open in Explorer",
     "open_remote": "Open remote",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
+    "open_on_host_no_remote": "No remote configured",
     "open_folder": "Open folder",
     "open_terminal": "Open terminal",
     "more_actions": "More actions",
@@ -58,5 +61,10 @@
   },
   "dashboard": {
     "main": "Dashboard content"
+  },
+  "feedback": {
+    "loading": "Loading…",
+    "success": "Done",
+    "error": "Failed"
   }
 }

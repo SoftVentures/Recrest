@@ -45,15 +45,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Per-arch legs mirror the production release workflow so beta artifacts
+        # cover the same set (mac arm64/x64, windows x64/arm64, linux x64).
+        # `windows-11-arm` is a GitHub-hosted native arm64 runner — availability
+        # varies by plan/region (see release-tauri.yml) and the leg is skipped
+        # harmlessly via continue-on-error when unavailable. This workflow only
+        # stages installers into OS folders; it builds no GitHub release.
         include:
           - platform: macos-latest
             os: macos
-            args: "--target universal-apple-darwin"
+            rustTarget: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+          - platform: macos-latest
+            os: macos
+            rustTarget: x86_64-apple-darwin
+            args: "--target x86_64-apple-darwin"
           - platform: ubuntu-22.04
             os: linux
+            rustTarget: ""
             args: ""
           - platform: windows-latest
             os: windows
+            rustTarget: ""
+            args: ""
+          - platform: windows-11-arm
+            os: windows
+            rustTarget: aarch64-pc-windows-msvc
             args: ""
     runs-on: ${{ matrix.platform }}
     continue-on-error: true
@@ -70,7 +87,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.rustTarget }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -169,7 +186,12 @@ jobs:
       - name: Upload staging artifact (${{ matrix.os }})
         uses: actions/upload-artifact@v7
         with:
-          name: recrest-beta-staging-${{ matrix.os }}
+          # Per-arch legs share `os` (two macos, two windows), so the artifact
+          # name must include the arch — upload-artifact@v7 names are immutable
+          # and a collision would drop one arch. `collect` downloads by the
+          # `recrest-beta-staging-*` pattern + merge-multiple, so distinct names
+          # still merge into the same per-OS folders.
+          name: recrest-beta-staging-${{ matrix.os }}-${{ matrix.rustTarget || 'native' }}
           path: stage/
           if-no-files-found: warn
           retention-days: 1

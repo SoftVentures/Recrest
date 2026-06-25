@@ -6,13 +6,16 @@ import {
 } from "@/store/activityRangePersistence";
 import { settingsBackendSync } from "@/store/backendSync";
 import { activityReducer, initialActivityState } from "@/store/reducers/activityReducer";
+import { branchesReducer } from "@/store/reducers/branchesReducer";
 import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
 import { reposReducer } from "@/store/reducers/reposReducer";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
+import { shortcutsReducer } from "@/store/reducers/shortcutsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 import type { RootState } from "@/store/rootState";
+import { shortcutsPersistMiddleware } from "@/store/shortcutsPersistence";
 
 /**
  * Phase 2: Redux is the only renderer-side source of truth for app state.
@@ -41,12 +44,18 @@ export const store = configureStore({
     prs: prsReducer,
     remoteImport: remoteImportReducer,
     activity: activityReducer,
+    branches: branchesReducer,
+    shortcuts: shortcutsReducer,
   },
   preloadedState: persistedRange
     ? { activity: { ...initialActivityState, selectedRange: persistedRange } }
     : undefined,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(settingsBackendSync, activityRangePersistMiddleware),
+    getDefaultMiddleware().concat(
+      settingsBackendSync,
+      activityRangePersistMiddleware,
+      shortcutsPersistMiddleware,
+    ),
 });
 
 export type { RootState };

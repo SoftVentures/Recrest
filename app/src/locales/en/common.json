@@ -56,7 +56,6 @@
     "remove": "Remove",
     "search": "Search",
     "search_placeholder": "Search repositories, branches, MRs…",
-    "find_across_repos": "Find across repositories",
     "open_in_ide": "Open in IDE",
     "open_in_named_ide": "Open in {{ide}}",
     "open_terminal": "Open terminal",
@@ -75,14 +74,28 @@
     "search_group_mrs": "Merge requests",
     "search_group_nav": "Go to",
     "search_group_repos": "Repositories",
+    "search_tab_global": "Search everything",
+    "search_tab_repo": "Search contents",
+    "search_content_placeholder": "Search file contents…",
+    "search_scope_all": "All repositories",
+    "search_content_hint": "Type at least two characters to search file contents.",
+    "search_content_empty": "No matches",
+    "search_content_searching": "Searching…",
+    "search_content_count_one": "{{count}} result",
+    "search_content_count_other": "{{count}} results",
     "clear_search": "Clear search",
     "go_back": "Back",
     "confirm": "Confirm"
   },
+  "open_host": {
+    "failed_provider": "Failed to open in {{provider}}",
+    "failed_generic": "Failed to open in browser"
+  },
   "context_menu": {
     "open_in_terminal": "Open in Terminal",
     "open_in_explorer": "Open in Explorer",
-    "open_on_host": "Open on host",
+    "open_on_host": "Open in browser",
+    "open_on_provider": "Open in {{provider}}",
     "no_remote": "No remote configured",
     "pin": "Pin",
     "unpin": "Unpin",
@@ -100,22 +113,51 @@
     "forget_failed": "Forget failed",
     "delete_disk": "Delete from disk",
     "delete_disk_done": "{{name}} moved to trash",
+    "delete_disk_done_permanent": "{{name}} permanently deleted",
     "delete_disk_failed": "Delete failed: {{message}}",
     "checkout_branch": "Checkout branch",
     "checkout_done": "Checked out {{branch}}",
     "checkout_failed": "Checkout failed",
     "merge": "Merge",
-    "terminal_failed": "Terminal failed",
+    "terminal_failed": "Terminal failed: {{message}}",
+    "explorer_failed": "Explorer failed: {{message}}",
+    "ide_failed": "{{ide}} failed: {{message}}",
     "confirm_forget_title": "Forget \"{{name}}\"?",
     "confirm_forget_desc": "Recrest stops tracking this repository. The folder stays on disk — you can re-add it any time.",
     "confirm_delete_title": "Delete \"{{name}}\" from disk?",
     "confirm_delete_desc": "Moves \"{{path}}\" to your system trash and stops Recrest from tracking it. You can restore from trash.",
-    "confirm_delete_action": "Move to Trash"
+    "confirm_delete_action": "Move to Trash",
+    "confirm_delete_permanent_title": "Couldn't move to trash — delete permanently?",
+    "confirm_delete_permanent_desc": "\"{{path}}\" couldn't be moved to the system trash — it may be disabled for this location, or a file is in use. Permanently delete the folder instead? This cannot be undone.",
+    "confirm_delete_permanent_action": "Delete permanently"
   },
   "toast": {
     "reload": {
       "success": "Refreshed",
       "error": "Refresh failed: {{detail}}"
+    }
+  },
+  "pat": {
+    "required_scopes": "Required scopes",
+    "read_docs": "Read docs",
+    "create_token": "Create token",
+    "scopes_manual_hint": "Bitbucket app passwords don't accept scopes via URL. Tick the scopes listed above on the create page.",
+    "scope_label": {
+      "github": {
+        "repo": "repo — read your private repositories",
+        "read:user": "read:user — your profile",
+        "read:org": "read:org — organisations you belong to"
+      },
+      "gitlab": {
+        "read_api": "read_api — read the GitLab API",
+        "read_repository": "read_repository — read repository content",
+        "read_user": "read_user — read your profile"
+      },
+      "bitbucket": {
+        "account:read": "account:read — your account",
+        "repository:read": "repository:read — read repositories",
+        "pullrequest:read": "pullrequest:read — read pull requests"
+      }
     }
   },
   "states": {
@@ -126,26 +168,36 @@
   "view": {
     "dashboard": {
       "title": "Dashboard",
-      "meta": "{{count}} repos"
+      "meta_zero": "No repos",
+      "meta_one": "{{count}} repo",
+      "meta_other": "{{count}} repos"
     },
     "repos": {
       "title": "Repositories",
-      "meta": "{{count}} repos"
+      "meta_zero": "No repos",
+      "meta_one": "{{count}} repo",
+      "meta_other": "{{count}} repos"
     },
     "mrs": {
       "title": "Merge Requests",
-      "meta": "{{count}} open"
+      "meta_zero": "None open",
+      "meta_one": "{{count}} open",
+      "meta_other": "{{count}} open"
     },
     "mr": {
       "title": "Merge Request"
     },
     "changes": {
       "title": "Changes",
-      "meta": "{{count}} with uncommitted changes"
+      "meta_zero": "Everything is clean",
+      "meta_one": "{{count}} with uncommitted changes",
+      "meta_other": "{{count}} with uncommitted changes"
     },
     "branches": {
       "title": "Branches",
-      "meta": "across {{count}} repos"
+      "meta_zero": "across no repos",
+      "meta_one": "across {{count}} repo",
+      "meta_other": "across {{count}} repos"
     },
     "activity": {
       "title": "Activity",
@@ -195,15 +247,19 @@
   "dash": {
     "kpi": {
       "repositories": "Repositories",
-      "repositories_sub": "{{count}} with changes",
+      "repositories_sub_zero": "None with changes",
+      "repositories_sub_one": "{{count}} with changes",
+      "repositories_sub_other": "{{count}} with changes",
       "merge_requests": "Merge Requests",
-      "merge_requests_sub": "{{count}} draft",
+      "merge_requests_sub_zero": "No drafts",
+      "merge_requests_sub_one": "{{count}} draft",
+      "merge_requests_sub_other": "{{count}} drafts",
       "ahead_behind": "Ahead / behind",
       "ahead_behind_sub": "across all remotes",
       "commits": "Commits · {{days}}d",
-      "commits_sub": "peak {{count}}",
+      "commits_sub": "peak {{peak}}",
       "clean_repos": "Clean repos",
-      "clean_repos_sub": "{{count}} of {{total}} fully in sync"
+      "clean_repos_sub": "{{clean}} of {{total}} fully in sync"
     },
     "activity": {
       "title": "Activity · last {{days}} days",
@@ -211,17 +267,35 @@
       "commits_one": "{{count}} commit",
       "commits_other": "{{count}} commits",
       "span": {
-        "day": { "now": "today", "prev": "yesterday", "ago": "{{count}} days ago" },
-        "week": { "now": "this week", "prev": "last week", "ago": "{{count}} weeks ago" },
-        "month": { "now": "this month", "prev": "last month", "ago": "{{count}} months ago" }
+        "day": {
+          "now": "today",
+          "prev": "yesterday",
+          "ago_one": "{{count}} day ago",
+          "ago_other": "{{count}} days ago"
+        },
+        "week": {
+          "now": "this week",
+          "prev": "last week",
+          "ago_one": "{{count}} week ago",
+          "ago_other": "{{count}} weeks ago"
+        },
+        "month": {
+          "now": "this month",
+          "prev": "last month",
+          "ago_one": "{{count}} month ago",
+          "ago_other": "{{count}} months ago"
+        }
       }
     },
     "attention": {
       "title": "Needs your attention",
       "empty": "Everything is clean and in sync.",
-      "changed": "{{count}} changed",
+      "changed_one": "{{count}} changed",
+      "changed_other": "{{count}} changed",
       "behind_one": "{{count}} commit behind",
-      "behind_other": "{{count}} commits behind"
+      "behind_other": "{{count}} commits behind",
+      "count_one": "{{count}} item",
+      "count_other": "{{count}} items"
     },
     "empty": {
       "title": "No repositories yet",
@@ -246,19 +320,19 @@
       "fetch_all": "Fetch all",
       "clone": "Clone repo",
       "clone_tooltip": "Clone from a URL or import from GitHub / GitLab / Bitbucket",
-      "find": "Find across repos",
       "workspace": "Open workspace",
       "workspace_tooltip": "Open a multi-root IDE workspace with all scanned repos",
       "open_ide": "Open in IDE",
       "open_ide_tooltip": "Open the most recently active repo in your default IDE",
       "open_ide_error": "Could not open the repo in your IDE",
       "recent_commits": "Recent commits",
-      "create_branch": "Create branch",
       "pull_all": "Pull all",
-      "coming_soon": "Coming soon",
       "fetched_one": "Fetched {{count}} repo",
       "fetched_other": "Fetched {{count}} repos",
-      "fetch_all_error": "Fetch all failed"
+      "fetch_all_error": "Fetch all failed",
+      "pulled_one": "Pulled {{count}} repo",
+      "pulled_other": "Pulled {{count}} repos",
+      "pull_all_error": "Pull all failed"
     }
   },
   "titlebar": {
@@ -314,7 +388,7 @@
       "reviewers": "Reviewers",
       "files": "Files",
       "timeline": "Timeline",
-      "open_on_host": "Open on host"
+      "open_on_host": "Open in browser"
     },
     "filter_placeholder": "Filter merge requests…"
   },
@@ -335,6 +409,8 @@
     "branches": "branches",
     "branches_count_one": "{{count}} branch",
     "branches_count_other": "{{count}} branches",
+    "load_more_one": "+{{count}} entry",
+    "load_more_other": "+{{count}} entries",
     "loading": "Loading branches…",
     "empty": "No branches match your filter.",
     "search_placeholder": "Filter branches by name…",
@@ -354,16 +430,34 @@
       "fetch": "Fetch",
       "fetch_all": "Fetch all",
       "fetch_tooltip": "Fetch from all remotes",
-      "fetching": "Fetching…",
       "fetched": "Fetched {{repo}}",
-      "fetched_all": "Fetched all repos"
+      "fetched_all": "Fetched all repos",
+      "pulled": "Pulled",
+      "pushed": "Pushed",
+      "checked_out": "Switched to “{{branch}}”",
+      "delete": "Delete branch",
+      "deleted": "Deleted branch “{{branch}}”"
     },
     "row": {
       "upstream_tracking": "tracks {{upstream}}",
       "no_upstream": "no upstream"
+    },
+    "delete": {
+      "title": "Delete branch?",
+      "body": "The local branch “{{branch}}” will be deleted. After this it can only be recovered via the git reflog.",
+      "body_unmerged": "“{{branch}}” has commits that aren't on any upstream — they'll be lost for good if you delete it. Delete anyway?",
+      "confirm": "Delete"
     }
   },
   "activity": {
+    "relative": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "hours_ago_one": "{{count}}h ago",
+      "hours_ago_other": "{{count}}h ago",
+      "days_ago_one": "{{count}} day ago",
+      "days_ago_other": "{{count}} days ago"
+    },
     "range": {
       "preset_7d": "7 days",
       "preset_14d": "14 days",
@@ -401,7 +495,8 @@
     },
     "leaders": {
       "title": "Top contributors",
-      "sub": "last {{days}} days · {{count}} authors",
+      "sub_one": "last {{days}} days · {{count}} author",
+      "sub_other": "last {{days}} days · {{count}} authors",
       "empty": "No contributors in range.",
       "share": "{{pct}}% share"
     },
@@ -422,14 +517,17 @@
       "ci_failing_other": "{{count}} failing",
       "ci_none": "no check runs yet",
       "ci_runs": "{{passed}} / {{total}} runs",
-      "ci_legend_passed": "{{count}} passed",
-      "ci_legend_failed": "{{count}} failed",
-      "ci_legend_other": "{{count}} other"
+      "ci_legend_passed_one": "{{count}} passed",
+      "ci_legend_passed_other": "{{count}} passed",
+      "ci_legend_failed_one": "{{count}} failed",
+      "ci_legend_failed_other": "{{count}} failed",
+      "ci_legend_other_one": "{{count}} other",
+      "ci_legend_other_other": "{{count}} other"
     },
     "cards": {
       "chart_title": "Commit activity · {{days}} days",
-      "heatmap_title": "Weekday × hour heatmap",
-      "heatmap_sub": "when the team commits",
+      "heatmap_title": "Activity heatmap",
+      "heatmap_sub": "Commits by weekday & hour",
       "heatmap_none": "low",
       "heatmap_high": "high",
       "clock_title": "Activity clock",
@@ -451,7 +549,8 @@
       "ci_trend_sub": "daily % pass",
       "ci_trend_sub_repos_one": "across {{count}} repo",
       "ci_trend_sub_repos_other": "across {{count}} repos",
-      "ci_trend_sub_runs": "{{count}} runs",
+      "ci_trend_sub_runs_one": "{{count}} run",
+      "ci_trend_sub_runs_other": "{{count}} runs",
       "ci_trend_avg": "avg pass",
       "flaky_title": "Flakiest repos",
       "flaky_sub": "failure rate · last {{days}} days",
@@ -461,16 +560,20 @@
       "peak_label": "Peak hours",
       "age_days_one": "{{count}} day old",
       "age_days_other": "{{count}} days old",
-      "age_short": "{{count}}d",
+      "age_short_one": "{{count}}d",
+      "age_short_other": "{{count}}d",
       "ci_trend_sub_window": "last {{days}} days",
-      "stacked_axis_days_ago": "{{count}}d ago",
+      "stacked_axis_days_ago_one": "{{count}}d ago",
+      "stacked_axis_days_ago_other": "{{count}}d ago",
       "stacked_axis_today": "today",
       "commits_count_one": "{{count}} commit",
       "commits_count_other": "{{count}} commits",
       "commits_label": "commits",
       "heatmap_tooltip": "{{weekday}} {{hour}} — {{commits}}",
       "clock_tooltip": "{{range}} — {{commits}}",
-      "language_tooltip": "{{language}} — {{percent}}%"
+      "language_tooltip": "{{language}} — {{percent}}%",
+      "language_more_one": "+{{count}} more repo",
+      "language_more_other": "+{{count}} more repos"
     },
     "tooltip": {
       "ci_passed": "{{passed}}/{{total}} passed"
@@ -479,7 +582,8 @@
       "no_remote": "No remote URL for this commit",
       "failing_checks_one": "{{count}} failing check",
       "failing_checks_other": "{{count}} failing checks",
-      "passing": "{{count}} passing"
+      "passing_one": "{{count}} passing",
+      "passing_other": "{{count}} passing"
     },
     "insights": {
       "section_title": "Insights",
@@ -487,7 +591,8 @@
       "streak_sub": "Consecutive days with commits",
       "streak_value_days_one": "{{count}} day",
       "streak_value_days_other": "{{count}} days",
-      "streak_longest": "Longest: {{count}} ({{range}})",
+      "streak_longest_one": "Longest: {{count}} day ({{range}})",
+      "streak_longest_other": "Longest: {{count}} days ({{range}})",
       "trend_title": "Trend",
       "trend_sub": "Last {{days}} days vs previous",
       "trend_up": "More active",
@@ -507,7 +612,8 @@
     },
     "timeline": {
       "title": "History",
-      "sub": "{{count}} events across {{days}} days",
+      "sub_one": "{{count}} event across {{days}} days",
+      "sub_other": "{{count}} events across {{days}} days",
       "filter_all": "All",
       "filter_commits": "Commits",
       "filter_prs": "Merge requests",
@@ -519,25 +625,16 @@
       "chip_prs_merged_other": "{{count}} MRs merged",
       "chip_prs_opened_one": "{{count}} MR opened",
       "chip_prs_opened_other": "{{count}} MRs opened",
-      "chip_checks_failed": {
-        "github": {
-          "one": "{{count}} check failed",
-          "other": "{{count}} checks failed"
-        },
-        "gitlab": {
-          "one": "{{count}} pipeline failed",
-          "other": "{{count}} pipelines failed"
-        },
-        "bitbucket": {
-          "one": "{{count}} pipeline failed",
-          "other": "{{count}} pipelines failed"
-        },
-        "default": {
-          "one": "{{count}} check failed",
-          "other": "{{count}} checks failed"
-        }
-      },
-      "show_more": "Show {{count}} more"
+      "chip_checks_failed_github_one": "{{count}} check failed",
+      "chip_checks_failed_github_other": "{{count}} checks failed",
+      "chip_checks_failed_gitlab_one": "{{count}} pipeline failed",
+      "chip_checks_failed_gitlab_other": "{{count}} pipelines failed",
+      "chip_checks_failed_bitbucket_one": "{{count}} pipeline failed",
+      "chip_checks_failed_bitbucket_other": "{{count}} pipelines failed",
+      "chip_checks_failed_default_one": "{{count}} check failed",
+      "chip_checks_failed_default_other": "{{count}} checks failed",
+      "show_more_one": "Show {{count}} more",
+      "show_more_other": "Show {{count}} more"
     }
   },
   "settings": {
@@ -547,7 +644,7 @@
       "integrations": "Integrations",
       "git": "Git config",
       "shortcuts": "Shortcuts",
-      "storage": "Storage",
+      "storage": "Updates & Diagnostics",
       "about": "About",
       "developer": "Developer"
     },
@@ -715,20 +812,28 @@
       "title": "Shortcuts",
       "intro": "Keyboard bindings.",
       "navigation": "Navigation",
-      "jump": "Jump to repo",
-      "pull": "Pull current branch",
-      "fetch_all": "Fetch all",
-      "toggle_detail": "Toggle detail pane",
-      "next_prev_repo": "Next / previous repo",
-      "open_editor": "Open in editor",
-      "open_terminal": "Open terminal",
-      "editor": "Editor & terminal",
-      "git": "Git operations",
-      "open_settings": "Open settings"
+      "actions": "Actions",
+      "go_dashboard": "Go to dashboard",
+      "go_repos": "Go to repositories",
+      "go_merge_requests": "Go to merge requests",
+      "go_changes": "Go to changes",
+      "go_branches": "Go to branches",
+      "go_activity": "Go to activity",
+      "go_settings": "Open settings",
+      "search": "Search",
+      "toggle_sidebar": "Toggle sidebar",
+      "edit": "Change shortcut",
+      "reset": "Reset to default",
+      "reset_all": "Reset all to defaults",
+      "recording": "Press keys…",
+      "recording_hint": "Esc to cancel",
+      "conflict": "Already used by \"{{name}}\"",
+      "need_modifier": "Must include {{mod}}",
+      "custom": "Custom"
     },
     "storage": {
-      "title": "Storage",
-      "intro": "Where Recrest keeps caches, indexes, and clone targets.",
+      "title": "Updates & Diagnostics",
+      "intro": "Update preferences and anonymous diagnostics.",
       "crash_reporting": "Crash reporting",
       "crash_reporting_info": "Crash reports are sent over HTTPS to our error tracker. No personal data is included.",
       "crash_reporting_sub": "Send anonymised crash reports to help us fix bugs.",
@@ -744,6 +849,12 @@
       "build_mode": "Build",
       "build_time": "Build time",
       "commit": "Commit",
+      "contributors_title": "Contributors",
+      "contributors_sub": "Everyone who has shipped commits to Recrest, ranked by contribution count — live from GitHub.",
+      "contributors_loading": "Loading contributors…",
+      "contributors_error": "Couldn't load contributors right now.",
+      "contributors_commit_unit_one": "commit",
+      "contributors_commit_unit_other": "commits",
       "git": "System git",
       "license": "License",
       "link_github": "Source code",
@@ -784,7 +895,7 @@
       "code_font": "Code font",
       "code_font_sub": "Monospace font for code surfaces — diffs, snippets and file contents.",
       "code_ligatures": "Code ligatures",
-      "code_ligatures_sub": "How programming ligatures (=>, !=, >=) render in code. Stylistic also enables the font's alternative glyph shapes.",
+      "code_ligatures_sub": "Render programming ligatures like =>, != and >= in code.",
       "custom_fonts": "Custom fonts",
       "custom_fonts_sub": "Upload a .ttf, .otf or .woff2 to use it as your UI or code font.",
       "custom_fonts_upload": "Upload font",
@@ -795,16 +906,43 @@
       "font_sub": "Typeface used across the interface. OpenDyslexic is a dyslexia-friendly font.",
       "language": "Language",
       "language_sub": "Interface language.",
+      "date_format": "Date format",
+      "date_format_sub": "How timestamps are shown across the app.",
+      "date_format_opt": {
+        "relative": "Relative",
+        "numeric": "Numeric",
+        "medium": "Medium",
+        "full": "Full",
+        "iso": "ISO 8601"
+      },
+      "time_format": "Time format",
+      "time_format_sub": "12-hour clock (2:32 PM) or 24-hour clock (14:32).",
+      "time_format_12h": "12-hour",
+      "time_format_24h": "24-hour",
+      "week_start": "Week starts on",
+      "week_start_sub": "First day of the week for the activity heatmap and date pickers.",
+      "week_start_monday": "Monday",
+      "week_start_sunday": "Sunday",
+      "country": "Country",
+      "country_sub": "Sets the regional format (date order, number separators). Defaults to the language above.",
+      "country_follow_language": "Follow language",
+      "timezone": "Time zone",
+      "timezone_sub": "Time zone used to display timestamps.",
+      "timezone_follow_system": "Follow system ({{zone}})",
       "polling_interval": "Polling interval (minutes)",
       "polling_interval_hint": "How often Recrest refreshes git state in the background.",
       "theme": "Theme",
-      "theme_sub": "Light, dark, or follow the OS."
+      "theme_sub": "Light, dark, or follow the OS.",
+      "translucency": "Translucency",
+      "translucency_sub": "Let the desktop show through the window using the OS vibrancy effect.",
+      "translucency_intensity": "Background opacity",
+      "translucency_intensity_sub": "How opaque the window background stays over the blurred desktop. 100 % = solid theme, 0 % = fully see-through.",
+      "translucency_unsupported": "Not supported on this platform."
     },
     "ide": {
       "auto_system_default": "System default ({{ide}})",
-      "detection_hint": "We didn't find a known IDE on $PATH. Install one or pick manually below.",
-      "no_ide_detected": "No IDE detected",
-      "not_installed_tag": "not installed"
+      "detection_hint": "We didn't find any IDE on this system. Install one and reopen settings.",
+      "no_ide_detected": "No IDE detected"
     },
     "notifications": {
       "ci_failed": "CI failed",
@@ -820,9 +958,11 @@
       "bitbucket_username_hint": "Bitbucket app-passwords require the username separately.",
       "bitbucket_username_label": "Bitbucket username",
       "bitbucket_username_placeholder": "your-bitbucket-username",
-      "connect_browser": "Connect via browser",
       "connect_with": "Connect with {{name}}",
       "disconnect": "Disconnect",
+      "disconnect_confirm_title": "Disconnect {{name}}?",
+      "disconnect_confirm_description": "We'll forget the stored token and stop fetching merge requests from {{name}}. Your local repositories aren't touched.",
+      "disconnect_confirm_action": "Disconnect",
       "edit_base_url": "Change API base URL",
       "paste_here": "Paste the token you just created — we store it encrypted in your OS keychain.",
       "ssh_key_label": "SSH key",
@@ -831,6 +971,26 @@
       "ssh_key_hint": "Default private key for this provider's SSH remotes. A repository can override it in its detail view.",
       "required_scopes": "Required scopes",
       "save": "Save",
+      "verify": "Verify connection",
+      "verified_as": "Verified as {{login}}",
+      "back_to_default": "Reset to default",
+      "test_connection": "Test connection",
+      "test": {
+        "ok": "Reachable. {{providerName}} detected.",
+        "ok_version": "Reachable. {{providerName}} {{version}} detected.",
+        "unreachable": "Could not reach this host. Check the URL and your network connection.",
+        "not_provider": "Reachable, but the response doesn't look like {{providerName}}. Double-check the URL."
+      },
+      "verifying": "Verifying…",
+      "error": {
+        "network": "Could not reach the host. Check the URL and your network connection.",
+        "tls": "TLS handshake failed — the certificate could not be validated.",
+        "unauthorized": "The token was rejected. Double-check that you copied it correctly and that it hasn't expired.",
+        "forbidden": "The token is valid but lacks the required scopes: {{detail}}",
+        "server": "The provider returned a {{status}} server error. Try again in a few minutes.",
+        "not_provider": "The host responded, but the answer didn't look like the expected provider ({{hint}}).",
+        "unknown": "Something went wrong: {{detail}}"
+      },
       "token_create_link": "Create a {{name}} token",
       "token_create_link_aria": "Open {{name}} token creation page in browser",
       "self_hosted": "Self-hosted",
@@ -840,6 +1000,12 @@
     },
     "saved": "Settings saved",
     "sections": {
+      "language": "Language",
+      "language_sub": "Pick the language Recrest uses across the interface.",
+      "design": "Design",
+      "design_sub": "Theme, accent, translucency, and overall interface size.",
+      "fonts": "Typography",
+      "fonts_sub": "UI font, code font, ligatures, and uploaded custom typefaces.",
       "desktop": "Desktop",
       "notifications": "Notifications",
       "system": "System",
@@ -860,7 +1026,11 @@
       "profile_label": "Terminal profile",
       "profile_hint": "Profile name passed to the terminal (e.g. wt.exe -p).",
       "custom_command_label": "Custom command",
-      "custom_command_hint": "Full command to run; the repo path is the working directory."
+      "custom_command_hint": "Full command to run; the repo path is the working directory.",
+      "test_button": "Test",
+      "test_success": "Command launched successfully.",
+      "test_failure": "Command failed: {{error}}",
+      "test_empty_command": "Please enter a command first."
     },
     "updates": {
       "check_now_label": "Check for updates",
@@ -914,22 +1084,26 @@
       "test_body": "Test notification from Recrest"
     },
     "burst": {
-      "new_pr": "{{count}} new merge requests",
-      "ci_failed": "{{count}} CI failures",
-      "merge_ready": "{{count}} merge requests are ready"
+      "new_pr_one": "{{count}} new merge request",
+      "new_pr_other": "{{count}} new merge requests",
+      "ci_failed_one": "{{count}} CI failure",
+      "ci_failed_other": "{{count}} CI failures",
+      "merge_ready_one": "{{count}} merge request is ready",
+      "merge_ready_other": "{{count}} merge requests are ready"
     },
     "test": "Test",
     "test_sent": "Test notification sent"
   },
   "ssh": {
     "title": "SSH key",
-    "description": "Override the SSH key for this repository's fetch/pull/push. Leave on ssh-agent to use the default key (set in Settings → Accounts) or your global config.",
-    "use_agent_option": "ssh-agent (default)",
-    "use_agent_sub": "Use your global SSH setup — no specific key",
+    "description": "Override the SSH key for this repository's fetch/pull/push. Without a selection, Recrest uses your default key (Settings → Accounts) or your global git config.",
+    "auto_option": "Automatic",
+    "auto_sub": "Uses your default key, or your global git config",
+    "default_badge": "Default",
     "custom_key": "Custom key",
     "browse": "Browse for a key…",
     "key_set": "SSH key set for this repository",
-    "use_agent": "Using ssh-agent for this repository",
+    "auto_set": "Using your default key for this repository",
     "failed": "Couldn't update SSH key",
     "passphrase_placeholder": "Key passphrase (kept in memory only)",
     "unlock": "Unlock",

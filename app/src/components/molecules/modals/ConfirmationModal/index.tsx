@@ -11,6 +11,11 @@ export interface ConfirmationModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /** Keeps the dialog open with a spinner on the confirm button while a slow
+   *  confirm action (e.g. trashing a repo's folder) runs. Disables both
+   *  buttons and blocks backdrop/ESC dismissal so the in-flight action can't
+   *  be abandoned mid-way. */
+  confirmLoading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -22,6 +27,7 @@ function ConfirmationModal({
   confirmLabel,
   cancelLabel,
   destructive,
+  confirmLoading = false,
   onCancel,
   onConfirm,
 }: ConfirmationModalProps) {
@@ -33,13 +39,14 @@ function ConfirmationModal({
       customTitle={title}
       subtitle={description}
       textCapitalize={false}
-      onCloseModal={onCancel}
+      onCloseModal={confirmLoading ? () => {} : onCancel}
       data-testid={TEST_IDS.confirmDialog.root}
       actionsChildren={
         <>
           <GeneralButton
             variant="ghost"
             onClick={onCancel}
+            disabled={confirmLoading}
             data-testid={TEST_IDS.confirmDialog.cancel}
           >
             {cancelLabel ?? t("actions.cancel")}
@@ -47,6 +54,7 @@ function ConfirmationModal({
           <GeneralButton
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
+            loading={confirmLoading}
             data-testid={TEST_IDS.confirmDialog.confirm}
           >
             {confirmLabel ?? t("actions.confirm")}

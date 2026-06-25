@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
 
 const MONO = MONO_STACK;
 
@@ -86,7 +87,7 @@ export const TitleInput = styled("input")(({ theme }) => ({
   padding: "0 12px",
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: opaqueSurfaceBg(theme),
   color: theme.palette.text.primary,
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,

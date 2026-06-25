@@ -24,7 +24,7 @@ process.stderr.write(
     `  required: ${required}  (from package.json engines.node)\n` +
     `  active:   ${current}\n\n` +
     `${yellow}Fix it:${reset}\n` +
-    `  nvm use            # picks up .nvmrc (22.20.0)\n` +
-    `  # or: nvm install  # if 22.20.0 isn't installed yet\n\n`,
+    `  nvm use                 # picks up .nvmrc (${required})\n` +
+    `  # or: nvm install ${required}  # if it isn't installed yet\n\n`,
 );
 process.exit(1);

@@ -2,6 +2,34 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] — 2026-06-25
+
+Minor release: dashboard polish, a more responsive Activity/Statistics surface, and a sweep of dependency + build-tooling modernisation.
+
+### Added
+
+- **"Pull all" quick action.** The dashboard quick-actions grid gains a working "Pull all" tile next to "Fetch all" — it pulls every scanned repo's current branch in one go (`git_pull_all`). The dead "Create branch" tile, which only navigated to the Branches page, was removed.
+
+### Changed
+
+- **Activity bars restyled.** The dashboard activity chart fills each bar with a vertical primary-colour gradient (brighter at the top), and hovering a bar no longer inflates it to full height — the bar keeps its real value and only brightens with a soft glow. The tooltip now anchors directly above each bar and rides up/down with the bar's height.
+- **Language-mix card is responsive.** The "Languages" donut scales with the card width instead of starving the legend, so the per-language percentages stay legible down to the minimum window width.
+- **Quick-action tiles fill the card.** The quick-actions buttons grow to fill the card height instead of leaving dead space below them.
+- **Build tooling modernised.** Vite config moved off the deprecated SWC / tsconfig-paths plugins onto the oxc / rolldown options (#83); `@tauri-apps/api` bumped to `^2.11.0` to match the Rust crate (#84). The in-app "About" version is now read from `package.json` at build time (#82).
+- **Dependencies.** Major and minor dependency groups bumped across npm and Cargo (#75–#79).
+
+### Fixed
+
+- **Windows minimum window size.** The window now enforces its 1100×720 minimum at runtime, so it can no longer be resized below the supported desktop floor — the config minimum was being dropped by the dev-config overlay's by-label window-array merge.
+
+### Landing page
+
+- Enhanced privacy policy and accessibility statement.
+
+### Known gaps
+
+- Unchanged from 0.9.x: auth is PAT / app-password only (OAuth scaffolded, not user-facing); installers remain unsigned, so macOS Gatekeeper / Windows SmartScreen warn on first launch.
+
 ## [0.9.1] — 2026-06-10
 
 Patch release on top of `0.9.0`: fixes a Windows-only regression in the packaged build and finishes the Windows installer branding.
@@ -187,6 +215,7 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.10.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.0
 [0.9.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.1
 [0.9.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.0
 [0.7.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.7.0

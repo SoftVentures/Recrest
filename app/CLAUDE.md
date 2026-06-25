@@ -56,7 +56,7 @@ Strict flags that bite: `noUncheckedIndexedAccess` (array/object index access re
 
 Two icon trees live under `src-tauri/`, each split into four platform subfolders:
 
-```text
+```
 src-tauri/icons/                 (production)
 ├── mac/      icon.icns, icon-light.icns, icon-dark.icns
 ├── windows/  icon.ico, icon-light.png, icon-dark.png, Square*Logo.png, StoreLogo.png
@@ -117,7 +117,7 @@ Full reorganisation plan: `docs/plans/PLAN_COMPONENTS_REFACTOR.md`. The rules be
 
 ### Folder layout
 
-```text
+```
 ComponentName/
 ├── index.tsx                  ← component, props interface, default export
 ├── ComponentName.styles.tsx   ← when styled-blocks exceed ~200 LOC

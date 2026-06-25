@@ -35,3 +35,53 @@ export const PROVIDER_CREATE_TOKEN_URLS: Record<ProviderId, string> = {
     "https://gitlab.com/-/user_settings/personal_access_tokens?name=Recrest&scopes=read_api,read_user,read_repository",
   bitbucket: "https://bitbucket.org/account/settings/app-passwords/new",
 };
+
+/**
+ * Self-contained PAT bootstrapping info per provider — docs URL, a builder
+ * for the create-token deep link with Recrest's required scopes prefilled,
+ * the list of scopes, and a flag for whether the provider honours URL-level
+ * scope hints (Bitbucket app passwords don't).
+ *
+ * Used by the shared `PatHelpPanel` molecule the onboarding wizard renders,
+ * and by Settings → Accounts. Keeping this in `@recrest/shared` lets the
+ * tests workspace inspect the same source of truth.
+ */
+export const PROVIDER_PAT_INFO = {
+  github: {
+    docsUrl:
+      "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
+    createUrl: (_baseUrl: string, scopes: readonly string[]) =>
+      `https://github.com/settings/tokens/new?description=Recrest&scopes=${scopes.join(",")}`,
+    requiredScopes: ["repo", "read:user", "read:org"] as const,
+    supportsUrlScopes: true,
+  },
+  gitlab: {
+    docsUrl: "https://docs.gitlab.com/user/profile/personal_access_tokens/",
+    createUrl: (baseUrl: string, scopes: readonly string[]) => {
+      // Callers pass the API URL (`https://gitlab.com/api/v4`) — the
+      // token-creation page lives at the host root, so strip the API suffix
+      // before assembling the deep link.
+      const trimmed =
+        baseUrl && baseUrl.trim().length > 0
+          ? baseUrl.trim().replace(/\/$/, "")
+          : "https://gitlab.com";
+      const root = trimmed.endsWith("/api/v4") ? trimmed.slice(0, -"/api/v4".length) : trimmed;
+      return `${root}/-/user_settings/personal_access_tokens?name=Recrest&scopes=${scopes.join(",")}`;
+    },
+    requiredScopes: ["read_api", "read_repository", "read_user"] as const,
+    supportsUrlScopes: true,
+  },
+  bitbucket: {
+    docsUrl: "https://support.atlassian.com/bitbucket-cloud/docs/create-an-app-password/",
+    createUrl: (_baseUrl: string, _scopes: readonly string[]) =>
+      "https://bitbucket.org/account/settings/app-passwords/new",
+    requiredScopes: ["account:read", "repository:read", "pullrequest:read"] as const,
+    supportsUrlScopes: false,
+  },
+} as const;
+
+/** Narrowed alias matching the keys of `PROVIDER_PAT_INFO`. Always identical
+ *  to `ProviderId`; declared separately so the molecule prop type can read
+ *  "the providers PatHelpPanel can render" without leaking the broader id
+ *  union. */
+export type ProviderKey = keyof typeof PROVIDER_PAT_INFO;

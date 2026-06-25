@@ -4,10 +4,14 @@
 # release but keeps the git tag, so assets get rebuilt from scratch without
 # having to bump the version or rewrite the tag.
 #
-# Builds Tauri installers for Linux / Windows / macOS, bündelt sie pro OS in
-# ein ZIP (`recrest-<tag>-windows.zip` / `-macos.zip` / `-linux.zip`) und lädt
-# diese als GitHub-Release-Assets hoch. Signing/notarization features activate
-# automatically when the matching secrets are populated.
+# Builds Tauri installers per OS+arch (macOS arm64/x64, Windows x64/arm64,
+# Linux x64) and uploads each as an individually, friendly-named GitHub-Release
+# asset (`recrest-<tag>-mac-arm64.dmg`, `recrest-<tag>-windows-x64.exe`, …) that
+# the landingpage download page links directly. No per-OS ZIP wrapper.
+# Updater payloads (`*.msi` / `*.app.tar.gz` / `*.AppImage` + `*.sig` +
+# `latest.json`) stay under their tauri-default names so the auto-updater keeps
+# resolving. Signing/notarization features activate automatically when the
+# matching secrets are populated.
 name: 📦 Release (Tauri)
 
 on:
@@ -115,21 +119,56 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS disables LTO (`off`) while Windows/Linux keep fat LTO. The
-          # `window-vibrancy` crate (Glassy backdrop) registers the macOS-only
-          # `NSVisualEffectView` Obj-C class; under fat LTO the universal build
+          # Per-arch legs so the download page can link individual installers
+          # (no per-OS ZIP wrapper anymore). `os` + `arch` drive the rename step
+          # that maps each tauri-default bundle name to the contract asset name.
+          #
+          # macOS builds disable LTO (`off`) while Windows/Linux keep fat LTO.
+          # The `window-vibrancy` crate (Glassy backdrop) registers the
+          # macOS-only `NSVisualEffectView` Obj-C class; under fat LTO the build
           # aborts with `failed to load bitcode … window_vibrancy` +
           # `__CLASS_NSVisualEffectViewTagged: symbol multiply defined`. The
           # symbol doesn't exist on Win/Linux, so their fat-LTO build is fine.
-          # Scoped via the CARGO_PROFILE_RELEASE_LTO env override below so the
-          # shipped Win/Linux binaries keep full LTO.
+          # (Previously the single `--target universal-apple-darwin` leg; the
+          # reasoning still applies to both per-arch mac legs.) Scoped via the
+          # CARGO_PROFILE_RELEASE_LTO env override below so the shipped
+          # Win/Linux binaries keep full LTO.
           - platform: macos-latest
-            args: "--target universal-apple-darwin"
+            os: mac
+            arch: arm64
+            rustTarget: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+            releaseLto: "off"
+          - platform: macos-latest
+            os: mac
+            arch: x64
+            rustTarget: x86_64-apple-darwin
+            args: "--target x86_64-apple-darwin"
             releaseLto: "off"
           - platform: ubuntu-22.04
+            os: linux
+            arch: x64
+            rustTarget: ""
             args: ""
             releaseLto: "fat"
           - platform: windows-latest
+            os: windows
+            arch: x64
+            rustTarget: ""
+            args: ""
+            releaseLto: "fat"
+          # Native arm64 Windows runner. `windows-11-arm` is a GitHub-hosted
+          # runner that builds Tauri/WebView2 natively for aarch64, which is far
+          # more reliable than cross-compiling from x64. CAVEAT: availability of
+          # `windows-11-arm` varies by plan/region and it has historically been
+          # in (public) preview — if a run cannot get this runner the leg is
+          # skipped harmlessly (continue-on-error below) and the arm64 asset can
+          # be attached from a later re-run. The aarch64 MSVC target is added on
+          # this leg only via matrix.rustTarget.
+          - platform: windows-11-arm
+            os: windows
+            arch: arm64
+            rustTarget: aarch64-pc-windows-msvc
             args: ""
             releaseLto: "fat"
     runs-on: ${{ matrix.platform }}
@@ -150,7 +189,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.rustTarget }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -256,17 +295,96 @@ jobs:
           args: ${{ matrix.args }}
           projectPath: ./app
 
+      # Publish the per-arch installers under the download-page contract names.
+      # tauri-action already uploaded the bundles under their default names
+      # (e.g. `Recrest_0.9.1_aarch64.dmg`); here we locate this leg's bundle
+      # output, copy/rename each to the contract name, and upload with
+      # --clobber. The original tauri-named *installers* (.dmg/.exe/.deb/.rpm)
+      # are deleted later by the `prune` job; the updater payloads
+      # (.msi/.app.tar.gz/.AppImage + .sig + latest.json) are KEPT under their
+      # tauri names because `latest.json` references them by those exact names —
+      # renaming them would break the auto-updater. The Linux AppImage is both
+      # the updater payload AND a download-page asset, so it is COPIED (not
+      # moved): the tauri-named original stays for the updater, the friendly
+      # copy serves the download page.
+      #
+      # Tauri-default → contract filename map (productName "Recrest"; ${V} is the
+      # package.json version, e.g. 0.9.1; ${TAG} = v${V}):
+      #   mac arm64   Recrest_${V}_aarch64.dmg          → recrest-${TAG}-mac-arm64.dmg
+      #   mac x64     Recrest_${V}_x64.dmg              → recrest-${TAG}-mac-x64.dmg
+      #   win x64     Recrest_${V}_x64-setup.exe        → recrest-${TAG}-windows-x64.exe
+      #   win arm64   Recrest_${V}_arm64-setup.exe      → recrest-${TAG}-windows-arm64.exe
+      #   linux x64   Recrest_${V}_amd64.AppImage       → recrest-${TAG}-linux-x64.AppImage
+      #   linux x64   Recrest_${V}_amd64.deb            → recrest-${TAG}-linux-x64.deb
+      #   linux x64   Recrest-${V}-1.x86_64.rpm         → recrest-${TAG}-linux-x64.rpm
+      # We discover files by extension within the bundle tree rather than
+      # hard-coding the version/arch tokens, so a tauri version bump or arch-
+      # token change can't silently produce a mis-named asset.
+      - name: Publish contract-named installers
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          REPO: ${{ github.repository }}
+          OS: ${{ matrix.os }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -uo pipefail
+          BUNDLE_ROOT='app/src-tauri/target'
+          rc=0
+
+          # $1 = source file (may not exist), $2 = contract basename.
+          # Copies (never moves) so updater payloads stay in place; uploads with
+          # retries to absorb the transient GitHub 401 seen mid-sequence on the
+          # large AppImage upload.
+          publish() {
+            local src="$1" dest="$2"
+            if [ -z "$src" ] || [ ! -f "$src" ]; then
+              echo "::warning::expected bundle not found for $dest (src='$src')"
+              return 0
+            fi
+            cp "$src" "$dest"
+            local ok=0
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$TAG" "$dest" --clobber --repo "$REPO"; then
+                echo "✓ $dest"; ok=1; break
+              fi
+              echo "  upload attempt $attempt for $dest failed; retry in $((attempt * 10))s"
+              sleep $((attempt * 10))
+            done
+            [ "$ok" -eq 1 ] || { echo "::error::could not upload $dest after retries"; rc=1; }
+            rm -f "$dest"
+          }
+
+          # First file matching the extension under the bundle tree.
+          find_one() {
+            find "$BUNDLE_ROOT" -type f -path '*/release/bundle/*' -name "$1" 2>/dev/null | head -n1
+          }
+
+          case "$OS-$ARCH" in
+            mac-arm64)     publish "$(find_one '*.dmg')"       "recrest-${TAG}-mac-arm64.dmg" ;;
+            mac-x64)       publish "$(find_one '*.dmg')"       "recrest-${TAG}-mac-x64.dmg" ;;
+            windows-x64)   publish "$(find_one '*-setup.exe')" "recrest-${TAG}-windows-x64.exe" ;;
+            windows-arm64) publish "$(find_one '*-setup.exe')" "recrest-${TAG}-windows-arm64.exe" ;;
+            linux-x64)
+              publish "$(find_one '*.AppImage')" "recrest-${TAG}-linux-x64.AppImage"
+              publish "$(find_one '*.deb')"      "recrest-${TAG}-linux-x64.deb"
+              publish "$(find_one '*.rpm')"      "recrest-${TAG}-linux-x64.rpm"
+              ;;
+            *) echo "::error::unmapped matrix leg $OS-$ARCH"; rc=1 ;;
+          esac
+          exit $rc
+
       # Backstop for tauri-action's asset upload, which intermittently returns
       # a transient GitHub 401 ("Requires authentication") mid-sequence — seen
       # on the ~100 MB Linux AppImage while the smaller deb/rpm went through.
-      # The bundles are already built locally at this point, so re-upload every
-      # produced installer/updater artifact with --clobber (idempotent) and
-      # retries, guaranteeing the draft has every asset the repackage job needs
-      # even when the action's own upload flaked. A no-op when uploads
-      # succeeded. Runs always() so a failed action upload doesn't skip it.
-      # Globs match exactly the artifact set tauri-action ships (no standalone
-      # .exe — only its .sig), so the repackaged per-OS ZIPs are unchanged.
-      - name: Backstop — ensure installers are on the release
+      # Narrowed to UPDATER PAYLOADS only (.msi / .app.tar.gz / .AppImage / .sig)
+      # because those must stay on the release under their tauri-default names
+      # for `latest.json` to resolve. The download-page installers are handled
+      # by the "Publish contract-named installers" step above. Runs always() so
+      # a failed action upload doesn't skip it; idempotent --clobber + retries.
+      - name: Backstop — ensure updater payloads are on the release
         if: always()
         shell: bash
         env:
@@ -275,7 +393,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           # mapfile is unavailable on the macOS runner's bash 3.2 — use a
-          # process-substitution read loop, which works on all three OSes.
+          # process-substitution read loop, which works on all OSes.
           set -uo pipefail
           rc=0
           found=0
@@ -291,121 +409,46 @@ jobs:
             done
             [ "$ok" -eq 1 ] || { echo "::error::could not upload $(basename "$f") after retries"; rc=1; }
           done < <(find app/src-tauri/target -type f -path '*/release/bundle/*' \
-            \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
-               -o -name '*.msi' -o -name '*.dmg' -o -name '*.tar.gz' \
+            \( -name '*.AppImage' -o -name '*.msi' -o -name '*.tar.gz' \
                -o -name '*.sig' \) 2>/dev/null)
-          [ "$found" -eq 1 ] || echo "No bundle artifacts found under app/src-tauri/target — nothing to backstop."
+          [ "$found" -eq 1 ] || echo "No updater payloads found under app/src-tauri/target — nothing to backstop."
           exit $rc
 
-  # Lädt alle Einzel-Installer vom Draft-Release runter, packt sie per OS in
-  # ein ZIP (`recrest-<tag>-windows.zip` usw.), lädt die ZIPs hoch und entfernt
-  # die ursprünglichen Einzel-Assets, damit die Release-Seite drei klare
-  # Download-Pakete statt einer langen Dateiliste zeigt.
-  repackage:
-    name: Repackage into per-OS ZIPs
+  # Removes the tauri-default-named INSTALLERS that tauri-action uploaded
+  # alongside the contract-named copies, so the release page shows exactly one
+  # friendly asset per arch instead of duplicate names. Updater payloads and
+  # their signatures are KEPT untouched under their tauri names because
+  # `latest.json` references them by those exact names — deleting/renaming them
+  # would break the auto-updater.
+  #
+  # Keep (never delete):
+  #   recrest-v*                      — the download-page contract assets
+  #   *.msi / *.app.tar.gz            — Windows / macOS updater payloads
+  #   *.AppImage                      — Linux updater payload (also a download
+  #                                     asset, but its tauri-named original must
+  #                                     stay for the updater)
+  #   *.sig                           — minisign signatures for updater payloads
+  #   latest.json                     — updater manifest
+  #   SHA256SUMS.txt                  — checksums file (checksums job)
+  # Delete (tauri-named duplicates now superseded by contract names):
+  #   Recrest_*.dmg, Recrest_*-setup.exe, Recrest_*.deb, Recrest*.rpm
+  prune:
+    name: Prune tauri-named installer duplicates
     needs: [resolve, build]
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.resolve.outputs.tag }}
     steps:
-      - name: Download release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p dl
-          gh release download "$TAG" \
-            --repo "${{ github.repository }}" \
-            --dir dl \
-            --pattern '*.dmg' \
-            --pattern '*.msi' \
-            --pattern '*.exe' \
-            --pattern '*.AppImage' \
-            --pattern '*.deb' \
-            --pattern '*.rpm' \
-            --pattern '*.app.tar.gz' \
-            --pattern '*.sig' \
-            --pattern 'latest.json' \
-            || true
-          ls -la dl || true
-
-      - name: Group files per OS and zip
-        id: zip
-        run: |
-          set -euo pipefail
-          mkdir -p stage/windows stage/macos stage/linux
-
-          shopt -s nullglob
-          for f in dl/*.msi dl/*.exe; do
-            mv "$f" stage/windows/
-          done
-          for f in dl/*.dmg dl/*.app.tar.gz; do
-            mv "$f" stage/macos/
-          done
-          for f in dl/*.AppImage dl/*.deb dl/*.rpm; do
-            mv "$f" stage/linux/
-          done
-
-          mkdir -p out
-          produced=()
-          for os in windows macos linux; do
-            if [ -n "$(ls -A "stage/$os" 2>/dev/null)" ]; then
-              zip_name="recrest-${TAG}-${os}.zip"
-              (cd stage && zip -r "../out/$zip_name" "$os")
-              produced+=("out/$zip_name")
-              echo "built: $zip_name"
-            else
-              echo "skip: no assets for $os"
-            fi
-          done
-
-          if [ "${#produced[@]}" -eq 0 ]; then
-            echo "no per-OS zips produced — leaving release assets untouched"
-            echo "uploaded=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "uploaded=true" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "${produced[@]}" > zips.list
-
-      - name: Upload per-OS ZIPs
-        if: steps.zip.outputs.uploaded == 'true'
+      - name: Delete tauri-named installer duplicates
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Explicit per-file loop with visible logging. An earlier `xargs -a
-          # zips.list gh release upload ...` version occasionally completed
-          # silently without actually publishing the zips, leaving 404s on
-          # the release page. This loop makes each upload observable and fails
-          # loudly on any individual upload error.
-          while IFS= read -r zipfile; do
-            [ -n "$zipfile" ] || continue
-            echo "uploading: $zipfile"
-            gh release upload "$TAG" "$zipfile" \
-              --repo "${{ github.repository }}" \
-              --clobber
-          done < zips.list
-
-      - name: Prune single-installer assets (keep updater + zip + checksums)
-        if: steps.zip.outputs.uploaded == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          # Iterate over the actual release assets (not dl/, which was drained
-          # by the zip step) and keep only what the updater / download flow
-          # still needs:
-          #   *.msi          — Windows updater payload (tauri-action updater bundle)
-          #   *.app.tar.gz   — macOS updater payload
-          #   *.AppImage     — Linux updater payload
-          #   *.sig          — Minisign signatures for updater payloads
-          #   latest.json    — updater manifest
-          #   *.zip          — per-OS packages users actually download
-          #   SHA256SUMS.txt — checksums file added by the `checksums` job
-          # Everything else (.dmg / .deb / .rpm / .exe) is bundled inside the
-          # per-OS ZIP and duplicates the download list — remove to keep the
-          # release page focused.
-          keep_patterns=("*.msi" "*.app.tar.gz" "*.AppImage" "*.sig" "latest.json" "*.zip" "SHA256SUMS.txt")
+          # Anything matching a keep pattern survives; the remaining .dmg/.exe/
+          # .deb/.rpm are the tauri-named duplicates we re-published as
+          # recrest-v* and can remove. (The contract assets all start with
+          # "recrest-v" so they match the keep pattern first.)
+          keep_patterns=("recrest-v*" "*.msi" "*.app.tar.gz" "*.AppImage" "*.sig" "latest.json" "SHA256SUMS.txt")
           assets="$(gh release view "$TAG" \
             --repo "${{ github.repository }}" \
             --json assets \
@@ -428,12 +471,12 @@ jobs:
 
   checksums:
     name: Checksums
-    needs: [resolve, repackage]
+    needs: [resolve, prune]
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.resolve.outputs.tag }}
     steps:
-      - name: Download per-OS zips
+      - name: Download per-arch installers
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -441,16 +484,22 @@ jobs:
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --dir assets \
-            --pattern '*.zip' \
+            --pattern 'recrest-v*.dmg' \
+            --pattern 'recrest-v*.exe' \
+            --pattern 'recrest-v*.AppImage' \
+            --pattern 'recrest-v*.deb' \
+            --pattern 'recrest-v*.rpm' \
             || true
+          ls -la assets || true
       - name: Compute SHA256SUMS
         run: |
           cd assets
-          if compgen -G "*.zip" > /dev/null; then
-            sha256sum *.zip > SHA256SUMS.txt
+          # Hash the published per-arch installers (no ZIPs anymore).
+          if compgen -G "recrest-v*" > /dev/null; then
+            sha256sum recrest-v* > SHA256SUMS.txt
             cat SHA256SUMS.txt
           else
-            echo "no zip assets found — skipping checksum step"
+            echo "no per-arch installer assets found — skipping checksum step"
             exit 0
           fi
       - name: Upload checksums to release

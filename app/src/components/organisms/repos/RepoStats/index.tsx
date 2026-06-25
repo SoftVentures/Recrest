@@ -87,7 +87,7 @@ function RepoStats({
         size="md"
         label={t("stats.commits_14d", { days: windowDays })}
         value={totalCommits}
-        sub={t("stats.commits_14d_sub", { count: maxBucket })}
+        sub={t("stats.commits_14d_sub", { peak: maxBucket })}
         data-testid={TEST_IDS.repoStats.commits14d}
       />
       {providerConnected ? (

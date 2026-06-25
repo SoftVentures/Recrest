@@ -36,6 +36,14 @@ export default tseslint.config(
     rules: {
       ...reactPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // eslint-plugin-react-hooks v7 added strict opinion rules
+      // (`set-state-in-effect`, `immutability`, `static-components`, `refs`)
+      // that flag intentional patterns. Disable here; revisit in dedicated
+      // cleanup PRs.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/static-components": "off",
+      "react-hooks/refs": "off",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],

@@ -1,10 +1,11 @@
 import { type ReactNode, memo } from "react";
 
 import { Box, Dialog, DialogActions, DialogContent, type DialogProps, Fade } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { alpha, styled } from "@mui/material/styles";
 
 import ModalTitle from "@/components/molecules/modals/GeneralModal/ModalTitle";
 import { openExternal } from "@/lib/tauri";
+import { frostedPanel } from "@/lib/utils/translucency.utils";
 
 interface RootBoxProps {
   $modalWidth?: number | string;
@@ -32,25 +33,38 @@ interface StyledDialogProps {
 
 const StyledDialog = styled(Dialog, {
   shouldForwardProp: (p) => p !== "$transparentBackdrop",
-})<StyledDialogProps>(({ theme, $transparentBackdrop }) => ({
-  "& .MuiBackdrop-root": $transparentBackdrop ? { backgroundColor: "transparent" } : undefined,
-  "& .MuiDialog-paper": {
-    backgroundColor: theme.palette.background.default,
-    border: `1px solid ${theme.palette.divider}`,
-    backgroundImage: "unset",
-    color: theme.palette.text.primary,
-    borderRadius: 8,
-    margin: 0,
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-    // Without this MUI's default `maxWidth="md"` shrinks the paper to ~768px
-    // while the inner Root keeps its requested `modalWidth` (e.g. 880) — the
-    // overflow clips action buttons on the right edge. Letting the paper grow
-    // to the inner content fixes both layouts in one place.
-    maxWidth: "none !important",
-  },
-}));
+})<StyledDialogProps>(({ theme, $transparentBackdrop }) => {
+  return {
+    // The backdrop frosts the whole app behind the modal rather than dropping a
+    // flat static scrim — a lighter dim plus a blur reads as glass and matches
+    // the modal's own frosting. (`$transparentBackdrop` modals stack on top of
+    // another modal, so they stay clear.)
+    "& .MuiBackdrop-root": $transparentBackdrop
+      ? { backgroundColor: "transparent" }
+      : {
+          backgroundColor: alpha(theme.palette.common.black, 0.4),
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+        },
+    "& .MuiDialog-paper": {
+      // Frosted-glass surface in translucency mode, solid canvas otherwise.
+      ...frostedPanel(theme),
+      border: `1px solid ${theme.palette.divider}`,
+      backgroundImage: "unset",
+      color: theme.palette.text.primary,
+      borderRadius: 8,
+      margin: 0,
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      // Without this MUI's default `maxWidth="md"` shrinks the paper to ~768px
+      // while the inner Root keeps its requested `modalWidth` (e.g. 880) — the
+      // overflow clips action buttons on the right edge. Letting the paper grow
+      // to the inner content fixes both layouts in one place.
+      maxWidth: "none !important",
+    },
+  };
+});
 
 const StyledContent = styled(DialogContent)({
   margin: 0,

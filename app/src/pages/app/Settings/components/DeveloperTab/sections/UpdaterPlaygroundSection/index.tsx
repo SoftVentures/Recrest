@@ -25,7 +25,7 @@ export function UpdaterPlaygroundSection() {
   const { t } = useTranslation(I18nNamespace.SETTINGS);
   const dispatch = useAppDispatch();
   const [forceFallback, setForceFallback] = useState(false);
-  const [simVersion, setSimVersion] = useState("99.99.99");
+  const [simVersion, setSimVersion] = useState("99.99.99"); // audit:ignore-fact — dev-only simulated remote version placeholder
   const [simCanAutoInstall, setSimCanAutoInstall] = useState(true);
   const [endpointOverride, setEndpointOverride] = useState("");
 
@@ -41,7 +41,7 @@ export function UpdaterPlaygroundSection() {
   const emit = () => {
     dispatch(
       setUpdaterBanner({
-        version: simVersion.trim() || "99.99.99",
+        version: simVersion.trim() || "99.99.99", // audit:ignore-fact — dev-only simulated remote version placeholder
         currentVersion: "dev",
         body: t("developer.updater.simulated_body"),
         canAutoInstall: simCanAutoInstall,
@@ -101,7 +101,10 @@ export function UpdaterPlaygroundSection() {
             type="text"
             value={simVersion}
             onChange={(e) => setSimVersion(e.target.value)}
-            placeholder="99.99.99"
+            placeholder={
+              // audit:ignore-fact — dev-only simulated remote version placeholder
+              "99.99.99"
+            }
             style={{ width: 120 }}
             data-testid={TEST_IDS.settings.developer.updater.simVersion}
           />

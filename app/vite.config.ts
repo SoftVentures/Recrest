@@ -3,13 +3,23 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import svgr from "vite-plugin-svgr";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
+
+function appPackageVersion(): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf8"),
+    ) as { version?: string };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 function gitShortSha(): string {
   try {
@@ -69,7 +79,6 @@ export default defineConfig({
   envDir: repoRoot,
   plugins: [
     react(),
-    tsconfigPaths(),
     svgr({
       // Only transform imports that explicitly opt in with `?react`, so plain
       // `import url from './foo.svg'` still resolves to a URL string.
@@ -87,6 +96,9 @@ export default defineConfig({
     alias: {
       "@": srcDir,
     },
+    // Vite 8 resolves `paths` from the nearest tsconfig natively — drops
+    // the `vite-tsconfig-paths` plugin we used through Vite 5–7.
+    tsconfigPaths: true,
     // framer-motion ships `@emotion/styled` as a sub-dep, which makes Vite's
     // dev-mode pre-bundler load a second @emotion/react instance — the second
     // instance has its own ThemeContext, so MUI's ThemeProvider fills one
@@ -101,6 +113,7 @@ export default defineConfig({
     global: "globalThis",
     __GIT_SHA__: JSON.stringify(gitShortSha()),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __APP_VERSION__: JSON.stringify(appPackageVersion()),
   },
   optimizeDeps: {
     // Pre-bundle frequently-imported deps so the dev server's first load
@@ -117,15 +130,16 @@ export default defineConfig({
       "linguist-languages",
       "simple-icons",
     ],
-    esbuildOptions: {
+    rolldownOptions: {
       // linguist-languages ships `export { default as 'Name With Space' }`
-      // which needs ES2022 string-keyed exports.
-      target: "es2022",
+      // which needs ES2022 string-keyed exports. Vite 8 swapped esbuild for
+      // Rolldown in optimizeDeps, so this lives under `transform.target` now.
+      transform: { target: "es2022" },
     },
   },
-  esbuild: {
-    target: "es2022",
-  },
+  // Vite 8 uses Oxc instead of esbuild for transform; `esbuild.target` is
+  // ignored in favour of `oxc.target`.
+  oxc: { target: "es2022" },
   server: {
     port: devPort,
     strictPort: true,

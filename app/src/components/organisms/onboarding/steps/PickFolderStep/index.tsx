@@ -199,7 +199,7 @@ function PickFolderStep({ onBack, onNext }: PickFolderStepProps) {
           {t("pickFolder.back")}
         </GeneralButton>
         {empty ? (
-          <GeneralTooltip title={t("pickFolder.at_least_one")} arrow placement="top">
+          <GeneralTooltip title={t("pickFolder.at_least_one_hint")} arrow placement="top">
             <Box component="span">
               <GeneralButton disabled data-testid={TEST_IDS.onboarding.pickFolderNext}>
                 {t("pickFolder.next")}

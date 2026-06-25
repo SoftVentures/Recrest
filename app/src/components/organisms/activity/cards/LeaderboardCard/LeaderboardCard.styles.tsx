@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { barGradient } from "@/lib/charts/palette";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 
 export const List = styled(Box)({
@@ -66,7 +67,7 @@ export const BarFill = styled(Box, { shouldForwardProp: (p) => p !== "width" })<
   ({ theme, width }) => ({
     height: "100%",
     width: `${Math.max(4, width)}%`,
-    backgroundImage: `linear-gradient(90deg, ${theme.palette.primary.main}, color-mix(in srgb, ${theme.palette.primary.main} 55%, white))`,
+    backgroundImage: barGradient(theme.palette.primary.main),
     borderRadius: 8,
     transition: "width 0.2s ease",
   }),

@@ -1,6 +1,15 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
-import { CodeBracketsIcon, GithubIcon, HelpCircleIcon, MessageIcon } from "./icons";
+import {
+  CodeBracketsIcon,
+  GitPullRequestIcon,
+  GithubIcon,
+  HelpCircleIcon,
+  MessageIcon,
+  RustIcon,
+  ScaleIcon,
+  TypeScriptIcon,
+} from "./icons";
 
 const WAYS = [
   { key: "issue", href: `${__REPO_URL__}/issues/new/choose`, Icon: HelpCircleIcon },
@@ -15,9 +24,33 @@ export function Contribute() {
     <section id="contribute" className="tight">
       <div className="wrap">
         <div className="contribute reveal">
-          <span className="section-eyebrow">{t("contribute.eyebrow")}</span>
-          <h2>{t("contribute.title")}</h2>
+          <span className="os-label">{t("contribute.eyebrow")}</span>
+          <h2>
+            <Trans i18nKey="contribute.title" components={{ 1: <span className="ac" /> }} />
+          </h2>
           <p>{t("contribute.body")}</p>
+
+          <div className="contrib-facts" role="list">
+            <span className="contrib-fact" role="listitem">
+              <ScaleIcon width={13} height={13} />
+              {t("contribute.facts.license")}
+            </span>
+            <span className="contrib-fact" role="listitem">
+              <span className="contrib-fact-tech">
+                <RustIcon width={13} height={13} />
+                Rust
+              </span>
+              <span className="contrib-fact-sep">+</span>
+              <span className="contrib-fact-tech">
+                <TypeScriptIcon width={13} height={13} />
+                TypeScript
+              </span>
+            </span>
+            <span className="contrib-fact" role="listitem">
+              <GitPullRequestIcon width={13} height={13} />
+              {t("contribute.facts.prs")}
+            </span>
+          </div>
 
           <div className="hero-cta" style={{ marginTop: 8 }}>
             <a
@@ -30,7 +63,7 @@ export function Contribute() {
               {t("contribute.ctaContribute")}
             </a>
             <a
-              href={`${__REPO_URL__}#roadmap`}
+              href={`${__REPO_URL__}/blob/main/ROADMAP.md`}
               className="btn btn-ghost"
               target="_blank"
               rel="noreferrer noopener"
