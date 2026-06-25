@@ -90,7 +90,7 @@ import {
 } from "@/pages/app/RepoDetail/RepoDetail.styles";
 import { detailKey, fetchPullRequests, loadPrDiff } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
-import { bumpRefreshNonce } from "@/store/actions/ui.actions";
+import { bumpRefreshNonce, setSelectedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 // Shared spring for the card grid: cells animate to their new size/slot when
@@ -149,6 +149,13 @@ export default function RepoDetailPage() {
   const openHostLabel = openHost.provider
     ? tAria("repo.open_on_provider", { provider: PROVIDER_NAMES[openHost.provider] })
     : tAria("repo.open_on_host");
+
+  // Reflect the repo being viewed as the app-wide "selected repo" so cross-page
+  // consumers (e.g. the search palette's "Repo" tab) target it — visiting this
+  // page via a deep link, not just clicking a repo row, must set it too.
+  useEffect(() => {
+    if (repoId) dispatch(setSelectedRepo(repoId));
+  }, [dispatch, repoId]);
 
   useEffect(() => {
     if (repoId && repoProviderConnected) void dispatch(fetchPullRequests(repoId));

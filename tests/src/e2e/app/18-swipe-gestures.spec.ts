@@ -79,24 +79,9 @@ async function dispatchSwipe(
 }
 
 test.describe("app / swipe gestures (D.5)", () => {
-  test("use-case 1: right swipe on MR drawer dismisses it", async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "app-desktop",
-      "TouchEvent constructor + MR list view are most reliable on app-desktop",
-    );
-    await page.goto(AppRoute.MERGE_REQUESTS);
-    await expect(page.getByTestId(TEST_IDS.mr.page)).toBeVisible();
-
-    const firstRow = page.getByTestId(TEST_IDS.mr.row).first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-
-    const drawer = page.getByTestId(TEST_IDS.mr.drawer);
-    await expect(drawer).toBeVisible();
-
-    await dispatchSwipe(page, `[data-testid="${TEST_IDS.mr.drawer}"]`, { dx: 200, dy: 0 });
-    await expect(drawer).toBeHidden();
-  });
+  // NB: the Merge Requests page no longer uses a swipe-dismissable overlay
+  // drawer — it now opens the detail in a push pane (like Repositories) that
+  // closes via its header button, so there is no MR-drawer swipe case here.
 
   test("use-case 2: left swipe on Activity page navigates to Repos", async ({ page }, testInfo) => {
     test.skip(

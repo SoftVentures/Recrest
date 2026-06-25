@@ -16,23 +16,28 @@ import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import MrChip from "@/components/atoms/chips/MrChip";
 import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
+import MarkdownView from "@/components/atoms/text/MarkdownView";
 import MergeMrModal, { type MergeMrSubmit } from "@/components/molecules/modals/MergeMrModal";
 import { ciFor } from "@/lib/constants/ciStates.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
+import { errorMessage } from "@/lib/utils/error.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
   ActionRow,
   Arrow,
   Body,
   BranchChip,
+  BranchChipFixed,
   BranchGlyph,
   BranchName,
   CiDot,
   CiPill,
+  DescriptionBox,
   Diff,
   Empty,
   FileDiff as FileDiffStat,
@@ -50,6 +55,10 @@ import {
   InfoLabel,
   InfoStrip,
   InfoValue,
+  Meta,
+  MetaKey,
+  MetaRow,
+  MetaVal,
   Muted,
   Panel,
   PrIcon,
@@ -59,6 +68,11 @@ import {
   ReviewerState,
   Sep,
   Subtitle,
+  TimelineBody,
+  TimelineHead,
+  TimelineItem,
+  TimelineList,
+  TimelineType,
   Title,
 } from "@/pages/app/MergeRequests/components/MrDetailPanel/MrDetailPanel.styles";
 import Section from "@/pages/app/MergeRequests/components/MrDetailPanel/parts/Section";
@@ -84,6 +98,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
   const dispatch = useAppDispatch();
   const checkout = useActionFeedback();
   const merge = useActionFeedback();
+  const dt = useDateTimeFormat();
   const busy = checkout.state === "loading" || merge.state === "loading";
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const key = detailKey(repoId, pr.number);
@@ -180,7 +195,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
                 tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }),
               );
             } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
+              const msg = errorMessage(err);
               toast.error(
                 tPrs("detail.merge_modal.branch_delete_failed", {
                   source: pr.sourceBranch,
@@ -192,7 +207,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
         }
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       toast.error(`${tPrs("detail.merge_modal.merge_failed")}: ${msg}`);
     }
   };
@@ -301,14 +316,14 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
             <Arrow component="span" variant="caption">
               →
             </Arrow>
-            <BranchChip component="span">
+            <BranchChipFixed component="span">
               <BranchGlyph component="span" variant="caption">
                 <GitBranch size={10} aria-hidden />
               </BranchGlyph>
               <BranchName component="span" variant="caption">
                 {pr.targetBranch}
               </BranchName>
-            </BranchChip>
+            </BranchChipFixed>
           </InfoValue>
         </InfoCell>
         <InfoCell>
@@ -348,6 +363,18 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
       </InfoStrip>
 
       <Body>
+        <Section title={tPrs("detail.section_description")} count={0} hideCount>
+          {detail?.body?.trim() ? (
+            <DescriptionBox>
+              <MarkdownView source={detail.body} />
+            </DescriptionBox>
+          ) : (
+            <Empty>
+              {detailLoading && !detail ? tPrs("diff.loading") : tPrs("detail.no_description")}
+            </Empty>
+          )}
+        </Section>
+
         <Section
           title={tPrs("detail.section_reviewers")}
           count={detail?.reviewers.length ?? 0}
@@ -408,6 +435,68 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
               })}
             </FilesList>
           )}
+        </Section>
+
+        <Section title={tPrs("detail.section_timeline")} count={detail?.timeline.length ?? 0}>
+          {detailLoading && !detail ? (
+            <Empty>{tPrs("diff.loading")}</Empty>
+          ) : !detail || detail.timeline.length === 0 ? (
+            <Empty>{tPrs("detail.no_timeline")}</Empty>
+          ) : (
+            <TimelineList>
+              {detail.timeline.map((evt) => (
+                <TimelineItem key={evt.id + evt.at}>
+                  <TimelineHead>
+                    {evt.actor && <AuthorAvatar name={evt.actor} avatarUrl={null} size={14} />}
+                    <TimelineType component="span" variant="caption">
+                      {evt.type.replace(/_/g, " ")}
+                    </TimelineType>
+                    {evt.actor && (
+                      <Muted component="span" variant="caption">
+                        · {evt.actor}
+                      </Muted>
+                    )}
+                    <Muted component="span" variant="caption">
+                      · {dt.formatAbsolute(evt.at)}
+                    </Muted>
+                  </TimelineHead>
+                  {evt.body && <TimelineBody>{evt.body}</TimelineBody>}
+                </TimelineItem>
+              ))}
+            </TimelineList>
+          )}
+        </Section>
+
+        <Section title={tPrs("detail.section_metadata")} count={0} hideCount>
+          <Meta>
+            <MetaRow>
+              <MetaKey>{tPrs("detail.meta_opened")}</MetaKey>
+              <MetaVal>
+                <Box component="span">{dt.formatTimestamp(pr.createdAt)}</Box>
+              </MetaVal>
+            </MetaRow>
+            <MetaRow>
+              <MetaKey>{tPrs("detail.meta_updated")}</MetaKey>
+              <MetaVal>
+                <Box component="span">{dt.formatTimestamp(pr.updatedAt)}</Box>
+              </MetaVal>
+            </MetaRow>
+            <MetaRow>
+              <MetaKey>{tPrs("detail.meta_author")}</MetaKey>
+              <MetaVal>
+                <AuthorAvatar name={pr.author} avatarUrl={pr.authorAvatarUrl ?? null} size={16} />
+                <Box component="span">{pr.author}</Box>
+              </MetaVal>
+            </MetaRow>
+            <MetaRow>
+              <MetaKey>{tPrs("detail.meta_state")}</MetaKey>
+              <MetaVal>
+                <MrChip state={pr.state} draft={pr.draft}>
+                  {tPrs(`state.${pr.draft ? "draft" : pr.state}`)}
+                </MrChip>
+              </MetaVal>
+            </MetaRow>
+          </Meta>
         </Section>
       </Body>
 

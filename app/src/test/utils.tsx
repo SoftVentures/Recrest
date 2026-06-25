@@ -21,6 +21,7 @@ import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
 import { reposReducer } from "@/store/reducers/reposReducer";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
+import { shortcutsReducer } from "@/store/reducers/shortcutsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 import { getTheme } from "@/theme";
 
@@ -33,6 +34,7 @@ const testReducer = {
   remoteImport: remoteImportReducer,
   activity: activityReducer,
   branches: branchesReducer,
+  shortcuts: shortcutsReducer,
 };
 
 type PreloadedSlices = { [K in keyof RootState]?: Partial<RootState[K]> };

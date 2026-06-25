@@ -1,21 +1,25 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { useNavigate } from "react-router-dom";
 
 import { AppRoute } from "@recrest/shared";
 
-import { SHORTCUTS, SHORTCUT_ID, type ShortcutId } from "@/lib/constants/shortcuts.constants";
-import { setFindDialogOpen, setSearchOpen, toggleSidebar } from "@/store/actions/ui.actions";
-import { useAppDispatch } from "@/store/hooks";
+import { SHORTCUT_ID, type ShortcutId } from "@/lib/constants/shortcuts.constants";
+import { resolveShortcuts } from "@/lib/utils/shortcuts.utils";
+import { setSearchOpen, toggleSidebar } from "@/store/actions/ui.actions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 /**
- * Binds the global keyboard shortcuts declared in `SHORTCUTS`. Mounted once in
+ * Binds the global keyboard shortcuts declared in `SHORTCUTS`, with any
+ * user overrides from `settings → shortcuts` merged on top. Mounted once in
  * `AppLayout`. All combos are modifier-based (⌘/Ctrl), so they coexist with
  * plain text entry without an input-focus guard.
  */
 export function useGlobalShortcuts(): void {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const overrides = useAppSelector((s) => s.shortcuts.overrides);
+  const resolved = useMemo(() => resolveShortcuts(overrides), [overrides]);
 
   const run = useCallback(
     (id: ShortcutId) => {
@@ -44,9 +48,6 @@ export function useGlobalShortcuts(): void {
         case SHORTCUT_ID.SEARCH:
           dispatch(setSearchOpen(true));
           break;
-        case SHORTCUT_ID.FIND_ACROSS:
-          dispatch(setFindDialogOpen(true));
-          break;
         case SHORTCUT_ID.TOGGLE_SIDEBAR:
           dispatch(toggleSidebar());
           break;
@@ -60,7 +61,7 @@ export function useGlobalShortcuts(): void {
       if (e.repeat) return;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
-      for (const def of SHORTCUTS) {
+      for (const def of resolved) {
         const c = def.combo;
         if (!!c.mod !== mod) continue;
         if (!!c.shift !== e.shiftKey) continue;
@@ -73,5 +74,5 @@ export function useGlobalShortcuts(): void {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [run]);
+  }, [run, resolved]);
 }

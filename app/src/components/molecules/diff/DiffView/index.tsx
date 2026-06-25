@@ -46,6 +46,21 @@ export interface DiffViewProps {
  *  across renders and `DiffRow`'s memo can skip it. */
 const NO_COMMENTS: Comment[] = [];
 
+// A single file over `MAX_FILE_LINES`, or any file once the cumulative rendered
+// lines cross `MAX_TOTAL_LINES`, starts collapsed. Without this a large PR mounts
+// tens of thousands of <DiffRow>s (each subscribing to i18n) on one synchronous
+// render, freezing the page and leaving the whole app janky. Collapsed files
+// render just their header until expanded — matching GitHub/GitLab's "large diffs
+// are not rendered by default".
+const MAX_FILE_LINES = 300;
+const MAX_TOTAL_LINES = 1000;
+
+function lineCountOf(file: FileDiff): number {
+  let n = 0;
+  for (const hunk of file.hunks) n += hunk.lines.length;
+  return n;
+}
+
 const STATUS_TONE: Record<FileChangeStatus, "add" | "remove" | "neutral"> = {
   added: "add",
   removed: "remove",
@@ -129,7 +144,31 @@ function endFromLineEl(el: HTMLElement): SelectionEnd | null {
 
 export default function DiffView({ files, comments, onComment }: DiffViewProps) {
   const { t } = useTranslation(I18nNamespace.PRS);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  // Files to collapse on first render of a given diff (large files + everything
+  // past the cumulative budget). Recomputed only when `files` changes.
+  const defaultCollapsed = useMemo(() => {
+    const set = new Set<string>();
+    let cumulative = 0;
+    for (const file of files) {
+      const lines = lineCountOf(file);
+      if (lines > MAX_FILE_LINES || cumulative >= MAX_TOTAL_LINES) set.add(file.path);
+      else cumulative += lines;
+    }
+    return set;
+  }, [files]);
+
+  const [collapsed, setCollapsed] = useState<Set<string>>(defaultCollapsed);
+  // Re-seed the collapse state whenever the diff itself changes (new PR /
+  // reload). `files` keeps a stable reference from the store within one diff, so
+  // a user's manual expand/collapse persists until the diff actually reloads.
+  const seededFilesRef = useRef(files);
+  useEffect(() => {
+    if (seededFilesRef.current !== files) {
+      seededFilesRef.current = files;
+      setCollapsed(defaultCollapsed);
+    }
+  }, [files, defaultCollapsed]);
   // `dragging` only gates the window listeners + `user-select`. The live range
   // is kept in a ref and painted via DOM attributes so sweeping across a large
   // diff never re-renders React. `composeSel` is set once on release, to render
@@ -364,7 +403,11 @@ export default function DiffView({ files, comments, onComment }: DiffViewProps) 
         const footer = footerComments.get(file.path) ?? NO_COMMENTS;
         return (
           <FileBlock key={file.path} data-testid={TEST_IDS.mr.diff.file}>
-            <FileHeader type="button" onClick={() => toggle(file.path)}>
+            <FileHeader
+              type="button"
+              onClick={() => toggle(file.path)}
+              data-testid={TEST_IDS.mr.diff.fileToggle}
+            >
               {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               <FilePath>{file.path}</FilePath>
               {file.status === FileChangeStatus.RENAMED && file.oldPath && (

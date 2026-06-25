@@ -15,6 +15,7 @@ import MergeMrModal, { type MergeMrSubmit } from "@/components/molecules/modals/
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
+import { errorMessage } from "@/lib/utils/error.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { BackBar, BackButton, Content, Root } from "@/pages/app/MrDetail/MrDetail.styles";
 import MrDescriptionCard from "@/pages/app/MrDetail/parts/MrDescriptionCard";
@@ -200,7 +201,7 @@ export default function MrDetailPage() {
                 tPrs("detail.merge_modal.branch_deleted_ok", { source: pr.sourceBranch }),
               );
             } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
+              const msg = errorMessage(err);
               toast.error(
                 tPrs("detail.merge_modal.branch_delete_failed", {
                   source: pr.sourceBranch,
@@ -212,7 +213,7 @@ export default function MrDetailPage() {
         }
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       toast.error(`${tPrs("detail.merge_modal.merge_failed")}: ${msg}`);
     }
   };

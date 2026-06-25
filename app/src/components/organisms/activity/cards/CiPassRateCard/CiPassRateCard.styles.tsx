@@ -1,6 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { barGradient } from "@/lib/charts/palette";
+
 export const ChartWrap = styled(Box)({
   width: "100%",
   height: 140,
@@ -13,7 +15,7 @@ export const Headline = styled(Box)(({ theme }) => ({
   "& > strong": {
     fontSize: 22,
     fontWeight: 700,
-    color: theme.palette.success.main,
+    color: theme.palette.primary.main,
     letterSpacing: "-0.4px",
     fontVariantNumeric: "tabular-nums",
     lineHeight: 1,
@@ -60,19 +62,13 @@ export const RepoBar = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const RepoBarFill = styled(Box, {
-  shouldForwardProp: (p) => p !== "width" && p !== "tone",
+  shouldForwardProp: (p) => p !== "width",
 })<{
   width: number;
-  tone: "ok" | "warn" | "fail";
-}>(({ theme, width, tone }) => ({
+}>(({ theme, width }) => ({
   width: `${width}%`,
   height: "100%",
-  backgroundColor:
-    tone === "ok"
-      ? theme.palette.success.main
-      : tone === "warn"
-        ? theme.palette.warning.main
-        : theme.palette.error.main,
+  backgroundImage: barGradient(theme.palette.primary.main),
 }));
 
 export const RepoPct = styled(Typography)(({ theme }) => ({

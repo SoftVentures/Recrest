@@ -79,6 +79,15 @@ fn auto_detect_terminal() -> Option<String> {
     })
 }
 
+/// Windows console-subsystem terminals: launched from the GUI app they need
+/// their own console window (see `process::with_new_console`), otherwise the
+/// spawn succeeds but nothing is visible. GUI terminals (`windows-terminal`,
+/// `wezterm`, `alacritty`, `hyper`) draw their own window and are excluded.
+#[cfg(windows)]
+fn is_console_terminal(id: &str) -> bool {
+    matches!(id, "cmd" | "powershell")
+}
+
 /// Opens a terminal at `path`, honoring the user's `TerminalSettings`.
 /// Resolution order: explicit `custom_command` → chosen `id` → auto-detect.
 pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandError> {
@@ -113,6 +122,12 @@ pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandEr
     c.args(&plan.args);
     if let Some(cwd) = &plan.cwd {
         c.current_dir(cwd);
+    }
+    // A console terminal launched from the windowless GUI process needs its own
+    // console, or it spawns invisibly (and exits) — `spawn()` still returns Ok.
+    #[cfg(windows)]
+    if is_console_terminal(&id) {
+        super::process::with_new_console(&mut c);
     }
     c.spawn()
         .map(|_| ())

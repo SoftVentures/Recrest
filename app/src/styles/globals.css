@@ -118,21 +118,18 @@ html[data-translucent="true"] #root {
 
 /* Glass layer — a `position: fixed` pseudo-element behind everything.
 
-   It ALWAYS carries the rgba tint (`--translucency-bg`, intensity slider,
-   written by `ThemeWrapper`) that washes the blurred desktop with the active
-   palette colour. The BLUR is platform-split:
+   It carries ONLY the rgba tint (`--translucency-bg`, intensity slider, written
+   by `ThemeWrapper`) that washes the blurred desktop with the active palette
+   colour. The BLUR itself is an OS compositor material on both supported
+   platforms — `NSVisualEffectView` on macOS, the Acrylic material on Windows
+   (see `commands::theme::apply_translucency`). There is deliberately NO CSS
+   `backdrop-filter` here: it can't blur the desktop behind a transparent window
+   (Chromium only blurs pixels inside its own compositor; the desktop is
+   composited by the OS), and on WKWebView it also flickers/shimmers on scroll.
 
-     - macOS: the OS `NSVisualEffectView` material does the blur (see
-       `commands::theme`). We deliberately put NO `backdrop-filter` here — a CSS
-       backdrop-filter over a transparent WKWebView is dropped/recomputed on
-       scroll (flicker) and lightens its edges (white shimmer in light mode).
-     - Windows: there is no OS material, so CSS `backdrop-filter` does the blur,
-       driven by the slider. Chromium WebView2 composites it reliably. This is
-       gated on `data-css-blur` (set by ThemeWrapper only where CSS blurs).
-
-   NO `transition` on background-color / backdrop-filter: on Stage-Manager wake
-   the browser would otherwise ramp from the default over the duration, reading
-   as the setting "applying gradually". A hard snap is less jarring. */
+   NO `transition` on background-color: on Stage-Manager wake the browser would
+   otherwise ramp from the default over the duration, reading as the setting
+   "applying gradually". A hard snap is less jarring. */
 html[data-translucent="true"]::before {
   content: "";
   position: fixed;
@@ -142,12 +139,13 @@ html[data-translucent="true"]::before {
   background-color: var(--translucency-bg, transparent);
 }
 
-/* CSS blur path (Windows / Chromium WebView2 only — see above). */
-html[data-css-blur="true"]::before {
-  -webkit-backdrop-filter: blur(var(--translucency-blur-px, 0px));
-  backdrop-filter: blur(var(--translucency-blur-px, 0px));
-  will-change: backdrop-filter;
-  transform: translateZ(0);
+/* Windows: the OS deactivates the Acrylic backdrop when the window loses focus,
+   leaving a gray fallback (microsoft/terminal#3497). `ThemeWrapper` sets
+   `data-window-blurred` while unfocused; paint the app's opaque background over
+   the gray so the inactive window reads as a normal solid window — like Windows
+   Terminal. No-op on macOS, where the vibrancy view stays active. */
+html[data-translucent="true"][data-window-blurred="true"]::before {
+  background-color: var(--translucency-bg-opaque, var(--translucency-bg));
 }
 
 /* Boot theme-flash suppression. Class is added on <html> by ThemeWrapper for

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Collapse } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { PrState } from "@recrest/shared";
@@ -11,9 +11,7 @@ import type { PullRequest } from "@recrest/shared";
 import { ChevronDown, Filter } from "lucide-react";
 
 import GeneralSearchInput from "@/components/atoms/inputs/GeneralSearchInput";
-import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
-import { useDrawerSwipe } from "@/hooks/useDrawerSwipe";
 import {
   PAGE_DUR_SM,
   PAGE_EASE,
@@ -23,6 +21,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
+import { MrDetailPanel } from "@/pages/app/MergeRequests/components/MrDetailPanel";
 import MrFiltersPopover, {
   type AuthorOption,
   type RepoOption,
@@ -49,11 +48,47 @@ interface Group {
   rows: Row[];
 }
 
-const Root = styled(Box)({
+// Flex row so the detail pane sits beside the list and pushes it left (a
+// "push" drawer, mirroring the Repositories page) instead of overlaying it.
+const PageRoot = styled(Box)({
+  display: "flex",
   height: "100%",
   minHeight: 0,
+});
+
+const MainColumn = styled(Box)({
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
   display: "flex",
   flexDirection: "column",
+});
+
+// Fixed-width side pane. `flexShrink: 0` keeps it from collapsing; the list
+// column shrinks to make room (the push behaviour). The MrDetailPanel inside
+// owns its own scroll + opaque background.
+const Pane = styled(Box)(({ theme }) => ({
+  width: 400,
+  height: "100%",
+  flexShrink: 0,
+  borderLeft: `1px solid ${theme.palette.divider}`,
+  display: "flex",
+  flexDirection: "column",
+  "@media (max-width: 1180px)": {
+    width: 340,
+  },
+})) as typeof Box;
+
+// `Collapse` (horizontal) is the flex item that animates the list making room;
+// pin its shrink so the list column — not the pane — gives up the width.
+const PaneCollapse = styled(Collapse)({
+  flexShrink: 0,
+  height: "100%",
+  // Horizontal Collapse animates width; force its inner wrappers to full height
+  // so the pane fills the column instead of collapsing vertically.
+  "& .MuiCollapse-wrapper, & .MuiCollapse-wrapperInner": {
+    height: "100%",
+  },
 });
 
 const Toolbar = styled(Box)({
@@ -250,77 +285,108 @@ export default function MergeRequestsPage() {
   };
 
   const [selected, setSelected] = useState<Row | null>(null);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-  useDrawerSwipe({
-    ref: drawerRef,
-    enabled: !!selected,
-    onClose: () => setSelected(null),
-    direction: "right",
-  });
+  // `shownRow` keeps the panel content mounted through the close animation so
+  // it doesn't vanish before the pane finishes collapsing. Set synchronously
+  // with `selected` on open (so the Collapse enter transition has content to
+  // animate); cleared in the Collapse `onExited` once the slide-out completes.
+  const [shownRow, setShownRow] = useState<Row | null>(null);
+
+  const isSameRow = (a: Row | null, b: Row) =>
+    !!a && a.repoId === b.repoId && a.pr.number === b.pr.number;
+
+  const handleSelectRow = (row: Row) => {
+    if (isSameRow(selected, row)) {
+      setSelected(null); // re-click closes; onExited clears shownRow
+    } else {
+      setShownRow(row);
+      setSelected(row);
+    }
+  };
 
   const activeCount = activeMrFilterCount(filters);
 
   return (
-    <Root data-testid={TEST_IDS.mr.page}>
-      <Toolbar>
-        <GeneralSearchInput
-          value={filter}
-          onChange={setFilter}
-          placeholder={t("mrs.filter_placeholder")}
-          aria-label={t("search.input", { ns: I18nNamespace.ARIA })}
-          clearLabel={t("search.clear", { ns: I18nNamespace.ARIA })}
-          data-testid={TEST_IDS.mr.filterInput}
-          clearTestId={TEST_IDS.mr.filterClear}
-        />
-        <FilterBtn
-          ref={filterBtnRef}
-          type="button"
-          onClick={() => setPopoverOpen((o) => !o)}
-          aria-haspopup="dialog"
-          aria-expanded={popoverOpen}
-          data-testid={TEST_IDS.mr.filterBtn}
-        >
-          <Filter size={13} />
-          {t("mrs.filters")}
-          {activeCount > 0 && (
-            <FilterBadge component="span" data-testid={TEST_IDS.mr.filterBadge}>
-              {activeCount}
-            </FilterBadge>
-          )}
-          <ChevronDown size={13} />
-        </FilterBtn>
-      </Toolbar>
+    <PageRoot data-testid={TEST_IDS.mr.page}>
+      <MainColumn>
+        <Toolbar>
+          <GeneralSearchInput
+            value={filter}
+            onChange={setFilter}
+            placeholder={t("mrs.filter_placeholder")}
+            aria-label={t("search.input", { ns: I18nNamespace.ARIA })}
+            clearLabel={t("search.clear", { ns: I18nNamespace.ARIA })}
+            data-testid={TEST_IDS.mr.filterInput}
+            clearTestId={TEST_IDS.mr.filterClear}
+          />
+          <FilterBtn
+            ref={filterBtnRef}
+            type="button"
+            onClick={() => setPopoverOpen((o) => !o)}
+            aria-haspopup="dialog"
+            aria-expanded={popoverOpen}
+            data-testid={TEST_IDS.mr.filterBtn}
+          >
+            <Filter size={13} />
+            {t("mrs.filters")}
+            {activeCount > 0 && (
+              <FilterBadge component="span" data-testid={TEST_IDS.mr.filterBadge}>
+                {activeCount}
+              </FilterBadge>
+            )}
+            <ChevronDown size={13} />
+          </FilterBtn>
+        </Toolbar>
 
-      <Scroll>
-        {allRows.length === 0 ? (
-          <EmptyState
-            mascot="snoozing"
-            title={t("empty_states.none_title", { ns: I18nNamespace.PRS })}
-            description={t("empty_states.none_description", { ns: I18nNamespace.PRS })}
-          />
-        ) : visibleRows.length === 0 ? (
-          <EmptyState
-            mascot="shrugging"
-            title={t("empty_states.no_match_title", { ns: I18nNamespace.PRS })}
-            description={t("empty_states.no_match_description", { ns: I18nNamespace.PRS })}
-          />
-        ) : (
-          <Card>
-            {groups.map((g) => (
-              <MrGroup
-                key={g.repoId}
-                repoId={g.repoId}
-                repoName={g.repoName}
-                prs={g.rows}
-                collapsed={collapsedRepoIds.has(g.repoId)}
-                selectedKey={selected ? `${selected.repoId}#${selected.pr.number}` : null}
-                onToggle={() => toggleGroup(g.repoId)}
-                onSelectRow={(row) => setSelected(row)}
-              />
-            ))}
-          </Card>
+        <Scroll>
+          {allRows.length === 0 ? (
+            <EmptyState
+              mascot="snoozing"
+              title={t("empty_states.none_title", { ns: I18nNamespace.PRS })}
+              description={t("empty_states.none_description", { ns: I18nNamespace.PRS })}
+            />
+          ) : visibleRows.length === 0 ? (
+            <EmptyState
+              mascot="shrugging"
+              title={t("empty_states.no_match_title", { ns: I18nNamespace.PRS })}
+              description={t("empty_states.no_match_description", { ns: I18nNamespace.PRS })}
+            />
+          ) : (
+            <Card>
+              {groups.map((g) => (
+                <MrGroup
+                  key={g.repoId}
+                  repoId={g.repoId}
+                  repoName={g.repoName}
+                  prs={g.rows}
+                  collapsed={collapsedRepoIds.has(g.repoId)}
+                  selectedKey={selected ? `${selected.repoId}#${selected.pr.number}` : null}
+                  onToggle={() => toggleGroup(g.repoId)}
+                  onSelectRow={handleSelectRow}
+                />
+              ))}
+            </Card>
+          )}
+        </Scroll>
+      </MainColumn>
+
+      <PaneCollapse
+        in={!!selected}
+        orientation="horizontal"
+        timeout={PAGE_DUR_SM}
+        unmountOnExit
+        onExited={() => setShownRow(null)}
+      >
+        {shownRow && (
+          <Pane>
+            <MrDetailPanel
+              pr={shownRow.pr}
+              repoId={shownRow.repoId}
+              repoName={shownRow.repoName}
+              onClose={() => setSelected(null)}
+            />
+          </Pane>
         )}
-      </Scroll>
+      </PaneCollapse>
 
       <MrFiltersPopover
         open={popoverOpen}
@@ -332,14 +398,6 @@ export default function MergeRequestsPage() {
         authors={authorOptions}
         hasDrafts={hasDrafts}
       />
-
-      <MrDetailDrawer
-        pr={selected?.pr ?? null}
-        repoId={selected?.repoId ?? ""}
-        repoName={selected?.repoName}
-        bodyRef={drawerRef}
-        onClose={() => setSelected(null)}
-      />
-    </Root>
+    </PageRoot>
   );
 }

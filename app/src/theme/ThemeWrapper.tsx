@@ -7,7 +7,6 @@ import { type FontSizeId, TauriCommand } from "@recrest/shared";
 
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import {
-  MAX_BLUR_PX,
   THEME_MODE_QUERY,
   THEME_NO_TRANSITIONS_CLASS,
   ThemeId,
@@ -69,10 +68,7 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   const underlineLinks = useAppSelector((s) => s.settings.underlineLinks);
   const translucencyEnabled = useAppSelector((s) => s.settings.translucency.enabled);
   const translucencyIntensity = useAppSelector((s) => s.settings.translucency.intensity);
-  const blurIntensity = useAppSelector((s) => s.settings.translucency.blurIntensity);
-  // macOS blurs via the OS material; only the CSS path (Windows/Chromium) reads
-  // the blur slider, so the blur var + `data-css-blur` are non-macOS only.
-  const isMac = usePlatform() === Platform.MAC;
+  const isWindows = usePlatform() === Platform.WINDOWS;
 
   // "Follow system" mode: subscribe to the OS appearance media query and
   // mirror its current value into the store via `syncSystemTheme` (which
@@ -173,25 +169,21 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // doesn't flash through the window. The anti-flash inline script
     // already painted the right initial value — this effect just keeps it
     // in sync as the user toggles settings at runtime.
-    // Translucency lives entirely in CSS — no OS NSVisualEffectView material
-    // (so the blur slider can truly bottom out at 0). The glass effect is
-    // painted by a `position: fixed` pseudo-element on <html> so it stays
-    // on its own compositor layer; without that, WebKit drops the
-    // `backdrop-filter` while the user is scrolling and re-applies it on
-    // scroll-end, producing a visible blur "pop" the user reported.
+    // The blur is an OS compositor material (NSVisualEffectView on macOS,
+    // Acrylic on Windows — see `commands::theme`). CSS only paints the tint: a
+    // `position: fixed` `::before` pseudo-element on <html> carrying the rgba
+    // wash, on its own compositor layer so it doesn't repaint on scroll.
     //
     // Layering:
     //   <html>::before  position: fixed; inset: 0; z-index: -1;
     //                   background-color: var(--translucency-bg);
-    //                   backdrop-filter: blur(var(--translucency-blur-px));
-    //   <html>          transparent (anti-flash + Tauri window)
+    //   <html>          transparent (anti-flash + Tauri window) → OS blur shows
     //   <body>          transparent (so ::before shows through)
     //   <#root>         transparent
     //   <AppFrame, MainSlot> palette.background.default → transparent
     //
-    // Intensity slider (the tint alpha — applies on every platform; the blur
-    // amount is the OS material's fixed radius on macOS, the CSS slider on
-    // Windows):
+    // Intensity slider drives the tint alpha (the OS blur radius is fixed, so
+    // there is no blur slider on either platform):
     //   intensity 0   → alpha 1.0 → solid theme tint, no see-through.
     //   intensity 100 → alpha 0   → no tint, blurred wallpaper shows raw.
     const transparentBg = translucencyEnabled;
@@ -206,25 +198,20 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
       // the user sees as the canvas tint.
       document.body.style.backgroundColor = "transparent";
       root.style.setProperty("--translucency-bg", `rgba(${rgb}, ${alpha})`);
+      // Opaque app background used to mask the gray Acrylic-inactive fallback
+      // when the Windows window loses focus (see the focus effect below).
+      root.style.setProperty("--translucency-bg-opaque", `rgb(${rgb})`);
     } else {
       document.body.style.backgroundColor = theme.palette.background.default as string;
       root.style.removeProperty("--translucency-bg");
+      root.style.removeProperty("--translucency-bg-opaque");
     }
     root.dataset.translucent = transparentBg ? "true" : "false";
-    // CSS blur path (Windows): drive the slider-controlled backdrop-filter. On
-    // macOS the OS NSVisualEffectView material blurs instead, so we leave
-    // `data-css-blur` off and set no blur var (a CSS backdrop-filter there
-    // would scroll-flicker / shimmer).
-    const cssBlur = transparentBg && !isMac;
-    root.dataset.cssBlur = cssBlur ? "true" : "false";
-    if (cssBlur) {
-      root.style.setProperty(
-        "--translucency-blur-px",
-        `${Math.round((blurIntensity * MAX_BLUR_PX) / 100)}px`,
-      );
-    } else {
-      root.style.removeProperty("--translucency-blur-px");
-    }
+    // The blur itself is done at the OS compositor level on every supported
+    // platform — NSVisualEffectView on macOS, the Acrylic material on Windows
+    // (see `commands::theme::apply_translucency`). A CSS `backdrop-filter` can't
+    // blur the desktop behind a transparent window, so there is no CSS blur
+    // path; this effect only drives the `::before` rgba tint + intensity.
 
     root.style.setProperty("--app-font-family", theme.typography.fontFamily ?? "");
     root.style.setProperty("--app-font-size", `${theme.typography.fontSize}px`);
@@ -253,14 +240,10 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // every descendant length scales uniformly.
     root.style.setProperty("--ui-scale", String(scaleForSize(fontSize)));
 
-    // Translucency is rendered entirely in CSS above (the rgba `::before`
-    // tint + backdrop-filter blur) — there is no OS NSVisualEffectView
-    // material. That material was dropped because its fixed blur radius
-    // masked the blur slider (slider 0 still showed the material's baseline
-    // blur) and it caused the #85 black flicker on focus regain. This IPC is
-    // now only a defensive "ensure no stale vibrancy view" clear on the
-    // native side; the blur the user sees is the CSS layer driven by the
-    // settings above.
+    // Toggle the OS blur material (attach when translucent, detach otherwise).
+    // The CSS `::before` rgba above only tints; the actual blur is this native
+    // material. `dark` picks the macOS vibrancy view's appearance / the Windows
+    // Acrylic tint so the frost matches the active theme.
     void safeInvoke<void>(TauriCommand.SET_TRANSLUCENCY, {
       enabled: translucencyEnabled,
       intensity: translucencyIntensity,
@@ -283,9 +266,32 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     underlineLinks,
     translucencyEnabled,
     translucencyIntensity,
-    blurIntensity,
-    isMac,
   ]);
+
+  // Windows-only: the OS deactivates the Acrylic system-backdrop whenever the
+  // window loses focus and leaves a flat gray fallback behind it (a longstanding
+  // Acrylic behaviour — see microsoft/terminal#3497). We mirror Windows
+  // Terminal: while unfocused, mark `<html>` so the glass `::before` paints the
+  // app's opaque background over the gray, making the inactive window read as a
+  // normal solid window. macOS keeps its vibrancy view `Active`, so this is
+  // Windows-only.
+  useEffect(() => {
+    if (!isWindows) return;
+    const root = document.documentElement;
+    const onBlur = () => {
+      root.dataset.windowBlurred = "true";
+    };
+    const onFocus = () => {
+      root.dataset.windowBlurred = "false";
+    };
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      delete root.dataset.windowBlurred;
+    };
+  }, [isWindows]);
 
   return (
     <MuiThemeProvider theme={theme}>

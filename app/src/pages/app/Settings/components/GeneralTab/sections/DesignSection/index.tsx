@@ -10,7 +10,6 @@ import { Monitor, Moon, Sun, Type } from "lucide-react";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import IntensitySlider from "@/components/atoms/inputs/IntensitySlider";
-import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { useTranslucencySupport } from "@/hooks/useTranslucencySupport";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -20,7 +19,6 @@ import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sectio
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import {
   followSystemTheme,
-  setBlurIntensity,
   setPrimaryColor,
   setThemeId,
   setTranslucencyEnabled,
@@ -102,11 +100,7 @@ export function DesignSection() {
   const themeChoice: ThemeChoice = followsSystem ? "system" : themeId;
   const translucencyEnabled = useAppSelector((s) => s.settings.translucency.enabled);
   const translucencyIntensity = useAppSelector((s) => s.settings.translucency.intensity);
-  const blurIntensity = useAppSelector((s) => s.settings.translucency.blurIntensity);
   const supportsTranslucency = useTranslucencySupport();
-  // The blur-amount slider is only meaningful where CSS does the blur
-  // (Windows). On macOS the OS material has a fixed radius, so we hide it.
-  const showBlurSlider = usePlatform() !== Platform.MAC;
 
   const onThemeChoice = (choice: ThemeChoice) => {
     if (choice === "system") {
@@ -170,26 +164,15 @@ export function DesignSection() {
           label={t("settings.fields.translucency_intensity")}
           sub={t("settings.fields.translucency_intensity_sub")}
         >
+          {/* Windows-Terminal model: the slider is "background opacity" (higher =
+              more solid). The store keeps `intensity` as the inverse
+              (transparency strength, what the CSS rgba alpha consumes), so we
+              flip it at the UI boundary only — store/CSS/macOS stay untouched. */}
           <IntensitySlider
-            value={translucencyIntensity}
-            onChange={(v) => dispatch(setTranslucencyIntensity(v))}
+            value={100 - translucencyIntensity}
+            onChange={(v) => dispatch(setTranslucencyIntensity(100 - v))}
             ariaLabel={t("settings.fields.translucency_intensity")}
             dataTestId={TEST_IDS.settings.general.translucencyIntensitySlider}
-            formatValue={(n) => `${n}%`}
-          />
-        </SettingsRow>
-      )}
-
-      {supportsTranslucency && translucencyEnabled && showBlurSlider && (
-        <SettingsRow
-          label={t("settings.fields.translucency_blur")}
-          sub={t("settings.fields.translucency_blur_sub")}
-        >
-          <IntensitySlider
-            value={blurIntensity}
-            onChange={(v) => dispatch(setBlurIntensity(v))}
-            ariaLabel={t("settings.fields.translucency_blur")}
-            dataTestId={TEST_IDS.settings.general.translucencyBlurSlider}
             formatValue={(n) => `${n}%`}
           />
         </SettingsRow>

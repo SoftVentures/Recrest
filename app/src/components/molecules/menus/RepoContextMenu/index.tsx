@@ -26,8 +26,9 @@ import { useDefaultIde } from "@/hooks/useDefaultIde";
 import { useOpenHost } from "@/hooks/useOpenHost";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openFolderInSystem } from "@/lib/tauri";
+import { invoke, isTauri } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import { errorMessage } from "@/lib/utils/error.utils";
 import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
@@ -47,7 +48,12 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const defaultIde = useDefaultIde();
-  const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | null>(null);
+  const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | "deletePermanent" | null>(
+    null,
+  );
+  // Keep the confirm dialog open with a spinner while the (potentially slow)
+  // backend action runs — trashing a large repo folder can take seconds.
+  const [pending, setPending] = useState(false);
   const brand = brandFromUrl(repo.remoteUrl);
   const openHost = useOpenHost(repo.remoteUrl);
 
@@ -62,7 +68,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
     try {
       await invoke(TauriCommand.OPEN_IN_IDE, { repoId: repo.id });
     } catch (err) {
-      toast.error((err as { message?: string })?.message ?? `${ideLabel} failed`);
+      toast.error(t("context_menu.ide_failed", { ide: ideLabel, message: errorMessage(err) }));
     }
   };
 
@@ -70,8 +76,17 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
     if (!isTauri()) return;
     try {
       await invoke(TauriCommand.OPEN_TERMINAL, { repoId: repo.id });
-    } catch {
-      toast.error(t("context_menu.terminal_failed"));
+    } catch (err) {
+      toast.error(t("context_menu.terminal_failed", { message: errorMessage(err) }));
+    }
+  };
+
+  const openExplorer = async () => {
+    if (!isTauri()) return;
+    try {
+      await invoke(TauriCommand.OPEN_IN_EXPLORER, { repoId: repo.id });
+    } catch (err) {
+      toast.error(t("context_menu.explorer_failed", { message: errorMessage(err) }));
     }
   };
 
@@ -87,23 +102,43 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
   const onTogglePin = () => dispatch(togglePinnedRepo(repo.id));
 
   const onConfirmForget = async () => {
-    setConfirmKind(null);
+    setPending(true);
     try {
       await dispatch(removeRepo(repo.id)).unwrap();
       toast.success(t("context_menu.forget_done", { name: repo.name }));
     } catch {
       toast.error(t("context_menu.forget_failed"));
+    } finally {
+      setPending(false);
+      setConfirmKind(null);
     }
   };
 
   const onConfirmDelete = async () => {
-    setConfirmKind(null);
+    setPending(true);
     try {
-      await dispatch(deleteRepo(repo.id)).unwrap();
+      await dispatch(deleteRepo({ repoId: repo.id })).unwrap();
       toast.success(t("context_menu.delete_disk_done", { name: repo.name }));
+      setConfirmKind(null);
+    } catch {
+      // Trash failed (e.g. the Recycle Bin is disabled for the drive or a file
+      // is locked). Offer the irreversible fallback instead of dead-ending; the
+      // specific reason surfaces in the toast if the permanent delete also fails.
+      setConfirmKind("deletePermanent");
+    } finally {
+      setPending(false);
+    }
+  };
+  const onConfirmDeletePermanent = async () => {
+    setPending(true);
+    try {
+      await dispatch(deleteRepo({ repoId: repo.id, permanent: true })).unwrap();
+      toast.success(t("context_menu.delete_disk_done_permanent", { name: repo.name }));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(t("context_menu.delete_disk_failed", { message: msg }));
+      toast.error(t("context_menu.delete_disk_failed", { message: errorMessage(err) }));
+    } finally {
+      setPending(false);
+      setConfirmKind(null);
     }
   };
 
@@ -152,7 +187,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
                 key: "open-explorer",
                 label: t("context_menu.open_in_explorer"),
                 icon: <Folder size={13} />,
-                onSelect: () => void openFolderInSystem(repo.path),
+                onSelect: () => void openExplorer(),
               },
             ],
           },
@@ -199,6 +234,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
         description={t("context_menu.confirm_forget_desc")}
         confirmLabel={t("context_menu.forget")}
         destructive
+        confirmLoading={pending}
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmForget()}
       />
@@ -208,8 +244,19 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
         description={t("context_menu.confirm_delete_desc", { path: repo.path })}
         confirmLabel={t("context_menu.confirm_delete_action")}
         destructive
+        confirmLoading={pending}
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmDelete()}
+      />
+      <ConfirmationModal
+        open={confirmKind === "deletePermanent"}
+        title={t("context_menu.confirm_delete_permanent_title")}
+        description={t("context_menu.confirm_delete_permanent_desc", { path: repo.path })}
+        confirmLabel={t("context_menu.confirm_delete_permanent_action")}
+        destructive
+        confirmLoading={pending}
+        onCancel={() => setConfirmKind(null)}
+        onConfirm={() => void onConfirmDeletePermanent()}
       />
       {openHost.modal}
     </>

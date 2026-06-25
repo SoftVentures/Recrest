@@ -124,10 +124,13 @@ export async function getTauriRuntimeVersion(): Promise<string | null> {
 }
 
 /**
- * Reveal a FILE in the OS file browser by selecting it in its parent
- * directory. For folders you almost always want `openFolderInSystem` instead,
- * which opens the folder's contents rather than highlighting the folder in
- * its parent. No-ops outside Tauri.
+ * Reveal a path in the OS file browser by selecting it in its parent directory
+ * (uses the opener plugin's `reveal_item_in_dir`, which never opens/executes
+ * the item — only highlights it). No-ops outside Tauri.
+ *
+ * To open a *repo* folder's contents, call the `open_in_explorer` Tauri command
+ * with a `repoId` instead — it resolves the path backend-side, so the frontend
+ * never needs the broad `opener:allow-open-path` capability.
  */
 export async function revealPathInSystem(path: string): Promise<void> {
   if (!isTauri() || !path) return;
@@ -136,21 +139,6 @@ export async function revealPathInSystem(path: string): Promise<void> {
     await revealItemInDir(path);
   } catch (err) {
     console.warn("[tauri] revealPathInSystem failed:", err);
-  }
-}
-
-/**
- * Open a FOLDER in the OS file browser, showing its contents (Finder /
- * Explorer / nautilus etc.). For files use `revealPathInSystem` which
- * highlights the file in its parent instead. No-ops outside Tauri.
- */
-export async function openFolderInSystem(path: string): Promise<void> {
-  if (!isTauri() || !path) return;
-  try {
-    const { openPath } = await import("@tauri-apps/plugin-opener");
-    await openPath(path);
-  } catch (err) {
-    console.warn("[tauri] openFolderInSystem failed:", err);
   }
 }
 

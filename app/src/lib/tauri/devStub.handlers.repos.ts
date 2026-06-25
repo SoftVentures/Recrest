@@ -42,6 +42,12 @@ const DEMO_REPO_LOGOS: Record<string, string> = {
   "demo-pulse-icon.svg": PULSE_ICON_SVG,
 };
 
+// Designer-generated avatars saved during a dev:web session. The real backend
+// writes these to `<app_data>/repo-logos/<id>.svg`; with no filesystem here we
+// keep the markup in memory keyed by the synthetic logo path so `load_logo_bytes`
+// can serve it back and the saved avatar actually renders on the repo.
+const designedLogos: Record<string, string> = {};
+
 /** Optional context the dispatcher passes so this handler can deliver the
  *  `activity://commits-chunk` stream the real backend emits. */
 export interface ReposStubContext {
@@ -157,7 +163,8 @@ export function reposStub(
       return ["vscode"];
 
     case "load_logo_bytes": {
-      const svg = DEMO_REPO_LOGOS[String(a.path ?? "")];
+      const path = String(a.path ?? "");
+      const svg = designedLogos[path] ?? DEMO_REPO_LOGOS[path];
       return svg ? { mimeType: "image/svg+xml", data: svgToBase64(svg) } : null;
     }
 
@@ -187,6 +194,20 @@ export function reposStub(
         seed.repos[idx] = {
           ...seed.repos[idx]!,
           logoPath: `dev-stub://repo-logos/${a.repoId as string}`,
+          logoIsCustom: true,
+        };
+      }
+      return seed.repos[idx] ?? null;
+    }
+
+    case "set_repo_logo_svg": {
+      const idx = seed.repos.findIndex((r) => r.id === a.repoId);
+      if (idx >= 0) {
+        const path = `dev-stub://repo-logos/${a.repoId as string}.svg`;
+        designedLogos[path] = String(a.svg ?? "");
+        seed.repos[idx] = {
+          ...seed.repos[idx]!,
+          logoPath: path,
           logoIsCustom: true,
         };
       }

@@ -35,6 +35,20 @@ export const CHART_PALETTE = [
   "#f43f5e", // rose
 ] as const;
 
+/** Vivid diff-stat fills for added/removed bar segments. The text-contrast
+ *  `success`/`warning` palette tokens read muddy (dark green) and brownish at
+ *  5px bar height — these mid-tone swatches (shared with CHART_PALETTE) stay
+ *  legible and pleasant on both light and dark card surfaces. */
+export const DIFF_ADDED = "#22c55e"; // green
+export const DIFF_REMOVED = "#ef4444"; // red
+
+/** Vivid status-gauge fills (CI-health ring, pass/fail donuts). Same rationale
+ *  as the diff swatches: the text-contrast success/warning/error tokens read
+ *  muddy as large arc fills, so the gauge uses brighter mid-tone swatches. */
+export const GAUGE_PASS = DIFF_ADDED; // green
+export const GAUGE_FAIL = DIFF_REMOVED; // red
+export const GAUGE_OTHER = "#f59e0b"; // amber
+
 /** Stable color for an id when no chart context is available. Hash-based so
  *  the same id always resolves to the same swatch across unrelated UI
  *  surfaces. Prefer [`buildRepoColorMap`] when you need guaranteed
@@ -139,6 +153,19 @@ export function fade(color: string, alpha: number): string {
 }
 
 /**
+ * Angular distance (0..180°) between two colors' hues on the color wheel.
+ * Used to detect when two categorical chart series would read as the same
+ * color — e.g. the PR-velocity card's "merged" green against a user-chosen
+ * green accent, where both series collapse to indistinguishable green.
+ */
+export function hueDistance(a: string, b: string): number {
+  const [ha] = rgbToHsl(...hexToRgb(a));
+  const [hb] = rgbToHsl(...hexToRgb(b));
+  const diff = Math.abs(ha - hb) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+/**
  * Adjusts the lightness of a color by `delta` (e.g. `+0.1` lightens by 10
  * percentage points, `-0.1` darkens). Saturates at [0, 1].
  */
@@ -147,4 +174,14 @@ export function shade(color: string, delta: number): string {
   const [h, s, l] = rgbToHsl(r, g, b);
   const [r2, g2, b2] = hslToRgb(h, s, clampUnit(l + delta));
   return rgbToHex(r2, g2, b2);
+}
+
+/**
+ * Horizontal bar fill gradient anchored on the chosen primary color: solid
+ * primary on the left fading to a lighter tint on the right. Shared so every
+ * progress/ratio bar (leaderboard, merge-time, flaky repos, CI pass rate)
+ * fades the same way instead of using flat success/warning/error swatches.
+ */
+export function barGradient(color: string): string {
+  return `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 55%, white))`;
 }

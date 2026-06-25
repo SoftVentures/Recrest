@@ -49,6 +49,19 @@ export const setRepoLogo = createAsyncThunk<
   return next;
 });
 
+/** Persists a designer-generated SVG (icon-on-gradient) as the repo's custom
+ *  avatar. Returns the refreshed repo so the store picks up the new `logoPath`.
+ *  Busts the per-path data-URI cache because the backend always writes to the
+ *  same `<repo_id>.svg` filename. */
+export const setRepoLogoSvg = createAsyncThunk<Repository, { repoId: RepositoryId; svg: string }>(
+  "repos/setLogoSvg",
+  async ({ repoId, svg }) => {
+    const next = await invoke<Repository>(TauriCommand.SET_REPO_LOGO_SVG, { repoId, svg });
+    invalidateRepoLogoCache(next.logoPath);
+    return next;
+  },
+);
+
 /** Removes the per-repo avatar override so the UI falls back to the
  *  in-repo auto-detected logo (or initials). */
 export const clearRepoLogo = createAsyncThunk<Repository, RepositoryId>(
@@ -103,13 +116,17 @@ export const forgetReposUnderPath = createAsyncThunk<
   invoke<RepositoryId[]>(TauriCommand.FORGET_REPOS_UNDER_PATH, { removedPath, remainingPaths }),
 );
 
-export const deleteRepo = createAsyncThunk<RepositoryId, RepositoryId>(
-  "repos/delete",
-  async (repoId) => {
-    await invoke<void>(TauriCommand.DELETE_REPO, { repoId });
-    return repoId;
-  },
-);
+/** Delete a repo's folder. Defaults to moving it to the OS trash (reversible);
+ *  `permanent: true` is the irreversible `remove_dir_all` fallback the UI offers
+ *  only after a trash attempt fails and the user confirms. Resolves with the
+ *  repo id either way so the reducers prune it. */
+export const deleteRepo = createAsyncThunk<
+  RepositoryId,
+  { repoId: RepositoryId; permanent?: boolean }
+>("repos/delete", async ({ repoId, permanent }) => {
+  await invoke<void>(TauriCommand.DELETE_REPO, { repoId, permanent: permanent ?? false });
+  return repoId;
+});
 
 export const gitFetch = createAsyncThunk<
   { repoId: RepositoryId; status: RepositoryStatus },

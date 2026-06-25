@@ -17,4 +17,22 @@ describe("ConfirmationModal", () => {
     fireEvent.click(getByTestId(TEST_IDS.confirmDialog.confirm));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
+
+  it("disables both buttons while confirmLoading so the in-flight action can't be re-triggered or cancelled", () => {
+    const onCancel = vi.fn();
+    const onConfirm = vi.fn();
+    const { getByTestId } = renderWithProviders(
+      <ConfirmationModal
+        open
+        title="Deleting…"
+        confirmLoading
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />,
+    );
+    fireEvent.click(getByTestId(TEST_IDS.confirmDialog.confirm));
+    fireEvent.click(getByTestId(TEST_IDS.confirmDialog.cancel));
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
 });

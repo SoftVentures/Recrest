@@ -760,6 +760,35 @@ describe("computeLanguageMix", () => {
     expect(ts!.share).toBeGreaterThan(css!.share);
   });
 
+  it("breaks each language down by contributing repo, biggest first", () => {
+    const repoA = makeRepo({ id: "ra", name: "alpha", langShares: { TypeScript: 1 } });
+    const repoB = makeRepo({ id: "rb", name: "beta", langShares: { TypeScript: 1 } });
+    const reposById = new Map([
+      ["ra", repoA],
+      ["rb", repoB],
+    ]);
+    // 3 commits from alpha, 1 from beta → alpha 75% / beta 25% of TypeScript.
+    const commits = [
+      makeCommit({ repoId: "ra" }),
+      makeCommit({ repoId: "ra" }),
+      makeCommit({ repoId: "ra" }),
+      makeCommit({ repoId: "rb" }),
+    ];
+    const ts = computeLanguageMix(commits, reposById).find((r) => r.language === "TypeScript");
+    expect(ts?.contributors.map((c) => c.repoName)).toEqual(["alpha", "beta"]);
+    expect(ts?.contributors[0]?.share).toBeCloseTo(0.75, 5);
+    expect(ts?.contributors[1]?.share).toBeCloseTo(0.25, 5);
+    // Contributor shares within a single language always sum to 1.
+    expect(ts!.contributors.reduce((sum, c) => sum + c.share, 0)).toBeCloseTo(1, 5);
+  });
+
+  it("uses repoId as the contributor name when the repo is unknown", () => {
+    const result = computeLanguageMix([makeCommit({ repoId: "ghost" })], new Map());
+    const other = result.find((r) => r.language === "Other");
+    expect(other?.contributors[0]?.repoId).toBe("ghost");
+    expect(other?.contributors[0]?.repoName).toBe("ghost");
+  });
+
   it("collapses TSX into TypeScript via alias", () => {
     const repo = makeRepo({ id: "r1", langShares: { TSX: 1 } });
     const c = makeCommit({ repoId: "r1" });

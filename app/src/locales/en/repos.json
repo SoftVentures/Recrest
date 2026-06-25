@@ -19,7 +19,19 @@
     "reset_aria": "Reset to auto-detected repository avatar",
     "upload_error": "Avatar upload failed",
     "uploaded": "Avatar updated",
-    "reset_done": "Avatar reset"
+    "reset_done": "Avatar reset",
+    "menu_upload": "Upload image",
+    "menu_design": "Design your own",
+    "designer": {
+      "title": "Design avatar",
+      "subtitle": "Pick a background and an icon",
+      "background_label": "Background",
+      "icon_label": "Icon",
+      "icon_search": "Search icons",
+      "icon_empty": "No icons match your search.",
+      "preview_label": "Preview",
+      "save": "Use avatar"
+    }
   },
   "summary": {
     "total": "Total",
@@ -105,17 +117,6 @@
     "submit": "Create branch",
     "cancel": "Cancel",
     "created": "Created '{{name}}'"
-  },
-  "find_across": {
-    "title": "Find across repositories",
-    "placeholder": "Search file contents…",
-    "no_results": "No matches",
-    "hint": "Searches all tracked repositories. Type at least two characters.",
-    "all_repos": "All repositories",
-    "searching": "Searching…",
-    "count_one": "{{count}} result",
-    "count_other": "{{count}} results",
-    "result_aria": "{{repo}} — {{path}}:{{line}}"
   },
   "stats": {
     "ahead_behind": "Ahead / Behind",
@@ -283,13 +284,17 @@
     "delete_title": "Delete \"{{name}}\" from disk?",
     "delete_desc": "Moves \"{{path}}\" to your system trash and stops Recrest from tracking it. You can restore from trash.",
     "delete_action": "Move to Trash",
+    "delete_permanent_title": "Couldn't move to trash — delete permanently?",
+    "delete_permanent_desc": "\"{{path}}\" couldn't be moved to the system trash — it may be disabled for this location, or a file is in use. Permanently delete the folder instead? This cannot be undone.",
+    "delete_permanent_action": "Delete permanently",
     "toast_no_remote": "No remote configured",
     "toast_path_copied": "Path copied",
     "toast_copy_failed": "Couldn't copy",
-    "toast_command_failed": "{{label}} failed",
+    "toast_command_failed": "{{label}} failed: {{message}}",
     "toast_removed": "{{name}} removed",
     "toast_forget_failed": "Forget failed",
     "toast_trashed": "{{name}} moved to trash",
+    "toast_deleted_permanently": "{{name}} permanently deleted",
     "toast_delete_failed": "Delete failed: {{message}}"
   },
   "toolbar": {

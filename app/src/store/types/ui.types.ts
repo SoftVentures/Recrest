@@ -20,7 +20,6 @@ export interface UiState {
   searchOpen: boolean;
   activeView: ActiveView;
   importDialogOpen: boolean;
-  findDialogOpen: boolean;
   refreshNonce: number;
   updaterBanner: UpdaterBannerState | null;
   /** Repos the user has pinned. Hydrated from the Tauri backend's `pinnedRepoIds`

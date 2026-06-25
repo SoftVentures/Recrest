@@ -45,6 +45,9 @@ export interface Props {
   checkRuns: readonly CheckRunSummary[];
   today: Date;
   reposById: Map<string, EnrichedRepo>;
+  /** Selected range in days — the feed must span the same window as the rest of
+   *  the page (a 90-day selection must not be silently clamped to 14). */
+  windowDays?: number;
 }
 
 type FilterKind = FeedFilterKind;
@@ -73,13 +76,20 @@ interface DayGroup {
   events: FeedEvent[];
 }
 
-function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
+function Timeline({
+  commits,
+  prEvents,
+  checkRuns,
+  today,
+  reposById,
+  windowDays = ACTIVITY_DAYS,
+}: Props) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterKind>(FeedFilterKind.ALL);
   const [cap, setCap] = useState(TIMELINE_RENDER_CAP);
 
   const groups = useMemo<DayGroup[]>(() => {
-    const buckets: DayGroup[] = Array.from({ length: ACTIVITY_DAYS }, (_, day) => ({
+    const buckets: DayGroup[] = Array.from({ length: windowDays }, (_, day) => ({
       day,
       commits: 0,
       prsOpened: 0,
@@ -91,7 +101,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
     const providerTallies = new Map<number, Map<ProviderId, number>>();
 
     for (const c of commits) {
-      const d = daysAgo(c.timestamp, today);
+      const d = daysAgo(c.timestamp, today, windowDays);
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
@@ -105,7 +115,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
     }
 
     for (const e of prEvents) {
-      const d = daysAgo(e.timestamp, today);
+      const d = daysAgo(e.timestamp, today, windowDays);
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
@@ -137,7 +147,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
     }
     for (const s of mergedChecks.values()) {
       const noonIso = `${s.day}T12:00:00Z`;
-      const d = daysAgo(noonIso, today);
+      const d = daysAgo(noonIso, today, windowDays);
       if (d < 0) continue;
       const g = buckets[d];
       if (!g) continue;
@@ -174,7 +184,7 @@ function Timeline({ commits, prEvents, checkRuns, today, reposById }: Props) {
       g.events.sort((a, b) => (a.at < b.at ? 1 : -1));
     }
     return buckets.filter((g) => g.commits + g.prsOpened + g.prsMerged + g.checksFailed > 0);
-  }, [commits, prEvents, checkRuns, today, reposById]);
+  }, [commits, prEvents, checkRuns, today, reposById, windowDays]);
 
   const totals = useMemo(() => {
     let cs = 0;

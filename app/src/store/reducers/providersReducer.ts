@@ -48,8 +48,17 @@ export const providersReducer = createReducer(initialState, (builder) => {
     .addCase(setProviderBaseUrl.fulfilled, (state, action) => {
       state.connections[action.payload.providerId] = action.payload;
     })
+    // Disconnecting clears the token but keeps the connection entry so static
+    // capability flags survive — `supportsOauth` (a compile-time flag) and the
+    // configured `baseUrl` (self-hosted endpoint) must not vanish just because
+    // the user logged out, or the Accounts row loses its OAuth dropdown and
+    // self-hosted URL until the next full `loadProviders`.
     .addCase(clearProviderToken.fulfilled, (state, action) => {
-      delete state.connections[action.payload];
+      const existing = state.connections[action.payload];
+      if (existing) {
+        existing.connected = false;
+        existing.username = null;
+      }
     });
 });
 

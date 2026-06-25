@@ -13,7 +13,6 @@ import UpdaterBanner from "@/components/organisms/banners/UpdaterBanner";
 import Header from "@/components/organisms/layout/Header";
 import Sidebar from "@/components/organisms/layout/Sidebar";
 import OnboardingWizard from "@/components/organisms/onboarding/OnboardingWizard";
-import FindAcrossReposDialog from "@/components/organisms/repos/FindAcrossReposDialog";
 import Titlebar from "@/components/organisms/titlebars/Titlebar";
 import { useActivityCommitsSync } from "@/hooks/useActivityCommits";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
@@ -29,8 +28,6 @@ import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useThemeAttribute } from "@/hooks/useThemeAttribute";
 import { WINDOW_CHROME_HEIGHT_PX } from "@/lib/constants/platform.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { setFindDialogOpen } from "@/store/actions/ui.actions";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 const AppFrame = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -127,8 +124,6 @@ export function AppLayout() {
   // state branch) compose harmlessly: a fade-in inside a fade-in is just
   // the inner one.
   const { pathname } = useLocation();
-  const dispatch = useAppDispatch();
-  const findDialogOpen = useAppSelector((s) => s.ui.findDialogOpen);
   const chrome = useWindowChrome();
   const chromeHeight = WINDOW_CHROME_HEIGHT_PX[chrome];
 
@@ -166,10 +161,6 @@ export function AppLayout() {
       <OverallSearch />
       <AddRepoModal />
       <OnboardingWizard />
-      <FindAcrossReposDialog
-        open={findDialogOpen}
-        onClose={() => dispatch(setFindDialogOpen(false))}
-      />
       <GeneralToaster />
     </AppFrame>
   );

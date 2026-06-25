@@ -9,6 +9,7 @@ import {
 } from "@recrest/shared";
 
 import { invoke } from "@/lib/tauri";
+import { errorMessage } from "@/lib/utils/error.utils";
 import { normalizeProviderBaseUrl } from "@/lib/utils/url.utils";
 
 export const upsertConnection = createAction<ProviderConnection>("providers/upsertConnection");
@@ -95,7 +96,7 @@ export const saveProviderCredentials = createAsyncThunk<
       // the UI can render *something*; the user can retry.
       return thunkApi.rejectWithValue({
         kind: "unknown",
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage(err),
       });
     }
   }

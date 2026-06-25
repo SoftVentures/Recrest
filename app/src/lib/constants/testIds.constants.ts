@@ -37,7 +37,6 @@ export const TEST_IDS = {
     searchTrigger: "search-trigger",
     btnRefresh: "btn-refresh",
     btnAddRepo: "btn-add-repo",
-    btnFindAcross: "btn-find-across",
   },
 
   sidebar: {
@@ -71,6 +70,13 @@ export const TEST_IDS = {
     input: "search-overlay-input",
     clear: "search-overlay-clear",
     row: <T extends string>(kind: T) => `search-row-${kind}` as const,
+    tab: <T extends string>(id: T) => `search-tab-${id}` as const,
+    scopeSelect: "search-scope-select",
+    scopeOption: <T extends string>(id: T) => `search-scope-option-${id}` as const,
+    contentGroup: <T extends string>(id: T) => `search-content-group-${id}` as const,
+    contentRow: <T extends string>(id: T) => `search-content-row-${id}` as const,
+    contentEmpty: "search-content-empty",
+    contentHint: "search-content-hint",
   },
 
   // --- Pages
@@ -118,6 +124,12 @@ export const TEST_IDS = {
     back: "repo-detail-back",
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
+    avatarMenu: "repo-avatar-menu",
+    avatarDesigner: "repo-avatar-designer",
+    avatarDesignerSave: "repo-avatar-designer-save",
+    avatarDesignerSearch: "repo-avatar-designer-search",
+    avatarDesignerBg: (id: string) => `repo-avatar-designer-bg-${id}` as const,
+    avatarDesignerIcon: (id: string) => `repo-avatar-designer-icon-${id}` as const,
     mrRow: "repo-detail-mr-row",
     mrDrawer: "repo-detail-mr-drawer",
     openHost: "repo-detail-open-host",
@@ -228,6 +240,7 @@ export const TEST_IDS = {
     },
     diff: {
       file: "mr-diff-file",
+      fileToggle: "mr-diff-file-toggle",
       line: "mr-diff-line",
       commentBtn: "mr-diff-comment-btn",
       composer: "mr-diff-composer",
@@ -353,7 +366,6 @@ export const TEST_IDS = {
       a11yUnderlineLinks: "settings-a11y-underline-links",
       translucencyToggle: "settings-translucency-toggle",
       translucencyIntensitySlider: "settings-translucency-intensity-slider",
-      translucencyBlurSlider: "settings-translucency-blur-slider",
       pollingInput: "settings-polling-input",
       defaultIdeSelect: "settings-default-ide-select",
       defaultTerminalSelect: "settings-default-terminal-select",
@@ -378,6 +390,12 @@ export const TEST_IDS = {
     shortcuts: {
       navigation: "settings-shortcuts-navigation",
       actions: "settings-shortcuts-actions",
+      row: <T extends string>(id: T) => `settings-shortcut-row-${id}` as const,
+      edit: <T extends string>(id: T) => `settings-shortcut-edit-${id}` as const,
+      reset: <T extends string>(id: T) => `settings-shortcut-reset-${id}` as const,
+      recording: <T extends string>(id: T) => `settings-shortcut-recording-${id}` as const,
+      feedback: <T extends string>(id: T) => `settings-shortcut-feedback-${id}` as const,
+      resetAll: "settings-shortcuts-reset-all",
     },
 
     storage: {
@@ -394,8 +412,6 @@ export const TEST_IDS = {
 
     accounts: {
       connectButton: "settings-accounts-connect",
-      oauthButton: "settings-accounts-oauth",
-      connectViaPat: "settings-accounts-connect-pat",
       tokenCreateLink: "settings-accounts-token-create-link",
       providerRow: <T extends string>(id: T) => `settings-accounts-provider-${id}` as const,
       statusPill: <T extends string>(id: T) => `settings-accounts-status-${id}` as const,
@@ -415,6 +431,14 @@ export const TEST_IDS = {
       scanAdd: "settings-scan-add",
       scanRemove: <T extends string>(path: T) => `settings-scan-remove-${path}` as const,
       scanDefaultRadio: <T extends string>(path: T) => `settings-scan-default-${path}` as const,
+    },
+
+    about: {
+      contributors: "settings-about-contributors",
+      contributorsLoading: "settings-about-contributors-loading",
+      contributorsError: "settings-about-contributors-error",
+      contributorRow: <T extends string>(login: T) =>
+        `settings-about-contributor-${login}` as const,
     },
 
     developer: {
@@ -588,17 +612,6 @@ export const TEST_IDS = {
       addLayerSelect: "git-config-url-add-layer",
       addSubmit: "git-config-url-add-submit",
     },
-  },
-
-  findAcrossDialog: {
-    root: "find-across-dialog",
-    input: "find-across-input",
-    clear: "find-across-clear",
-    repoFilter: "find-across-repo-filter",
-    list: "find-across-list",
-    group: <T extends string>(id: T) => `find-across-group-${id}` as const,
-    row: <T extends string>(id: T) => `find-across-row-${id}` as const,
-    empty: "find-across-empty",
   },
 
   changedFilesList: {

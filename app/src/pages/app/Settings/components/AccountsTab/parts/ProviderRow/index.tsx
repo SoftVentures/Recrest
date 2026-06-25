@@ -1,26 +1,15 @@
-import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-
-import { ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 
 import { type ProviderPingResult, type ProviderVerifyError, TauriCommand } from "@recrest/shared";
 
 import type { TFunction } from "i18next";
-import {
-  ChevronDown,
-  ExternalLink,
-  KeyRound,
-  Link as LinkIcon,
-  PlugZap,
-  RotateCcw,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Link as LinkIcon, PlugZap, RotateCcw } from "lucide-react";
 
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import PatHelpPanel from "@/components/molecules/PatHelpPanel";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
-import { OAUTH_CALLBACK_EVENT } from "@/lib/constants/events.constants";
 import {
   PROVIDER_API_URLS,
   PROVIDER_BASE_URL_PLACEHOLDERS,
@@ -29,7 +18,7 @@ import {
   type ProviderId,
 } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
-import { invoke, listen } from "@/lib/tauri";
+import { invoke } from "@/lib/tauri";
 import { normalizeProviderBaseUrl } from "@/lib/utils/url.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
@@ -92,60 +81,6 @@ function errorMessage(err: ProviderVerifyError, t: TFunction): string {
   }
 }
 
-// How long to wait for the browser to redirect back before giving up. The
-// user has to switch to their browser, authorize, and get redirected — so the
-// window is generous.
-const OAUTH_CALLBACK_TIMEOUT_MS = 180_000;
-
-/**
- * Drives the browser OAuth handshake: subscribe to the deep-link callback,
- * ask the backend to open the authorize URL (`begin_oauth`), then complete the
- * exchange (`complete_oauth`) once the `recrest://oauth/callback` URL comes
- * back. The listener is registered before `begin_oauth` so a fast redirect
- * can't race us, and is always torn down on the way out.
- */
-async function runOauthFlow(providerId: ProviderId): Promise<void> {
-  let resolveCallback!: () => void;
-  let rejectCallback!: (reason: unknown) => void;
-  const callbackDone = new Promise<void>((resolve, reject) => {
-    resolveCallback = resolve;
-    rejectCallback = reject;
-  });
-
-  const unlisten = await listen<{ url: string }>(OAUTH_CALLBACK_EVENT, (event) => {
-    void (async () => {
-      try {
-        const url = new URL(event.payload.url);
-        const code = url.searchParams.get("code");
-        const state = url.searchParams.get("state");
-        // Ignore callbacks that aren't a real authorization response (e.g. an
-        // error redirect with no code) — keep waiting for a valid one.
-        if (!code || !state) return;
-        await invoke(TauriCommand.COMPLETE_OAUTH, { providerId, code, oauthState: state });
-        resolveCallback();
-      } catch (e) {
-        rejectCallback(e);
-      }
-    })();
-  });
-
-  const timer = setTimeout(
-    () => rejectCallback(new Error("oauth-timeout")),
-    OAUTH_CALLBACK_TIMEOUT_MS,
-  );
-
-  try {
-    const begin = await invoke<{ supportsOauth: boolean }>(TauriCommand.BEGIN_OAUTH, {
-      providerId,
-    });
-    if (!begin?.supportsOauth) throw new Error("oauth-unsupported");
-    await callbackDone;
-  } finally {
-    clearTimeout(timer);
-    unlisten();
-  }
-}
-
 export interface ProviderRowProps {
   providerId: ProviderId;
 }
@@ -176,12 +111,10 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
   const [verifyError, setVerifyError] = useState<ProviderVerifyError | null>(null);
   const [verifiedLogin, setVerifiedLogin] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
-  const [connectMenuAnchor, setConnectMenuAnchor] = useState<HTMLElement | null>(null);
 
   const saveFeedback = useActionFeedback();
   const verifyFeedback = useActionFeedback();
   const pingFeedback = useActionFeedback();
-  const oauthFeedback = useActionFeedback();
   const [pingMessage, setPingMessage] = useState<{
     tone: "success" | "error";
     text: string;
@@ -200,10 +133,6 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
     setVerifyError(null);
     setVerifiedLogin(null);
   };
-
-  const openConnectMenu = (e: MouseEvent<HTMLButtonElement>) =>
-    setConnectMenuAnchor(e.currentTarget);
-  const closeConnectMenu = () => setConnectMenuAnchor(null);
 
   const baseUrlForRequest = (): string | null => {
     const trimmed = baseUrlDraft.trim();
@@ -317,20 +246,6 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
     }
   };
 
-  const onConnectBrowser = async () => {
-    setVerifyError(null);
-    setVerifiedLogin(null);
-    try {
-      await oauthFeedback.run(() => runOauthFlow(providerId));
-      void dispatch(loadProviders());
-      toast.success(t("settings.providers.oauth_success", { name: providerName }));
-    } catch {
-      // begin_oauth / complete_oauth surface their own CommandError; for the
-      // timeout / unsupported / cancelled cases a single toast is enough.
-      toast.error(t("settings.providers.oauth_failed", { name: providerName }));
-    }
-  };
-
   const onDisconnect = async () => {
     setConfirmDisconnect(false);
     setVerifyError(null);
@@ -342,10 +257,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
     }
   };
 
-  const submitting =
-    saveFeedback.state === "loading" ||
-    verifyFeedback.state === "loading" ||
-    oauthFeedback.state === "loading";
+  const submitting = saveFeedback.state === "loading" || verifyFeedback.state === "loading";
 
   return (
     <Card data-testid={TEST_IDS.settings.accounts.providerRow(providerId)}>
@@ -376,55 +288,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
             >
               {t("settings.providers.disconnect")}
             </GeneralButton>
-          ) : open ? null : connection?.supportsOauth ? (
-            <>
-              <GeneralButton
-                variant="default"
-                size="sm"
-                startIcon={<LinkIcon size={11} />}
-                endIcon={<ChevronDown size={13} />}
-                disabled={submitting}
-                loading={oauthFeedback.state === "loading"}
-                feedbackState={oauthFeedback.state}
-                onClick={openConnectMenu}
-                data-testid={TEST_IDS.settings.accounts.connectButton}
-              >
-                {t("settings.providers.connect_with", { name: providerName })}
-              </GeneralButton>
-              <Menu
-                anchorEl={connectMenuAnchor}
-                open={!!connectMenuAnchor}
-                onClose={closeConnectMenu}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-              >
-                <MenuItem
-                  onClick={() => {
-                    closeConnectMenu();
-                    setOpen(true);
-                  }}
-                  data-testid={TEST_IDS.settings.accounts.connectViaPat}
-                >
-                  <ListItemIcon>
-                    <KeyRound size={14} />
-                  </ListItemIcon>
-                  <ListItemText>{t("settings.providers.connect_via_pat")}</ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    closeConnectMenu();
-                    void onConnectBrowser();
-                  }}
-                  data-testid={TEST_IDS.settings.accounts.oauthButton}
-                >
-                  <ListItemIcon>
-                    <ExternalLink size={14} />
-                  </ListItemIcon>
-                  <ListItemText>{t("settings.providers.connect_via_oauth")}</ListItemText>
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
+          ) : open ? null : (
             <GeneralButton
               variant="default"
               size="sm"

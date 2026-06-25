@@ -20,6 +20,7 @@ export const TauriCommand = {
   LIST_RECENT_COMMITS: "list_recent_commits",
   LOAD_LOGO_BYTES: "load_logo_bytes",
   SET_REPO_LOGO: "set_repo_logo",
+  SET_REPO_LOGO_SVG: "set_repo_logo_svg",
   CLEAR_REPO_LOGO: "clear_repo_logo",
   OPEN_IN_IDE: "open_in_ide",
   OPEN_FILE_IN_IDE: "open_file_in_ide",

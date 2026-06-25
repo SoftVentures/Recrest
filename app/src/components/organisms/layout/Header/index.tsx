@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { useLocation } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
@@ -6,7 +8,7 @@ import { Box } from "@mui/material";
 
 import { PrState } from "@recrest/shared";
 
-import { BookPlus, FileSearch, RefreshCw, Search } from "lucide-react";
+import { BookPlus, RefreshCw, Search } from "lucide-react";
 
 import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
@@ -14,7 +16,6 @@ import {
   AddRepoButton,
   AddRepoLabel,
   CenterSection,
-  FindAcrossButton,
   HEADER_REFRESH_SPIN_MS,
   Kbd,
   LeftSection,
@@ -28,16 +29,13 @@ import {
 } from "@/components/organisms/layout/Header/Header.styles";
 import { formatShortcut, usePlatform } from "@/hooks/usePlatform";
 import { windowDaysOf } from "@/lib/activity/rangeBuckets";
+import { SHORTCUT_ID } from "@/lib/constants/shortcuts.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { resolveShortcuts } from "@/lib/utils/shortcuts.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos } from "@/store/actions/repos.actions";
-import {
-  bumpRefreshNonce,
-  setFindDialogOpen,
-  setImportDialogOpen,
-  setSearchOpen,
-} from "@/store/actions/ui.actions";
+import { bumpRefreshNonce, setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectSelectedRange } from "@/store/selectors/activity.selectors";
 
@@ -138,7 +136,16 @@ function Header() {
   const reposLoading = useAppSelector((s) => s.repos.loading);
   const prsLoading = useAppSelector((s) => s.prs.loading);
   const repoItems = useAppSelector((s) => s.repos.items);
-  const searchKbd = formatShortcut(platform, { mod: true, key: "K" });
+  const overrides = useAppSelector((s) => s.shortcuts.overrides);
+  // Resolve the displayed combos from the same registry the binding hook uses,
+  // including any user override, so the header hints can never drift from the
+  // real shortcuts.
+  const resolved = useMemo(() => resolveShortcuts(overrides), [overrides]);
+  const comboHint = (id: (typeof SHORTCUT_ID)[keyof typeof SHORTCUT_ID]) => {
+    const c = resolved.find((s) => s.id === id)?.combo;
+    return c ? formatShortcut(platform, { ...c, key: c.key.toUpperCase() }) : "";
+  };
+  const searchKbd = comboHint(SHORTCUT_ID.SEARCH);
   const refresh = useActionFeedback();
 
   // Show the result glyph (check/cross) once a user-initiated refresh settles;
@@ -178,8 +185,6 @@ function Header() {
   const searchLabel = t("actions.search");
   const searchPlaceholder = t("actions.search_placeholder");
   const refreshLabel = t("actions.refresh");
-  const findAcrossLabel = t("actions.find_across_repos");
-  const findAcrossKbd = formatShortcut(platform, { mod: true, shift: true, key: "F" });
 
   return (
     <TopBar data-testid={TEST_IDS.header.root}>
@@ -210,16 +215,6 @@ function Header() {
       </CenterSection>
 
       <RightSection>
-        <GeneralTooltip title={`${findAcrossLabel} · ${findAcrossKbd}`} arrow placement="bottom">
-          <FindAcrossButton
-            type="button"
-            aria-label={findAcrossLabel}
-            data-testid={TEST_IDS.header.btnFindAcross}
-            onClick={() => dispatch(setFindDialogOpen(true))}
-          >
-            <FileSearch size={16} aria-hidden />
-          </FindAcrossButton>
-        </GeneralTooltip>
         <GeneralTooltip title={refreshLabel} arrow placement="bottom">
           {/* Span wrap: `disabled` is dynamic (reposLoading toggles) and MUI Tooltip
               can't attach listeners to a disabled <button>. The inline-flex span

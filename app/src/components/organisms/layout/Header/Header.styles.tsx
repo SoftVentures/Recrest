@@ -144,28 +144,6 @@ export const AddRepoLabel = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
-export const FindAcrossButton = styled("button")(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 38,
-  height: 38,
-  padding: 0,
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: 8,
-  backgroundColor: theme.palette.background.paper,
-  color: theme.palette.text.secondary,
-  cursor: "pointer",
-  flexShrink: 0,
-  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease",
-  "&:hover": {
-    backgroundColor: theme.palette.surface.interface.active,
-    borderColor: theme.palette.border.hover,
-    color: theme.palette.text.primary,
-  },
-}));
-
-// eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 export const RefreshButton = styled("button", { shouldForwardProp: (p) => p !== "spinning" })<{
   spinning?: boolean;
 }>(({ theme, spinning }) => ({

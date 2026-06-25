@@ -16,7 +16,6 @@ import {
   GitPullRequest,
   Plus,
   RefreshCw,
-  Search,
   Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,11 +30,7 @@ import { invoke, isTauri } from "@/lib/tauri";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { useAppDispatch } from "@/store/hooks";
 import { loadRepos } from "@/store/reducers/reposReducer";
-import {
-  bumpRefreshNonce,
-  setFindDialogOpen,
-  setImportDialogOpen,
-} from "@/store/reducers/uiReducer";
+import { bumpRefreshNonce, setImportDialogOpen } from "@/store/reducers/uiReducer";
 
 /**
  * 8-button quick-actions grid shown on the dashboard. Mirrors the old
@@ -65,7 +60,6 @@ function QuickActionsCard() {
   };
 
   const onOpenImport = () => dispatch(setImportDialogOpen(true));
-  const onFindAcrossRepos = () => dispatch(setFindDialogOpen(true));
 
   const onOpenWorkspace = async () => {
     const ids = repos.map((r) => r.id);
@@ -120,10 +114,6 @@ function QuickActionsCard() {
             <Box component="span">{t("dash.quick.clone")}</Box>
           </QBtn>
         </GeneralTooltip>
-        <QBtn type="button" onClick={onFindAcrossRepos}>
-          <Search size={14} />
-          <Box component="span">{t("dash.quick.find")}</Box>
-        </QBtn>
         <GeneralTooltip title={t("dash.quick.workspace_tooltip")} placement="top">
           <QBtn
             type="button"

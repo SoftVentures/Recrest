@@ -15,6 +15,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { formatBuildTime, gitDescription, prettyArch } from "@/lib/utils/about.utils";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import ContributorsSection from "@/pages/app/Settings/components/AboutTab/parts/ContributorsSection";
 import LinkItem from "@/pages/app/Settings/components/AboutTab/parts/LinkItem";
 import { GithubGlyph } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow/ProviderRow.styles";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
@@ -172,6 +173,8 @@ export function AboutSection() {
           ))}
         </GeneralCard>
       </SettingsSection>
+
+      <ContributorsSection />
 
       <SettingsSection title={t("sections.system", { ns: I18nNamespace.SETTINGS })}>
         <SystemInfoPanel />

@@ -19,7 +19,19 @@
     "reset_aria": "Repository-Avatar auf Auto-Erkennung zurücksetzen",
     "upload_error": "Avatar-Upload fehlgeschlagen",
     "uploaded": "Avatar aktualisiert",
-    "reset_done": "Avatar zurückgesetzt"
+    "reset_done": "Avatar zurückgesetzt",
+    "menu_upload": "Bild hochladen",
+    "menu_design": "Selbst gestalten",
+    "designer": {
+      "title": "Avatar gestalten",
+      "subtitle": "Hintergrund und Icon wählen",
+      "background_label": "Hintergrund",
+      "icon_label": "Icon",
+      "icon_search": "Icons durchsuchen",
+      "icon_empty": "Keine Icons passen zur Suche.",
+      "preview_label": "Vorschau",
+      "save": "Avatar übernehmen"
+    }
   },
   "summary": {
     "total": "Gesamt",
@@ -105,17 +117,6 @@
     "submit": "Branch erstellen",
     "cancel": "Abbrechen",
     "created": "'{{name}}' erstellt"
-  },
-  "find_across": {
-    "title": "Über alle Repositories suchen",
-    "placeholder": "Dateiinhalte durchsuchen…",
-    "no_results": "Keine Treffer",
-    "hint": "Durchsucht alle erfassten Repositories. Mindestens zwei Zeichen.",
-    "all_repos": "Alle Repositories",
-    "searching": "Suche läuft…",
-    "count_one": "{{count}} Treffer",
-    "count_other": "{{count}} Treffer",
-    "result_aria": "{{repo}} — {{path}}:{{line}}"
   },
   "stats": {
     "ahead_behind": "Voraus / Hinterher",
@@ -283,13 +284,17 @@
     "delete_title": "\"{{name}}\" von der Festplatte löschen?",
     "delete_desc": "Verschiebt \"{{path}}\" in den Papierkorb deines Systems und beendet die Verfolgung durch Recrest. Du kannst es aus dem Papierkorb wiederherstellen.",
     "delete_action": "In den Papierkorb",
+    "delete_permanent_title": "Papierkorb nicht möglich — endgültig löschen?",
+    "delete_permanent_desc": "„{{path}}“ konnte nicht in den Papierkorb verschoben werden — eventuell ist er für diesen Ort deaktiviert oder eine Datei ist in Benutzung. Stattdessen den Ordner endgültig löschen? Das kann nicht rückgängig gemacht werden.",
+    "delete_permanent_action": "Endgültig löschen",
     "toast_no_remote": "Kein Remote konfiguriert",
     "toast_path_copied": "Pfad kopiert",
     "toast_copy_failed": "Kopieren nicht möglich",
-    "toast_command_failed": "{{label}} fehlgeschlagen",
+    "toast_command_failed": "{{label}} fehlgeschlagen: {{message}}",
     "toast_removed": "{{name}} entfernt",
     "toast_forget_failed": "Vergessen fehlgeschlagen",
     "toast_trashed": "{{name}} in den Papierkorb verschoben",
+    "toast_deleted_permanently": "{{name}} endgültig gelöscht",
     "toast_delete_failed": "Löschen fehlgeschlagen: {{message}}"
   },
   "toolbar": {

@@ -41,17 +41,6 @@ interface CiLinePoint {
   data: { x?: unknown; passed?: number; total?: number };
 }
 
-type CiTone = "ok" | "warn" | "fail";
-
-// Maps a pass-rate percentage to a RepoBarFill style token. Kept as a
-// module-scope helper so the tone tokens aren't inline literals in the render
-// body (they're style identifiers, not user-facing copy).
-function ciTone(pct: number): CiTone {
-  if (pct >= 95) return "ok";
-  if (pct >= 80) return "warn";
-  return "fail";
-}
-
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
 export interface Props {
@@ -67,7 +56,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
   const { show, hide, portal } = useChartTooltip();
-  const greenColor = theme.palette.success.main;
+  const lineColor = theme.palette.primary.main;
 
   const size = bucketSizeForWindow(windowDays);
   // Newest-first buckets → reverse for chronological left-to-right. Each bucket
@@ -141,7 +130,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
         <ResponsiveLine
           data={data}
           theme={nivoTheme}
-          colors={[greenColor]}
+          colors={[lineColor]}
           margin={{ top: 8, right: 8, bottom: 24, left: 44 }}
           xScale={{ type: "point" }}
           yScale={{ type: "linear", min: yMin, max: 1 }}
@@ -167,7 +156,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
                 title={String(datum.x ?? "")}
                 rows={[
                   {
-                    color: greenColor,
+                    color: lineColor,
                     label: `${pct}%`,
                     value: t("activity.tooltip.ci_passed", { passed, total }),
                   },
@@ -184,14 +173,13 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
         <Breakdown>
           {breakdown.map((r) => {
             const pct = Math.round(r.rate * 100);
-            const tone = ciTone(pct);
             return (
               <RepoRow key={r.repoId}>
                 <RepoName component="span" variant="caption">
                   {r.repoName}
                 </RepoName>
                 <RepoBar>
-                  <RepoBarFill width={pct} tone={tone} />
+                  <RepoBarFill width={pct} />
                 </RepoBar>
                 <RepoPct component="span" variant="caption">
                   {pct}%

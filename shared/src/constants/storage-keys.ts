@@ -44,6 +44,13 @@ export const StorageKey = {
    *  async backend load. Stored as `{ key, since, until }`; fixed presets are
    *  recomputed relative to "now" on load, so "30d" stays "last 30 days". */
   ACTIVITY_RANGE: `${STORAGE_PREFIX}activity-range`,
+  /** User overrides for keyboard shortcuts: a JSON map of `{ [shortcutId]:
+   *  combo }`. Renderer-only UI preference, persisted here (not the backend) so
+   *  custom bindings are available synchronously at store creation —
+   *  `useGlobalShortcuts` binds them on first mount with no flash of the
+   *  defaults. Only overridden shortcuts appear; the rest fall back to the
+   *  declarative defaults in `shortcuts.constants.ts`. */
+  SHORTCUT_OVERRIDES: `${STORAGE_PREFIX}shortcut-overrides`,
 } as const;
 
 /** Prefix for per-confirmation skip flags. Full key:

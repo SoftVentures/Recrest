@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 
 import { useSearchParams } from "react-router-dom";
 
@@ -259,6 +259,28 @@ function SettingsPage() {
   const queryTab = searchParams.get(SETTINGS_TAB_QUERY_PARAM) as TabId | null;
   const tab: TabId = queryTab && KNOWN_TAB_IDS.has(queryTab) ? queryTab : SettingsTab.GENERAL;
 
+  // The General tab has seven sections; mounting them all in one synchronous
+  // pass produced a long main-thread task (~150ms+ in dev, worse on the Tauri
+  // debug build with its discovery IPC) during which clicks on the topmost
+  // control (the theme dropdown) were dropped. We render the light top sections
+  // immediately and defer the heavier ones — incl. SystemSection's IDE/terminal
+  // discovery — to the next frame, so the page is interactive on first paint.
+  const [mountHeavySections, setMountHeavySections] = useState(false);
+  useEffect(() => {
+    if (tab !== "general") {
+      setMountHeavySections(false);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setMountHeavySections(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [tab]);
+
   const setTab = useCallback(
     (next: TabId) => {
       setSearchParams(
@@ -318,11 +340,15 @@ function SettingsPage() {
             </PageHead>
             <DesignSection />
             <LanguageSection />
-            <FontsSection />
-            <AccessibilitySection />
-            <SystemSection />
-            <DesktopSection />
-            <NotificationsSection />
+            {mountHeavySections && (
+              <>
+                <FontsSection />
+                <AccessibilitySection />
+                <SystemSection />
+                <DesktopSection />
+                <NotificationsSection />
+              </>
+            )}
           </PageInner>
         )}
         {tab === "accounts" && (

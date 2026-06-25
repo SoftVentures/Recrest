@@ -12,10 +12,17 @@ use window_vibrancy::{apply_vibrancy, clear_vibrancy, NSVisualEffectMaterial, NS
 /// material's blur radius is fixed, so the renderer hides the blur-amount
 /// slider on macOS (only the rgba intensity tint, which lives in CSS).
 ///
-/// **Windows / other:** nothing to do here — translucency is rendered by CSS
-/// `backdrop-filter` over the transparent window, which the Chromium WebView2
-/// composites reliably (incl. an adjustable blur slider). See `ThemeWrapper` /
-/// `globals.css`.
+/// **Windows:** the Acrylic material (window-vibrancy `apply_acrylic`). A CSS
+/// `backdrop-filter` is NOT viable here even though Chromium supports it — it
+/// only blurs pixels inside Chromium's own compositor, and the desktop behind a
+/// transparent window is composited by the Windows DWM, so the filter blurs
+/// transparency and nothing is visible. The OS Acrylic blur is the equivalent of
+/// the macOS material; the palette tint + intensity slider stay in CSS
+/// (`::before` rgba). Acrylic's radius is fixed, so — like macOS — the renderer
+/// hides the blur-amount slider on Windows.
+///
+/// **Linux / other:** nothing to attach — WebKitGTK has no reliable compositor
+/// blur, and `supports_translucency` reports false there.
 ///
 /// History — why NOT `NSGlassEffectView` / `tauri-plugin-liquid-glass`: that
 /// plugin selects macOS 26's `NSGlassEffectView`, which has a confirmed Apple
@@ -60,9 +67,20 @@ pub fn apply_translucency(
                 CommandError::internal(format!("apply_translucency main-thread hop failed: {e}"))
             })?;
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
     {
-        // Windows/Linux: translucency is CSS-only; nothing to attach natively.
+        // Blur at the OS level via the Acrylic system-backdrop — a CSS
+        // backdrop-filter over a transparent window can't reach the
+        // DWM-composited desktop, so it blurs nothing (the bug this fixes).
+        // The helper extends the borderless window's frame so DWM actually
+        // paints the backdrop, and pins the frost's light/dark appearance to
+        // the APP theme (`dark`) instead of the Windows system theme. The CSS
+        // `::before` rgba layer carries the palette tint + opacity slider.
+        crate::platform::windows::apply_acrylic_backdrop(window, dark);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        // Linux/other: translucency is unsupported (no reliable compositor blur).
         let _ = (window, dark);
     }
     Ok(())
@@ -160,7 +178,11 @@ pub fn clear_translucency(
                 CommandError::internal(format!("clear_translucency main-thread hop failed: {e}"))
             })?;
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    {
+        crate::platform::windows::clear_acrylic_backdrop(window);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = window;
     }
@@ -186,9 +208,10 @@ pub fn set_translucency(
 }
 
 /// Capability check the renderer uses to show/hide the Translucency controls.
-/// macOS: native NSVisualEffectView. Windows: CSS `backdrop-filter` over the
-/// transparent window (Chromium WebView2 composites it reliably). Off on Linux
-/// where WebKitGTK's backdrop-filter over a transparent window isn't reliable.
+/// macOS: native NSVisualEffectView. Windows: OS Acrylic material (both blur at
+/// the compositor level — a CSS backdrop-filter can't reach the desktop behind a
+/// transparent window). Off on Linux where WebKitGTK has no reliable compositor
+/// blur.
 #[tauri::command]
 pub fn supports_translucency() -> bool {
     cfg!(target_os = "macos") || cfg!(target_os = "windows")

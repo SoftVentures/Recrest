@@ -157,14 +157,25 @@ export function SystemSection() {
   // Both the legacy PATH-based detect probes and the new bundle/registry-based
   // discovery run side-by-side — discovery is preferred when it resolves, the
   // older probes remain as fallback so the migration is non-breaking.
+  //
+  // Each probe is guarded on its slice being unloaded (`== null`) so re-opening
+  // Settings doesn't re-run the (Windows: registry + filesystem) scans on every
+  // mount — those redundant scans + their re-renders made the page lag on open.
   useEffect(() => {
     if (!isTauri()) return;
-    void dispatch(loadDetectedTerminals());
-    void dispatch(loadDetectedShells());
-    void dispatch(loadDetectedIdes());
-    void dispatch(loadDiscoveredTerminals());
-    void dispatch(loadDiscoveredIdes());
-  }, [dispatch]);
+    if (detectedTerminalsState == null) void dispatch(loadDetectedTerminals());
+    if (detectedShellsState == null) void dispatch(loadDetectedShells());
+    if (detectedIdesState == null) void dispatch(loadDetectedIdes());
+    if (discoveredTerminalsState == null) void dispatch(loadDiscoveredTerminals());
+    if (discoveredIdesState == null) void dispatch(loadDiscoveredIdes());
+  }, [
+    dispatch,
+    detectedTerminalsState,
+    detectedShellsState,
+    detectedIdesState,
+    discoveredTerminalsState,
+    discoveredIdesState,
+  ]);
 
   const persist = (patch: Partial<AppSettings>) => {
     void dispatch(saveSettings(patch))

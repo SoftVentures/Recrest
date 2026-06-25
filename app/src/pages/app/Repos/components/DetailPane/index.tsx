@@ -45,9 +45,10 @@ import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openExternal, openFolderInSystem } from "@/lib/tauri";
+import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import { errorMessage } from "@/lib/utils/error.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import {
   BranchCard,
@@ -126,8 +127,8 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
     if (!isTauri()) return;
     try {
       await invoke(cmd, { repoId: repo.id });
-    } catch {
-      toast.error(t("row_actions.toast_command_failed", { label }));
+    } catch (err) {
+      toast.error(t("row_actions.toast_command_failed", { label, message: errorMessage(err) }));
     }
   };
 
@@ -189,7 +190,9 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_explorer")}
             tooltip={t("detail_pane.open_in_explorer")}
-            onClick={() => void openFolderInSystem(repo.path)}
+            onClick={() =>
+              void run(TauriCommand.OPEN_IN_EXPLORER, t("detail_pane.open_in_explorer"))
+            }
             icon={<Folder size={13} />}
           />
           {repo.remoteUrl && (

@@ -70,12 +70,25 @@ describe("repos thunks", () => {
     expect(result.payload).toBe(REPO);
   });
 
-  it("deleteRepo resolves with the repo id after the void invoke", async () => {
+  it("deleteRepo resolves with the repo id after the void invoke (trash by default)", async () => {
     invokeMock.mockResolvedValueOnce(undefined);
     const store = makeStore();
-    const result = await store.dispatch(deleteRepo(REPO));
-    expect(invokeMock).toHaveBeenCalledWith(TauriCommand.DELETE_REPO, { repoId: REPO });
+    const result = await store.dispatch(deleteRepo({ repoId: REPO }));
+    expect(invokeMock).toHaveBeenCalledWith(TauriCommand.DELETE_REPO, {
+      repoId: REPO,
+      permanent: false,
+    });
     expect(result.payload).toBe(REPO);
+  });
+
+  it("deleteRepo passes permanent: true for the irreversible fallback", async () => {
+    invokeMock.mockResolvedValueOnce(undefined);
+    const store = makeStore();
+    await store.dispatch(deleteRepo({ repoId: REPO, permanent: true }));
+    expect(invokeMock).toHaveBeenCalledWith(TauriCommand.DELETE_REPO, {
+      repoId: REPO,
+      permanent: true,
+    });
   });
 
   it("setRepoSshKey writes the key then re-reads status", async () => {

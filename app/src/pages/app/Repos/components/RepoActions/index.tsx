@@ -29,8 +29,9 @@ import { useOpenHost } from "@/hooks/useOpenHost";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
-import { invoke, isTauri, openFolderInSystem } from "@/lib/tauri";
+import { invoke, isTauri } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
+import { errorMessage } from "@/lib/utils/error.utils";
 import {
   DangerMenuIcon,
   DangerMenuItem,
@@ -58,7 +59,12 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
   const px = ICON_BUTTON_ICON_SIZES[iconSize];
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | null>(null);
+  const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | "deletePermanent" | null>(
+    null,
+  );
+  // Keep the confirm dialog open with a spinner while the (potentially slow)
+  // backend action runs — trashing a large repo folder can take seconds.
+  const [pending, setPending] = useState(false);
 
   const stop = (e: MouseEvent) => e.stopPropagation();
 
@@ -66,8 +72,8 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
     if (!isTauri()) return;
     try {
       await invoke(cmd, { repoId: repo.id });
-    } catch {
-      toast.error(t("row_actions.toast_command_failed", { label }));
+    } catch (err) {
+      toast.error(t("row_actions.toast_command_failed", { label, message: errorMessage(err) }));
     }
   };
 
@@ -93,22 +99,42 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
   };
 
   const onConfirmForget = async () => {
-    setConfirmKind(null);
+    setPending(true);
     try {
       await dispatch(removeRepo(repo.id)).unwrap();
       toast.success(t("row_actions.toast_removed", { name: repo.name }));
     } catch {
       toast.error(t("row_actions.toast_forget_failed"));
+    } finally {
+      setPending(false);
+      setConfirmKind(null);
     }
   };
   const onConfirmDelete = async () => {
-    setConfirmKind(null);
+    setPending(true);
     try {
-      await dispatch(deleteRepo(repo.id)).unwrap();
+      await dispatch(deleteRepo({ repoId: repo.id })).unwrap();
       toast.success(t("row_actions.toast_trashed", { name: repo.name }));
+      setConfirmKind(null);
+    } catch {
+      // Trash failed (e.g. the Recycle Bin is disabled for the drive or a file
+      // is locked). Offer the irreversible fallback instead of dead-ending; the
+      // specific reason surfaces in the toast if the permanent delete also fails.
+      setConfirmKind("deletePermanent");
+    } finally {
+      setPending(false);
+    }
+  };
+  const onConfirmDeletePermanent = async () => {
+    setPending(true);
+    try {
+      await dispatch(deleteRepo({ repoId: repo.id, permanent: true })).unwrap();
+      toast.success(t("row_actions.toast_deleted_permanently", { name: repo.name }));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(t("row_actions.toast_delete_failed", { message: msg }));
+      toast.error(t("row_actions.toast_delete_failed", { message: errorMessage(err) }));
+    } finally {
+      setPending(false);
+      setConfirmKind(null);
     }
   };
 
@@ -140,7 +166,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
         size={iconSize}
         aria-label={tAria("repo.open_in_explorer")}
         tooltip={t("row_actions.open_in_explorer")}
-        onClick={() => void openFolderInSystem(repo.path)}
+        onClick={() => void run(TauriCommand.OPEN_IN_EXPLORER, t("row_actions.open_in_explorer"))}
         icon={<Folder size={px} />}
       />
       <GeneralIconButton
@@ -202,6 +228,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
         description={t("row_actions.forget_desc")}
         confirmLabel={t("row_actions.forget_action")}
         destructive
+        confirmLoading={pending}
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmForget()}
       />
@@ -211,8 +238,19 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
         description={t("row_actions.delete_desc", { path: repo.path })}
         confirmLabel={t("row_actions.delete_action")}
         destructive
+        confirmLoading={pending}
         onCancel={() => setConfirmKind(null)}
         onConfirm={() => void onConfirmDelete()}
+      />
+      <ConfirmationModal
+        open={confirmKind === "deletePermanent"}
+        title={t("row_actions.delete_permanent_title")}
+        description={t("row_actions.delete_permanent_desc", { path: repo.path })}
+        confirmLabel={t("row_actions.delete_permanent_action")}
+        destructive
+        confirmLoading={pending}
+        onCancel={() => setConfirmKind(null)}
+        onConfirm={() => void onConfirmDeletePermanent()}
       />
       {openHost.modal}
     </>

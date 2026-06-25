@@ -178,9 +178,19 @@ export const BranchChip = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   fontSize: 11,
   color: theme.palette.text.primary,
+  // The source branch shrinks + truncates so a very long ref (e.g. a dependabot
+  // branch) can't push the arrow + target out of the cell.
+  flex: "0 1 auto",
   minWidth: 0,
+  overflow: "hidden",
   whiteSpace: "nowrap",
 })) as typeof Box;
+
+// The target branch (usually "main"/"develop") keeps its full width so source →
+// target stays fully readable however long the source ref gets.
+export const BranchChipFixed = styled(BranchChip)({
+  flex: "0 0 auto",
+}) as typeof Box;
 
 export const BranchGlyph = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
@@ -202,6 +212,7 @@ export const BranchName = styled(Typography)({
 export const Arrow = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
   fontSize: 11,
+  flexShrink: 0,
 })) as typeof Typography;
 
 export const Diff = styled(Box)(({ theme }) => ({
@@ -282,6 +293,14 @@ export const SectionCount = styled(Typography)(({ theme }) => ({
 
 export const SectionBody = styled(Box)({
   padding: "0 16px 12px",
+}) as typeof Box;
+
+// Caps a long PR description so it scrolls inside the section instead of
+// stretching the whole pane; MarkdownView supplies its own typography.
+export const DescriptionBox = styled(Box)({
+  maxHeight: 240,
+  overflow: "auto",
+  fontSize: 12.5,
 }) as typeof Box;
 
 export const Empty = styled(Box)(({ theme }) => ({
@@ -399,9 +418,39 @@ export const TimelineBody = styled(Box)(({ theme }) => ({
 export const Meta = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: 8,
   fontSize: 12,
   color: theme.palette.text.primary,
+})) as typeof Box;
+
+export const MetaRow = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+}) as typeof Box;
+
+export const MetaKey = styled(Box)(({ theme }) => ({
+  fontSize: 11,
+  color: theme.palette.text.information,
+  flexShrink: 0,
+})) as typeof Box;
+
+export const MetaVal = styled(Box)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+  overflow: "hidden",
+  fontSize: 12,
+  fontVariantNumeric: "tabular-nums",
+  color: theme.palette.text.primary,
+  "& > span": {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
 })) as typeof Box;
 
 export const Footer = styled(Box)(({ theme }) => ({

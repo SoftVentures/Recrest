@@ -22,7 +22,6 @@ export const SHORTCUT_ID = {
   NAV_ACTIVITY: "nav-activity",
   NAV_SETTINGS: "nav-settings",
   SEARCH: "search",
-  FIND_ACROSS: "find-across",
   TOGGLE_SIDEBAR: "toggle-sidebar",
 } as const;
 export type ShortcutId = (typeof SHORTCUT_ID)[keyof typeof SHORTCUT_ID];
@@ -42,6 +41,15 @@ export interface ShortcutDef {
   labelKey: string;
   group: ShortcutGroup;
 }
+
+/**
+ * User overrides for the default combos, keyed by shortcut id. Only shortcuts
+ * the user has rebound appear here; every other shortcut falls back to its
+ * declarative default in `SHORTCUTS`. Persisted to `localStorage`
+ * (`StorageKey.SHORTCUT_OVERRIDES`) and merged at bind/display time via
+ * `resolveShortcuts` in `shortcuts.utils.ts`.
+ */
+export type ShortcutOverrides = Partial<Record<ShortcutId, ShortcutCombo>>;
 
 export const SHORTCUTS: readonly ShortcutDef[] = [
   {
@@ -90,12 +98,6 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     id: SHORTCUT_ID.SEARCH,
     combo: { mod: true, key: "k" },
     labelKey: "settings.shortcuts.search",
-    group: SHORTCUT_GROUP.ACTIONS,
-  },
-  {
-    id: SHORTCUT_ID.FIND_ACROSS,
-    combo: { mod: true, shift: true, key: "f" },
-    labelKey: "settings.shortcuts.find_across",
     group: SHORTCUT_GROUP.ACTIONS,
   },
   {

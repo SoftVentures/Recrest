@@ -61,8 +61,6 @@ export const BrandLink = styled(NavLink)(({ theme }) => ({
   color: "inherit",
   padding: theme.spacing(0.5),
   borderRadius: 8,
-  transition: "background-color 120ms ease",
-  "&:hover": { backgroundColor: theme.palette.surface.interface.active },
   "&:focus-visible": {
     outline: `2px solid ${theme.palette.primary.main}`,
     outlineOffset: 2,

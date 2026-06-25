@@ -104,7 +104,7 @@ ignore = "0.4.26"
 # instead of the parent process (e.g. powershell.exe in dev). The richer
 # `windows` crate is needed (vs `windows-sys`) because `SetWindowSubclass`
 # lives in the Win32 ABI helpers and we want safe HWND/LPARAM wrappers.
-windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Registry"] }
+windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_UI_Controls", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_Registry"] }
 # Phase 6 discovery — scans `HKLM/HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths`
 # for installed editors and terminals. Pure Rust, no native linking.
 winreg = "0.55"

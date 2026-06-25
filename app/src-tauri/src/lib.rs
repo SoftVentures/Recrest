@@ -369,7 +369,7 @@ fn windows_uses_dark_mode() -> bool {
         if RegOpenKeyExW(
             HKEY_CURRENT_USER,
             PCWSTR(subkey.as_ptr()),
-            0,
+            Some(0),
             KEY_READ,
             &mut hkey,
         )
@@ -431,14 +431,18 @@ fn apply_windows_theme_icon(app: &AppHandle) {
         if let Ok(raw) = window.hwnd() {
             let hwnd = HWND(raw.0 as *mut _);
             unsafe {
-                let small_hicon =
-                    SendMessageW(hwnd, WM_GETICON, WPARAM(ICON_SMALL as usize), LPARAM(0));
+                let small_hicon = SendMessageW(
+                    hwnd,
+                    WM_GETICON,
+                    Some(WPARAM(ICON_SMALL as usize)),
+                    Some(LPARAM(0)),
+                );
                 if small_hicon.0 != 0 {
                     SendMessageW(
                         hwnd,
                         WM_SETICON,
-                        WPARAM(ICON_BIG as usize),
-                        LPARAM(small_hicon.0),
+                        Some(WPARAM(ICON_BIG as usize)),
+                        Some(LPARAM(small_hicon.0)),
                     );
                 }
             }
@@ -646,6 +650,18 @@ pub fn run() {
                 let _ = window.set_title("");
                 #[cfg(not(target_os = "macos"))]
                 let _ = window.set_title(identity::current_tray_tooltip());
+                // Belt-and-suspenders: the `tauri.dev.conf.json` overlay's
+                // `windows[]` entry omits `decorations: false`, and Tauri's
+                // by-label array merge for window config is unreliable (the
+                // same reason `visible: false` needs the explicit hide below).
+                // In the dev build that lets `decorations` fall back to its
+                // `true` default, so the NATIVE Windows/Linux title bar paints
+                // on top of our custom titlebar — two stacked title bars. Force
+                // it off at runtime for the non-macOS chrome. macOS keeps
+                // decorations on deliberately (Overlay traffic-lights, set
+                // separately below).
+                #[cfg(not(target_os = "macos"))]
+                let _ = window.set_decorations(false);
                 // Belt-and-suspenders: explicitly hide the window here in
                 // case the `visible: false` config-overlay merge didn't
                 // apply (Tauri's `tauri.dev.conf.json` deep-merge for
@@ -1032,6 +1048,10 @@ pub fn run() {
                     match window.hwnd() {
                         Ok(hwnd) => {
                             let raw = windows::Win32::Foundation::HWND(hwnd.0 as *mut _);
+                            // Re-assert WS_MAXIMIZEBOX so Windows 11 surfaces the
+                            // Snap-Layouts flyout when the hit-test reports
+                            // HTMAXBUTTON over our custom maximize button.
+                            platform::windows::ensure_caption_styles(raw);
                             platform::windows::install_subclass(raw);
                         }
                         Err(err) => tracing::warn!("could not get main HWND for subclass: {err}"),
@@ -1132,6 +1152,7 @@ pub fn run() {
         commands::repos::get_oldest_commit_date,
         commands::repos::load_logo_bytes,
         commands::repos::set_repo_logo,
+        commands::repos::set_repo_logo_svg,
         commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::repos::open_file_in_ide,
@@ -1233,6 +1254,7 @@ pub fn run() {
         commands::repos::get_oldest_commit_date,
         commands::repos::load_logo_bytes,
         commands::repos::set_repo_logo,
+        commands::repos::set_repo_logo_svg,
         commands::repos::clear_repo_logo,
         commands::repos::open_in_ide,
         commands::repos::open_file_in_ide,

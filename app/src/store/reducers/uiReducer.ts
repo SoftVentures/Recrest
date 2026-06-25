@@ -4,7 +4,6 @@ import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import {
   bumpRefreshNonce,
   setActiveView,
-  setFindDialogOpen,
   setImportDialogOpen,
   setOnboardingOverride,
   setPinnedRepos,
@@ -22,7 +21,6 @@ const initialState: UiState = {
   searchOpen: false,
   activeView: "dashboard",
   importDialogOpen: false,
-  findDialogOpen: false,
   refreshNonce: 0,
   updaterBanner: null,
   pinnedRepoIds: [],
@@ -46,9 +44,6 @@ export const uiReducer = createReducer(initialState, (builder) => {
     })
     .addCase(setImportDialogOpen, (state, action) => {
       state.importDialogOpen = action.payload;
-    })
-    .addCase(setFindDialogOpen, (state, action) => {
-      state.findDialogOpen = action.payload;
     })
     .addCase(bumpRefreshNonce, (state) => {
       state.refreshNonce += 1;
@@ -102,7 +97,6 @@ function hydrateUiFromBackend(state: UiState, payload: unknown): void {
 export {
   bumpRefreshNonce,
   setActiveView,
-  setFindDialogOpen,
   setImportDialogOpen,
   setPinnedRepos,
   setSearchOpen,
