@@ -671,14 +671,20 @@ pub fn run() {
                 // Keep in lock-step with `tauri.conf.json` (1100×720, the
                 // documented desktop-only minimum).
                 let _ = window.set_min_size(Some(LogicalSize::new(1100.0, 720.0)));
-                // Belt-and-suspenders: explicitly hide the window here in
-                // case the `visible: false` config-overlay merge didn't
-                // apply (Tauri's `tauri.dev.conf.json` deep-merge for
-                // arrays-of-objects-by-label is not well-documented and
-                // we cannot trust it for boot-critical behaviour). With
-                // this explicit `hide()` the window stays off-screen from
-                // process start until JS's `getCurrentWebviewWindow().show()`
-                // fires, regardless of conf-merge semantics.
+                // macOS only: the window boots `visible: false`
+                // (tauri.macos.conf.json) so the WKWebView cold-boot sequence
+                // (transparent → shadow → backdrop-filter engaging) never
+                // reaches the user; JS `show()`s it after first paint. We force
+                // the hide here too because Tauri's by-label window-array merge
+                // is not reliable for boot-critical behaviour.
+                //
+                // Windows/Linux boot `visible: true` (as in 0.9.x). Do NOT hide
+                // them: force-hiding made WebView2 (and WebKitGTK) latch an
+                // early, unstyled frame on cold boot — the window surface kept
+                // presenting that stale frame even after the styled frame was
+                // composited (a reload fixed it). Leaving the window visible
+                // lets the webview re-present normally as content paints.
+                #[cfg(target_os = "macos")]
                 let _ = window.hide();
             }
 

@@ -8,7 +8,6 @@
       {
         "label": "main",
         "transparent": true,
-        "visible": false,
         "decorations": false
       }
     ],
