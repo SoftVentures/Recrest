@@ -2,6 +2,14 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] — 2026-06-26
+
+Patch release fixing the real cause of the unstyled-app regression that 0.10.0/0.10.1 misdiagnosed.
+
+### Fixed
+
+- **The packaged app rendered completely unstyled** (huge logo, oversized text, broken layout) — on every launch, not just cold boot. Root cause: at build time Tauri rewrites the Content-Security-Policy and injects a `nonce` into `style-src` to allow the inline `<style>` in `index.html`. Per the CSP spec, once a nonce is present in a directive, `'unsafe-inline'` is ignored — so every stylesheet MUI/Emotion injects at runtime (which carries no nonce) was blocked, leaving only the static reset stylesheet applied. The dev server doesn't go through Tauri's CSP rewrite, which is why it only showed in packaged builds. Fixed by excluding `style-src` from Tauri's CSP nonce/hash injection (`dangerousDisableAssetCspModification`), so the declared `'unsafe-inline'` stays effective and runtime styles apply again. `script-src` keeps its nonce.
+
 ## [0.10.1] — 2026-06-26
 
 Patch release fixing a cold-boot rendering regression in the desktop app.
@@ -224,6 +232,7 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.10.2]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.2
 [0.10.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.1
 [0.10.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.0
 [0.9.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.1
