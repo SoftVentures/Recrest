@@ -1,16 +1,11 @@
-# Recrest 0.10.0 — Dashboard polish & a responsive Activity surface
+# Recrest 0.10.1 — Cold-boot rendering fix
 
-Minor release on top of `0.9.1`. Dashboard and statistics refinements plus a sweep of dependency and build-tooling modernisation. Everything from the `0.9.0` / `0.9.1` releases (GitLab + Bitbucket parity, repository management & Git actions, the Activity/Statistics stack, the Material UI migration) is unchanged — see the [0.9.0 notes](https://github.com/SoftVentures/Recrest/releases/tag/v0.9.0) for that feature set.
-
-## What's new
-
-- **"Pull all" on the dashboard.** A new quick action pulls the current branch of every scanned repo in one click, right next to "Fetch all". (The old "Create branch" shortcut, which only jumped to the Branches page, is gone.)
-- **Nicer activity bars.** The dashboard activity chart now uses a primary-colour gradient and keeps each bar at its real height on hover (with a soft glow) instead of stretching to full height; the tooltip sits directly above the bar you're pointing at.
-- **Responsive language mix.** The "Languages" donut scales with its card so the per-language percentages stay readable down to the minimum window size.
+Patch release on top of `0.10.0`. Fixes a desktop cold-start regression — everything from `0.10.0` (dashboard polish, responsive Activity/Statistics, the "Pull all" quick action) is unchanged.
 
 ## What's fixed
 
-- **Windows minimum window size.** The window now enforces its 1100×720 minimum at runtime — it can no longer be resized below the supported desktop floor.
+- **Windows / Linux: the app no longer launches unstyled.** On a cold start the window could appear completely unstyled — huge logo, oversized text, as if the CSS hadn't loaded. The styles were actually fine; the window had booted hidden and was revealed from JS after the first paint (a flash-suppression path), which on Windows (WebView2) and Linux (WebKitGTK) latched an early, unstyled frame that only a reload would clear. The window now boots visible on Windows/Linux, so the first frame the compositor presents is the styled one. macOS is unchanged.
+- **Linux installer** builds again (adapted to a dependency API change).
 
 ## Install
 
@@ -18,7 +13,7 @@ Minor release on top of `0.9.1`. Dashboard and statistics refinements plus a swe
 - **macOS** — open the `.dmg`, drag Recrest into Applications. On first launch, Gatekeeper may block; right-click the app → **Open**, or `xattr -cr /Applications/Recrest.app`.
 - **Linux** — `chmod +x Recrest_*.AppImage && ./Recrest_*.AppImage`, or install the `.deb` / `.rpm`.
 
-Already on an earlier build? The in-app updater picks 0.10.0 up automatically on next launch (or via **Settings → Updates → Check for updates**). The signing key and endpoint are unchanged, so it verifies and installs without a manual reinstall.
+Already on 0.10.0? The in-app updater picks 0.10.1 up automatically on next launch (or via **Settings → Updates → Check for updates**). The signing key and endpoint are unchanged, so it verifies and installs without a manual reinstall.
 
 ## Verify the download
 

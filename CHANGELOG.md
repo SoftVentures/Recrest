@@ -2,6 +2,15 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] — 2026-06-26
+
+Patch release fixing a cold-boot rendering regression in the desktop app.
+
+### Fixed
+
+- **Windows / Linux: the app rendered completely unstyled on cold start** (huge logo, oversized text — as if no CSS applied). The window booted hidden and was revealed from JS after first paint — a macOS flash-suppression path added in 0.10.0 — but on Windows (WebView2) and Linux (WebKitGTK) the hidden→show transition latched an early, unstyled frame that never re-presented until a manual reload. The CSS was always loaded and correct; only the on-screen surface was stale. The window now boots visible on Windows/Linux (as it did through 0.9.x); macOS keeps the flash-suppression path unchanged.
+- **Linux installer build.** Adapted to the `freedesktop-desktop-entry` 0.7.19 `Iter::new` API change so the Linux bundle compiles again.
+
 ## [0.10.0] — 2026-06-25
 
 Minor release: dashboard polish, a more responsive Activity/Statistics surface, and a sweep of dependency + build-tooling modernisation.
@@ -215,6 +224,7 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.10.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.1
 [0.10.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.0
 [0.9.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.1
 [0.9.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.0
