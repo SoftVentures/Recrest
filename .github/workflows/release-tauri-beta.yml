@@ -24,7 +24,7 @@ jobs:
     name: Generate installer assets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v6
@@ -75,7 +75,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
