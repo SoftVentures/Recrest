@@ -80,7 +80,7 @@ jobs:
     needs: resolve
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -177,7 +177,7 @@ jobs:
     # manually (gh release upload) or by re-running the failed leg once fixed.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -279,7 +279,7 @@ jobs:
           forward TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
