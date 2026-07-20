@@ -48,7 +48,7 @@ tauri-plugin-window-state = "2.4"
 # vibrancy shows through. On Windows we apply Acrylic for the same reason.
 # Linux has no compositor blur, so Glassy falls back to a semi-transparent
 # surface without blur — documented as a platform limitation.
-window-vibrancy = "0.7"
+window-vibrancy = "0.8"
 sentry = "0.48"
 os_info = "3"
 serde = { version = "1.0", features = ["derive"] }
@@ -104,10 +104,10 @@ ignore = "0.4.26"
 # instead of the parent process (e.g. powershell.exe in dev). The richer
 # `windows` crate is needed (vs `windows-sys`) because `SetWindowSubclass`
 # lives in the Win32 ABI helpers and we want safe HWND/LPARAM wrappers.
-windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_UI_Controls", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_Registry"] }
+windows = { version = "0.62", features = ["Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_UI_Controls", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_Registry"] }
 # Phase 6 discovery — scans `HKLM/HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths`
 # for installed editors and terminals. Pure Rust, no native linking.
-winreg = "0.55"
+winreg = "0.56"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Sets NSApp.applicationIconImage at runtime so Stage Manager / Mission
@@ -132,7 +132,7 @@ plist = "1"
 notify-rust = { version = "4", features = [] }
 # Phase 6 discovery — parses freedesktop `.desktop` entries to find installed
 # terminals and IDEs. Pure Rust, no native linking.
-freedesktop-desktop-entry = "0.7"
+freedesktop-desktop-entry = "0.8"
 
 [dev-dependencies]
 # Phase 3 backend test harness: throwaway git repos + mocked provider HTTP.
