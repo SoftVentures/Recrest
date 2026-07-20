@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: System deps (webkit2gtk + xvfb)
         run: |
@@ -48,7 +48,7 @@ jobs:
             xvfb
 
       - name: Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           cache: yarn
@@ -70,7 +70,7 @@ jobs:
 
       - name: Cache tauri-driver + tauri-cli
         id: tauri-bins-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/tauri-driver
