@@ -4,6 +4,7 @@ use tauri::{AppHandle, State};
 use crate::AppState;
 
 use super::error::{CommandError, ProviderVerifyError};
+use crate::providers::r#trait::{GitProvider, ProviderAuthState, ProviderAuthStatus};
 use crate::providers::verify::VerifiedAccount;
 
 /// Whether the Accounts UI should surface the "Connect via browser" affordance.
@@ -19,6 +20,10 @@ const fn oauth_visible(real_support: bool) -> bool {
 pub struct ProviderConnectionDto {
     pub provider_id: String,
     pub display_name: String,
+    /// Whether the account is usable. `false` for both "no credentials" and
+    /// "credentials rejected" — read `auth_state` to tell those apart.
+    /// A provider we simply could not reach stays `true`: offline must not
+    /// look like a disconnect.
     pub connected: bool,
     pub username: Option<String>,
     pub supports_oauth: bool,
@@ -27,6 +32,27 @@ pub struct ProviderConnectionDto {
     /// chip and prefill the "Change API base URL" input.
     #[serde(default)]
     pub base_url: Option<String>,
+    /// Live credential state. `disconnected` | `connected` | `invalid` |
+    /// `unreachable`. `invalid` is the case a revoked PAT used to hide in.
+    #[serde(default)]
+    pub auth_state: ProviderAuthState,
+}
+
+/// Builds the DTO from one live credential check, so `connected`, `username`
+/// and `auth_state` can never disagree with each other.
+async fn connection_dto(
+    provider: &dyn GitProvider,
+    status: ProviderAuthStatus,
+) -> ProviderConnectionDto {
+    ProviderConnectionDto {
+        provider_id: provider.id().to_string(),
+        display_name: provider.display_name().to_string(),
+        connected: status.is_usable(),
+        username: status.username.clone(),
+        supports_oauth: oauth_visible(provider.supports_oauth()),
+        base_url: provider.base_url().await,
+        auth_state: status.state,
+    }
 }
 
 #[tauri::command]
@@ -36,15 +62,8 @@ pub async fn list_providers(
     let providers = state.providers.list();
     let mut out = Vec::with_capacity(providers.len());
     for provider in providers {
-        let connected = provider.is_authenticated().await.unwrap_or(false);
-        out.push(ProviderConnectionDto {
-            provider_id: provider.id().to_string(),
-            display_name: provider.display_name().to_string(),
-            connected,
-            username: provider.username().await.ok().flatten(),
-            supports_oauth: oauth_visible(provider.supports_oauth()),
-            base_url: provider.base_url().await,
-        });
+        let status = provider.auth_status().await;
+        out.push(connection_dto(provider.as_ref(), status).await);
     }
     Ok(out)
 }
@@ -61,14 +80,14 @@ pub async fn set_provider_token(
         .get(&provider_id)
         .ok_or_else(|| CommandError::not_found(format!("provider {provider_id} not found")))?;
     provider.set_token(&token, username.as_deref()).await?;
-    Ok(ProviderConnectionDto {
-        provider_id: provider.id().to_string(),
-        display_name: provider.display_name().to_string(),
-        connected: true,
-        username,
-        supports_oauth: oauth_visible(provider.supports_oauth()),
-        base_url: provider.base_url().await,
-    })
+    // Report what the provider actually says about the credentials we just
+    // stored rather than asserting `connected: true` — otherwise a token that
+    // stops working between verify and save still shows up as healthy.
+    let mut status = provider.auth_status().await;
+    if status.username.is_none() {
+        status.username = username;
+    }
+    Ok(connection_dto(provider.as_ref(), status).await)
 }
 
 /// Persists a per-provider API base URL override (or clears it with `None` /
@@ -92,6 +111,14 @@ pub async fn set_provider_base_url(
 
     provider.set_base_url(trimmed.clone()).await?;
 
+    // Persist what the provider *resolved* the input to, not the raw string:
+    // GitHub normalises a bare Enterprise host into its `/api/v3` API root,
+    // and settings.json must hold the same value the runtime uses.
+    let persisted = match trimmed {
+        Some(_) => provider.base_url().await,
+        None => None,
+    };
+
     {
         let mut config = state.config.lock().await;
         let settings = config.settings_mut();
@@ -99,21 +126,14 @@ pub async fn set_provider_base_url(
             .provider_settings
             .entry(provider_id.clone())
             .or_default();
-        entry.base_url = trimmed.clone();
+        entry.base_url = persisted;
         config
             .save(&app)
             .map_err(|e| CommandError::internal(format!("save settings: {e}")))?;
     }
 
-    let connected = provider.is_authenticated().await.unwrap_or(false);
-    Ok(ProviderConnectionDto {
-        provider_id: provider.id().to_string(),
-        display_name: provider.display_name().to_string(),
-        connected,
-        username: provider.username().await.ok().flatten(),
-        supports_oauth: oauth_visible(provider.supports_oauth()),
-        base_url: provider.base_url().await,
-    })
+    let status = provider.auth_status().await;
+    Ok(connection_dto(provider.as_ref(), status).await)
 }
 
 #[tauri::command]
@@ -438,13 +458,17 @@ async fn ping_gitlab_inner(client: &reqwest::Client, trimmed: &str) -> ProviderP
 }
 
 async fn ping_github_inner(client: &reqwest::Client, trimmed: &str) -> ProviderPingResult {
-    // GitHub Enterprise uses `/api/v3`. Strip it so we hit the API root.
-    let root = trimmed.strip_suffix("/api/v3").unwrap_or(trimmed);
+    // Resolve through the *same* rule the provider and `verify_credentials`
+    // use, so all three agree on what a user-typed URL means. Stripping
+    // `/api/v3` here (the old behaviour) probed the Enterprise web app, which
+    // never carries the API dictionary — so a perfectly good GHE host was
+    // reported as "reachable, but doesn't look like GitHub".
+    let root = crate::providers::github::normalize_api_base(trimmed);
     // `GET <root>` returns a JSON dictionary of API URLs (including
     // `current_user_url`) on both cloud (https://api.github.com) and
     // Enterprise (`<host>/api/v3`). Cheap, unauthenticated, no scope needed.
     match client
-        .get(root)
+        .get(&root)
         .header("Accept", "application/vnd.github+json")
         .send()
         .await
@@ -569,6 +593,27 @@ pub async fn verify_credentials(
     }
 }
 
+async fn resolve_repo_provider(
+    state: &State<'_, AppState>,
+    repo_id: &str,
+) -> Result<(String, String), CommandError> {
+    let config = state.config.lock().await;
+    let record = config
+        .settings()
+        .repos
+        .get(repo_id)
+        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
+    let provider_id = record
+        .provider_id
+        .clone()
+        .ok_or_else(|| CommandError::bad_request("repo has no provider assigned"))?;
+    let remote_url = record
+        .remote_url
+        .clone()
+        .ok_or_else(|| CommandError::bad_request("repo has no remote configured"))?;
+    Ok((provider_id, remote_url))
+}
+
 #[cfg(test)]
 mod ping_provider_tests {
     use super::*;
@@ -628,39 +673,29 @@ mod ping_provider_tests {
         }
     }
 
+    /// The ping probe must resolve a base URL exactly like the provider and
+    /// `verify_credentials` do — a bare Enterprise host has to become its
+    /// `/api/v3` API root, not stay pointed at the web app.
     #[test]
-    fn github_root_url_strip_logic_handles_api_v3() {
+    fn github_ping_resolves_the_same_api_root_as_the_provider() {
+        use crate::providers::github::normalize_api_base;
         let cases = [
             ("https://api.github.com", "https://api.github.com"),
-            ("https://github.acme.com", "https://github.acme.com"),
-            ("https://github.acme.com/api/v3", "https://github.acme.com"),
-            ("https://github.acme.com/api/v3/", "https://github.acme.com"),
+            ("https://api.github.com/", "https://api.github.com"),
+            ("https://github.acme.com", "https://github.acme.com/api/v3"),
+            ("https://github.acme.com/", "https://github.acme.com/api/v3"),
+            (
+                "https://github.acme.com/api/v3",
+                "https://github.acme.com/api/v3",
+            ),
+            (
+                "https://github.acme.com/api/v3/",
+                "https://github.acme.com/api/v3",
+            ),
         ];
         for (input, expected) in cases {
             let trimmed = input.trim().trim_end_matches('/').to_string();
-            let root = trimmed.strip_suffix("/api/v3").unwrap_or(&trimmed);
-            assert_eq!(root, expected, "for input {input}");
+            assert_eq!(normalize_api_base(&trimmed), expected, "for input {input}");
         }
     }
-}
-
-async fn resolve_repo_provider(
-    state: &State<'_, AppState>,
-    repo_id: &str,
-) -> Result<(String, String), CommandError> {
-    let config = state.config.lock().await;
-    let record = config
-        .settings()
-        .repos
-        .get(repo_id)
-        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
-    let provider_id = record
-        .provider_id
-        .clone()
-        .ok_or_else(|| CommandError::bad_request("repo has no provider assigned"))?;
-    let remote_url = record
-        .remote_url
-        .clone()
-        .ok_or_else(|| CommandError::bad_request("repo has no remote configured"))?;
-    Ok((provider_id, remote_url))
 }

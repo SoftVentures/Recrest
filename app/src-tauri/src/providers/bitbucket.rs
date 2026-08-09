@@ -20,6 +20,9 @@ const USERNAME_KEY: &str = "bitbucket:username";
 const API_BASE: &str = "https://api.bitbucket.org/2.0";
 const PAGELEN: u32 = 100;
 const MAX_PAGES: u32 = 10;
+/// Hard cap for the open-PR listing: 10 x 100 = 1000 open PRs per repo.
+/// The list used to stop dead at a single unpaginated 50, silently.
+const MAX_PR_PAGES: u32 = 10;
 
 /// Bitbucket's OAuth flow issues access tokens (treated as passwords for the
 /// Basic-auth API requests Recrest already makes). The refresh-token dance is
@@ -50,17 +53,17 @@ impl BitbucketProvider {
     }
 
     /// Effective API base URL. See `github::api_base` for the layering
-    /// rationale — the Plan-8 E2E env-var (`RECREST_PROVIDER_BASE_URLS`)
-    /// wins over any user-configured override.
+    /// rationale — the user's own override wins, and the debug-only E2E
+    /// env-var (`RECREST_PROVIDER_BASE_URLS`) only replaces the built-in
+    /// cloud default.
     fn api_base(&self) -> String {
+        if let Some(url) = self.base_url_override.read().ok().and_then(|g| g.clone()) {
+            return url;
+        }
         if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
             return url;
         }
-        self.base_url_override
-            .read()
-            .ok()
-            .and_then(|g| g.clone())
-            .unwrap_or_else(|| API_BASE.to_string())
+        API_BASE.to_string()
     }
 
     async fn credentials(&self) -> Result<Option<(String, String)>, CommandError> {
@@ -100,8 +103,37 @@ impl GitProvider for BitbucketProvider {
         Ok(self.credentials().await?.is_some())
     }
 
+    /// Unlike the other two providers this used to return the *stored*
+    /// username without ever calling the API, so a revoked app-password kept
+    /// the account looking connected forever. It now verifies against
+    /// `/user` and follows the `GitProvider::username` contract: `Ok(None)`
+    /// only when nothing is stored, `Unauthorized` when the credentials are
+    /// rejected.
     async fn username(&self) -> Result<Option<String>, CommandError> {
-        Ok(self.credentials().await?.map(|(u, _)| u))
+        let Some((stored_username, password)) = self.credentials().await? else {
+            return Ok(None);
+        };
+        let base = self.api_base();
+        let url = format!("{base}/user");
+        let res = self
+            .http
+            .get(&url)
+            .basic_auth(&stored_username, Some(&password))
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(super::http_error(PROVIDER_ID, &res, &url));
+        }
+        let me: BbCurrentUser = res.json().await?;
+        // Atlassian accounts migrated away from `username`; `nickname` is the
+        // documented replacement. Fall back to what the user typed so a
+        // successful check never blanks out the displayed account.
+        Ok(Some(
+            me.username
+                .or(me.nickname)
+                .filter(|s| !s.is_empty())
+                .unwrap_or(stored_username),
+        ))
     }
 
     async fn set_token(&self, token: &str, username: Option<&str>) -> Result<(), CommandError> {
@@ -140,34 +172,37 @@ impl GitProvider for BitbucketProvider {
         })?;
         let base = self.api_base();
 
-        let res = self
-            .http
-            .get(format!(
-                "{base}/repositories/{workspace}/{repo}/pullrequests"
-            ))
-            .basic_auth(&username, Some(&password))
-            // `+values.reviewers` extends Bitbucket's default field set so
-            // each PR carries its reviewers inline; without this the list
-            // endpoint omits them entirely and we'd need an extra request
-            // per PR to surface them.
-            .query(&[
-                ("state", "OPEN"),
-                ("pagelen", "50"),
-                ("fields", "+values.reviewers"),
-            ])
-            .send()
-            .await?;
+        // Follow Bitbucket's `next` cursor instead of taking a single page —
+        // the list used to stop dead at 50 open PRs with no indication.
+        // `+values.reviewers` extends Bitbucket's default field set so each PR
+        // carries its reviewers inline; without it the list endpoint omits
+        // them entirely and we would need an extra request per PR.
+        let mut url = format!(
+            "{base}/repositories/{workspace}/{repo}/pullrequests?state=OPEN&pagelen={PAGELEN}&fields=%2Bvalues.reviewers"
+        );
+        let mut items: Vec<BbPr> = Vec::new();
+        for _ in 0..MAX_PR_PAGES {
+            let res = self
+                .http
+                .get(&url)
+                .basic_auth(&username, Some(&password))
+                .send()
+                .await?;
 
-        if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket: {}",
-                res.status()
-            )));
+            if !res.status().is_success() {
+                return Err(super::http_error(PROVIDER_ID, &res, &url));
+            }
+
+            let body: BbPage<BbPr> = res.json().await?;
+            items.extend(body.values);
+            match body.next {
+                Some(next) if !next.is_empty() => url = next,
+                _ => break,
+            }
         }
 
-        let body: BbPage<BbPr> = res.json().await?;
-        let mut out = Vec::with_capacity(body.values.len());
-        for pr in body.values {
+        let mut out = Vec::with_capacity(items.len());
+        for pr in items {
             let sha = pr
                 .source
                 .as_ref()
@@ -382,10 +417,7 @@ impl GitProvider for BitbucketProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket oauth token: {}",
-                res.status()
-            )));
+            return Err(super::http_error(PROVIDER_ID, &res, "oauth token"));
         }
         let body: BbTokenResponse = res.json().await?;
         let token = body
@@ -459,10 +491,7 @@ impl GitProvider for BitbucketProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket diff: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(PROVIDER_ID, &res, &format!("diff {url}")));
         }
         let text = res.text().await?;
         Ok(parse_combined_diff(&text))
@@ -508,10 +537,11 @@ impl GitProvider for BitbucketProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket post comment: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("post comment {url}"),
+            ));
         }
         let raw: BbCreatedComment = res.json().await?;
         let author_avatar_url = raw
@@ -598,10 +628,11 @@ impl GitProvider for BitbucketProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket trigger pipeline: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("trigger pipeline {url}"),
+            ));
         }
         let run: BbPipeline = res.json().await?;
         Ok(map_pipeline(run))
@@ -625,10 +656,11 @@ impl GitProvider for BitbucketProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket stop pipeline: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("stop pipeline {url}"),
+            ));
         }
         Ok(())
     }
@@ -658,10 +690,11 @@ impl GitProvider for BitbucketProvider {
             return Ok(None);
         }
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket pipelines.yml: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("pipelines.yml {url}"),
+            ));
         }
         let yaml = res.text().await?;
         if pipelines_yaml_has_deploy(&yaml) {
@@ -731,9 +764,11 @@ impl GitProvider for BitbucketProvider {
             })));
         }
         if !status.is_success() {
-            return Err(CommandError::internal(format!(
-                "bitbucket merge: {status} ({url})"
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("merge {url}"),
+            ));
         }
 
         let merged: BbMerged = res.json().await?;
@@ -1161,11 +1196,7 @@ async fn bb_json<T: serde::de::DeserializeOwned>(
         .send()
         .await?;
     if !res.status().is_success() {
-        return Err(CommandError::internal(format!(
-            "bitbucket {}: {}",
-            res.status(),
-            url
-        )));
+        return Err(super::http_error(PROVIDER_ID, &res, url));
     }
     Ok(res.json::<T>().await?)
 }
@@ -1481,6 +1512,7 @@ mod tests {
     use super::*;
     use crate::auth::token::install_keyring_mock;
     use crate::providers::api::CommentAnchor;
+    use crate::providers::r#trait::ProviderAuthState;
     use wiremock::matchers::{method, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -1833,5 +1865,134 @@ mod tests {
             err,
             crate::commands::error::ProviderVerifyError::Unauthorized
         ));
+    }
+
+    #[tokio::test]
+    async fn bitbucket_username_maps_401_to_unauthorized() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let err = provider.username().await.unwrap_err();
+        assert!(
+            matches!(err, CommandError::Unauthorized(_)),
+            "expected Unauthorized, got {err:?}"
+        );
+        assert!(serde_json::to_string(&err)
+            .unwrap()
+            .contains("\"kind\":\"unauthorized\""));
+    }
+
+    /// Bitbucket used to report the *stored* username without ever calling the
+    /// API, so a revoked app-password stayed "connected" indefinitely.
+    #[tokio::test]
+    async fn bitbucket_auth_status_reports_invalid_for_revoked_app_password() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let status = provider.auth_status().await;
+        assert_eq!(status.state, ProviderAuthState::Invalid);
+        assert!(!status.is_usable());
+    }
+
+    #[tokio::test]
+    async fn bitbucket_auth_status_prefers_the_account_nickname() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"nickname":"alice"}"#))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let status = provider.auth_status().await;
+        assert_eq!(status.state, ProviderAuthState::Connected);
+        assert_eq!(status.username.as_deref(), Some("alice"));
+    }
+
+    #[tokio::test]
+    async fn bitbucket_auth_status_reports_disconnected_without_credentials() {
+        install_keyring_mock();
+        let provider = BitbucketProvider::new();
+        provider.clear_token().await.unwrap();
+        assert_eq!(
+            provider.auth_status().await.state,
+            ProviderAuthState::Disconnected
+        );
+    }
+
+    /// Regression: the open-PR list took a single 50-item page and dropped the
+    /// rest. It now follows Bitbucket's `next` cursor.
+    #[tokio::test]
+    async fn bitbucket_list_pull_requests_follows_the_next_cursor() {
+        use wiremock::matchers::path;
+
+        let server = MockServer::start().await;
+        let page = |from: u64, count: u64, next: Option<String>| {
+            let values: Vec<serde_json::Value> = (from..from + count)
+                .map(|n| {
+                    serde_json::json!({
+                        "id": n, "title": format!("PR {n}"),
+                        "state": "OPEN",
+                        "links": { "html": { "href": "u" } },
+                        "source": { "branch": { "name": "feature" } },
+                        "destination": { "branch": { "name": "main" } },
+                        "created_on": "2024-01-01T00:00:00Z",
+                        "updated_on": "2024-01-01T00:00:00Z"
+                    })
+                })
+                .collect();
+            let mut body = serde_json::json!({ "values": values });
+            if let Some(next) = next {
+                body["next"] = serde_json::Value::String(next);
+            }
+            body
+        };
+
+        Mock::given(method("GET"))
+            .and(path("/repositories/acme/widget/pullrequests"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(
+                1,
+                100,
+                Some(format!("{}/pr-page-2", server.uri())),
+            )))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/pr-page-2"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(101, 5, None)))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let prs = provider
+            .list_pull_requests("https://bitbucket.org/acme/widget.git")
+            .await
+            .unwrap();
+        assert_eq!(
+            prs.len(),
+            105,
+            "next cursor must be followed, not truncated"
+        );
+    }
+
+    /// The user's own override must win over the debug-only E2E env-var.
+    #[tokio::test]
+    async fn bitbucket_user_base_url_wins_over_env_override() {
+        install_keyring_mock();
+        let p = BitbucketProvider::new();
+        p.set_base_url(Some("https://bb.acme.test/2.0".into()))
+            .await
+            .unwrap();
+        assert_eq!(p.api_base(), "https://bb.acme.test/2.0");
     }
 }

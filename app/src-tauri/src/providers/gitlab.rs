@@ -21,6 +21,9 @@ pub const PROVIDER_ID: &str = "gitlab";
 const API_BASE: &str = "https://gitlab.com/api/v4";
 const PER_PAGE: u32 = 100;
 const MAX_PAGES: u32 = 10;
+/// Hard cap for the open-MR listing: 10 x 100 = 1000 open MRs per project.
+/// The list used to stop dead at a single unpaginated 50, silently.
+const MAX_PR_PAGES: u32 = 10;
 
 const OAUTH_CLIENT_ID: Option<&str> = option_env!("RECREST_GITLAB_OAUTH_CLIENT_ID");
 const OAUTH_CLIENT_SECRET: Option<&str> = option_env!("RECREST_GITLAB_OAUTH_CLIENT_SECRET");
@@ -48,17 +51,17 @@ impl GitlabProvider {
     }
 
     /// Effective API base URL. See `github::api_base` for the layering
-    /// rationale — the Plan-8 E2E env-var (`RECREST_PROVIDER_BASE_URLS`)
-    /// wins over the user-configured self-hosted GitLab override.
+    /// rationale — the user's own self-hosted override wins, and the
+    /// debug-only E2E env-var (`RECREST_PROVIDER_BASE_URLS`) only replaces
+    /// the built-in cloud default.
     fn api_base(&self) -> String {
+        if let Some(url) = self.base_url_override.read().ok().and_then(|g| g.clone()) {
+            return url;
+        }
         if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
             return url;
         }
-        self.base_url_override
-            .read()
-            .ok()
-            .and_then(|g| g.clone())
-            .unwrap_or_else(|| API_BASE.to_string())
+        API_BASE.to_string()
     }
 
     async fn token(&self) -> Result<Option<String>, CommandError> {
@@ -92,19 +95,23 @@ impl GitProvider for GitlabProvider {
         Ok(self.token().await?.is_some())
     }
 
+    /// See the `GitProvider::username` contract: `Ok(None)` only when no
+    /// token is stored; a stored-but-rejected token surfaces as
+    /// `Unauthorized` so `auth_status()` can tell the two apart.
     async fn username(&self) -> Result<Option<String>, CommandError> {
         let Some(token) = self.token().await? else {
             return Ok(None);
         };
         let base = self.api_base();
+        let url = format!("{base}/user");
         let res = self
             .http
-            .get(format!("{base}/user"))
+            .get(&url)
             .header("PRIVATE-TOKEN", &token)
             .send()
             .await?;
         if !res.status().is_success() {
-            return Ok(None);
+            return Err(super::http_error(PROVIDER_ID, &res, &url));
         }
         let user: GlUser = res.json().await?;
         Ok(Some(user.username))
@@ -142,20 +149,30 @@ impl GitProvider for GitlabProvider {
         let encoded = urlencoding::encode(&project_path);
         let base = self.api_base();
 
-        let res = self
-            .http
-            .get(format!("{base}/projects/{encoded}/merge_requests"))
-            .header("PRIVATE-TOKEN", &token)
-            .query(&[("state", "opened"), ("per_page", "50")])
-            .send()
-            .await?;
+        let mut out: Vec<PullRequestDto> = Vec::new();
+        for page in 1..=MAX_PR_PAGES {
+            let url = format!(
+                "{base}/projects/{encoded}/merge_requests?state=opened&per_page={PER_PAGE}&page={page}"
+            );
+            let res = self
+                .http
+                .get(&url)
+                .header("PRIVATE-TOKEN", &token)
+                .send()
+                .await?;
 
-        if !res.status().is_success() {
-            return Err(CommandError::internal(format!("gitlab: {}", res.status())));
+            if !res.status().is_success() {
+                return Err(super::http_error(PROVIDER_ID, &res, &url));
+            }
+
+            let batch: Vec<GlMr> = res.json().await?;
+            let batch_len = batch.len() as u32;
+            out.extend(batch.into_iter().map(map_mr));
+            if batch_len < PER_PAGE {
+                break;
+            }
         }
-
-        let items: Vec<GlMr> = res.json().await?;
-        Ok(items.into_iter().map(map_mr).collect())
+        Ok(out)
     }
 
     async fn get_pull_request_detail(
@@ -320,10 +337,7 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab oauth token: {}",
-                res.status()
-            )));
+            return Err(super::http_error(PROVIDER_ID, &res, "oauth token"));
         }
         let body: GlTokenResponse = res.json().await?;
         let token = body
@@ -504,10 +518,11 @@ impl GitProvider for GitlabProvider {
                 .send()
                 .await?;
             if !res.status().is_success() {
-                return Err(CommandError::internal(format!(
-                    "gitlab post discussion: {} ({url})",
-                    res.status()
-                )));
+                return Err(super::http_error(
+                    PROVIDER_ID,
+                    &res,
+                    &format!("post discussion {url}"),
+                ));
             }
             let disc: GlDiscussion = res.json().await?;
             // A new discussion has exactly one note — return that.
@@ -544,10 +559,11 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab post note: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("post note {url}"),
+            ));
         }
         let note: GlNote = res.json().await?;
         Ok(CommentDto {
@@ -642,10 +658,11 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab trigger pipeline: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("trigger pipeline {url}"),
+            ));
         }
         let run: GlPipelineRun = res.json().await?;
         Ok(map_pipeline_run(run))
@@ -670,10 +687,11 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab cancel pipeline: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("cancel pipeline {url}"),
+            ));
         }
         Ok(())
     }
@@ -701,10 +719,11 @@ impl GitProvider for GitlabProvider {
             return Ok(None);
         }
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab pages: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("pages {url}"),
+            ));
         }
         let pages: GlPages = res.json().await?;
         let custom_domain = pages
@@ -826,9 +845,11 @@ impl GitProvider for GitlabProvider {
             })));
         }
         if !status.is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab merge: {status} ({merge_url})"
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("merge {merge_url}"),
+            ));
         }
 
         let merged: GlMrMerged = res.json().await?;
@@ -1077,11 +1098,7 @@ async fn gl_json<T: serde::de::DeserializeOwned>(
 ) -> Result<T, CommandError> {
     let res = http.get(url).header("PRIVATE-TOKEN", token).send().await?;
     if !res.status().is_success() {
-        return Err(CommandError::internal(format!(
-            "gitlab {}: {}",
-            res.status(),
-            url
-        )));
+        return Err(super::http_error(PROVIDER_ID, &res, url));
     }
     Ok(res.json::<T>().await?)
 }
@@ -1300,6 +1317,7 @@ struct GlGroup {
 mod tests {
     use super::*;
     use crate::auth::token::install_keyring_mock;
+    use crate::providers::r#trait::ProviderAuthState;
     use wiremock::matchers::{method, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -1826,5 +1844,121 @@ mod tests {
             err,
             crate::commands::error::ProviderVerifyError::NotProviderResponse { .. }
         ));
+    }
+
+    #[tokio::test]
+    async fn gitlab_username_maps_401_to_unauthorized() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let err = provider.username().await.unwrap_err();
+        assert!(
+            matches!(err, CommandError::Unauthorized(_)),
+            "expected Unauthorized, got {err:?}"
+        );
+        assert!(serde_json::to_string(&err)
+            .unwrap()
+            .contains("\"kind\":\"unauthorized\""));
+    }
+
+    /// A revoked PAT must not keep the account looking connected.
+    #[tokio::test]
+    async fn gitlab_auth_status_reports_invalid_for_revoked_token() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let status = provider.auth_status().await;
+        assert_eq!(status.state, ProviderAuthState::Invalid);
+        assert!(!status.is_usable());
+    }
+
+    #[tokio::test]
+    async fn gitlab_auth_status_reports_connected_with_username() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"username":"tanuki"}"#))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let status = provider.auth_status().await;
+        assert_eq!(status.state, ProviderAuthState::Connected);
+        assert_eq!(status.username.as_deref(), Some("tanuki"));
+    }
+
+    #[tokio::test]
+    async fn gitlab_auth_status_reports_disconnected_without_token() {
+        install_keyring_mock();
+        let provider = GitlabProvider::new();
+        provider.clear_token().await.unwrap();
+        assert_eq!(
+            provider.auth_status().await.state,
+            ProviderAuthState::Disconnected
+        );
+    }
+
+    /// Regression: the open-MR list stopped at a single unpaginated page of 50.
+    #[tokio::test]
+    async fn gitlab_list_pull_requests_paginates_past_the_first_page() {
+        use wiremock::matchers::query_param;
+
+        let server = MockServer::start().await;
+        let page = |from: u64, count: u64| {
+            let items: Vec<serde_json::Value> = (from..from + count)
+                .map(|n| {
+                    serde_json::json!({
+                        "id": n, "iid": n, "title": format!("MR {n}"),
+                        "web_url": "u", "state": "opened",
+                        "source_branch": "feature", "target_branch": "main",
+                        "created_at": "2024-01-01T00:00:00Z",
+                        "updated_at": "2024-01-01T00:00:00Z"
+                    })
+                })
+                .collect();
+            serde_json::Value::Array(items)
+        };
+
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/merge_requests$"))
+            .and(query_param("page", "1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(1, 100)))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/merge_requests$"))
+            .and(query_param("page", "2"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(101, 3)))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let prs = provider
+            .list_pull_requests("https://gitlab.com/group/proj")
+            .await
+            .unwrap();
+        assert_eq!(prs.len(), 103, "second page must be fetched, not truncated");
+    }
+
+    /// The user's own self-hosted override must win over the debug-only E2E
+    /// env-var — the precedence used to be the other way round.
+    #[tokio::test]
+    async fn gitlab_user_base_url_wins_over_env_override() {
+        install_keyring_mock();
+        let p = GitlabProvider::new();
+        p.set_base_url(Some("https://gl.acme.test/api/v4".into()))
+            .await
+            .unwrap();
+        assert_eq!(p.api_base(), "https://gl.acme.test/api/v4");
     }
 }
