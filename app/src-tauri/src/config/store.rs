@@ -1,12 +1,29 @@
+use std::ffi::OsString;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
 use super::settings::{AppSettings, RepoRecord};
 
 const SETTINGS_FILE: &str = "settings.json";
+/// Suffix of the scratch file `save()` writes before renaming it over
+/// `settings.json`. Lives in the same directory so the rename stays on one
+/// volume (a cross-device rename is a copy, and copies are not atomic).
+const TMP_SUFFIX: &str = ".tmp";
+/// Prefix of the quarantine copy taken when an existing `settings.json`
+/// fails to parse. Full shape: `settings.json.corrupt-<unix-ts>`.
+const CORRUPT_SUFFIX: &str = ".corrupt-";
+/// How often `fs::rename` is retried before `save()` gives up. On Windows the
+/// destination can be transiently locked by an indexer or a virus scanner
+/// holding it without `FILE_SHARE_DELETE`; a couple of short retries turn that
+/// into a non-event instead of a lost save.
+const RENAME_ATTEMPTS: u32 = 4;
+const RENAME_RETRY_DELAY_MS: u64 = 20;
 
 /// Whether a missing folder may be treated as proof that a scanned repo is gone.
 ///
@@ -30,9 +47,31 @@ pub enum MissingFolderEvidence {
     Unverified,
 }
 
+/// Report of a `settings.json` that existed but could not be parsed.
+///
+/// Handed out by `ConfigStore::corruption()`. Serializable so a command can
+/// forward it to the renderer verbatim — the user is the only one who can
+/// decide whether to hand-repair the quarantined file or accept the reset.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsCorruption {
+    /// Where the unparseable file was moved to, or `None` if even the rename
+    /// failed (in which case the original is still in place and untouched).
+    pub quarantine_path: Option<PathBuf>,
+    /// Unix seconds at detection — matches the `<unix-ts>` in the file name.
+    pub detected_at: u64,
+    /// The serde error, verbatim (line/column included).
+    pub message: String,
+}
+
 pub struct ConfigStore {
     settings: AppSettings,
     path: PathBuf,
+    /// `Some` for the rest of the process lifetime when this store booted off
+    /// an unparseable `settings.json`. Never cleared by a later `save()` —
+    /// the point is that the session started from defaults, and that stays
+    /// true no matter what is written afterwards.
+    corruption: Option<SettingsCorruption>,
 }
 
 impl ConfigStore {
@@ -40,25 +79,19 @@ impl ConfigStore {
         let dir = config_dir(app)?;
         fs::create_dir_all(&dir)?;
         let path = dir.join(SETTINGS_FILE);
-        let mut settings: AppSettings = if path.exists() {
-            let raw = fs::read_to_string(&path)?;
-            serde_json::from_str(&raw).unwrap_or_default()
-        } else {
-            AppSettings::default()
-        };
+        let (mut settings, corruption) = read_settings(&path)?;
         // One-shot legacy migration: pre-translucency builds shipped a
         // `theme_id = "glassy"` value. Rewrite to `theme_id = "dark"` plus
         // `translucency.enabled = true` so the user's prior intent survives,
         // and persist the rewrite once so the migration never re-runs.
         if settings.appearance.migrate_legacy() {
-            if let Some(parent) = path.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
-            if let Ok(json) = serde_json::to_string_pretty(&settings) {
-                let _ = fs::write(&path, json);
-            }
+            let _ = write_settings_atomically(&path, &settings);
         }
-        Ok(Self { settings, path })
+        Ok(Self {
+            settings,
+            path,
+            corruption,
+        })
     }
 
     pub fn settings(&self) -> &AppSettings {
@@ -69,13 +102,22 @@ impl ConfigStore {
         &mut self.settings
     }
 
+    /// `Some` when this store came up on defaults because the on-disk
+    /// `settings.json` could not be parsed. Additive read-only accessor —
+    /// callers that don't care are unaffected.
+    pub fn corruption(&self) -> Option<&SettingsCorruption> {
+        self.corruption.as_ref()
+    }
+
+    /// Persist the in-memory settings.
+    ///
+    /// Write-to-temp + rename, never a truncate-in-place: `settings.json`
+    /// holds every `RepoRecord` (with its group, custom logo and SSH key),
+    /// every group, the pins and the scan paths, and a process death halfway
+    /// through an in-place rewrite left a truncated file that the next boot
+    /// silently replaced with factory defaults.
     pub fn save(&self, _app: &AppHandle) -> anyhow::Result<()> {
-        if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let json = serde_json::to_string_pretty(&self.settings)?;
-        fs::write(&self.path, json)?;
-        Ok(())
+        write_settings_atomically(&self.path, &self.settings)
     }
 
     /// Wipe persisted settings: replace the in-memory snapshot with the
@@ -102,13 +144,19 @@ impl ConfigStore {
     /// Tauri's `AppHandle`.
     #[cfg(test)]
     pub fn from_path_for_tests(path: PathBuf) -> anyhow::Result<Self> {
-        let settings = if path.exists() {
-            let raw = fs::read_to_string(&path)?;
-            serde_json::from_str(&raw).unwrap_or_default()
-        } else {
-            AppSettings::default()
-        };
-        Ok(Self { settings, path })
+        let (settings, corruption) = read_settings(&path)?;
+        Ok(Self {
+            settings,
+            path,
+            corruption,
+        })
+    }
+
+    /// Persist without an `AppHandle`. Test-only mirror of `save`, which only
+    /// ever used its handle to satisfy the call site.
+    #[cfg(test)]
+    pub fn save_for_tests(&self) -> anyhow::Result<()> {
+        write_settings_atomically(&self.path, &self.settings)
     }
 
     /// Upsert a repository record discovered during scanning.
@@ -204,6 +252,177 @@ impl ConfigStore {
     }
 }
 
+/// Load `settings.json`, quarantining it if it exists but doesn't parse.
+///
+/// Three outcomes, deliberately kept distinct:
+/// - **file missing** — first launch. Silent defaults, no quarantine, no log.
+/// - **file unreadable** — an IO error is propagated to the caller (boot
+///   fails loudly) rather than papered over; a permission problem is not
+///   something a rename would fix either.
+/// - **file present but malformed** — the data-loss case. `#[serde(default)]`
+///   on `AppSettings` only covers *missing fields*; a truncated or otherwise
+///   broken document fails outright, and the previous `unwrap_or_default()`
+///   turned that into a silent factory reset that the next `save()` made
+///   permanent. The bytes are moved aside so they stay recoverable.
+fn read_settings(path: &Path) -> anyhow::Result<(AppSettings, Option<SettingsCorruption>)> {
+    if !path.exists() {
+        return Ok((AppSettings::default(), None));
+    }
+    let raw = fs::read_to_string(path)?;
+    match serde_json::from_str::<AppSettings>(&raw) {
+        Ok(settings) => Ok((settings, None)),
+        Err(err) => Ok((AppSettings::default(), Some(quarantine(path, &err)))),
+    }
+}
+
+/// Move an unparseable `settings.json` to `settings.json.corrupt-<unix-ts>`
+/// and shout about it. Returns the report even when the rename itself fails —
+/// the session still started from defaults, which is what callers must know.
+fn quarantine(path: &Path, err: &serde_json::Error) -> SettingsCorruption {
+    let detected_at = unix_seconds();
+    let quarantine_path = match unique_corrupt_path(path, detected_at) {
+        Some(target) => match fs::rename(path, &target) {
+            Ok(()) => Some(target),
+            Err(rename_err) => {
+                tracing::error!(
+                    "[config] could not quarantine unparseable {}: {rename_err}",
+                    path.display()
+                );
+                None
+            }
+        },
+        None => None,
+    };
+    match &quarantine_path {
+        Some(target) => tracing::error!(
+            "[config] {} is corrupt ({err}) — starting from defaults. The previous file was kept at {}; \
+             repos, groups, pins and scan paths can be recovered from it.",
+            path.display(),
+            target.display()
+        ),
+        None => tracing::error!(
+            "[config] {} is corrupt ({err}) — starting from defaults, and the file could NOT be moved aside. \
+             Back it up manually before changing any setting; the next save overwrites it.",
+            path.display()
+        ),
+    }
+    SettingsCorruption {
+        quarantine_path,
+        detected_at,
+        message: err.to_string(),
+    }
+}
+
+/// `settings.json` → `settings.json.corrupt-<ts>`, with a `-1`, `-2`, … tail
+/// if that name is taken (two corrupt boots inside the same second, or a
+/// leftover from a previous incident).
+fn unique_corrupt_path(path: &Path, detected_at: u64) -> Option<PathBuf> {
+    let base = path.file_name()?.to_os_string();
+    for attempt in 0..100u32 {
+        let mut name = base.clone();
+        name.push(CORRUPT_SUFFIX);
+        name.push(detected_at.to_string());
+        if attempt > 0 {
+            name.push(format!("-{attempt}"));
+        }
+        let candidate = path.with_file_name(name);
+        if !candidate.exists() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+/// Serialize to `<file>.tmp`, flush + `sync_all` it, then rename over the
+/// target. The rename is the only step that touches `settings.json`, and it
+/// is atomic on both NTFS and POSIX: a reader either sees the whole old file
+/// or the whole new one, never a half-written one.
+///
+/// Windows note: `std::fs::rename` maps to `MoveFileExW` with
+/// `MOVEFILE_REPLACE_EXISTING`, so an existing destination *is* replaced —
+/// the "rename fails if the target exists" rule applies to the raw
+/// `MoveFileW`/`rename()` APIs, not to Rust's wrapper. It can still fail with
+/// a sharing violation while another process holds the destination open, so
+/// the error path is handled explicitly instead of assumed away.
+fn write_settings_atomically(path: &Path, settings: &AppSettings) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let json = serde_json::to_string_pretty(settings)?;
+    let tmp = tmp_path_for(path);
+
+    // Scoped so the handle is closed before the rename — Windows refuses to
+    // move a file that is still open in this process.
+    {
+        let mut file = fs::File::create(&tmp)?;
+        file.write_all(json.as_bytes())?;
+        file.flush()?;
+        // Without this the rename can land while the bytes are still in the
+        // page cache; a power cut would then leave an empty settings.json.
+        file.sync_all()?;
+    }
+
+    let mut last_err = None;
+    for attempt in 0..RENAME_ATTEMPTS {
+        match fs::rename(&tmp, path) {
+            Ok(()) => {
+                sync_parent_dir(path);
+                return Ok(());
+            }
+            Err(err) => {
+                last_err = Some(err);
+                if attempt + 1 < RENAME_ATTEMPTS {
+                    std::thread::sleep(std::time::Duration::from_millis(RENAME_RETRY_DELAY_MS));
+                }
+            }
+        }
+    }
+
+    // Leaving the scratch file behind would be mistaken for a partial write
+    // by the next reader, and the original settings.json is still intact.
+    let _ = fs::remove_file(&tmp);
+    let err = last_err.expect("RENAME_ATTEMPTS must be > 0");
+    tracing::error!(
+        "[config] could not replace {} with the freshly written settings: {err}",
+        path.display()
+    );
+    Err(anyhow::anyhow!(
+        "could not persist settings to {}: {err}",
+        path.display()
+    ))
+}
+
+fn tmp_path_for(path: &Path) -> PathBuf {
+    let mut name = path
+        .file_name()
+        .map(OsString::from)
+        .unwrap_or_else(|| OsString::from(SETTINGS_FILE));
+    name.push(TMP_SUFFIX);
+    path.with_file_name(name)
+}
+
+/// On POSIX the rename itself is only durable once the *directory* entry is
+/// flushed. Best-effort: opening a directory as a file is not portable, so
+/// Windows (where `MoveFileExW` writes through) simply skips this.
+#[cfg(unix)]
+fn sync_parent_dir(path: &Path) {
+    if let Some(parent) = path.parent() {
+        if let Ok(dir) = fs::File::open(parent) {
+            let _ = dir.sync_all();
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn sync_parent_dir(_path: &Path) {}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
 fn config_dir(app: &AppHandle) -> anyhow::Result<PathBuf> {
     // Plan-8 E2E harness: when running under `RECREST_TEST_PROFILE`, redirect
     // settings.json into an isolated tmpdir so the test can't corrupt the
@@ -245,6 +464,162 @@ mod tests {
         fs::create_dir_all(&dir).expect("create temp dir");
         dir.push("settings.json");
         dir
+    }
+
+    /// Every `settings.json.corrupt-*` sibling of `path`.
+    fn corrupt_siblings(path: &Path) -> Vec<PathBuf> {
+        let parent = path.parent().expect("parent");
+        let mut found: Vec<PathBuf> = fs::read_dir(parent)
+            .expect("read config dir")
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.contains(CORRUPT_SUFFIX))
+            })
+            .collect();
+        found.sort();
+        found
+    }
+
+    /// The write path must never truncate `settings.json` in place: a crash
+    /// mid-write used to leave a half-file that the next boot read as
+    /// "corrupt" and replaced with factory defaults.
+    #[test]
+    fn save_writes_through_a_temp_file_and_round_trips() {
+        let path = fresh_settings_path("atomic-save");
+        let parent = path.parent().expect("parent").to_path_buf();
+
+        let mut store = ConfigStore::from_path_for_tests(path.clone()).expect("fresh store");
+        {
+            let settings = store.settings_mut();
+            settings.theme = "dark".into();
+            settings.locale = "de".into();
+            settings.scan_paths = vec!["/tmp/customers".to_string()];
+            settings.pinned_repo_ids = vec!["pinned-one".into()];
+        }
+        store.save_for_tests().expect("save");
+
+        assert!(path.exists(), "settings.json must exist after save");
+        assert!(
+            !tmp_path_for(&path).exists(),
+            "the scratch file must be gone once the rename succeeded"
+        );
+
+        // A second save over an existing file must also succeed — on Windows
+        // this is the case that would break if rename didn't replace.
+        store.settings_mut().theme = "light".into();
+        store.save_for_tests().expect("overwriting save");
+
+        let reloaded = ConfigStore::from_path_for_tests(path.clone()).expect("reload");
+        assert!(
+            reloaded.corruption().is_none(),
+            "a file we just wrote must parse"
+        );
+        assert_eq!(reloaded.settings().theme, "light");
+        assert_eq!(reloaded.settings().locale, "de");
+        assert_eq!(
+            reloaded.settings().scan_paths,
+            vec!["/tmp/customers".to_string()]
+        );
+        assert_eq!(
+            reloaded.settings().pinned_repo_ids,
+            vec!["pinned-one".to_string()]
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// The data-loss path: a `settings.json` that exists but doesn't parse
+    /// must be moved aside, never silently replaced by defaults. Everything
+    /// the user configured — repos with their groups/logos/keys, pins, scan
+    /// paths, provider settings — lives only in those bytes.
+    #[test]
+    fn corrupt_settings_file_is_quarantined_instead_of_factory_reset() {
+        let path = fresh_settings_path("corrupt");
+        let parent = path.parent().expect("parent").to_path_buf();
+
+        // Truncated mid-write, exactly what a process death used to leave.
+        let truncated = r#"{
+            "pollingIntervalMs": 99999,
+            "theme": "dark",
+            "locale": "de",
+            "scanPaths": ["/tmp/cust"#;
+        fs::write(&path, truncated).expect("seed truncated settings");
+
+        let store = ConfigStore::from_path_for_tests(path.clone()).expect("load corrupt store");
+
+        // Runtime falls back to defaults so the app still boots …
+        let defaults = AppSettings::default();
+        assert_eq!(store.settings().theme, defaults.theme);
+        assert_eq!(store.settings().locale, defaults.locale);
+
+        // … but the condition is visible, not swallowed.
+        let corruption = store.corruption().expect("corruption must be reported");
+        assert!(
+            !corruption.message.is_empty(),
+            "the serde error must be carried"
+        );
+
+        // The original bytes survive under a .corrupt-<ts> name, and the
+        // defaults were NOT written back over them.
+        let quarantined = corruption
+            .quarantine_path
+            .as_ref()
+            .expect("quarantine path must be set");
+        assert!(quarantined.exists(), "quarantine file must exist on disk");
+        assert_eq!(
+            fs::read_to_string(quarantined).expect("read quarantine"),
+            truncated,
+            "the corrupt file must be preserved byte-for-byte"
+        );
+        assert_eq!(corrupt_siblings(&path), vec![quarantined.clone()]);
+        assert!(
+            !path.exists(),
+            "loading must not leave a defaults-filled settings.json behind"
+        );
+
+        // A later save writes defaults to settings.json — the quarantined
+        // copy must stay untouched, otherwise recovery is impossible.
+        store.save_for_tests().expect("save after recovery");
+        assert!(path.exists());
+        assert_eq!(
+            fs::read_to_string(quarantined).expect("read quarantine again"),
+            truncated
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// First launch: no file at all is the normal path — defaults, no
+    /// quarantine, nothing written until the first explicit save.
+    #[test]
+    fn missing_settings_file_loads_defaults_without_quarantine() {
+        let path = fresh_settings_path("first-launch");
+        let parent = path.parent().expect("parent").to_path_buf();
+        assert!(!path.exists());
+
+        let store = ConfigStore::from_path_for_tests(path.clone()).expect("load empty store");
+
+        let defaults = AppSettings::default();
+        assert!(
+            store.corruption().is_none(),
+            "a missing file is not corrupt"
+        );
+        assert_eq!(store.settings().theme, defaults.theme);
+        assert_eq!(
+            store.settings().polling_interval_ms,
+            defaults.polling_interval_ms
+        );
+        assert!(store.settings().repos.is_empty());
+        assert!(
+            corrupt_siblings(&path).is_empty(),
+            "a first launch must not create a quarantine file"
+        );
+        assert!(!path.exists(), "loading alone must not write settings.json");
+
+        let _ = fs::remove_dir_all(&parent);
     }
 
     #[test]

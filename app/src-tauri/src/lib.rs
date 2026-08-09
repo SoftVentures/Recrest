@@ -575,7 +575,7 @@ pub fn run() {
             // logic in the setup hook below). Without this arg the
             // autostarted instance would pop the window forward, which is
             // exactly what users disabling-on-startup don't want.
-            Some(vec!["--start-minimized".into()]),
+            Some(vec!["--start-minimized"]),
         ))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -1248,6 +1248,7 @@ pub fn run() {
         commands::oauth::begin_oauth,
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
+        commands::settings::get_settings_corruption,
         commands::settings::update_settings,
         commands::settings::factory_reset,
         commands::fonts::list_custom_fonts,
@@ -1351,6 +1352,7 @@ pub fn run() {
         commands::oauth::begin_oauth,
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
+        commands::settings::get_settings_corruption,
         commands::settings::update_settings,
         commands::settings::factory_reset,
         commands::fonts::list_custom_fonts,

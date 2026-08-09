@@ -8,6 +8,7 @@ use crate::config::settings::{
     AccessibilitySettings, AppSettings, AppearanceSettings, NotificationSettings, PrivacySettings,
     RepoImportDefaults, RepoListSort, RepoListViewMode, TerminalSettings, WindowStateSettings,
 };
+use crate::config::store::SettingsCorruption;
 use crate::AppState;
 
 use super::error::CommandError;
@@ -77,6 +78,18 @@ pub struct SettingsPatch {
 pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, CommandError> {
     let config = state.config.lock().await;
     Ok(config.settings().clone())
+}
+
+/// Report a `settings.json` that could not be parsed on boot.
+///
+/// Pull-style rather than an event: the detection happens in `setup()`, long
+/// before the renderer exists to receive an emit.
+#[tauri::command]
+pub async fn get_settings_corruption(
+    state: State<'_, AppState>,
+) -> Result<Option<SettingsCorruption>, CommandError> {
+    let config = state.config.lock().await;
+    Ok(config.corruption().cloned())
 }
 
 #[tauri::command]
