@@ -181,10 +181,7 @@ mod tests {
 
     #[test]
     fn dir_size_sums_files_recursively() {
-        let tmp = std::env::temp_dir().join(format!(
-            "recrest-dir-size-{}",
-            std::process::id()
-        ));
+        let tmp = std::env::temp_dir().join(format!("recrest-dir-size-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&tmp);
         std::fs::create_dir_all(tmp.join("nested")).unwrap();
         std::fs::write(tmp.join("a.txt"), b"abc").unwrap(); // 3 bytes
@@ -207,13 +204,7 @@ mod tests {
         assert_eq!(normalize_os_version("Unknown ()"), None);
         assert_eq!(normalize_os_version("Unknown (rolling)"), None);
         assert_eq!(normalize_os_version("unknown"), None);
-        assert_eq!(
-            normalize_os_version("14.5"),
-            Some("14.5".to_string())
-        );
-        assert_eq!(
-            normalize_os_version("  22.04  "),
-            Some("22.04".to_string())
-        );
+        assert_eq!(normalize_os_version("14.5"), Some("14.5".to_string()));
+        assert_eq!(normalize_os_version("  22.04  "), Some("22.04".to_string()));
     }
 }

@@ -1,6 +1,8 @@
 use crate::commands::error::CommandError;
 #[cfg(target_os = "macos")]
-use window_vibrancy::{apply_vibrancy, clear_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+use window_vibrancy::{
+    apply_vibrancy, clear_vibrancy, NSVisualEffectMaterial, NSVisualEffectState,
+};
 
 /// Apply the platform's translucency.
 ///

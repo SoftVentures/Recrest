@@ -1249,12 +1249,11 @@ pub async fn verify_with_base(
                     hint: "response body was not JSON".into(),
                 }
             })?;
-            let login = json
-                .get("login")
-                .and_then(|v| v.as_str())
-                .ok_or(ProviderVerifyError::NotProviderResponse {
+            let login = json.get("login").and_then(|v| v.as_str()).ok_or(
+                ProviderVerifyError::NotProviderResponse {
                     hint: "missing login field — response does not look like GitHub".into(),
-                })?;
+                },
+            )?;
             Ok(super::verify::VerifiedAccount {
                 login: login.to_string(),
             })
@@ -2098,7 +2097,9 @@ on:
         // be `/api/v3/user` and not match this mount.
         Mock::given(method("GET"))
             .and(path_regex(r"^/user$"))
-            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"login":"enterprise-user"}"#))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_string(r#"{"login":"enterprise-user"}"#),
+            )
             .mount(&server)
             .await;
         let with_suffix = format!("{}/api/v3", server.uri());

@@ -41,10 +41,7 @@ pub enum LaunchSpec {
     #[serde(rename_all = "camelCase")]
     AppBundle { bundle_path: PathBuf },
     #[serde(rename_all = "camelCase")]
-    Executable {
-        binary: PathBuf,
-        args: Vec<String>,
-    },
+    Executable { binary: PathBuf, args: Vec<String> },
     #[serde(rename_all = "camelCase")]
     DesktopEntry { exec: String },
 }

@@ -1807,9 +1807,8 @@ mod tests {
         Mock::given(method("GET"))
             .and(path_regex(r".*/user$"))
             .respond_with(
-                ResponseTemplate::new(200).set_body_string(
-                    r#"{"username":"alice","nickname":"al","account_id":"a-1"}"#,
-                ),
+                ResponseTemplate::new(200)
+                    .set_body_string(r#"{"username":"alice","nickname":"al","account_id":"a-1"}"#),
             )
             .mount(&server)
             .await;

@@ -24,9 +24,9 @@ use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::ScreenToClient;
 use windows::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_STYLE, HTCLIENT, HTCLOSE,
-    HTMAXBUTTON, HTMINBUTTON, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
-    WM_NCHITTEST, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_SYSMENU,
+    GetClientRect, GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_STYLE, HTCLIENT,
+    HTCLOSE, HTMAXBUTTON, HTMINBUTTON, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    SWP_NOZORDER, WM_NCHITTEST, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_SYSMENU,
 };
 
 /// Unique identifier for our subclass. Picked from the high range to avoid

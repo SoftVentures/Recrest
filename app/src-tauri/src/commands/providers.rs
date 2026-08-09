@@ -208,7 +208,11 @@ pub async fn post_pr_comment(
         let is_range = pos.start_line() != pos.anchor_line()
             || pos.start.map(|s| s.side) != Some(pos.end.side);
         comment.start_line = if is_range { pos.start_line() } else { None };
-        comment.start_side = if is_range { pos.start.map(|s| s.side) } else { None };
+        comment.start_side = if is_range {
+            pos.start.map(|s| s.side)
+        } else {
+            None
+        };
     }
     Ok(comment)
 }
@@ -414,8 +418,14 @@ async fn ping_gitlab_inner(client: &reqwest::Client, trimmed: &str) -> ProviderP
             // and `/api/v4/version` requires auth so the 200-with-version case
             // is the exception, not the rule.
             let looks_like_provider = version.is_some()
-                || server_hdr.as_deref().map(|s| s.contains("GitLab")).unwrap_or(false)
-                || www_auth.as_deref().map(|s| s.contains("GitLab")).unwrap_or(false)
+                || server_hdr
+                    .as_deref()
+                    .map(|s| s.contains("GitLab"))
+                    .unwrap_or(false)
+                || www_auth
+                    .as_deref()
+                    .map(|s| s.contains("GitLab"))
+                    .unwrap_or(false)
                 || (status.as_u16() == 401 && json.is_some());
             ProviderPingResult {
                 reachable: true,
@@ -433,7 +443,12 @@ async fn ping_github_inner(client: &reqwest::Client, trimmed: &str) -> ProviderP
     // `GET <root>` returns a JSON dictionary of API URLs (including
     // `current_user_url`) on both cloud (https://api.github.com) and
     // Enterprise (`<host>/api/v3`). Cheap, unauthenticated, no scope needed.
-    match client.get(root).header("Accept", "application/vnd.github+json").send().await {
+    match client
+        .get(root)
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .await
+    {
         Err(e) => ProviderPingResult {
             reachable: false,
             looks_like_provider: false,
@@ -448,8 +463,8 @@ async fn ping_github_inner(client: &reqwest::Client, trimmed: &str) -> ProviderP
                 .map(|s| s.to_string());
             let status_ok = resp.status().is_success();
             let body = resp.text().await.unwrap_or_default();
-            let looks_json_github = body.contains("\"current_user_url\"")
-                || body.contains("\"repository_url\"");
+            let looks_json_github =
+                body.contains("\"current_user_url\"") || body.contains("\"repository_url\"");
             let looks_like_provider = (status_ok && looks_json_github)
                 || server_hdr
                     .as_deref()
@@ -578,21 +593,38 @@ mod ping_provider_tests {
         let r = ping_provider("nope".into(), "https://example.com".into()).await;
         assert!(!r.reachable);
         assert!(!r.looks_like_provider);
-        assert!(r.error.as_deref().unwrap_or("").contains("unknown provider"));
+        assert!(r
+            .error
+            .as_deref()
+            .unwrap_or("")
+            .contains("unknown provider"));
     }
 
     #[test]
     fn gitlab_root_url_strip_logic_avoids_doubled_api_v4() {
         let cases = [
             ("https://gitlab.com", "https://gitlab.com/api/v4/version"),
-            ("https://gitlab.com/api/v4", "https://gitlab.com/api/v4/version"),
-            ("https://gitlab.com/api/v4/", "https://gitlab.com/api/v4/version"),
-            ("https://gl.acme.test/", "https://gl.acme.test/api/v4/version"),
+            (
+                "https://gitlab.com/api/v4",
+                "https://gitlab.com/api/v4/version",
+            ),
+            (
+                "https://gitlab.com/api/v4/",
+                "https://gitlab.com/api/v4/version",
+            ),
+            (
+                "https://gl.acme.test/",
+                "https://gl.acme.test/api/v4/version",
+            ),
         ];
         for (input, expected) in cases {
             let trimmed = input.trim().trim_end_matches('/').to_string();
             let root = trimmed.strip_suffix("/api/v4").unwrap_or(&trimmed);
-            assert_eq!(format!("{}/api/v4/version", root), expected, "for input {input}");
+            assert_eq!(
+                format!("{}/api/v4/version", root),
+                expected,
+                "for input {input}"
+            );
         }
     }
 

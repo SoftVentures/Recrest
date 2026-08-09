@@ -1047,16 +1047,14 @@ pub async fn verify_with_base(
             let txt = resp.text().await.unwrap_or_default();
             let json: serde_json::Value = serde_json::from_str(&txt).map_err(|_| {
                 ProviderVerifyError::NotProviderResponse {
-                    hint: "response body was not JSON — base URL does not look like GitLab"
-                        .into(),
+                    hint: "response body was not JSON — base URL does not look like GitLab".into(),
                 }
             })?;
-            let username = json
-                .get("username")
-                .and_then(|v| v.as_str())
-                .ok_or(ProviderVerifyError::NotProviderResponse {
+            let username = json.get("username").and_then(|v| v.as_str()).ok_or(
+                ProviderVerifyError::NotProviderResponse {
                     hint: "no username field — base URL does not look like GitLab".into(),
-                })?;
+                },
+            )?;
             Ok(super::verify::VerifiedAccount {
                 login: username.to_string(),
             })
