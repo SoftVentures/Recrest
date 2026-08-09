@@ -1,5 +1,5 @@
-//! Test-only helpers shared across Phase 3 backend tests.
-#![cfg(test)]
+//! Test-only helpers shared across Phase 3 backend tests. The `mod
+//! test_support;` declaration in `lib.rs` carries `#[cfg(test)]`.
 
 use std::path::Path;
 

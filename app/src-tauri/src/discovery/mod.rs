@@ -46,6 +46,9 @@ pub enum LaunchSpec {
     DesktopEntry { exec: String },
 }
 
+// cfg-dispatch chain: each arm is a block *statement*, so the `return` is
+// required on every platform; clippy only sees the active one.
+#[allow(clippy::needless_return)]
 fn scan_now() -> Vec<DiscoveredApp> {
     #[cfg(target_os = "macos")]
     {

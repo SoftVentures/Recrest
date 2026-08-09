@@ -132,6 +132,9 @@ pub async fn get_platform_info() -> Result<PlatformInfo, CommandError> {
 /// Routing the truth through the OS API here lets the renderer recover.
 /// `None` on Linux (webview matchMedia is reliable there) — the frontend
 /// keeps its existing matchMedia value in that case.
+// cfg-dispatch chain: each arm is a block *statement*, so the `return` is
+// required on every platform; clippy only sees the active one.
+#[allow(clippy::needless_return)]
 #[tauri::command]
 pub async fn get_system_dark_mode(
     #[allow(unused_variables)] app: tauri::AppHandle,
