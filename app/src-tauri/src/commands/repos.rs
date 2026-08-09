@@ -79,6 +79,24 @@ impl RepoDto {
     }
 }
 
+/// `status::read_status` is synchronous libgit2 + working-tree I/O. Awaiting it
+/// inline inside an async command parks a Tokio worker thread for the whole
+/// walk, and with a handful of repos that starves the runtime and stalls every
+/// other IPC call. Every single-repo status read in this module goes through
+/// here; the fan-out call sites (`list_repos`, `scan_repos`) keep their own
+/// batched `spawn_blocking` so the reads still run concurrently. `pub(crate)`
+/// because `git_ops`, `git_index` and `clone` end every mutating command with
+/// the same single-repo read — duplicating the wrapper per module would let the
+/// four copies drift apart.
+pub(crate) async fn read_status_off_thread(
+    path: PathBuf,
+) -> Result<status::RepoStatusDto, CommandError> {
+    let status = tokio::task::spawn_blocking(move || status::read_status(&path))
+        .await
+        .map_err(|e| CommandError::internal(format!("read_status task failed: {e}")))?;
+    Ok(status?)
+}
+
 #[tauri::command]
 pub async fn scan_repos(
     app: AppHandle,
@@ -200,14 +218,20 @@ pub async fn repo_status(
     state: State<'_, AppState>,
     repo_id: String,
 ) -> Result<RepoDto, CommandError> {
-    let config = state.config.lock().await;
-    let record = config
-        .settings()
-        .repos
-        .get(&repo_id)
-        .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?;
-    let status = status::read_status(&record.path)?;
-    Ok(RepoDto::from_record(record, status))
+    // Snapshot the record and drop the config lock before the status read —
+    // holding it across a blocking git2 walk would serialize every other command
+    // behind this one.
+    let record = {
+        let config = state.config.lock().await;
+        config
+            .settings()
+            .repos
+            .get(&repo_id)
+            .cloned()
+            .ok_or_else(|| CommandError::not_found(format!("repo {repo_id} not found")))?
+    };
+    let status = read_status_off_thread(record.path.clone()).await?;
+    Ok(RepoDto::from_record(&record, status))
 }
 
 #[tauri::command]
@@ -229,7 +253,7 @@ pub async fn add_repo(
         .insert(record.id.clone(), record.clone());
     config.save(&app)?;
     drop(config);
-    let status = status::read_status(&record.path)?;
+    let status = read_status_off_thread(record.path.clone()).await?;
 
     if let Some(watcher) = state.watcher.lock().await.as_mut() {
         let _ = watcher.watch_repo(&record.id, &record.path).await;
@@ -467,6 +491,64 @@ pub struct ListCommitsSummaryDto {
     pub truncated: std::collections::HashMap<String, bool>,
 }
 
+/// Per-repo commit counts and truncation flags produced by one range walk.
+pub type CommitWalkSummary = (
+    std::collections::HashMap<String, u32>,
+    std::collections::HashMap<String, bool>,
+);
+
+/// Walks every `(id, name, path)` in `records` and reports `(totals, truncated)`
+/// keyed by repo id. `on_chunk` receives `(repo_id, batch, done)`.
+///
+/// **Every** record gets an entry in both maps — including one whose repository
+/// cannot be opened (deleted folder, unreadable `.git`, permission error). The
+/// frontend planner uses the presence of a per-repo entry as "this repo was
+/// fetched for the requested window"; skipping the entry made an unopenable repo
+/// look permanently unloaded, so `planFetchWindow` re-walked the full window for
+/// *all* repos on every range switch. A `0`/`false` entry is the honest answer —
+/// the repo was visited and yielded nothing — and is exactly what a repo with an
+/// unborn HEAD already reported.
+pub fn walk_commit_ranges(
+    records: Vec<(String, String, PathBuf)>,
+    since: DateTime<Utc>,
+    until: DateTime<Utc>,
+    cap: u32,
+    chunk_size: usize,
+    on_chunk: &mut dyn FnMut(&str, Vec<RecentCommitDto>, bool),
+) -> Result<CommitWalkSummary, CommandError> {
+    let mut totals = std::collections::HashMap::new();
+    let mut truncated_map = std::collections::HashMap::new();
+    for (id, name, path) in records {
+        let Ok(repo) = git2::Repository::open(&path) else {
+            tracing::debug!("list_commits: skipped {id}: open failed");
+            // Mirror the empty-but-done shape of a successful zero-commit walk
+            // so the renderer marks the repo loaded instead of retrying forever.
+            on_chunk(&id, Vec::new(), true);
+            totals.insert(id.clone(), 0);
+            truncated_map.insert(id, false);
+            continue;
+        };
+        let mut total: u32 = 0;
+        let truncated = collect_commits_range(
+            &id,
+            &name,
+            &repo,
+            since,
+            until,
+            cap,
+            chunk_size,
+            &mut |commits, done| {
+                total += commits.len() as u32;
+                on_chunk(&id, commits, done);
+            },
+        )
+        .map_err(|e| CommandError::internal(format!("walk failed for {id}: {e}")))?;
+        totals.insert(id.clone(), total);
+        truncated_map.insert(id, truncated);
+    }
+    Ok((totals, truncated_map))
+}
+
 /// Range-based replacement for `list_recent_commits` (Plan 04/01 §C.1).
 /// Commit data is streamed via `activity://commits-chunk`; the return value
 /// only carries per-repo totals + truncation flags.
@@ -510,44 +592,28 @@ pub async fn list_commits(
     let app = app.clone();
     let request_id_for_walk = request_id.clone();
     let (totals, truncated_map) = tokio::task::spawn_blocking(move || {
-        let mut totals = std::collections::HashMap::new();
-        let mut truncated_map = std::collections::HashMap::new();
-        for (id, name, path) in records {
-            let Ok(repo) = git2::Repository::open(&path) else {
-                tracing::debug!("list_commits: skipped {id}: open failed");
-                continue;
-            };
-            let mut total: u32 = 0;
-            let truncated = collect_commits_range(
-                &id,
-                &name,
-                &repo,
-                since,
-                until,
-                cap,
-                COMMITS_CHUNK_SIZE,
-                &mut |commits, done| {
-                    total += commits.len() as u32;
-                    // Event name mirrors `ACTIVITY_COMMITS_CHUNK_EVENT` in
-                    // `shared/src/constants/events.ts`. The chunk-level
-                    // `truncated` stays false — the summary carries the real flag.
-                    let _ = app.emit(
-                        "activity://commits-chunk",
-                        CommitsChunkPayload {
-                            request_id: request_id_for_walk.clone(),
-                            repo_id: id.clone(),
-                            commits,
-                            done,
-                            truncated: false,
-                        },
-                    );
-                },
-            )
-            .map_err(|e| CommandError::internal(format!("walk failed for {id}: {e}")))?;
-            totals.insert(id.clone(), total);
-            truncated_map.insert(id, truncated);
-        }
-        Ok::<_, CommandError>((totals, truncated_map))
+        walk_commit_ranges(
+            records,
+            since,
+            until,
+            cap,
+            COMMITS_CHUNK_SIZE,
+            &mut |repo_id, commits, done| {
+                // Event name mirrors `ACTIVITY_COMMITS_CHUNK_EVENT` in
+                // `shared/src/constants/events.ts`. The chunk-level
+                // `truncated` stays false — the summary carries the real flag.
+                let _ = app.emit(
+                    "activity://commits-chunk",
+                    CommitsChunkPayload {
+                        request_id: request_id_for_walk.clone(),
+                        repo_id: repo_id.to_string(),
+                        commits,
+                        done,
+                        truncated: false,
+                    },
+                );
+            },
+        )
     })
     .await
     .map_err(|e| CommandError::internal(format!("list_commits task failed: {e}")))??;
@@ -756,7 +822,7 @@ pub async fn set_repo_logo(
     config.save(&app)?;
     drop(config);
 
-    let status = status::read_status(&record_snapshot.path)?;
+    let status = read_status_off_thread(record_snapshot.path.clone()).await?;
     Ok(RepoDto::from_record(&record_snapshot, status))
 }
 
@@ -819,7 +885,7 @@ pub async fn set_repo_logo_svg(
     config.save(&app)?;
     drop(config);
 
-    let status = status::read_status(&record_snapshot.path)?;
+    let status = read_status_off_thread(record_snapshot.path.clone()).await?;
     Ok(RepoDto::from_record(&record_snapshot, status))
 }
 
@@ -847,7 +913,7 @@ pub async fn clear_repo_logo(
         let _ = std::fs::remove_file(&p);
     }
 
-    let status = status::read_status(&record_snapshot.path)?;
+    let status = read_status_off_thread(record_snapshot.path.clone()).await?;
     Ok(RepoDto::from_record(&record_snapshot, status))
 }
 
@@ -1293,6 +1359,42 @@ mod range_tests {
         let (_dir, repo) = fixture_repo(&[1, 100, 200], anchor);
         let oldest = oldest_commit_date(&repo).expect("some");
         assert_eq!(oldest, anchor - chrono::Duration::days(200));
+    }
+
+    #[test]
+    fn unopenable_repo_still_reports_a_zero_total() {
+        // A repo whose folder is gone (or whose `.git` is unreadable) used to be
+        // skipped silently. The renderer then never saw a per-repo entry, so
+        // `planFetchWindow` kept classifying it as "never fetched" and re-walked
+        // the full window for every repo on every range switch.
+        let anchor = Utc.with_ymd_and_hms(2026, 6, 1, 12, 0, 0).unwrap();
+        let since = anchor - chrono::Duration::days(30);
+        let (_dir, _repo) = fixture_repo(&[1, 2, 3], anchor);
+        let good_path = _dir.path().to_path_buf();
+        let missing_path = _dir.path().join("does-not-exist");
+
+        let mut chunks: Vec<(String, usize, bool)> = Vec::new();
+        let (totals, truncated) = walk_commit_ranges(
+            vec![
+                ("good".into(), "good".into(), good_path),
+                ("gone".into(), "gone".into(), missing_path),
+            ],
+            since,
+            anchor,
+            5_000,
+            1_000,
+            &mut |id, commits, done| chunks.push((id.to_string(), commits.len(), done)),
+        )
+        .expect("walk");
+
+        assert_eq!(totals.get("good").copied(), Some(3));
+        assert_eq!(totals.get("gone").copied(), Some(0));
+        assert_eq!(truncated.get("gone").copied(), Some(false));
+        // The unreadable repo still gets a terminal empty chunk, so the
+        // renderer's per-repo stream state flips to "done" like any other repo.
+        assert!(chunks
+            .iter()
+            .any(|(id, len, done)| id == "gone" && *len == 0 && *done));
     }
 
     #[test]

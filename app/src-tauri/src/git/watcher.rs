@@ -205,6 +205,15 @@ fn is_ignored_event_path(path: &Path, repo_root: &Path) -> bool {
     false
 }
 
+/// Why an off-thread status read produced no status. `Gone` folds in the
+/// `.git`-presence probe that decides between `repo://status` and
+/// `repo://removed`: it is another blocking `stat`, and running it back on the
+/// runtime would reintroduce exactly the stall the fan-out removes.
+enum StatusFailure {
+    Gone,
+    Failed(git2::Error),
+}
+
 async fn handle_events(
     app: AppHandle,
     watched: Arc<Mutex<WatchedRepos>>,
@@ -234,30 +243,52 @@ async fn handle_events(
     }
     drop(map);
 
-    for (id, path) in touched {
-        match status::read_status(&path) {
-            Ok(status) => {
+    // `read_status` is synchronous libgit2 + working-tree I/O. Running it inline
+    // here parked a Tokio worker *once per touched repo*, so a single filesystem
+    // event storm spanning several repos froze every in-flight IPC call for the
+    // length of the whole loop. Fan out to the blocking pool (same shape as
+    // `commands::repos::list_repos`) and await the handles in the order they
+    // were spawned — the emitted events, their order and their payloads are
+    // byte-for-byte what they were before.
+    let touched: Vec<(String, PathBuf)> = touched.into_iter().collect();
+    let handles: Vec<_> = touched
+        .iter()
+        .map(|(_, root)| {
+            let path = root.clone();
+            tokio::task::spawn_blocking(move || match status::read_status(&path) {
+                Ok(status) => Ok(status),
+                Err(_) if !path.join(".git").exists() => Err(StatusFailure::Gone),
+                Err(err) => Err(StatusFailure::Failed(err)),
+            })
+        })
+        .collect();
+
+    for ((id, _), handle) in touched.iter().zip(handles) {
+        match handle.await {
+            Ok(Ok(status)) => {
                 let _ = app.emit(
                     REPO_STATUS_EVENT,
                     serde_json::json!({ "repoId": id, "status": status }),
                 );
             }
+            // A failing `read_status` on a repo whose `.git` is gone means the
+            // folder was deleted or moved — report it instead of silently
+            // freezing the row. `forgotten: false` because the watcher never
+            // touches `settings.json`, and neither does the reconciler (it only
+            // ever flags). `forgotten: true` comes exclusively from
+            // `scan_repos`, the one path that walked the roots and may
+            // therefore delete a record.
+            Ok(Err(StatusFailure::Gone)) => {
+                let _ = app.emit(
+                    REPO_REMOVED_EVENT,
+                    serde_json::json!({ "repoId": id, "forgotten": false }),
+                );
+            }
+            Ok(Err(StatusFailure::Failed(err))) => {
+                tracing::debug!("handle_events: read_status failed for {id}: {err}");
+            }
             Err(err) => {
-                // A failing `read_status` on a repo whose `.git` is gone means
-                // the folder was deleted or moved — report it instead of
-                // silently freezing the row. `forgotten: false` because the
-                // watcher never touches `settings.json`, and neither does the
-                // reconciler (it only ever flags). `forgotten: true` comes
-                // exclusively from `scan_repos`, the one path that walked the
-                // roots and may therefore delete a record.
-                if !path.join(".git").exists() {
-                    let _ = app.emit(
-                        REPO_REMOVED_EVENT,
-                        serde_json::json!({ "repoId": id, "forgotten": false }),
-                    );
-                } else {
-                    tracing::debug!("handle_events: read_status failed for {id}: {err}");
-                }
+                tracing::debug!("handle_events: status task failed for {id}: {err}");
             }
         }
     }
