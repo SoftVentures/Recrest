@@ -58,9 +58,15 @@ Outside the Tauri runtime `invoke()` throws `tauri-ipc-unavailable`. In `dev:web
 
 `src/fixtures/a11y.fixture.ts` wraps `@axe-core/playwright`'s `AxeBuilder` with a `scan()` helper that runs `wcag2a`, `wcag2aa`, `wcag21aa` by default. `11-a11y.spec.ts` in each suite runs it per section/route. Critical + serious violations fail the build; moderate findings are reported but tolerated until someone triages them into `docs/UNFINISHED.md`.
 
-## Visual regression (landing only)
+## Visual work — three different things, don't mix them up
 
-`src/e2e/landing/10-responsive.spec.ts` uses `toHaveScreenshot` with deterministic content (fixed date-free copy, `animations: "disabled"`). App-side visual regression is explicitly out of scope — too much live-time volatility in dirty-counts, relative timestamps, etc.
+**Gating pixel-diff, landing only.** `src/e2e/landing/10-responsive.spec.ts` uses `toHaveScreenshot` with deterministic content (fixed date-free copy, `animations: "disabled"`). It runs in `ci.yml::e2e` and its baselines are pinned to Chromium-on-Linux.
+
+**Local pixel-diff for the app.** `src/e2e/app/14-visual.spec.ts` does the same for the app's main routes, masking the volatile regions (relative timestamps, sparklines, dirty counts). It **skips itself when `CI` is set** and its baselines are deliberately uncommitted, because they are per-platform — a `*-win32.png` baseline says nothing about a Linux runner. Run it locally, refresh with `yarn test:e2e:update-snapshots` only after reviewing the change by eye.
+
+**Cross-OS capture for the app.** `src/e2e/app/99-visual-tour.spec.ts` screenshots every major view unconditionally into `../.screenshots/playwright/visual-tour/`. It compares nothing, so it cannot go red for cosmetic reasons. This is what the manual `📸 Visual Tester` workflow runs (`yarn test:e2e:visual`) on Linux, Windows and macOS to produce a reviewable image set per OS.
+
+If you add a route or a settings tab, add it to the tour — that spec is the only place the app's rendering is captured on machines nobody owns. The workflow fails the run when the flattened artifact would be empty, so a tour that silently stops capturing shows up as a red job instead of an empty download.
 
 ## CI
 
