@@ -7,6 +7,7 @@ use tauri::State;
 use super::error::CommandError;
 #[cfg(target_os = "windows")]
 use super::process::configure as no_window;
+use super::repos::read_status_off_thread;
 use crate::auth::token::TokenStore;
 use crate::config::settings::{AppSettings, RepoRecord};
 use crate::git::{branches, status};
@@ -39,7 +40,7 @@ fn provider_for_remote_url(url: &str) -> Option<&'static str> {
         .map(|r| r.split(':').next().unwrap_or(""))
         .or_else(|| {
             let after_scheme = url.split("://").nth(1).unwrap_or(url);
-            let after_auth = after_scheme.split('@').last().unwrap_or(after_scheme);
+            let after_auth = after_scheme.split('@').next_back().unwrap_or(after_scheme);
             after_auth.split(&['/', ':'][..]).next()
         })
         .unwrap_or("")
@@ -52,13 +53,17 @@ fn provider_for_remote_url(url: &str) -> Option<&'static str> {
     }
 }
 
-/// Resolves the effective provider id for a given `origin` remote: explicit
-/// hint wins, otherwise we fall back to matching the remote URL's host.
-fn resolve_provider_for_remote(repo: &Repository, hint: Option<&str>) -> Option<String> {
+/// Resolves the effective provider id for a given remote: explicit hint wins,
+/// otherwise we fall back to matching the remote URL's host.
+fn resolve_provider_for_remote(
+    repo: &Repository,
+    remote_name: &str,
+    hint: Option<&str>,
+) -> Option<String> {
     if let Some(pid) = hint {
         return Some(pid.to_string());
     }
-    let remote = repo.find_remote("origin").ok()?;
+    let remote = repo.find_remote(remote_name).ok()?;
     let url = remote.url()?;
     provider_for_remote_url(url).map(|s| s.to_string())
 }
@@ -114,7 +119,7 @@ fn build_ssh_key_cred(
     )
 }
 
-fn install_credentials(
+pub(crate) fn install_credentials(
     callbacks: &mut RemoteCallbacks<'_>,
     provider_id: Option<String>,
     ssh: SshCreds,
@@ -224,10 +229,32 @@ pub enum GitMergeState {
     Conflicted,
 }
 
+/// Result of `git_pull_all`. `ok` is the plain success count the dashboard has
+/// always rendered; `failures` carries the per-repo errors that used to be
+/// logged and dropped — a bulk pull that skipped half the repos (dirty tree,
+/// diverged history, no upstream) looked exactly like one that worked.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitPullAllResult {
+    pub ok: u32,
+    pub failures: Vec<GitPullFailure>,
+}
+
+/// One repo that could not be pulled during `git_pull_all`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitPullFailure {
+    pub repo_id: String,
+    pub message: String,
+}
+
 /// Opens the host file manager at the given repository, showing the repo's
 /// own contents (not its parent with the repo highlighted). Uses `explorer`
 /// on Windows, `open` on macOS and `xdg-open` on Linux — no extra crates
 /// needed.
+// cfg-dispatch chain: each arm is a block *statement*, so the `return` is
+// required on every platform; clippy only sees the active one.
+#[allow(clippy::needless_return)]
 #[tauri::command]
 pub async fn open_in_explorer(
     state: State<'_, AppState>,
@@ -298,8 +325,13 @@ pub async fn git_fetch(
         .await
         .map_err(|e| CommandError::internal(format!("fetch task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
+
+/// Everything the bulk fetch/pull loops need from one settings record before
+/// the config lock is dropped:
+/// `(repo_id, path, provider_id, ssh_key_path, allow_agent_fallback)`.
+type BulkRepoTarget = (String, PathBuf, Option<String>, Option<String>, bool);
 
 /// Fire-and-forget fetch across every registered repo. Failures on individual
 /// repos are swallowed (and logged) so one broken remote doesn't block the rest.
@@ -308,7 +340,7 @@ pub async fn git_fetch(
 pub async fn git_fetch_all(state: State<'_, AppState>) -> Result<u32, CommandError> {
     let config = state.config.lock().await;
     let settings = config.settings();
-    let repos: Vec<(String, PathBuf, Option<String>, Option<String>, bool)> = settings
+    let repos: Vec<BulkRepoTarget> = settings
         .repos
         .values()
         .map(|r| {
@@ -339,16 +371,17 @@ pub async fn git_fetch_all(state: State<'_, AppState>) -> Result<u32, CommandErr
     Ok(ok)
 }
 
-/// Fire-and-forget pull across every registered repo. Mirrors `git_fetch_all`:
-/// each repo fetches `origin` and fast-forwards its current branch, and failures
-/// on individual repos are swallowed (and logged) so one repo with diverged
-/// history (or no upstream) doesn't block the rest. Returns the number of repos
-/// whose pull returned `Ok`.
+/// Pull across every registered repo. Mirrors `git_fetch_all`: each repo
+/// fetches its upstream remote and fast-forwards its current branch, and a
+/// failure on one repo doesn't block the rest. Unlike `git_fetch_all` the
+/// per-repo failures are **returned**, not just logged — a pull can refuse for
+/// reasons the user must act on (dirty tree, diverged history, no upstream) and
+/// a bare success count hid all of them.
 #[tauri::command]
-pub async fn git_pull_all(state: State<'_, AppState>) -> Result<u32, CommandError> {
+pub async fn git_pull_all(state: State<'_, AppState>) -> Result<GitPullAllResult, CommandError> {
     let config = state.config.lock().await;
     let settings = config.settings();
-    let repos: Vec<(String, PathBuf, Option<String>, Option<String>, bool)> = settings
+    let repos: Vec<BulkRepoTarget> = settings
         .repos
         .values()
         .map(|r| {
@@ -365,6 +398,7 @@ pub async fn git_pull_all(state: State<'_, AppState>) -> Result<u32, CommandErro
     drop(config);
 
     let mut ok = 0u32;
+    let mut failures: Vec<GitPullFailure> = Vec::new();
     for (repo_id, path, provider_id, key_path, allow_agent_fallback) in repos {
         let ssh = ssh_creds_for(&state, &repo_id, key_path, allow_agent_fallback).await;
         let result =
@@ -372,11 +406,23 @@ pub async fn git_pull_all(state: State<'_, AppState>) -> Result<u32, CommandErro
                 .await;
         match result {
             Ok(Ok(())) => ok += 1,
-            Ok(Err(e)) => tracing::debug!("pull_all: one repo skipped: {e:?}"),
-            Err(e) => tracing::debug!("pull_all: spawn_blocking failed: {e}"),
+            Ok(Err(e)) => {
+                tracing::debug!("pull_all: {repo_id} failed: {e:?}");
+                failures.push(GitPullFailure {
+                    repo_id,
+                    message: e.to_string(),
+                });
+            }
+            Err(e) => {
+                tracing::debug!("pull_all: spawn_blocking failed for {repo_id}: {e}");
+                failures.push(GitPullFailure {
+                    repo_id,
+                    message: format!("pull task failed: {e}"),
+                });
+            }
         }
     }
-    Ok(ok)
+    Ok(GitPullAllResult { ok, failures })
 }
 
 /// Returns every local + remote branch for a given repository, with
@@ -410,7 +456,7 @@ pub async fn git_checkout(
         .await
         .map_err(|e| CommandError::internal(format!("checkout task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
 
 /// Creates a local branch from a remote-tracking ref and checks it out.
@@ -437,7 +483,7 @@ pub async fn git_checkout_remote(
     .await
     .map_err(|e| CommandError::internal(format!("checkout task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
 
 /// Pushes the current branch to `origin`. Uses the provider token stored in
@@ -471,7 +517,7 @@ pub async fn git_push(
         .map_err(|e| CommandError::internal(format!("push task failed: {e}")))??;
 
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
 
 /// Merges `source` into the currently checked-out branch. When `target` is
@@ -502,7 +548,7 @@ pub async fn git_merge(
 
     let path2 = resolve_repo_path(&state, &repo_id).await?;
     Ok(GitMergeResult {
-        status: status::read_status(&path2)?,
+        status: read_status_off_thread(path2).await?,
         state: outcome.0,
         conflicts: outcome.1,
     })
@@ -533,7 +579,7 @@ pub async fn git_branch_create(
     .await
     .map_err(|e| CommandError::internal(format!("branch_create task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
 
 /// Deletes a local branch. Refuses to delete the currently-checked-out branch
@@ -552,13 +598,14 @@ pub async fn git_branch_delete(
         .await
         .map_err(|e| CommandError::internal(format!("branch_delete task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
 
 /// Fast-forward `git pull` — fetches then fast-forwards HEAD when possible.
-/// Refuses to pull when the working tree is dirty or a merge would be needed;
-/// that's a UX call rather than a limitation (real merge conflicts should
-/// happen in the user's IDE, not inside Recrest).
+/// Refuses to pull when the working tree is dirty (uncommitted changes or
+/// untracked files) or when a merge would be needed; that's a UX call rather
+/// than a limitation (real merge conflicts should happen in the user's IDE,
+/// not inside Recrest).
 #[tauri::command]
 pub async fn git_pull(
     state: State<'_, AppState>,
@@ -584,7 +631,7 @@ pub async fn git_pull(
         .await
         .map_err(|e| CommandError::internal(format!("pull task failed: {e}")))??;
     let path2 = resolve_repo_path(&state, &repo_id).await?;
-    Ok(status::read_status(&path2)?)
+    read_status_off_thread(path2).await
 }
 
 /// Assemble the per-repo SSH credentials: the key path comes from the repo
@@ -628,7 +675,7 @@ fn fetch_blocking(
 ) -> Result<(), CommandError> {
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
-    let effective = resolve_provider_for_remote(&repo, provider_id);
+    let effective = resolve_provider_for_remote(&repo, "origin", provider_id);
     let mut remote = repo
         .find_remote("origin")
         .map_err(|e| CommandError::bad_request(format!("no 'origin' remote: {e}")))?;
@@ -676,17 +723,7 @@ fn merge_blocking(
     }
 
     // Refuse to merge with a dirty working tree — mirrors git's own safety rail.
-    let mut status_opts = git2::StatusOptions::new();
-    status_opts.include_untracked(false).include_ignored(false);
-    let dirty = repo
-        .statuses(Some(&mut status_opts))
-        .map(|s| s.iter().any(|e| e.status().bits() != 0))
-        .unwrap_or(false);
-    if dirty {
-        return Err(CommandError::bad_request(
-            "working tree has uncommitted changes — commit or stash before merging",
-        ));
-    }
+    ensure_clean_worktree(&repo, "merging")?;
 
     let source_branch = repo
         .find_branch(source, git2::BranchType::Local)
@@ -708,17 +745,7 @@ fn merge_blocking(
     }
 
     if analysis.is_fast_forward() {
-        let head_ref_name = format!("refs/heads/{head_branch}");
-        let mut head_ref = repo
-            .find_reference(&head_ref_name)
-            .map_err(|e| CommandError::internal(format!("head ref failed: {e}")))?;
-        head_ref
-            .set_target(source_oid, "recrest: fast-forward merge")
-            .map_err(|e| CommandError::internal(format!("set_target failed: {e}")))?;
-        repo.set_head(&head_ref_name)
-            .map_err(|e| CommandError::internal(format!("set_head failed: {e}")))?;
-        repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
-            .map_err(|e| CommandError::internal(format!("checkout failed: {e}")))?;
+        fast_forward_to(&repo, &head_branch, source_oid, "fast-forward merge")?;
         return Ok((GitMergeState::FastForward, Vec::new()));
     }
 
@@ -899,8 +926,14 @@ fn checkout_remote_blocking(path: &Path, remote: &str, branch: &str) -> Result<(
     let mut new_branch = repo
         .branch(branch, &commit, false)
         .map_err(|e| CommandError::internal(format!("create local branch failed: {e}")))?;
+    // Surface a failure here instead of dropping it: a local branch without
+    // tracking config reports 0/0 ahead-behind forever and cannot be pulled.
     let upstream_short = format!("{remote}/{branch}");
-    let _ = new_branch.set_upstream(Some(&upstream_short));
+    new_branch
+        .set_upstream(Some(&upstream_short))
+        .map_err(|e| {
+            CommandError::internal(format!("set upstream '{upstream_short}' failed: {e}"))
+        })?;
 
     let full_ref = format!("refs/heads/{branch}");
     let (object, _) = repo
@@ -950,7 +983,7 @@ fn push_blocking(
         .to_string();
     let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
 
-    let effective = resolve_provider_for_remote(&repo, provider_id);
+    let effective = resolve_provider_for_remote(&repo, "origin", provider_id);
     let mut remote = repo
         .find_remote("origin")
         .map_err(|e| CommandError::bad_request(format!("no 'origin' remote: {e}")))?;
@@ -966,6 +999,64 @@ fn push_blocking(
     Ok(())
 }
 
+/// Refuses to continue when the working tree carries uncommitted changes **or
+/// untracked files**. Untracked files count because a checkout happily
+/// overwrites an untracked file the incoming tree also carries — which is
+/// exactly the data loss `git merge --ff-only` refuses to cause, and exactly
+/// the files `git_index::is_protected` defends elsewhere (`.env`, `*.pem`,
+/// `id_*`).
+///
+/// A failing `statuses()` read (index lock held by a concurrent `git`,
+/// unreadable file) is propagated, never treated as "clean": the one signal
+/// that says we cannot tell must not green-light a destructive checkout.
+fn ensure_clean_worktree(repo: &Repository, action: &str) -> Result<(), CommandError> {
+    let mut status_opts = git2::StatusOptions::new();
+    status_opts
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .include_ignored(false);
+    let statuses = repo
+        .statuses(Some(&mut status_opts))
+        .map_err(|e| CommandError::internal(format!("working tree status failed: {e}")))?;
+    if statuses.iter().any(|e| e.status().bits() != 0) {
+        return Err(CommandError::bad_request(format!(
+            "working tree has uncommitted changes or untracked files — commit, stash or remove them before {action}"
+        )));
+    }
+    Ok(())
+}
+
+/// The remote a branch pulls from: its configured upstream remote, falling back
+/// to `origin`. Forks routinely name their remote something else, and a
+/// hardcoded `origin` makes pull fail outright on those repos.
+fn upstream_remote_name(repo: &Repository, branch: &str) -> String {
+    repo.branch_upstream_remote(&format!("refs/heads/{branch}"))
+        .ok()
+        .and_then(|buf| buf.as_str().map(|s| s.to_string()))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "origin".to_string())
+}
+
+/// OID the branch's upstream ref points at. Reads the branch's configured
+/// upstream (what `git status` uses) and only falls back to the hardcoded
+/// `refs/remotes/origin/<branch>` when no tracking config exists.
+fn upstream_oid(repo: &Repository, branch: &str) -> Result<git2::Oid, CommandError> {
+    let configured = repo
+        .find_branch(branch, git2::BranchType::Local)
+        .ok()
+        .and_then(|local| local.upstream().ok())
+        .and_then(|up| up.get().target());
+    if let Some(oid) = configured {
+        return Ok(oid);
+    }
+
+    let fallback = format!("refs/remotes/origin/{branch}");
+    repo.find_reference(&fallback)
+        .map_err(|e| CommandError::bad_request(format!("no upstream for {branch}: {e}")))?
+        .target()
+        .ok_or_else(|| CommandError::internal("upstream ref has no target"))
+}
+
 fn pull_blocking(
     path: &Path,
     provider_id: Option<&str>,
@@ -974,11 +1065,21 @@ fn pull_blocking(
     let repo = Repository::open(path)
         .map_err(|e| CommandError::internal(format!("open repo failed: {e}")))?;
 
-    // Fetch origin first.
-    let effective = resolve_provider_for_remote(&repo, provider_id);
+    // Work out HEAD first — the branch decides which remote we fetch from.
+    let branch_shorthand = {
+        let head = repo
+            .head()
+            .map_err(|e| CommandError::internal(format!("head lookup failed: {e}")))?;
+        head.shorthand()
+            .ok_or_else(|| CommandError::internal("HEAD has no shorthand"))?
+            .to_string()
+    };
+    let remote_name = upstream_remote_name(&repo, &branch_shorthand);
+
+    let effective = resolve_provider_for_remote(&repo, &remote_name, provider_id);
     let mut remote = repo
-        .find_remote("origin")
-        .map_err(|e| CommandError::bad_request(format!("no 'origin' remote: {e}")))?;
+        .find_remote(&remote_name)
+        .map_err(|e| CommandError::bad_request(format!("no '{remote_name}' remote: {e}")))?;
     let mut callbacks = RemoteCallbacks::new();
     install_credentials(&mut callbacks, effective, ssh);
     let mut opts = FetchOptions::new();
@@ -988,22 +1089,7 @@ fn pull_blocking(
         .map_err(|e| CommandError::internal(format!("fetch failed: {e}")))?;
     drop(remote);
 
-    // Work out HEAD + upstream.
-    let head = repo
-        .head()
-        .map_err(|e| CommandError::internal(format!("head lookup failed: {e}")))?;
-    let branch_shorthand = head
-        .shorthand()
-        .ok_or_else(|| CommandError::internal("HEAD has no shorthand"))?
-        .to_string();
-
-    let upstream_ref = format!("refs/remotes/origin/{branch_shorthand}");
-    let upstream = repo.find_reference(&upstream_ref).map_err(|e| {
-        CommandError::bad_request(format!("no upstream for {branch_shorthand}: {e}"))
-    })?;
-    let upstream_oid = upstream
-        .target()
-        .ok_or_else(|| CommandError::internal("upstream ref has no target"))?;
+    let upstream_oid = upstream_oid(&repo, &branch_shorthand)?;
 
     // Fast-forward only. If the merge-base isn't HEAD, we refuse.
     let (analysis, _) = repo
@@ -1021,22 +1107,52 @@ fn pull_blocking(
         ));
     }
 
-    let mut head_ref = repo
-        .find_reference(&format!("refs/heads/{branch_shorthand}"))
-        .map_err(|e| CommandError::internal(format!("head ref failed: {e}")))?;
-    head_ref
-        .set_target(upstream_oid, "recrest: fast-forward pull")
+    // Only now, immediately before the write: a dirty tree must not be
+    // fast-forwarded over. Checked after the analysis so an already-up-to-date
+    // repo with local edits stays a harmless no-op, exactly like real `git pull`.
+    ensure_clean_worktree(&repo, "pulling")?;
+
+    fast_forward_to(&repo, &branch_shorthand, upstream_oid, "fast-forward pull")
+}
+
+/// Moves `branch` (which must be HEAD) to `target`, working tree included.
+///
+/// The working tree is checked out **before** the ref moves, and in `.safe()`
+/// mode. Both details matter:
+///
+/// * `.force()` overwrites every colliding file in the working tree — the data
+///   loss this whole path exists to avoid. Safe mode makes libgit2 itself
+///   refuse on conflict, behind `ensure_clean_worktree`'s own check.
+/// * libgit2 takes the *index* as the checkout baseline, so moving the ref
+///   first (and then calling `checkout_head`) makes a clean tree look dirty and
+///   silently checks nothing out at all. This is the documented pitfall in
+///   `git_checkout_head`.
+fn fast_forward_to(
+    repo: &Repository,
+    branch: &str,
+    target: git2::Oid,
+    reflog_action: &str,
+) -> Result<(), CommandError> {
+    let object = repo
+        .find_object(target, None)
+        .map_err(|e| CommandError::internal(format!("target object failed: {e}")))?;
+    repo.checkout_tree(&object, Some(git2::build::CheckoutBuilder::new().safe()))
+        .map_err(|e| CommandError::bad_request(format!("checkout failed: {e}")))?;
+
+    let branch_ref_name = format!("refs/heads/{branch}");
+    repo.find_reference(&branch_ref_name)
+        .map_err(|e| CommandError::internal(format!("head ref failed: {e}")))?
+        .set_target(target, &format!("recrest: {reflog_action}"))
         .map_err(|e| CommandError::internal(format!("set_target failed: {e}")))?;
-    repo.set_head(&format!("refs/heads/{branch_shorthand}"))
+    repo.set_head(&branch_ref_name)
         .map_err(|e| CommandError::internal(format!("set_head failed: {e}")))?;
-    repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
-        .map_err(|e| CommandError::internal(format!("checkout failed: {e}")))?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::TempRepo;
     use tempfile::TempDir;
 
     /// Write a throwaway private key (+ optional `.pub`) into a temp dir. We
@@ -1065,5 +1181,273 @@ mod tests {
         let (_dir, key) = temp_key(true);
         assert!(key.with_extension("pub").exists());
         assert!(build_ssh_key_cred(None, &key, None).is_ok());
+    }
+
+    /// Reads a file with CRLF folded to LF — a developer or runner with
+    /// `core.autocrlf=true` checks the fixtures out with CRLF, and none of
+    /// these assertions are about line endings.
+    fn read_normalized(path: &Path) -> Option<String> {
+        std::fs::read_to_string(path)
+            .ok()
+            .map(|s| s.replace("\r\n", "\n"))
+    }
+
+    /// An upstream repo plus a working clone of it, both on disk. libgit2's
+    /// local transport makes the fetch inside `pull_blocking` run for real
+    /// without any network or credentials.
+    struct PullFixture {
+        origin: TempRepo,
+        clone_dir: TempDir,
+        branch: String,
+    }
+
+    impl PullFixture {
+        fn new() -> Self {
+            let origin = TempRepo::init();
+            origin.commit_file("file.txt", "v1\n", "initial");
+            let branch = origin
+                .repo
+                .head()
+                .expect("head")
+                .shorthand()
+                .expect("shorthand")
+                .to_string();
+
+            let clone_dir = TempDir::new().expect("tempdir");
+            let url = origin.dir.path().to_string_lossy().replace('\\', "/");
+            Repository::clone(&url, clone_dir.path().join("clone")).expect("clone");
+
+            Self {
+                origin,
+                clone_dir,
+                branch,
+            }
+        }
+
+        fn clone_path(&self) -> PathBuf {
+            self.clone_dir.path().join("clone")
+        }
+
+        fn clone_file(&self, rel: &str) -> Option<String> {
+            read_normalized(&self.clone_path().join(rel))
+        }
+
+        fn write_in_clone(&self, rel: &str, content: &str) {
+            std::fs::write(self.clone_path().join(rel), content).expect("write in clone");
+        }
+
+        /// Move the upstream branch one commit forward.
+        fn advance_origin(&self, content: &str) {
+            self.origin
+                .commit_file("file.txt", content, "upstream change");
+        }
+
+        fn pull(&self) -> Result<(), CommandError> {
+            pull_blocking(&self.clone_path(), None, SshCreds::default())
+        }
+    }
+
+    #[test]
+    fn pull_refuses_when_a_tracked_file_has_uncommitted_changes() {
+        let fx = PullFixture::new();
+        fx.advance_origin("v2-from-upstream\n");
+        fx.write_in_clone("file.txt", "MY UNCOMMITTED WORK\n");
+
+        let err = fx.pull().expect_err("pull must refuse a dirty tree");
+        assert!(
+            err.to_string().contains("uncommitted changes"),
+            "unexpected error: {err}"
+        );
+        assert_eq!(
+            fx.clone_file("file.txt").as_deref(),
+            Some("MY UNCOMMITTED WORK\n"),
+            "uncommitted work must survive a refused pull"
+        );
+    }
+
+    #[test]
+    fn pull_refuses_when_an_untracked_file_would_be_overwritten() {
+        let fx = PullFixture::new();
+        fx.origin
+            .commit_file("notes.md", "upstream notes\n", "add notes upstream");
+        fx.write_in_clone("notes.md", "MY LOCAL NOTES\n");
+
+        let err = fx
+            .pull()
+            .expect_err("pull must refuse when untracked files are present");
+        assert!(
+            err.to_string().contains("untracked"),
+            "unexpected error: {err}"
+        );
+        assert_eq!(
+            fx.clone_file("notes.md").as_deref(),
+            Some("MY LOCAL NOTES\n"),
+            "untracked file must survive a refused pull"
+        );
+    }
+
+    #[test]
+    fn pull_fast_forwards_a_clean_worktree() {
+        let fx = PullFixture::new();
+        fx.advance_origin("v2-from-upstream\n");
+
+        fx.pull().expect("clean fast-forward pull");
+        assert_eq!(
+            fx.clone_file("file.txt").as_deref(),
+            Some("v2-from-upstream\n")
+        );
+    }
+
+    #[test]
+    fn pull_stays_a_noop_when_already_up_to_date_despite_local_edits() {
+        // Real `git pull` succeeds here — nothing is written, so a dirty tree is
+        // harmless. The guard must not turn this into an error.
+        let fx = PullFixture::new();
+        fx.write_in_clone("file.txt", "local edit\n");
+
+        fx.pull().expect("up-to-date pull is a no-op");
+        assert_eq!(fx.clone_file("file.txt").as_deref(), Some("local edit\n"));
+    }
+
+    #[test]
+    fn pull_follows_a_non_origin_upstream_remote() {
+        let fx = PullFixture::new();
+        {
+            let repo = Repository::open(fx.clone_path()).expect("open clone");
+            let problems = repo.remote_rename("origin", "upstream").expect("rename");
+            assert!(problems.is_empty(), "refspec problems after rename");
+        }
+        fx.advance_origin("v2-from-upstream\n");
+
+        fx.pull().expect("pull via a remote named 'upstream'");
+        assert_eq!(
+            fx.clone_file("file.txt").as_deref(),
+            Some("v2-from-upstream\n")
+        );
+    }
+
+    #[test]
+    fn upstream_remote_name_falls_back_to_origin_without_tracking_config() {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+        let branch = tr
+            .repo
+            .head()
+            .expect("head")
+            .shorthand()
+            .expect("shorthand")
+            .to_string();
+
+        assert_eq!(upstream_remote_name(&tr.repo, &branch), "origin");
+    }
+
+    #[test]
+    fn upstream_remote_name_reads_the_branch_tracking_config() {
+        let fx = PullFixture::new();
+        let repo = Repository::open(fx.clone_path()).expect("open clone");
+        repo.remote_rename("origin", "upstream").expect("rename");
+
+        assert_eq!(upstream_remote_name(&repo, &fx.branch), "upstream");
+    }
+
+    #[test]
+    fn checkout_remote_configures_the_upstream_of_the_new_branch() {
+        let fx = PullFixture::new();
+        {
+            let head = fx.origin.repo.head().expect("head");
+            let commit = head.peel_to_commit().expect("commit");
+            fx.origin
+                .repo
+                .branch("feature", &commit, false)
+                .expect("branch on origin");
+        }
+        fetch_blocking(&fx.clone_path(), None, SshCreds::default()).expect("fetch");
+
+        checkout_remote_blocking(&fx.clone_path(), "origin", "feature").expect("checkout remote");
+
+        let repo = Repository::open(fx.clone_path()).expect("open clone");
+        let local = repo
+            .find_branch("feature", git2::BranchType::Local)
+            .expect("local feature branch");
+        let upstream = local.upstream().expect("upstream configured");
+        assert_eq!(
+            upstream.name().expect("name").expect("some"),
+            "origin/feature"
+        );
+    }
+
+    /// Repo with `base` checked out and a `feature` branch one commit ahead
+    /// carrying `notes.md` — the classic fast-forwardable merge.
+    fn merge_fixture() -> (TempRepo, String) {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+        let base = tr
+            .repo
+            .head()
+            .expect("head")
+            .shorthand()
+            .expect("shorthand")
+            .to_string();
+        {
+            let commit = tr
+                .repo
+                .head()
+                .expect("head")
+                .peel_to_commit()
+                .expect("peel");
+            tr.repo
+                .branch("feature", &commit, false)
+                .expect("create feature");
+        }
+        checkout_blocking(tr.dir.path(), "feature").expect("checkout feature");
+        tr.commit_file("notes.md", "from feature\n", "add notes");
+        checkout_blocking(tr.dir.path(), &base).expect("checkout base");
+        (tr, base)
+    }
+
+    #[test]
+    fn merge_refuses_to_fast_forward_over_an_untracked_file() {
+        let (tr, _base) = merge_fixture();
+        tr.write_file("notes.md", "MY LOCAL NOTES\n");
+
+        let err = merge_blocking(tr.dir.path(), "feature", None, None)
+            .expect_err("merge must refuse when untracked files are present");
+        assert!(
+            err.to_string().contains("untracked"),
+            "unexpected error: {err}"
+        );
+        assert_eq!(
+            read_normalized(&tr.dir.path().join("notes.md")),
+            Some("MY LOCAL NOTES\n".to_string()),
+            "untracked file must survive a refused merge"
+        );
+    }
+
+    #[test]
+    fn merge_fast_forwards_a_clean_worktree() {
+        let (tr, _base) = merge_fixture();
+
+        let (state, conflicts) =
+            merge_blocking(tr.dir.path(), "feature", None, None).expect("fast-forward merge");
+        assert!(matches!(state, GitMergeState::FastForward));
+        assert!(conflicts.is_empty());
+        assert_eq!(
+            read_normalized(&tr.dir.path().join("notes.md")),
+            Some("from feature\n".to_string())
+        );
+    }
+
+    #[test]
+    fn ensure_clean_worktree_flags_untracked_files() {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+        ensure_clean_worktree(&tr.repo, "testing").expect("clean tree passes");
+
+        tr.write_file("stray.txt", "stray\n");
+        let err = ensure_clean_worktree(&tr.repo, "testing").expect_err("untracked file is dirty");
+        assert!(
+            err.to_string().contains("untracked"),
+            "unexpected error: {err}"
+        );
     }
 }
