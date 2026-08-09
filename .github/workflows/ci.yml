@@ -203,6 +203,10 @@ jobs:
       - uses: ./.github/actions/install-deps
       - run: yarn workspace @recrest/shared build
       - run: yarn workspace @recrest/app build
+      # The dev IPC stub and its seed data must never reach a desktop user.
+      # Reuses the bundle built above instead of rebuilding it.
+      - name: Guard — dev IPC stub must not ship in the production bundle
+        run: yarn guard:devstub:check
 
   landingpage-build:
     name: Landingpage production build

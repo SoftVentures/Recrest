@@ -1,3 +1,22 @@
+<!--
+  MAINTENANCE CONTRACT — enforced by .github/workflows/release-tauri.yml,
+  job `verify-metadata`, which runs before anything is built or published.
+
+  * The H1 below must read `# Recrest <version> — <headline>`.
+  * <version> must equal the tag being released (tag `vX.Y.Z` → `X.Y.Z`) and
+    match package.json, app/src-tauri/tauri.conf.json and
+    app/src-tauri/Cargo.toml — all four are bumped together by release-please.
+  * Update this file in the release PR, before the tag exists.
+
+  Why it is gated: this file is copied verbatim into the GitHub Release body
+  AND becomes the `notes` field of `latest.json`, the update manifest every
+  installed client polls. A stale file does not just look untidy — it ships
+  the wrong version's changelog to the updater.
+
+  This block is invisible where it lands: GitHub's markdown renderer strips
+  HTML comments from release bodies, and the app never displays the raw notes.
+-->
+
 # Recrest 0.10.2 — Unstyled-app fix
 
 Patch release on top of `0.10.1`. Fixes the real cause of the unstyled-app regression that `0.10.0`/`0.10.1` misdiagnosed — everything from `0.10.0` (dashboard polish, responsive Activity/Statistics, the "Pull all" quick action) is unchanged.
