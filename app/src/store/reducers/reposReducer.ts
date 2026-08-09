@@ -2,6 +2,7 @@ import { createReducer } from "@reduxjs/toolkit";
 
 import {
   addRepo,
+  backgroundScanForRepos,
   clearRepoLogo,
   deleteRepo,
   forgetReposUnderPath,
@@ -22,6 +23,7 @@ import {
   loadRepos,
   refreshRepoStatus,
   removeRepo,
+  repoRemoved,
   scanForRepos,
   setGroups,
   setRepoLogo,
@@ -76,6 +78,14 @@ export const reposReducer = createReducer(initialState, (builder) => {
       state.loading = false;
       state.error = action.error.message ?? "scan failed";
     })
+    // The unattended rescan deliberately handles only `fulfilled`: touching
+    // `loading` would blink the header refresh indicator (and disable its
+    // button) every 10 minutes and on every alt-tab, and touching `error` would
+    // pop a failure banner for work the user never started. A silent trigger
+    // may update data, never chrome.
+    .addCase(backgroundScanForRepos.fulfilled, (state, action) => {
+      state.items = Object.fromEntries(action.payload.map((r) => [r.id, r]));
+    })
     .addCase(loadRepos.pending, (state) => {
       state.loading = true;
       state.error = null;
@@ -118,6 +128,19 @@ export const reposReducer = createReducer(initialState, (builder) => {
     })
     .addCase(deleteRepo.fulfilled, (state, action) => {
       delete state.items[action.payload];
+    })
+    .addCase(repoRemoved, (state, action) => {
+      const { repoId, forgotten } = action.payload;
+      // Forgotten means the backend also dropped the record from settings.json,
+      // so there is nothing left to point the row at. A kept record (manually
+      // added repo) only lost its folder — keeping the row flagged lets the user
+      // re-point or remove it deliberately instead of silently losing it.
+      if (forgotten) {
+        delete state.items[repoId];
+        return;
+      }
+      const repo = state.items[repoId];
+      if (repo) repo.missing = true;
     })
     .addCase(gitFetch.fulfilled, (state, action) => {
       const repo = state.items[action.payload.repoId];
@@ -178,6 +201,7 @@ export const reposReducer = createReducer(initialState, (builder) => {
 
 export {
   addRepo,
+  backgroundScanForRepos,
   clearRepoLogo,
   deleteRepo,
   forgetReposUnderPath,
@@ -191,6 +215,7 @@ export {
   loadRepos,
   refreshRepoStatus,
   removeRepo,
+  repoRemoved,
   scanForRepos,
   setGroups,
   setRepoLogo,

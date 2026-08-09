@@ -6,7 +6,7 @@
  * `REPO_STATUS_EVENT` is defined in `constants/git.ts` (historical home) and
  * re-exported through `EventChannel` below for consistency.
  */
-import { REPO_STATUS_EVENT } from "./git.js";
+import { REPO_REMOVED_EVENT, REPO_STATUS_EVENT } from "./git.js";
 
 /** Emitted once at startup when the updater plugin finds a newer release. */
 export const UPDATER_AVAILABLE_EVENT = "updater://available";
@@ -47,6 +47,7 @@ export const WINDOW_BLURRED_EVENT = "recrest://window-blurred";
 
 export const EventChannel = {
   REPO_STATUS: REPO_STATUS_EVENT,
+  REPO_REMOVED: REPO_REMOVED_EVENT,
   UPDATER_AVAILABLE: UPDATER_AVAILABLE_EVENT,
   UPDATER_PROGRESS: UPDATER_PROGRESS_EVENT,
   OAUTH_CALLBACK: OAUTH_CALLBACK_EVENT,

@@ -51,7 +51,14 @@
   "status": {
     "clean": "Clean",
     "dirty": "Uncommitted changes",
-    "conflicted": "Conflicts"
+    "conflicted": "Conflicts",
+    "missing": "Folder missing"
+  },
+  "missing": {
+    "title": "Folder no longer exists",
+    "description": "Recrest can't reach \"{{path}}\" any more. Restore the folder, or remove the repository from Recrest.",
+    "action_unavailable": "The folder for this repository no longer exists on disk.",
+    "remove": "Remove from Recrest"
   },
   "detail": {
     "branch": "Branch",

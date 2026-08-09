@@ -43,6 +43,8 @@
     "open_folder": "Open folder",
     "open_terminal": "Open terminal",
     "more_actions": "More actions",
+    "missing": "Repository folder no longer exists on disk",
+    "remove_missing": "Remove missing repository from Recrest",
     "close_detail_pane": "Close detail pane",
     "view_toggle": "Repository view",
     "heatmap": "Activity heatmap",

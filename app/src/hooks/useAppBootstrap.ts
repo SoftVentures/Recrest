@@ -18,9 +18,12 @@ import { loadSettings } from "@/store/reducers/settingsReducer";
  * If the user has scan paths persisted but `list_repos` returns nothing
  * (fresh install with paths configured via Settings → Integrations, or a
  * settings.json that lost its `repos` map), kick off a discovery scan so
- * the dashboard isn't permanently empty. Re-scans on a populated install
- * still surface new repos under the watched paths via the filesystem
- * watcher in the Rust side, so this is just the boot bootstrap.
+ * the dashboard isn't permanently empty.
+ *
+ * This is only the boot bootstrap. The filesystem watcher does NOT surface
+ * repos that appear later — it subscribes to already-registered repos and
+ * never observes the scan roots themselves — so discovery of new repos on a
+ * populated install is owned by `useRepoAutoRescan`.
  */
 export function useAppBootstrap(): void {
   const dispatch = useAppDispatch();

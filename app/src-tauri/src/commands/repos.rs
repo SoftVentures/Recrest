@@ -4,7 +4,7 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::config::settings::RepoRecord;
 use crate::git::logo;
@@ -34,6 +34,12 @@ pub struct RepoDto {
     pub logo_is_custom: bool,
     /// Per-repo SSH private key path, or `None` for ssh-agent / global config.
     pub ssh_key_path: Option<String>,
+    /// `true` when the repository is no longer readable at `path` — the folder
+    /// was deleted or moved outside the app, or lost its `.git`. The record is
+    /// kept either way; only `scan_repos` drops one for real, and only when the
+    /// walk actually reached the root it lives under (see
+    /// `MissingFolderEvidence`).
+    pub missing: bool,
 }
 
 impl RepoDto {
@@ -68,6 +74,7 @@ impl RepoDto {
             logo_dark_path,
             logo_is_custom,
             ssh_key_path: record.ssh_key_path.clone(),
+            missing: !crate::git::is_repo_present(&record.path),
         }
     }
 }
@@ -79,7 +86,7 @@ pub async fn scan_repos(
     paths: Vec<String>,
 ) -> Result<Vec<RepoDto>, CommandError> {
     let options = ScanOptions::default();
-    let discovered = crate::git::scanner::scan_many(&paths, &options)?;
+    let outcome = crate::git::scanner::scan_many(&paths, &options)?;
 
     // Upsert everything discovered under the new paths, then reconcile: drop
     // auto-discovered repos that no longer sit under any scan root (a removed
@@ -91,12 +98,22 @@ pub async fn scan_repos(
         config.settings_mut().scan_paths = paths;
 
         let mut new_records: Vec<(String, std::path::PathBuf)> = Vec::new();
-        for repo_path in discovered {
+        for repo_path in outcome.repos {
             let record = config.upsert_scanned_repo(&repo_path)?;
             new_records.push((record.id.clone(), record.path.clone()));
         }
 
-        let orphans = config.prune_orphan_scanned_repos();
+        // The walk enumerated every repo under the roots it *reached*, so a
+        // registered path below one of those and absent from the result really
+        // is gone. Roots that were unreachable (unplugged drive, dropped share)
+        // or only partially readable are not in `walked_roots`, so nothing
+        // beneath them is pruned. This is the only place allowed to act on a
+        // missing folder — see `MissingFolderEvidence`.
+        let orphans = config.prune_orphan_scanned_repos(
+            crate::config::store::MissingFolderEvidence::Authoritative {
+                walked_roots: outcome.walked_roots,
+            },
+        );
         config.save(&app)?;
 
         let records: Vec<RepoRecord> = config.settings().repos.values().cloned().collect();
@@ -111,6 +128,17 @@ pub async fn scan_repos(
         for (_, path) in &orphans {
             let _ = watcher.unwatch_repo(path.as_path()).await;
         }
+    }
+
+    // Announce the prune even though this command already returns the full
+    // list. The caller replaces its own store from the return value, but any
+    // other subscriber (and a second window) would otherwise keep a row for a
+    // repo that no longer exists in `settings.json`.
+    for (id, _) in &orphans {
+        let _ = app.emit(
+            crate::git::watcher::REPO_REMOVED_EVENT,
+            serde_json::json!({ "repoId": id, "forgotten": true }),
+        );
     }
 
     // Statuses for the full set, computed concurrently (mirrors `list_repos`).

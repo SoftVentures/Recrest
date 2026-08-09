@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addRepo,
+  backgroundScanForRepos,
   clearRepoLogo,
   deleteRepo,
   forgetReposUnderPath,
@@ -31,6 +32,7 @@ import {
   loadRepos,
   refreshRepoStatus,
   removeRepo,
+  repoRemoved,
   scanForRepos,
   setGroups,
   setRepoLogo,
@@ -139,6 +141,29 @@ describe("reposReducer", () => {
     expect(next.error).toBe("scan boom");
   });
 
+  it("replaces items on backgroundScanForRepos.fulfilled without touching chrome state", () => {
+    const start = withRepo(repo({ id: "old" }));
+    const pending = reposReducer(start, backgroundScanForRepos.pending("internal-id", ["/dev"]));
+    // The header refresh indicator reads `loading` — an unattended scan must
+    // never make it spin.
+    expect(pending.loading).toBe(false);
+    const next = reposReducer(
+      pending,
+      backgroundScanForRepos.fulfilled([repo({ id: "new" })], "internal-id", ["/dev"]),
+    );
+    expect(Object.keys(next.items)).toEqual(["new"]);
+    expect(next.loading).toBe(false);
+  });
+
+  it("keeps the error banner clear when a background rescan fails", () => {
+    const next = reposReducer(
+      initial(),
+      backgroundScanForRepos.rejected(new Error("scan boom"), "internal-id", ["/dev"]),
+    );
+    expect(next.error).toBeNull();
+    expect(next.loading).toBe(false);
+  });
+
   it("sets loading on loadRepos.pending and replaces items on fulfilled", () => {
     const pending = reposReducer(initial(), loadRepos.pending("internal-id", undefined));
     expect(pending.loading).toBe(true);
@@ -239,6 +264,26 @@ describe("reposReducer", () => {
     const start = withRepo(repo({ id: "r1" }));
     const next = reposReducer(start, deleteRepo.fulfilled("r1", "internal-id", { repoId: "r1" }));
     expect(next.items["r1"]).toBeUndefined();
+  });
+
+  it("drops the repo on repoRemoved when the record was forgotten", () => {
+    let state = withRepo(repo({ id: "gone" }));
+    state = reposReducer(state, upsertRepo(repo({ id: "kept" })));
+    const next = reposReducer(state, repoRemoved({ repoId: "gone", forgotten: true }));
+    expect(next.items["gone"]).toBeUndefined();
+    expect(next.items["kept"]).toBeDefined();
+  });
+
+  it("flags the repo as missing on repoRemoved when the record was kept", () => {
+    const start = withRepo(repo({ id: "r1" }));
+    const next = reposReducer(start, repoRemoved({ repoId: "r1", forgotten: false }));
+    expect(next.items["r1"]).toBeDefined();
+    expect(next.items["r1"]?.missing).toBe(true);
+  });
+
+  it("ignores repoRemoved for an unknown repo", () => {
+    const next = reposReducer(initial(), repoRemoved({ repoId: "ghost", forgotten: false }));
+    expect(next.items["ghost"]).toBeUndefined();
   });
 
   it("updates repo.status from a direct-status git action (gitFetch)", () => {

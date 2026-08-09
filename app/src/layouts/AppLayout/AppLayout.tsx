@@ -23,6 +23,7 @@ import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
 import { useWindowChrome } from "@/hooks/usePlatform";
 import { usePrPolling } from "@/hooks/usePrPolling";
+import { useRepoAutoRescan } from "@/hooks/useRepoAutoRescan";
 import { useResponsiveSidebar } from "@/hooks/useResponsiveSidebar";
 import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useThemeAttribute } from "@/hooks/useThemeAttribute";
@@ -115,6 +116,7 @@ export function AppLayout() {
   useResponsiveSidebar();
   useScrollbarWidth();
   usePrPolling();
+  useRepoAutoRescan();
   usePageSwipe();
   useGlobalShortcuts();
   // Keying `PageTransition` on the current pathname makes React unmount the

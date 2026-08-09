@@ -131,10 +131,7 @@ fn disable_webview_occlusion_detection(window: &tauri::WebviewWindow) {
                 return;
             };
             // Recursively find the WKWebView in the view tree.
-            fn find_webview(
-                view: *mut AnyObject,
-                class: &AnyClass,
-            ) -> Option<*mut AnyObject> {
+            fn find_webview(view: *mut AnyObject, class: &AnyClass) -> Option<*mut AnyObject> {
                 if view.is_null() {
                     return None;
                 }
@@ -172,7 +169,6 @@ fn disable_webview_occlusion_detection(window: &tauri::WebviewWindow) {
         }
     });
 }
-
 
 #[cfg(target_os = "macos")]
 fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
@@ -515,10 +511,10 @@ pub fn run() {
         )
         .init();
 
-    // GUI-gestartete Apps erben auf macOS/Linux nicht den interaktiven $PATH
-    // aus dem User-Shell. Das ist der Hauptgrund, warum `open_in_ide` in
-    // Prod-Builds oft fehlschlägt obwohl `code`/`cursor` im Terminal laufen.
-    // fix-path-env repariert den PATH einmalig beim Start.
+    // GUI-launched apps on macOS/Linux don't inherit the interactive $PATH from
+    // the user's shell. That's the main reason `open_in_ide` often fails in
+    // production builds even though `code`/`cursor` work in a terminal.
+    // fix-path-env repairs the PATH once at startup.
     let _ = fix_path_env::fix();
 
     // macOS: set the process name BEFORE any AppKit/Tauri init — the Dock
@@ -712,7 +708,14 @@ pub fn run() {
             // scan, or a scan path removed by an older build before pruning
             // existed). Manual adds are kept. Persist only when something
             // actually changed.
-            if !config.prune_orphan_scanned_repos().is_empty() {
+            // `Unverified`: nothing has walked the disk yet at this point, and an
+            // autostart launch routinely beats the mount of an external or
+            // network drive. Repos on such a drive are surfaced as `missing` and
+            // pruned for real by the next scan.
+            if !config
+                .prune_orphan_scanned_repos(crate::config::store::MissingFolderEvidence::Unverified)
+                .is_empty()
+            {
                 let _ = config.save(&handle);
             }
 
@@ -865,6 +868,13 @@ pub fn run() {
                 ssh_passphrases: Arc::new(Mutex::new(HashMap::new())),
             };
             app.manage(state);
+
+            // Poll for repos whose folder disappeared. `notify` drops the watch
+            // when a directory is deleted and a *moved* repo yields no usable
+            // event on some platforms, so the watcher alone can never report a
+            // vanished repo. Must run after `app.manage` — it resolves
+            // `AppState` on every tick.
+            crate::git::reconcile::spawn_repo_reconciler(handle.clone());
 
             #[cfg(target_os = "macos")]
             {

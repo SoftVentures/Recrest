@@ -22,6 +22,7 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import GeneralIconButton, {
   ICON_BUTTON_ICON_SIZES,
   IconButtonSize,
+  IconButtonTone,
 } from "@/components/atoms/buttons/GeneralIconButton";
 import OpenInIdeButton from "@/components/atoms/buttons/OpenInIdeButton";
 import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
@@ -57,6 +58,10 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
   const brand = brandFromUrl(repo.remoteUrl);
   const openHost = useOpenHost(repo.remoteUrl);
   const px = ICON_BUTTON_ICON_SIZES[iconSize];
+  // Everything that touches the working copy is doomed once the folder is
+  // gone. Opening the remote host still works — that lives on the server.
+  const missing = !!repo.missing;
+  const missingReason = t("missing.action_unavailable");
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [confirmKind, setConfirmKind] = useState<"forget" | "delete" | "deletePermanent" | null>(
@@ -140,11 +145,17 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
 
   return (
     <>
-      <OpenInIdeButton repoId={repo.id} iconSize={iconSize} />
+      <OpenInIdeButton
+        repoId={repo.id}
+        iconSize={iconSize}
+        disabled={missing}
+        tooltip={missing ? missingReason : undefined}
+      />
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.open_in_terminal")}
-        tooltip={t("row_actions.open_in_terminal")}
+        tooltip={missing ? missingReason : t("row_actions.open_in_terminal")}
+        disabled={missing}
         onClick={() => void run(TauriCommand.OPEN_TERMINAL, t("row_actions.open_in_terminal"))}
         icon={<TerminalLucide size={px} />}
       />
@@ -165,10 +176,22 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.open_in_explorer")}
-        tooltip={t("row_actions.open_in_explorer")}
+        tooltip={missing ? missingReason : t("row_actions.open_in_explorer")}
+        disabled={missing}
         onClick={() => void run(TauriCommand.OPEN_IN_EXPLORER, t("row_actions.open_in_explorer"))}
         icon={<Folder size={px} />}
       />
+      {missing && (
+        <GeneralIconButton
+          size={iconSize}
+          tone={IconButtonTone.DANGER}
+          aria-label={tAria("repo.remove_missing")}
+          tooltip={t("missing.remove")}
+          data-testid={TEST_IDS.repos.rowForget}
+          onClick={() => setConfirmKind("forget")}
+          icon={<X size={px} />}
+        />
+      )}
       <GeneralIconButton
         size={iconSize}
         aria-label={tAria("repo.more_actions")}

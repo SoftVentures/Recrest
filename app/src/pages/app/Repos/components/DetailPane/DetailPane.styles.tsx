@@ -96,8 +96,12 @@ export const PrimaryIde = styled("button")(({ theme }) => ({
   fontWeight: 600,
   cursor: "pointer",
   transition: "background-color 0.12s ease",
-  "&:hover": {
+  "&:hover:not(:disabled)": {
     backgroundColor: theme.palette.surface.button.ctaHover,
+  },
+  "&:disabled": {
+    opacity: 0.55,
+    cursor: "default",
   },
 }));
 

@@ -62,8 +62,8 @@ pub struct CommitInfo {
 pub struct ChangedFile {
     pub path: String,
     pub status: ChangedFileStatus,
-    /// Art der Änderung (added/modified/deleted/…) unabhängig vom Staging-State.
-    /// Das Frontend färbt Listen-Einträge danach.
+    /// Kind of change (added/modified/deleted/…), independent of the staging
+    /// state. The frontend colours list entries by this.
     pub kind: ChangedFileKind,
     pub has_unstaged_changes: bool,
 }
@@ -245,11 +245,11 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
     })
 }
 
-/// Leitet die Art der Änderung aus den git2-Status-Flags ab. Für Staged-
-/// Einträge schauen wir auf die Index-Flags, sonst auf die Worktree-Flags;
-/// Untracked zählt als Added (die Datei ist komplett neu). Conflicts bleiben
-/// als „Modified" klassifiziert — die Diff-Sicht muss eh vom User aufgelöst
-/// werden, die Zusatzinfo hilft der Listenfarbe nicht.
+/// Derives the kind of change from git2's status flags. Staged entries are
+/// read from the index flags, everything else from the worktree flags;
+/// untracked counts as added (the file is entirely new). Conflicts stay
+/// classified as "modified" — the user has to resolve them in the diff view
+/// anyway, and the extra detail wouldn't help the row colour.
 fn classify_kind(s: Status, primary: ChangedFileStatus) -> ChangedFileKind {
     match primary {
         ChangedFileStatus::Untracked => ChangedFileKind::Added,

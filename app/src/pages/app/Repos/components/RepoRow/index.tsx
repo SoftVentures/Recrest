@@ -13,6 +13,7 @@ import GeneralIconButton, {
   IconButtonTone,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
+import RepoMissingChip from "@/components/atoms/chips/RepoMissingChip";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import IconSlot from "@/components/atoms/layout/IconSlot";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
@@ -56,6 +57,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
   const dispatch = useAppDispatch();
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
+  const missing = !!repo.missing;
   const ahead = repo.status.ahead;
   const behind = repo.status.behind;
   const activity = useRepoActivitySeries(repo.id, repo.activity);
@@ -76,6 +78,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
       data-testid={TEST_IDS.repos.row}
       data-repo-id={repo.id}
       data-dirty={dirty ? "true" : undefined}
+      data-missing={missing ? "true" : undefined}
       data-context-menu-open={ctx.open ? "true" : undefined}
       onClick={() => onClick?.(repo)}
       onContextMenu={ctx.onContextMenu}
@@ -117,8 +120,10 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         <AheadBehind ahead={ahead} behind={behind} variant="compact" />
       </BranchCell>
 
-      <StatusCell>
-        {dirty ? (
+      <StatusCell data-missing-keep>
+        {missing ? (
+          <RepoMissingChip />
+        ) : dirty ? (
           <>
             <Diff component="span">
               <Box component="span" className="add">
@@ -148,7 +153,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         />
       </ActivityCell>
 
-      <Actions onClick={stop}>
+      <Actions onClick={stop} data-missing-keep>
         <RepoActions repo={repo} iconSize={IconButtonSize.MD} />
       </Actions>
       <RepoContextMenu repo={repo} position={ctx.position} onClose={ctx.onClose} />

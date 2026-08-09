@@ -21,6 +21,12 @@ export interface Repository {
   logoIsCustom?: boolean;
   /** Per-repo SSH private key path, or null for ssh-agent / global config. */
   sshKeyPath: string | null;
+  /** True when the repository is no longer readable at `path` — deleted or
+   *  moved outside the app, or stripped of its `.git`. The record survives:
+   *  only a scan, which has actually walked the disk, may drop one. A missing
+   *  path on its own is just as consistent with an unmounted drive.
+   *  Optional so fixtures and legacy payloads stay valid. */
+  missing?: boolean;
 }
 
 export interface LogoBlob {
@@ -123,4 +129,18 @@ export interface RepositoryGroup {
 export interface RepoStatusEventPayload {
   repoId: RepositoryId;
   status: RepositoryStatus;
+}
+
+/**
+ * Payload for the `repo://removed` Tauri event.
+ *
+ * `forgotten: true`  — the record was dropped from `settings.json` as well, so
+ *                      the renderer must remove the row entirely.
+ * `forgotten: false` — the record was kept (a manually added repo) and only its
+ *                      folder is gone; the renderer keeps the row and flags it
+ *                      via `Repository.missing` so the user can decide.
+ */
+export interface RepoRemovedEventPayload {
+  repoId: RepositoryId;
+  forgotten: boolean;
 }

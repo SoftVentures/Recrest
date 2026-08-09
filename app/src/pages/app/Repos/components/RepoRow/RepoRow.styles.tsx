@@ -30,6 +30,14 @@ export const Row = styled(Box)(({ theme }) => ({
   [`&:hover [data-pin-slot], &[data-selected='true'] [data-pin-slot]`]: {
     opacity: 1,
   },
+  // A repo whose folder vanished reads as stale: everything fades except the
+  // status cell (which carries the "folder missing" badge) and the actions
+  // (which carry the way out). Opacity creates a stacking group, so the
+  // exemptions have to be direct children, not nested nodes.
+  "&[data-missing='true'] > *:not([data-missing-keep])": {
+    opacity: 0.4,
+    filter: "grayscale(1)",
+  },
   // Mount stagger: rows slide in from the left in quick succession. Tight
   // 20ms step + 200ms duration so 10 rows finish within ~400ms total.
   animation: `${pgSlideL} 200ms ${PAGE_EASE} both`,

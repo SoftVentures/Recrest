@@ -108,11 +108,14 @@ export const TEST_IDS = {
     row: "repo-row",
     rowName: "repo-row-name",
     rowDelete: "repo-row-delete",
+    rowForget: "repo-row-forget",
     rowPinToggle: "repo-row-pin-toggle",
+    missingBadge: "repo-missing-badge",
     card: "repo-card",
     cardName: "repo-card-name",
     contextMenu: "repo-context-menu",
     detailPane: "detail-pane",
+    detailPaneMissingBadge: "detail-pane-missing-badge",
   },
 
   contextMenu: {
@@ -122,6 +125,7 @@ export const TEST_IDS = {
   repoDetail: {
     page: "repo-detail-page",
     back: "repo-detail-back",
+    missingBadge: "repo-detail-missing-badge",
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
     avatarMenu: "repo-avatar-menu",

@@ -31,6 +31,14 @@ export const Card = styled(Box)(({ theme }) => ({
     borderColor: theme.palette.primary.main,
     backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 10%, transparent)`,
   },
+  // A repo whose folder vanished reads as stale: the body fades out while the
+  // action cluster and the footer (which carries the "folder missing" badge)
+  // stay at full strength. Opacity creates a stacking group, so the exemptions
+  // have to be direct children, not nested nodes.
+  "&[data-missing='true'] > *:not([data-missing-keep])": {
+    opacity: 0.4,
+    filter: "grayscale(1)",
+  },
   // Mount stagger: cards rise in row by row.
   animation: `${pgRise} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...staggerNthOfType({ step: 40, count: 10 }),

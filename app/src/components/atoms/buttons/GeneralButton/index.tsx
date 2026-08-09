@@ -7,6 +7,7 @@ import { styled } from "@mui/material/styles";
 
 import { Check as CheckIcon, X as ErrorIcon } from "lucide-react";
 
+import VisuallyHidden from "@/components/atoms/layout/VisuallyHidden";
 import GeneralCircularLoader, {
   CircularLoaderSize,
 } from "@/components/atoms/loaders/GeneralCircularLoader";
@@ -125,19 +126,6 @@ const StyledButton = styled(Button, {
 // so they read white/contrast against green/red.
 const SuccessIcon = styled(CheckIcon)({ color: "inherit" });
 const FailureIcon = styled(ErrorIcon)({ color: "inherit" });
-
-// eslint-disable-next-line no-restricted-syntax -- visually-hidden live region; pure layout primitive, no semantic <Typography>/<Box> equivalent
-const VisuallyHidden = styled("span")({
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0 0 0 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-});
 
 const GeneralButton = forwardRef<HTMLButtonElement, GeneralButtonProps>(function GeneralButton(
   {

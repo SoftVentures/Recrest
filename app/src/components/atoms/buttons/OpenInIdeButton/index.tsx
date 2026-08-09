@@ -31,6 +31,11 @@ export interface OpenInIdeButtonProps {
    *  Defaults to "Open in {selected IDE}", or a generic "Open in IDE" on auto. */
   label?: string;
   iconSize?: IconButtonSize;
+  /** Blocks the action — e.g. when the repo folder no longer exists on disk. */
+  disabled?: boolean;
+  /** Tooltip override. Defaults to the resolved "Open in <IDE>" label; pass the
+   *  reason string when `disabled` is set. */
+  tooltip?: string;
   className?: string;
   "data-testid"?: string;
 }
@@ -41,6 +46,8 @@ function OpenInIdeButton({
   ideId,
   label,
   iconSize = IconButtonSize.MD,
+  disabled,
+  tooltip,
   className,
   "data-testid": testId,
 }: OpenInIdeButtonProps) {
@@ -66,6 +73,7 @@ function OpenInIdeButton({
     return (
       <GeneralButton
         variant="default"
+        disabled={disabled}
         onClick={() => void onClick()}
         className={className}
         data-testid={testId}
@@ -80,7 +88,8 @@ function OpenInIdeButton({
     <GeneralIconButton
       size={iconSize}
       aria-label={t("repo.open_in_ide", { ns: I18nNamespace.ARIA, defaultValue: resolvedLabel })}
-      tooltip={resolvedLabel}
+      tooltip={tooltip ?? resolvedLabel}
+      disabled={disabled}
       onClick={() => void onClick()}
       icon={<IdeIcon id={effectiveIdeId} size={16} color="brand" />}
       className={className}
