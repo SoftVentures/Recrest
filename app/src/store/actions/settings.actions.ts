@@ -106,9 +106,43 @@ export const loadSettings = createAsyncThunk<AppSettings>("settings/load", async
   invoke<AppSettings>(TauriCommand.GET_SETTINGS),
 );
 
+/** The newest `update_settings` round-trip. Every reducer that listens to
+ *  `saveSettings.fulfilled` applies the whole returned `AppSettings` snapshot,
+ *  so an older response landing last rewrites the store backwards. */
+let latestSave: Promise<AppSettings> | null = null;
+
+/**
+ * Persist a settings patch. Concurrent saves are routine — `IntensitySlider`
+ * dispatches one per drag step (`step={5}` over 0..100), and the pinned-repo
+ * writes fan out the same way — so responses can and do complete out of order.
+ *
+ * The guard is the same shape as `useContentSearch`'s sequence check, minus the
+ * dropped result: a superseded save resolves with the *newest* snapshot instead
+ * of its own stale one. `fulfilled` therefore never carries an older value than
+ * one already applied, while `.unwrap()` callers still get a real `AppSettings`
+ * and still see a genuine backend failure as a rejection.
+ */
 export const saveSettings = createAsyncThunk<AppSettings, Partial<AppSettings>>(
   "settings/save",
-  async (patch) => invoke<AppSettings>(TauriCommand.UPDATE_SETTINGS, { patch }),
+  async (patch) => {
+    const request = invoke<AppSettings>(TauriCommand.UPDATE_SETTINGS, { patch });
+    latestSave = request;
+    let awaited = request;
+    let settings = await awaited;
+    // Another save started while this one was in flight — wait for it (and for
+    // anything that supersedes *it*) so this thunk fulfils with the last word.
+    while (latestSave && latestSave !== awaited) {
+      awaited = latestSave;
+      try {
+        settings = await awaited;
+      } catch {
+        // The newer save failed, so it changed nothing: our own snapshot is
+        // still the truthful one. Don't fail a write that actually landed.
+        break;
+      }
+    }
+    return settings;
+  },
 );
 
 export const loadDetectedTerminals = createAsyncThunk<TerminalDetection[]>(

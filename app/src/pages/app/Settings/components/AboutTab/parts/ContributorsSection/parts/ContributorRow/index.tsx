@@ -8,6 +8,7 @@ import { ExternalLink } from "lucide-react";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { Contributor } from "@/lib/contributors";
+import { useNumberFormat } from "@/lib/utils/format.utils";
 
 type Medal = "gold" | "silver" | "bronze" | null;
 
@@ -159,6 +160,7 @@ interface ContributorRowProps {
 
 function ContributorRow({ rank, contributor, topContributions, onOpen }: ContributorRowProps) {
   const { t } = useTranslation();
+  const { formatNumber } = useNumberFormat();
   const medal = medalFor(rank);
   // Floor at 4% so even a one-commit contributor shows a visible sliver.
   const pct =
@@ -183,7 +185,9 @@ function ContributorRow({ rank, contributor, topContributions, onOpen }: Contrib
         </ShareTrack>
       </Identity>
       <Commits>
-        <CommitsCount>{contributor.contributions.toLocaleString()}</CommitsCount>
+        <CommitsCount data-testid={TEST_IDS.settings.about.contributorCommits(contributor.login)}>
+          {formatNumber(contributor.contributions)}
+        </CommitsCount>
         <CommitsLabel>
           {t("settings.about.contributors_commit_unit", { count: contributor.contributions })}
         </CommitsLabel>

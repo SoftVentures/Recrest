@@ -93,3 +93,34 @@ describe("ProviderRow base URL editing", () => {
     },
   );
 });
+
+describe("ProviderRow connection status", () => {
+  const renderWithState = (state: ProviderConnection["authState"], connected: boolean) => {
+    const store = makeTestStore({
+      providers: {
+        connections: {
+          github: { ...connection("github", null), connected, authState: state },
+        },
+      },
+    });
+    return renderWithProviders(<ProviderRow providerId="github" />, { store });
+  };
+
+  it("separates a rejected token from a provider that was never connected", () => {
+    const { getByTestId } = renderWithState("invalid", false);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Token rejected");
+  });
+
+  it("shows the plain disconnected state when no credentials are stored", () => {
+    const { getByTestId } = renderWithState("disconnected", false);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Not connected");
+  });
+
+  it("shows the connected state when the token is accepted", () => {
+    const { getByTestId } = renderWithState("connected", true);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Connected");
+  });
+});

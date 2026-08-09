@@ -7,6 +7,7 @@ import {
   fetchOldestCommitDate,
   setSelectedRange,
 } from "@/store/actions/activity.actions";
+import { deleteRepo, forgetReposUnderPath, removeRepo } from "@/store/actions/repos.actions";
 import type { ActivityState, RepoCommits } from "@/store/types/activity.types";
 
 const DAY_MS = 86_400_000;
@@ -106,5 +107,21 @@ export const activityReducer = createReducer(initialActivityState, (builder) => 
     })
     .addCase(fetchOldestCommitDate.fulfilled, (state, action) => {
       state.oldestCommitDate = action.payload;
+    })
+    // Drop a repo's commits the moment it leaves Recrest (mirrors
+    // `branchesReducer` / `prsReducer`). Without this the dashboard KPIs, the
+    // heatmap, the language mix and every Activity chart keep counting a
+    // removed repo for the rest of the session — the streams are only ever
+    // replaced by a new `list_commits`, never pruned.
+    .addCase(removeRepo.fulfilled, (state, action) => {
+      delete state.commitsByRepo[action.payload];
+    })
+    .addCase(deleteRepo.fulfilled, (state, action) => {
+      delete state.commitsByRepo[action.payload];
+    })
+    .addCase(forgetReposUnderPath.fulfilled, (state, action) => {
+      for (const id of action.payload ?? []) {
+        delete state.commitsByRepo[id];
+      }
     });
 });

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-import { AppRoute, TauriCommand } from "@recrest/shared";
+import { AppRoute, type GitPullAllResult, TauriCommand } from "@recrest/shared";
 
 import { Activity, ArrowDownToLine, Code2, Plus, RefreshCw, Terminal } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import ConfirmationModal from "@/components/molecules/modals/ConfirmationModal";
 import { useActivityCommits } from "@/hooks/useActivityCommits";
 import { useEnrichedRepos } from "@/hooks/useEnrichedRepos";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -38,6 +39,7 @@ function QuickActionsCard() {
 
   const fetchAll = useActionFeedback();
   const pullAll = useActionFeedback();
+  const [pullAllConfirmOpen, setPullAllConfirmOpen] = useState(false);
 
   const onFetchAll = async () => {
     if (!isTauri()) return;
@@ -52,10 +54,27 @@ function QuickActionsCard() {
   };
 
   const onPullAll = async () => {
+    setPullAllConfirmOpen(false);
     if (!isTauri()) return;
     try {
-      const ok = await pullAll.run(() => invoke<number>(TauriCommand.GIT_PULL_ALL));
-      toast.success(t("dash.quick.pulled", { count: ok }));
+      const result = await pullAll.run(() => invoke<GitPullAllResult>(TauriCommand.GIT_PULL_ALL));
+      // A repo that refuses to pull (dirty worktree, no upstream, auth) used to be
+      // dropped on the backend, so the toast reported a success count that silently
+      // excluded it. Name the failures instead.
+      if (result.failures.length > 0) {
+        const names = result.failures
+          .map((f) => repos.find((r) => r.id === f.repoId)?.name ?? f.repoId)
+          .join(", ");
+        toast.warning(
+          t("dash.quick.pulled_partial", {
+            ok: result.ok,
+            failed: result.failures.length,
+            repos: names,
+          }),
+        );
+      } else {
+        toast.success(t("dash.quick.pulled", { count: result.ok }));
+      }
       void dispatch(loadRepos());
       dispatch(bumpRefreshNonce());
     } catch {
@@ -114,7 +133,7 @@ function QuickActionsCard() {
         </QBtn>
         <QBtn
           type="button"
-          onClick={() => void onPullAll()}
+          onClick={() => setPullAllConfirmOpen(true)}
           disabled={pullAll.state === "loading" || repos.length === 0}
           data-testid={TEST_IDS.dashboard.qa.pullAll}
         >
@@ -161,6 +180,14 @@ function QuickActionsCard() {
           <Box component="span">{t("dash.quick.recent_commits")}</Box>
         </QBtn>
       </Grid>
+      <ConfirmationModal
+        open={pullAllConfirmOpen}
+        title={t("dash.quick.pull_all_confirm_title")}
+        description={t("dash.quick.pull_all_confirm_body", { count: repos.length })}
+        confirmLabel={t("dash.quick.pull_all")}
+        onCancel={() => setPullAllConfirmOpen(false)}
+        onConfirm={() => void onPullAll()}
+      />
     </GeneralCard>
   );
 }

@@ -30,14 +30,30 @@ const initialState: PrsState = {
   diff: {},
   diffLoading: {},
   comments: {},
+  loadingRepoIds: [],
+  errorByRepo: {},
   loading: false,
   error: null,
   lastFetched: null,
   filters: initialFilters,
 };
 
+/** Recompute the two aggregate fields the app-wide chrome still reads
+ *  (`s.prs.loading` / `s.prs.error`) from the per-repo maps that own the
+ *  truth. Call after every mutation of `loadingRepoIds` / `errorByRepo`. */
+function syncAggregates(state: PrsState) {
+  state.loading = state.loadingRepoIds.length > 0;
+  state.error = Object.values(state.errorByRepo)[0] ?? null;
+}
+
+function clearLoading(state: PrsState, repoId: RepositoryId) {
+  state.loadingRepoIds = state.loadingRepoIds.filter((id) => id !== repoId);
+}
+
 function purgeRepo(state: PrsState, repoId: RepositoryId) {
   delete state.items[repoId];
+  delete state.errorByRepo[repoId];
+  clearLoading(state, repoId);
   const prefix = `${repoId}#`;
   for (const map of [
     state.detail,
@@ -50,6 +66,7 @@ function purgeRepo(state: PrsState, repoId: RepositoryId) {
       if (key.startsWith(prefix)) delete map[key];
     }
   }
+  syncAggregates(state);
 }
 
 export const prsReducer = createReducer(initialState, (builder) => {
@@ -66,18 +83,25 @@ export const prsReducer = createReducer(initialState, (builder) => {
     .addCase(resetFilters, (state) => {
       state.filters = initialFilters;
     })
-    .addCase(fetchPullRequests.pending, (state) => {
-      state.loading = true;
-      state.error = null;
+    .addCase(fetchPullRequests.pending, (state, action) => {
+      const repoId = action.meta.arg;
+      if (!state.loadingRepoIds.includes(repoId)) state.loadingRepoIds.push(repoId);
+      delete state.errorByRepo[repoId];
+      syncAggregates(state);
     })
     .addCase(fetchPullRequests.fulfilled, (state, action) => {
-      state.loading = false;
-      state.items[action.payload.repoId] = action.payload.prs;
+      const { repoId, prs } = action.payload;
+      clearLoading(state, repoId);
+      delete state.errorByRepo[repoId];
+      state.items[repoId] = prs;
       state.lastFetched = Date.now();
+      syncAggregates(state);
     })
     .addCase(fetchPullRequests.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.error.message ?? "failed to fetch merge requests";
+      const repoId = action.meta.arg;
+      clearLoading(state, repoId);
+      state.errorByRepo[repoId] = action.error.message ?? "failed to fetch merge requests";
+      syncAggregates(state);
     })
     .addCase(loadPrDetail.pending, (state, action) => {
       state.detailLoading[detailKey(action.meta.arg.repoId, action.meta.arg.prNumber)] = true;

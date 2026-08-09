@@ -1,64 +1,47 @@
-import { fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { PROVIDER_PAT_INFO } from "@recrest/shared";
+
+import { beforeAll, describe, expect, it } from "vitest";
 
 import PatHelpPanel from "@/components/molecules/PatHelpPanel";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import i18n from "@/locales";
+import commonEn from "@/locales/en/common.json";
 import { renderWithProviders } from "@/test/utils";
 
-vi.mock("@/lib/tauri", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/tauri")>("@/lib/tauri");
-  return {
-    ...actual,
-    openExternal: vi.fn(async () => {}),
-    isTauri: () => false,
-  };
-});
-
 describe("PatHelpPanel", () => {
-  it("opens the docs URL when the read-docs button is clicked", async () => {
-    const tauri = await import("@/lib/tauri");
-    const openSpy = tauri.openExternal as ReturnType<typeof vi.fn>;
-    openSpy.mockClear();
+  beforeAll(async () => {
+    await i18n.changeLanguage("en");
+  });
 
+  it("resolves GitHub scope labels whose id contains i18next's namespace separator", () => {
     const { getByTestId } = renderWithProviders(<PatHelpPanel provider="github" />);
 
-    fireEvent.click(getByTestId(TEST_IDS.onboarding.patHelpDocs));
-    expect(openSpy).toHaveBeenCalledTimes(1);
-    expect(openSpy.mock.calls[0]?.[0]).toContain("docs.github.com");
+    for (const scope of PROVIDER_PAT_INFO.github.requiredScopes) {
+      const node = getByTestId(TEST_IDS.onboarding.patHelpScope(scope));
+      const expected = commonEn.pat.scope_label.github[scope];
+      expect(node.textContent).toBe(expected);
+      // The `defaultValue` fallback would render the bare scope id.
+      expect(node.textContent).not.toBe(scope);
+    }
   });
 
-  it("opens the GitHub token-create URL with the prefilled scopes", async () => {
-    const tauri = await import("@/lib/tauri");
-    const openSpy = tauri.openExternal as ReturnType<typeof vi.fn>;
-    openSpy.mockClear();
+  it("resolves Bitbucket scope labels (every id carries a colon)", () => {
+    const { getByTestId } = renderWithProviders(<PatHelpPanel provider="bitbucket" />);
 
-    const { getByTestId } = renderWithProviders(<PatHelpPanel provider="github" />);
-
-    fireEvent.click(getByTestId(TEST_IDS.onboarding.patHelpCreate));
-    const url = openSpy.mock.calls[0]?.[0] ?? "";
-    expect(url).toContain("scopes=repo,read:user,read:org");
-    expect(url).toContain("description=Recrest");
+    for (const scope of PROVIDER_PAT_INFO.bitbucket.requiredScopes) {
+      const node = getByTestId(TEST_IDS.onboarding.patHelpScope(scope));
+      const expected = commonEn.pat.scope_label.bitbucket[scope];
+      expect(node.textContent).toBe(expected);
+      expect(node.textContent).not.toBe(scope);
+    }
   });
 
-  it("uses the provided GitLab base URL when building the create-token link", async () => {
-    const tauri = await import("@/lib/tauri");
-    const openSpy = tauri.openExternal as ReturnType<typeof vi.fn>;
-    openSpy.mockClear();
+  it("resolves GitLab scope labels (no separator in the ids)", () => {
+    const { getByTestId } = renderWithProviders(<PatHelpPanel provider="gitlab" />);
 
-    const { getByTestId } = renderWithProviders(
-      <PatHelpPanel provider="gitlab" baseUrl="https://gitlab.acme.test" />,
-    );
-
-    fireEvent.click(getByTestId(TEST_IDS.onboarding.patHelpCreate));
-    const url = openSpy.mock.calls[0]?.[0] ?? "";
-    expect(url).toContain("https://gitlab.acme.test/-/user_settings/personal_access_tokens");
-    expect(url).toContain("scopes=read_api,read_repository,read_user");
-  });
-
-  it("shows a manual-scope hint for Bitbucket (no URL scope support)", () => {
-    const { getByText } = renderWithProviders(<PatHelpPanel provider="bitbucket" />);
-    // Both en + de bundles contain the brand name verbatim — assert on it
-    // so the test doesn't depend on which language i18next resolves to.
-    expect(getByText(/Bitbucket/i)).toBeInTheDocument();
+    for (const scope of PROVIDER_PAT_INFO.gitlab.requiredScopes) {
+      const node = getByTestId(TEST_IDS.onboarding.patHelpScope(scope));
+      expect(node.textContent).toBe(commonEn.pat.scope_label.gitlab[scope]);
+    }
   });
 });

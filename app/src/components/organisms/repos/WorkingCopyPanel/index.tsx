@@ -339,7 +339,12 @@ function WorkingCopyPanel({ repoId, onCommitClick }: WorkingCopyPanelProps) {
           <StashList>
             {stash.map((s) => (
               <StashRow key={s.oid} data-testid={TEST_IDS.workingCopy.stashRow(s.index)}>
-                <StashIndex component="span">{t("stash_index", { index: s.index })}</StashIndex>
+                <StashIndex component="span" data-testid={TEST_IDS.workingCopy.stashIndex(s.index)}>
+                  {/* Braces are added here, not in the bundle: i18next has no way to escape a
+                      literal `{` next to a placeholder, and git's own notation is `stash@{0}` —
+                      which is what users paste into `git stash apply`. */}
+                  {t("stash_index", { index: `{${s.index}}` })}
+                </StashIndex>
                 <StashMessage component="span">{s.message}</StashMessage>
                 <GeneralButton
                   size="sm"

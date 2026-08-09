@@ -1,8 +1,8 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { useDevice } from "@/hooks/useDevice";
+import { setSidebarCollapsedAuto } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setSidebarCollapsed } from "@/store/reducers/uiReducer";
 
 /** Viewport below this collapses the sidebar even on "laptop"-class
  *  devices — the macOS min window (1100×720) sits here, and an expanded
@@ -31,9 +31,18 @@ function getCompactLayoutServerSnapshot(): boolean {
 }
 
 /**
- * Auto-collapses the sidebar on narrow viewports (mobile/tablet/compact-laptop)
- * while remembering the user's manual preference. On wider viewports the hook
- * restores the persisted state instead of staying collapsed.
+ * Auto-collapses the sidebar on narrow viewports while remembering the user's
+ * manual preference, and restores that preference once the window is wide
+ * again.
+ *
+ * The automatic collapse is dispatched as `setSidebarCollapsedAuto`, which
+ * `settingsBackendSync` deliberately does **not** persist. Persisting it made
+ * one narrow session overwrite the stored preference for good: the next cold
+ * start hydrated `sidebarCollapsed: true`, the `narrow && !collapsed` branch
+ * below then never fired, `forcedRef` stayed `false`, and widening the window
+ * had nothing to restore. Only a collapse the user performed themselves
+ * (`toggleSidebar` / `setSidebarCollapsed` from the sidebar chrome) is written
+ * back to settings.
  */
 export function useResponsiveSidebar(): void {
   const device = useDevice();
@@ -44,19 +53,42 @@ export function useResponsiveSidebar(): void {
   );
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.ui.sidebarCollapsed);
+  const narrow = device.isMobile || device.isTablet || compact;
+
+  const collapsedRef = useRef(collapsed);
+  collapsedRef.current = collapsed;
+
+  /** The user's own preference — the value we restore on widening. */
   const userPrefRef = useRef(collapsed);
+  /** The value this hook last forced, so the echo back through the store
+   *  isn't mistaken for the user reaching for the toggle. */
+  const pendingAutoRef = useRef<boolean | null>(null);
   const forcedRef = useRef(false);
 
+  // Any change to `sidebarCollapsed` we did not cause ourselves is the user
+  // clicking the toggle (or settings hydration replaying an earlier click) —
+  // that is the value worth remembering.
   useEffect(() => {
-    const narrow = device.isMobile || device.isTablet || compact;
-    if (narrow && !collapsed) {
-      userPrefRef.current = collapsed;
-      forcedRef.current = true;
-      dispatch(setSidebarCollapsed(true));
-    } else if (!narrow && forcedRef.current) {
-      forcedRef.current = false;
-      dispatch(setSidebarCollapsed(userPrefRef.current));
+    if (pendingAutoRef.current === collapsed) {
+      pendingAutoRef.current = null;
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [device.isMobile, device.isTablet, compact, dispatch]);
+    pendingAutoRef.current = null;
+    userPrefRef.current = collapsed;
+  }, [collapsed]);
+
+  useEffect(() => {
+    if (narrow) {
+      if (collapsedRef.current) return;
+      pendingAutoRef.current = true;
+      forcedRef.current = true;
+      dispatch(setSidebarCollapsedAuto(true));
+      return;
+    }
+    if (!forcedRef.current) return;
+    forcedRef.current = false;
+    if (collapsedRef.current === userPrefRef.current) return;
+    pendingAutoRef.current = userPrefRef.current;
+    dispatch(setSidebarCollapsedAuto(userPrefRef.current));
+  }, [narrow, dispatch]);
 }

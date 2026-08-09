@@ -2,6 +2,7 @@ import type { AppSettings } from "@recrest/shared";
 
 import { describe, expect, it } from "vitest";
 
+import { deleteRepo, forgetReposUnderPath, removeRepo } from "@/store/actions/repos.actions";
 import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import {
   bumpRefreshNonce,
@@ -88,6 +89,69 @@ describe("uiReducer", () => {
   it("sets the onboarding override flag", () => {
     const next = uiReducer(initial(), setOnboardingOverride(true));
     expect(next.onboardingOverride).toBe(true);
+  });
+
+  it("unpins and deselects a removed repo", () => {
+    let state = uiReducer(initial(), setPinnedRepos(["repo-1", "repo-2"]));
+    state = uiReducer(state, setSelectedRepo("repo-1"));
+
+    const next = uiReducer(state, removeRepo.fulfilled("repo-1", "internal-id", "repo-1"));
+
+    expect(next.pinnedRepoIds).toEqual(["repo-2"]);
+    expect(next.selectedRepoId).toBeNull();
+  });
+
+  it("keeps the selection when another repo is removed", () => {
+    let state = uiReducer(initial(), setPinnedRepos(["repo-1", "repo-2"]));
+    state = uiReducer(state, setSelectedRepo("repo-2"));
+
+    const next = uiReducer(state, removeRepo.fulfilled("repo-1", "internal-id", "repo-1"));
+
+    expect(next.pinnedRepoIds).toEqual(["repo-2"]);
+    expect(next.selectedRepoId).toBe("repo-2");
+  });
+
+  it("unpins and deselects a deleted repo", () => {
+    let state = uiReducer(initial(), setPinnedRepos(["repo-1"]));
+    state = uiReducer(state, setSelectedRepo("repo-1"));
+
+    const next = uiReducer(
+      state,
+      deleteRepo.fulfilled("repo-1", "internal-id", { repoId: "repo-1" }),
+    );
+
+    expect(next.pinnedRepoIds).toEqual([]);
+    expect(next.selectedRepoId).toBeNull();
+  });
+
+  it("prunes every repo forgotten with a removed scan root", () => {
+    let state = uiReducer(initial(), setPinnedRepos(["repo-1", "repo-2", "repo-3"]));
+    state = uiReducer(state, setSelectedRepo("repo-3"));
+
+    const next = uiReducer(
+      state,
+      forgetReposUnderPath.fulfilled(["repo-1", "repo-3"], "internal-id", {
+        removedPath: "/dev",
+        remainingPaths: [],
+      }),
+    );
+
+    expect(next.pinnedRepoIds).toEqual(["repo-2"]);
+    expect(next.selectedRepoId).toBeNull();
+  });
+
+  it("leaves pins untouched when nothing was forgotten", () => {
+    const state = uiReducer(initial(), setPinnedRepos(["repo-1"]));
+
+    const next = uiReducer(
+      state,
+      forgetReposUnderPath.fulfilled([], "internal-id", {
+        removedPath: "/dev",
+        remainingPaths: [],
+      }),
+    );
+
+    expect(next.pinnedRepoIds).toEqual(["repo-1"]);
   });
 
   it("hydrates pinned repos and sidebar state from loadSettings.fulfilled", () => {

@@ -26,7 +26,11 @@
     "current": "(current {{version}})",
     "install": "Install & restart",
     "download": "Download",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "installing": "Installing…",
+    "installing_percent": "Installing… {{percent}}%",
+    "install_failed": "Update couldn't be installed. Download it manually from the release page.",
+    "download_failed": "The download page couldn't be opened."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -332,7 +336,11 @@
       "fetch_all_error": "Fetch all failed",
       "pulled_one": "Pulled {{count}} repo",
       "pulled_other": "Pulled {{count}} repos",
-      "pull_all_error": "Pull all failed"
+      "pull_all_error": "Pull all failed",
+      "pull_all_confirm_title": "Pull all repos?",
+      "pull_all_confirm_body_one": "This pulls {{count}} repo. Repos with uncommitted changes are skipped and reported.",
+      "pull_all_confirm_body_other": "This pulls {{count}} repos. Repos with uncommitted changes are skipped and reported.",
+      "pulled_partial": "Pulled {{ok}}, {{failed}} skipped: {{repos}}"
     }
   },
   "titlebar": {
@@ -480,6 +488,7 @@
       "remote": "Remote"
     },
     "commits": "commits",
+    "loading": "Loading activity…",
     "empty": "No commits match your filter.",
     "kpi": {
       "commits_week": "Commits · this week",
@@ -996,6 +1005,7 @@
       "self_hosted": "Self-hosted",
       "status_connected": "Connected",
       "status_disconnected": "Not connected",
+      "status_invalid": "Token rejected",
       "token_placeholder": "Paste your personal access token"
     },
     "saved": "Settings saved",
@@ -1156,5 +1166,10 @@
     "url_hint": "HTTPS or SSH — GitHub, GitLab, Bitbucket, or self-hosted.",
     "connect_first": "Connect GitHub, GitLab or Bitbucket in Settings to browse your remote repositories here.",
     "desc": "Import from a connected provider, add an existing folder, or clone from any URL."
+  },
+  "settings_corrupt": {
+    "title": "Your settings file could not be read",
+    "quarantined": "Recrest started with defaults. Your previous settings — repos, groups, pins and scan paths — were kept at {{path}} and can be restored by hand.",
+    "not_quarantined": "Recrest started with defaults. The unreadable file could not be moved aside, so it is still in place — back it up before changing any setting."
   }
 }

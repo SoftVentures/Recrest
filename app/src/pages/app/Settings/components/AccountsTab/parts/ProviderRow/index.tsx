@@ -90,6 +90,9 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
   const dispatch = useAppDispatch();
   const connection = useAppSelector((s) => s.providers.connections[providerId]);
   const connected = !!connection?.connected;
+  // A stored token the provider rejected is not the same as no token at all —
+  // the user has to replace it, not add one, and only the backend can tell.
+  const tokenRejected = connection?.authState === "invalid";
   const defaultBaseUrl = PROVIDER_API_URLS[providerId];
   const effectiveBaseUrl = connection?.baseUrl ?? defaultBaseUrl;
   const isSelfHosted =
@@ -267,12 +270,14 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
           {providerName}
         </BrandName>
         <StatusPill
-          tone={connected ? "connected" : "disconnected"}
+          tone={connected ? "connected" : tokenRejected ? "invalid" : "disconnected"}
           data-testid={TEST_IDS.settings.accounts.statusPill(providerId)}
         >
           {connected
             ? t("settings.providers.status_connected")
-            : t("settings.providers.status_disconnected")}
+            : tokenRejected
+              ? t("settings.providers.status_invalid")
+              : t("settings.providers.status_disconnected")}
         </StatusPill>
         {isSelfHosted && (
           <StatusPill tone="self-hosted">{t("settings.providers.self_hosted")}</StatusPill>

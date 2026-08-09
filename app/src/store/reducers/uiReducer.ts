@@ -1,5 +1,6 @@
 import { createReducer } from "@reduxjs/toolkit";
 
+import { deleteRepo, forgetReposUnderPath, removeRepo } from "@/store/actions/repos.actions";
 import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import {
   bumpRefreshNonce,
@@ -76,8 +77,27 @@ export const uiReducer = createReducer(initialState, (builder) => {
     })
     .addCase(saveSettings.fulfilled, (state, action) => {
       hydrateUiFromBackend(state, action.payload);
+    })
+    // A repo that left Recrest must not stay pinned to the sidebar, and
+    // `selectedRepoId` must not keep pointing at a record no reducer holds
+    // any more (mirrors `branchesReducer` / `prsReducer` / `activityReducer`).
+    .addCase(removeRepo.fulfilled, (state, action) => {
+      pruneRepos(state, [action.payload]);
+    })
+    .addCase(deleteRepo.fulfilled, (state, action) => {
+      pruneRepos(state, [action.payload]);
+    })
+    .addCase(forgetReposUnderPath.fulfilled, (state, action) => {
+      pruneRepos(state, action.payload ?? []);
     });
 });
+
+function pruneRepos(state: UiState, repoIds: readonly string[]): void {
+  if (repoIds.length === 0) return;
+  const gone = new Set(repoIds);
+  state.pinnedRepoIds = state.pinnedRepoIds.filter((id) => !gone.has(id));
+  if (state.selectedRepoId && gone.has(state.selectedRepoId)) state.selectedRepoId = null;
+}
 
 function hydrateUiFromBackend(state: UiState, payload: unknown): void {
   if (!payload || typeof payload !== "object") return;

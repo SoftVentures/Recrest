@@ -412,8 +412,9 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "git_branch_create":
         return resolveStatus(args?.repoId);
       case "git_fetch_all":
-      case "git_pull_all":
         return SEED.repos.length;
+      case "git_pull_all":
+        return { ok: SEED.repos.length, failures: [] };
       case "git_list_branches":
         return [
           { name: "main", isRemote: false, isHead: true, upstream: "origin/main", ahead: 0, behind: 0 },
@@ -543,6 +544,8 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return { authorizationUrl: "about:blank", state: "stub" };
       case "complete_oauth":
         return undefined;
+      case "get_settings_corruption":
+        return null;
       case "get_settings": {
         // Read a localStorage overlay (written by update_settings below) so a
         // page reload re-hydrates the user's last settings — mirroring real

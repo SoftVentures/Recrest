@@ -91,8 +91,9 @@ describe("prsReducer", () => {
     expect(next.filters.state).toEqual(["open"]);
   });
 
-  it("sets loading on fetchPullRequests.pending", () => {
+  it("tracks the fetching repo on fetchPullRequests.pending", () => {
     const next = prsReducer(initial(), fetchPullRequests.pending("internal-id", "r1"));
+    expect(next.loadingRepoIds).toEqual(["r1"]);
     expect(next.loading).toBe(true);
     expect(next.error).toBeNull();
   });
@@ -102,17 +103,66 @@ describe("prsReducer", () => {
       initial(),
       fetchPullRequests.fulfilled({ repoId: "r1", prs: [pr({ number: 2 })] }, "internal-id", "r1"),
     );
+    expect(next.loadingRepoIds).toEqual([]);
     expect(next.loading).toBe(false);
     expect(next.items["r1"]?.map((p) => p.number)).toEqual([2]);
     expect(typeof next.lastFetched).toBe("number");
   });
 
-  it("records the error on fetchPullRequests.rejected", () => {
+  it("records the error per repo on fetchPullRequests.rejected", () => {
     const next = prsReducer(
       initial(),
       fetchPullRequests.rejected(new Error("fetch boom"), "internal-id", "r1"),
     );
+    expect(next.errorByRepo["r1"]).toBe("fetch boom");
     expect(next.error).toBe("fetch boom");
+  });
+
+  it("keeps one repo out of loading while another is still fetching", () => {
+    let state = prsReducer(initial(), fetchPullRequests.pending("id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.pending("id-2", "r2"));
+    expect(state.loadingRepoIds).toEqual(["r1", "r2"]);
+
+    state = prsReducer(
+      state,
+      fetchPullRequests.fulfilled({ repoId: "r1", prs: [pr({ number: 1 })] }, "id-1", "r1"),
+    );
+
+    expect(state.loadingRepoIds).toEqual(["r2"]);
+    // The aggregate stays true — one repo is genuinely still in flight.
+    expect(state.loading).toBe(true);
+
+    state = prsReducer(state, fetchPullRequests.fulfilled({ repoId: "r2", prs: [] }, "id-2", "r2"));
+    expect(state.loading).toBe(false);
+  });
+
+  it("keeps one repo's failure out of another repo's error slot", () => {
+    let state = prsReducer(
+      initial(),
+      fetchPullRequests.rejected(new Error("r1 boom"), "id-1", "r1"),
+    );
+    state = prsReducer(
+      state,
+      fetchPullRequests.fulfilled({ repoId: "r2", prs: [pr({ number: 5 })] }, "id-2", "r2"),
+    );
+
+    expect(state.errorByRepo["r1"]).toBe("r1 boom");
+    expect(state.errorByRepo["r2"]).toBeUndefined();
+    expect(state.items["r2"]?.map((p) => p.number)).toEqual([5]);
+  });
+
+  it("clears a repo's previous error when it starts fetching again", () => {
+    let state = prsReducer(initial(), fetchPullRequests.rejected(new Error("boom"), "id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.pending("id-2", "r1"));
+
+    expect(state.errorByRepo["r1"]).toBeUndefined();
+    expect(state.error).toBeNull();
+  });
+
+  it("does not queue the same repo twice while its fetch is in flight", () => {
+    let state = prsReducer(initial(), fetchPullRequests.pending("id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.pending("id-2", "r1"));
+    expect(state.loadingRepoIds).toEqual(["r1"]);
   });
 
   it("tracks loading state across the loadPrDetail lifecycle", () => {
@@ -182,6 +232,19 @@ describe("prsReducer", () => {
     const next = prsReducer(state, removeRepo.fulfilled("r1", "internal-id", "r1"));
     expect(next.items["r1"]).toBeUndefined();
     expect(next.detail[key]).toBeUndefined();
+  });
+
+  it("drops a removed repo's loading and error tracking", () => {
+    let state = prsReducer(initial(), fetchPullRequests.pending("id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("boom"), "id-2", "r2"));
+
+    const next = prsReducer(state, removeRepo.fulfilled("r1", "internal-id", "r1"));
+    expect(next.loadingRepoIds).toEqual([]);
+    expect(next.loading).toBe(false);
+
+    const cleared = prsReducer(next, removeRepo.fulfilled("r2", "internal-id", "r2"));
+    expect(cleared.errorByRepo["r2"]).toBeUndefined();
+    expect(cleared.error).toBeNull();
   });
 
   it("purges repo-scoped state on deleteRepo.fulfilled but keeps other repos", () => {

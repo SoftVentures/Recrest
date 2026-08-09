@@ -64,7 +64,7 @@ export const BrandName = styled(Typography)(({ theme }) => ({
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 export const StatusPill = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
-  tone: "connected" | "disconnected" | "self-hosted";
+  tone: "connected" | "disconnected" | "invalid" | "self-hosted";
 }>(({ theme, tone }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -79,13 +79,17 @@ export const StatusPill = styled("span", { shouldForwardProp: (p) => p !== "tone
       ? toneText(theme, StatusTone.SUCCESS)
       : tone === "self-hosted"
         ? toneText(theme, StatusTone.WARNING)
-        : theme.palette.text.information,
+        : tone === "invalid"
+          ? toneText(theme, StatusTone.ERROR)
+          : theme.palette.text.information,
   backgroundColor:
     tone === "connected"
       ? `color-mix(in srgb, ${theme.palette.success.main} 18%, transparent)`
       : tone === "self-hosted"
         ? `color-mix(in srgb, ${theme.palette.warning.main} 22%, transparent)`
-        : theme.palette.surface.interface.backElevation,
+        : tone === "invalid"
+          ? `color-mix(in srgb, ${theme.palette.error.main} 20%, transparent)`
+          : theme.palette.surface.interface.backElevation,
 }));
 
 export const Spacer = styled(Box)({ flex: 1 }) as typeof Box;

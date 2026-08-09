@@ -89,6 +89,14 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
   ) {
     return result;
   }
+  // Viewport-driven writes (see `setSidebarCollapsedAuto`) share the action
+  // type of the user-driven ones so the reducer stays simple, but they are
+  // ephemeral layout state — persisting them would let a narrow window
+  // overwrite the user's stored preference.
+  if ((action as { meta?: { transient?: boolean } }).meta?.transient) {
+    return result;
+  }
+
   const actionType = (action as { type: string }).type;
   const isPersistedUiAction =
     actionType === "ui/setSidebarCollapsed" ||

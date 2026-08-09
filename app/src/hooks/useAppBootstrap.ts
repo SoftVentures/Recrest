@@ -1,6 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { isTauri } from "@/lib/tauri";
+import { useTranslation } from "react-i18next";
+
+import { type SettingsCorruption, TauriCommand } from "@recrest/shared";
+
+import { toast } from "sonner";
+
+import { invoke, isTauri } from "@/lib/tauri";
 import { scanForRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
 import { loadProviders } from "@/store/reducers/providersReducer";
@@ -27,10 +33,33 @@ import { loadSettings } from "@/store/reducers/settingsReducer";
  */
 export function useAppBootstrap(): void {
   const dispatch = useAppDispatch();
+  const { t } = useTranslation();
+
+  // Held in a ref so a language switch can't re-run the whole bootstrap —
+  // this effect must fire exactly once per mount.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     if (!isTauri()) return;
     void (async () => {
+      // A settings.json that failed to parse is quarantined rather than
+      // overwritten, but the boot detection happens before this renderer
+      // exists — so it has to be pulled, not awaited as an event.
+      const corruption = await invoke<SettingsCorruption | null>(
+        TauriCommand.GET_SETTINGS_CORRUPTION,
+      ).catch(() => null);
+      if (corruption) {
+        toast.error(tRef.current("settings_corrupt.title"), {
+          description: corruption.quarantinePath
+            ? tRef.current("settings_corrupt.quarantined", { path: corruption.quarantinePath })
+            : tRef.current("settings_corrupt.not_quarantined"),
+          duration: Infinity,
+          closeButton: true,
+        });
+      }
       const [settings, repos] = await Promise.all([
         dispatch(loadSettings())
           .unwrap()
