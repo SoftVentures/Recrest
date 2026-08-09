@@ -316,9 +316,14 @@ jobs:
           ARCH: ${{ matrix.arch }}
         run: |
           set -uo pipefail
-          APP="$(ls -d app/src-tauri/target/release/bundle/macos/*.app \
-                       app/src-tauri/target/*/release/bundle/macos/*.app \
-                 2>/dev/null | head -n1)"
+          # `find`, not a glob list: GitHub runs `shell: bash` as
+          # `bash --noprofile --norc -eo pipefail`, so `-e` is on and `set -uo`
+          # does not clear it. Both mac legs build with `--target <triple>`, so
+          # a bare `target/release/bundle/macos/*.app` never matches, `ls` exits
+          # 2, pipefail propagates it, and the assignment kills the step before
+          # the first echo. `find` exits 0 when nothing matches.
+          # `-prune` stops the descent at the bundle so a nested .app can't win.
+          APP="$(find app/src-tauri/target -type d -path '*/release/bundle/macos/*.app' -prune 2>/dev/null | head -n1)"
           if [ -z "$APP" ]; then
             echo "::error::no .app bundle produced under app/src-tauri/target"
             exit 1
@@ -522,9 +527,11 @@ jobs:
 
           # Abort rather than prune blind: an unreadable manifest would make the
           # referenced-set empty and delete every updater payload on the release.
+          # `|| true` so an unreadable manifest reaches the guard below instead
+          # of dying on the assignment under `set -e` with no explanation.
           referenced="$(gh release download "$TAG" --repo "$REPO" \
             --pattern 'latest.json' --output - 2>/dev/null \
-            | jq -r '.platforms[].url' | sed 's#.*/##' | sort -u)"
+            | jq -r '.platforms[].url' | sed 's#.*/##' | sort -u || true)"
           if [ -z "$referenced" ]; then
             echo "::error::could not read latest.json from $TAG — refusing to prune"
             exit 1
@@ -714,11 +721,14 @@ jobs:
               echo "::error::$origin: codesign --verify failed"; rc=1; return
             fi
             local bin got
-            bin="$(ls "$app/Contents/MacOS" 2>/dev/null | head -n1)"
+            # `|| true` on every capture in this job: `-e` is on (see the build
+            # leg's note), so a failing `ls`/`lipo` would kill the step instead
+            # of reaching the ::error:: line that explains what is wrong.
+            bin="$(ls "$app/Contents/MacOS" 2>/dev/null | head -n1 || true)"
             if [ -z "$bin" ]; then
               echo "::error::$origin: no executable in Contents/MacOS"; rc=1; return
             fi
-            got="$(lipo -archs "$app/Contents/MacOS/$bin")"
+            got="$(lipo -archs "$app/Contents/MacOS/$bin" || true)"
             case " $got " in
               *" $want "*) echo "✓ $origin: signed, $got" ;;
               *) echo "::error::$origin: architecture is '$got', expected '$want'"; rc=1 ;;
@@ -734,7 +744,7 @@ jobs:
             if ! hdiutil attach -nobrowse -readonly -noverify -mountpoint "$mnt" "$dmg" >/dev/null; then
               echo "::error::$dmg could not be mounted"; rc=1; continue
             fi
-            verify_app "$(ls -d "$mnt"/*.app 2>/dev/null | head -n1)" "$want" "$(basename "$dmg")"
+            verify_app "$(ls -d "$mnt"/*.app 2>/dev/null | head -n1 || true)" "$want" "$(basename "$dmg")"
             hdiutil detach "$mnt" >/dev/null || true
           done
 
@@ -753,6 +763,6 @@ jobs:
             [ -f "$tgz" ] || { echo "::error::missing updater payload $tgz"; rc=1; continue; }
             out="$(mktemp -d)"
             tar -xzf "$tgz" -C "$out"
-            verify_app "$(ls -d "$out"/*.app 2>/dev/null | head -n1)" "$want" "$(basename "$tgz")"
+            verify_app "$(ls -d "$out"/*.app 2>/dev/null | head -n1 || true)" "$want" "$(basename "$tgz")"
           done
           exit $rc
