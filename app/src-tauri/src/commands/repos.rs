@@ -314,7 +314,7 @@ pub async fn list_recent_commits(
     }
 
     // Newest first across all repos.
-    out.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    out.sort_by_key(|c| std::cmp::Reverse(c.timestamp));
     out.truncate(limit);
     Ok(out)
 }

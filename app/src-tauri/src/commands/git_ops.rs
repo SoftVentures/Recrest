@@ -1173,7 +1173,10 @@ mod tests {
     fn ssh_key_override_builds_ssh_key_cred() {
         let (_dir, key) = temp_key(false);
         let cred = build_ssh_key_cred(Some("git"), &key, None).expect("cred builds");
-        assert!(cred.credtype() as u32 & git2::CredentialType::SSH_KEY.bits() != 0);
+        // `credtype()` is a C `int`, which libgit2 maps to i32 on Windows and
+        // u32 elsewhere — widening both sides keeps this compiling (and
+        // cast-lint-free) on every platform.
+        assert!(i64::from(cred.credtype()) & i64::from(git2::CredentialType::SSH_KEY.bits()) != 0);
     }
 
     #[test]
