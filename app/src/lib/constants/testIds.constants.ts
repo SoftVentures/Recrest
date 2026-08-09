@@ -417,6 +417,7 @@ export const TEST_IDS = {
 
     accounts: {
       connectButton: "settings-accounts-connect",
+      disconnectButton: "settings-accounts-disconnect",
       tokenCreateLink: "settings-accounts-token-create-link",
       providerRow: <T extends string>(id: T) => `settings-accounts-provider-${id}` as const,
       statusPill: <T extends string>(id: T) => `settings-accounts-status-${id}` as const,

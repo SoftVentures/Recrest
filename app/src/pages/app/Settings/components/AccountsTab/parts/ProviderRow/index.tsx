@@ -290,6 +290,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               size="sm"
               disabled={submitting}
               onClick={() => setConfirmDisconnect(true)}
+              data-testid={TEST_IDS.settings.accounts.disconnectButton}
             >
               {t("settings.providers.disconnect")}
             </GeneralButton>
