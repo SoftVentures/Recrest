@@ -238,6 +238,10 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
     return repo ? repo.status : null;
   }
 
+  // Per-repo stash state. Session-scoped, like the real backend's — each spec
+  // gets a fresh page and therefore a fresh map.
+  const stashByRepo = new Map();
+
   async function handleCommand(cmd, args) {
     switch (cmd) {
       // --- repos
@@ -314,11 +318,30 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "git_branch_delete":
       case "git_stage":
       case "git_unstage":
-      case "git_stash":
-      case "git_stash_pop":
-      case "git_stash_drop":
       case "git_commit":
         return resolveStatus(args?.repoId);
+      // Stashes are stateful in the real backend, and the stash list is the
+      // only place \`stash_index\` renders — a stub that always answers []
+      // makes that row untestable. Mirrors \`devStub.handlers.git.ts\`.
+      case "git_stash": {
+        const repoId = (args && args.repoId) || "";
+        const list = stashByRepo.get(repoId) || [];
+        list.unshift({
+          index: 0,
+          message: (args && args.message) || "WIP on dev: stub stash",
+          oid: "stub-" + list.length,
+        });
+        stashByRepo.set(repoId, list.map((e, i) => ({ ...e, index: i })));
+        return resolveStatus(repoId);
+      }
+      case "git_stash_pop":
+      case "git_stash_drop": {
+        const repoId = (args && args.repoId) || "";
+        const idx = (args && args.index) || 0;
+        const list = (stashByRepo.get(repoId) || []).filter((e) => e.index !== idx);
+        stashByRepo.set(repoId, list.map((e, i) => ({ ...e, index: i })));
+        return resolveStatus(repoId);
+      }
       case "git_discard":
         return {
           discarded: (args && args.paths) || [],
@@ -326,7 +349,7 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
           status: resolveStatus(args?.repoId),
         };
       case "git_stash_list":
-        return [];
+        return stashByRepo.get((args && args.repoId) || "") || [];
       case "git_has_pre_commit_hook":
         return false;
       case "get_git_config":
@@ -727,7 +750,17 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
     }
   }
 
+  // Ordered log of every command the app dispatched. Specs read it to assert
+  // that an action did NOT happen (a cancelled confirmation, a throttled
+  // rescan) — something no amount of DOM inspection can prove.
+  Object.defineProperty(window, "__RECREST_STUB_CALLS__", {
+    configurable: true,
+    writable: true,
+    value: [],
+  });
+
   async function invoke(cmd, args, _options) {
+    window.__RECREST_STUB_CALLS__.push(cmd);
     try {
       return await handleCommand(cmd, args || {});
     } catch (err) {
