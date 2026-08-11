@@ -60,14 +60,18 @@ Outside the Tauri runtime `invoke()` throws `tauri-ipc-unavailable`. In `dev:web
 
 ## Visual work — three different things, don't mix them up
 
-**Gating pixel-diff, landing only.** `src/e2e/landing/10-responsive.spec.ts` uses `toHaveScreenshot` with deterministic content (fixed date-free copy, `animations: "disabled"`). It runs in `ci.yml::e2e` and its baselines are pinned to Chromium-on-Linux.
+**Advisory pixel-diff, landing only.** `src/e2e/landing/10-responsive.spec.ts` uses `toHaveScreenshot` with deterministic content (fixed date-free copy, `animations: "disabled"`). It runs in `ci.yml::e2e` and its baselines are pinned to Chromium-on-Linux. Advisory, not gating — see the CI section below.
 
-**Local pixel-diff for the app.** `src/e2e/app/14-visual.spec.ts` does the same for the app's main routes, masking the volatile regions (relative timestamps, sparklines, dirty counts). It **skips itself when `CI` is set** and its baselines are deliberately uncommitted, because they are per-platform — a `*-win32.png` baseline says nothing about a Linux runner. Run it locally, refresh with `yarn test:e2e:update-snapshots` only after reviewing the change by eye.
+**Local pixel-diff for the app.** `src/e2e/app/14-visual.spec.ts` does the same for the app's main routes (also advisory — it never runs in CI at all), masking the volatile regions (relative timestamps, sparklines, dirty counts). It **skips itself when `CI` is set** and its baselines are deliberately uncommitted, because they are per-platform — a `*-win32.png` baseline says nothing about a Linux runner. Run it locally, refresh with `yarn test:e2e:update-snapshots` only after reviewing the change by eye.
 
 **Cross-OS capture for the app.** `src/e2e/app/99-visual-tour.spec.ts` screenshots every major view unconditionally into `../.screenshots/playwright/visual-tour/`. It compares nothing, so it cannot go red for cosmetic reasons. This is what the manual `📸 Visual Tester` workflow runs (`yarn test:e2e:visual`) on Linux, Windows and macOS to produce a reviewable image set per OS.
 
-If you add a route or a settings tab, add it to the tour — that spec is the only place the app's rendering is captured on machines nobody owns. The workflow fails the run when the flattened artifact would be empty, so a tour that silently stops capturing shows up as a red job instead of an empty download.
+If you add a route or a settings tab, add it to the tour — that spec is the only place the app's rendering is captured on machines nobody owns. The workflow counts the PNGs the tour itself wrote (`.screenshots/playwright/visual-tour/`) and fails the run when fewer than one per non-skipped tour test arrived — **13 today**; the expected count is a constant in `visual-tester.yml`, so bump it there when you add or remove a view. Counting the whole flattened folder instead would not work: `screenshot: "only-on-failure"` plus 2 CI retries means a tour that _fails_ on every view writes plenty of `test-failed-*.png`, so the artifact looks full while containing nothing but failure shots.
 
 ## CI
 
 CI runs with `CI=1`, so `reuseExistingServer: false`, 2 retries, HTML + github reporters, and `forbidOnly`. Failing runs upload `../.screenshots/playwright/` as a build artifact.
+
+**No Playwright spec gates a merge right now.** The job is `ci.yml::e2e`, named "Playwright E2E (optional)"; it carries `continue-on-error: true` and is deliberately absent from the `ci-pass` `needs:` list that Branch Protection references. So a red spec is visible in the Checks tab but cannot block a PR. This is a holding position, not an oversight: the job currently fails with pre-existing failures across all seven projects and has been failing on `main` as well, so promoting it to required would block unrelated work on inherited breakage. **Triaging those failures and making `e2e` gating is tracked in `docs/plans/09-bug-audit-remediation.md`.**
+
+Practical consequence while that is true: a new spec is only as verified as the run you did yourself. Run new app specs locally against the dev server (`PW_HEADLESS=1 yarn workspace @recrest/tests test:e2e --project=app-desktop <spec>`) and confirm the assertion fails when the fix under test is reverted — CI will not do it for you.

@@ -1,3 +1,4 @@
+import { STUB_CALLS_GLOBAL } from "./constants.js";
 import type { AppSeed } from "./seed/index.js";
 
 /**
@@ -753,14 +754,14 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
   // Ordered log of every command the app dispatched. Specs read it to assert
   // that an action did NOT happen (a cancelled confirmation, a throttled
   // rescan) — something no amount of DOM inspection can prove.
-  Object.defineProperty(window, "__RECREST_STUB_CALLS__", {
+  Object.defineProperty(window, "${STUB_CALLS_GLOBAL}", {
     configurable: true,
     writable: true,
     value: [],
   });
 
   async function invoke(cmd, args, _options) {
-    window.__RECREST_STUB_CALLS__.push(cmd);
+    window["${STUB_CALLS_GLOBAL}"].push(cmd);
     try {
       return await handleCommand(cmd, args || {});
     } catch (err) {

@@ -56,6 +56,7 @@ test.describe("app / runtime-built translation keys", () => {
             username: null,
             supportsOauth: true,
             baseUrl: PROVIDER_API_URLS.github,
+            authState: "disconnected",
           },
         },
       },
