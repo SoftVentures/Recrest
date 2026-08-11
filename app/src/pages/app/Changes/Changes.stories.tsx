@@ -11,6 +11,7 @@ import { providersReducer } from "@/store/reducers/providersReducer";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import { remoteImportReducer } from "@/store/reducers/remoteImportReducer";
 import { reposReducer } from "@/store/reducers/reposReducer";
+import { INITIAL_SAVE_SEQ } from "@/store/reducers/saveSettingsSeq";
 import { settingsReducer } from "@/store/reducers/settingsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 
@@ -83,6 +84,7 @@ function storeWith(repos: Repository[]) {
         scanPaths: [],
         loading: false,
         error: null,
+        lastAppliedSaveSeq: INITIAL_SAVE_SEQ,
       },
     },
   });

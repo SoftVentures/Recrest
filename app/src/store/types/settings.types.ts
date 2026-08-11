@@ -14,6 +14,7 @@ import type {
 } from "@recrest/shared";
 
 import type { PrimaryColorScheme, ThemeId } from "@/lib/constants/theme.constants";
+import type { SaveSeqTracked } from "@/store/reducers/saveSettingsSeq";
 
 export interface DesktopPrefs {
   /** Launch Recrest automatically when the OS user logs in. */
@@ -61,7 +62,7 @@ export interface LocalePrefs {
   timeZone: string | null;
 }
 
-export interface SettingsState {
+export interface SettingsState extends SaveSeqTracked {
   /** The theme to apply right now. When `followsSystem` is true this slot is
    *  kept in sync with the OS `prefers-color-scheme` media query. */
   themeId: ThemeId;

@@ -28,9 +28,11 @@ export interface ProviderConnection {
    *  default otherwise. Null only for providers that don't expose one
    *  (none today). */
   baseUrl: string | null;
-  /** Live credential state. The backend always sends this; it is optional
-   *  here only so existing hand-built fixtures keep compiling. */
-  authState?: ProviderAuthState;
+  /** Live credential state. Required: the backend always sends it, and making
+   *  it optional let the UI fall back to `disconnected` — which is exactly the
+   *  bug being fixed, a revoked token reading as "Not connected". A regressed
+   *  backend DTO now fails the typecheck instead of degrading silently. */
+  authState: ProviderAuthState;
 }
 
 export interface ProviderConfig {

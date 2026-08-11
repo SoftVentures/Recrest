@@ -2,7 +2,12 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { type ProviderPingResult, type ProviderVerifyError, TauriCommand } from "@recrest/shared";
+import {
+  type ProviderConnection,
+  type ProviderPingResult,
+  type ProviderVerifyError,
+  TauriCommand,
+} from "@recrest/shared";
 
 import type { TFunction } from "i18next";
 import { Link as LinkIcon, PlugZap, RotateCcw } from "lucide-react";
@@ -40,6 +45,7 @@ import {
   SaveRow,
   Spacer,
   StatusPill,
+  type StatusPillTone,
   SuccessText,
   TextInput,
   TopRow,
@@ -81,6 +87,31 @@ function errorMessage(err: ProviderVerifyError, t: TFunction): string {
   }
 }
 
+/** Status tones a connection can land in, and the bundle key that names each.
+ *  `self-hosted` is a separate pill and never the connection status. */
+type ConnectionTone = Exclude<StatusPillTone, "self-hosted">;
+
+const PROVIDER_STATUS_LABEL_KEYS: Record<ConnectionTone, string> = {
+  connected: "settings.providers.status_connected",
+  unreachable: "settings.providers.status_unreachable",
+  invalid: "settings.providers.status_invalid",
+  disconnected: "settings.providers.status_disconnected",
+};
+
+/**
+ * `unreachable` outranks `connected`: the credentials are stored and the account
+ * stays usable, but nothing confirmed them this session, and rendering that
+ * identically to a verified account is how a failed verification went unnoticed.
+ */
+function connectionTone(connection: ProviderConnection | undefined): ConnectionTone {
+  if (connection?.authState === "unreachable") return "unreachable";
+  if (connection?.connected) return "connected";
+  // A stored token the provider rejected is not the same as no token at all —
+  // the user has to replace it, not add one, and only the backend can tell.
+  if (connection?.authState === "invalid") return "invalid";
+  return "disconnected";
+}
+
 export interface ProviderRowProps {
   providerId: ProviderId;
 }
@@ -90,9 +121,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
   const dispatch = useAppDispatch();
   const connection = useAppSelector((s) => s.providers.connections[providerId]);
   const connected = !!connection?.connected;
-  // A stored token the provider rejected is not the same as no token at all —
-  // the user has to replace it, not add one, and only the backend can tell.
-  const tokenRejected = connection?.authState === "invalid";
+  const statusTone = connectionTone(connection);
   const defaultBaseUrl = PROVIDER_API_URLS[providerId];
   const effectiveBaseUrl = connection?.baseUrl ?? defaultBaseUrl;
   const isSelfHosted =
@@ -270,14 +299,13 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
           {providerName}
         </BrandName>
         <StatusPill
-          tone={connected ? "connected" : tokenRejected ? "invalid" : "disconnected"}
+          tone={statusTone}
+          // Machine-readable mirror of the pill state, so a spec can assert the
+          // auth state without pinning itself to user-visible copy.
+          data-tone={statusTone}
           data-testid={TEST_IDS.settings.accounts.statusPill(providerId)}
         >
-          {connected
-            ? t("settings.providers.status_connected")
-            : tokenRejected
-              ? t("settings.providers.status_invalid")
-              : t("settings.providers.status_disconnected")}
+          {t(PROVIDER_STATUS_LABEL_KEYS[statusTone])}
         </StatusPill>
         {isSelfHosted && (
           <StatusPill tone="self-hosted">{t("settings.providers.self_hosted")}</StatusPill>
@@ -308,7 +336,10 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
         </ActionGroup>
       </TopRow>
 
-      {connected && connection?.username && <Username>{connection.username}</Username>}
+      {/* Not gated on `connected`: whenever the backend has a stored login it is
+          worth showing, and for a rejected or unverifiable credential it is the
+          only way to see *which* account needs attention. */}
+      {connection?.username && <Username>{connection.username}</Username>}
 
       {!(open && !connected) && (
         <ApiRow>

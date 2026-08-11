@@ -202,7 +202,6 @@
     "submit_error": "Commit failed",
     "missing_git_config": "Set user.name and user.email in Settings → Git config to commit."
   },
-  "stash_index": "stash@{{index}}",
   "add_modal": {
     "clone_url_placeholder": "https://github.com/owner/repo.git",
     "clone_dest_placeholder": "/Users/you/Code",

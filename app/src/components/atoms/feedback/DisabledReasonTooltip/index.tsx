@@ -1,9 +1,10 @@
-import type { ElementType, ReactElement } from "react";
+import { type ElementType, type ReactElement, cloneElement, isValidElement, useId } from "react";
 
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import VisuallyHidden from "@/components/atoms/layout/VisuallyHidden";
 
 export interface DisabledReasonTooltipProps {
   /** Why the wrapped control is unavailable. Pass `null`/`false` while the
@@ -40,16 +41,35 @@ const TooltipAnchor = styled(Box, {
  * events, so MUI can only anchor a tooltip on an enabled wrapper — hence the
  * `<span>`. It is only added while a reason exists, keeping the DOM unchanged
  * in the ordinary enabled case.
+ *
+ * The reason is also wired to the child as an `aria-describedby` description.
+ * The tooltip alone is hover-only and a disabled `<button>` is not focusable, so
+ * keyboard and screen-reader users got no explanation at all — the control just
+ * read as unavailable. A *description* rather than a label because the child's
+ * own accessible name ("Pull", "Open terminal") is still the right name;
+ * overwriting `aria-label` with the reason would lose it.
  */
 function DisabledReasonTooltip({ reason, title, stretch, children }: DisabledReasonTooltipProps) {
+  const reasonId = useId();
+
   if (!reason) {
     if (!title) return children;
     return <GeneralTooltip title={title}>{children}</GeneralTooltip>;
   }
+
+  const described = isValidElement<{ "aria-describedby"?: string }>(children)
+    ? cloneElement(children, {
+        "aria-describedby": [children.props["aria-describedby"], reasonId]
+          .filter(Boolean)
+          .join(" "),
+      })
+    : children;
+
   return (
     <GeneralTooltip title={reason}>
       <TooltipAnchor component="span" $stretch={stretch ?? false}>
-        {children}
+        {described}
+        <VisuallyHidden id={reasonId}>{reason}</VisuallyHidden>
       </TooltipAnchor>
     </GeneralTooltip>
   );

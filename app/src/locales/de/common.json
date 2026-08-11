@@ -338,8 +338,8 @@
       "pulled_other": "{{count}} Repos gepullt",
       "pull_all_error": "Pull fehlgeschlagen",
       "pull_all_confirm_title": "Alle Repos pullen?",
-      "pull_all_confirm_body_one": "Das pullt {{count}} Repo. Repos mit uncommitteten Änderungen werden übersprungen und gemeldet.",
-      "pull_all_confirm_body_other": "Das pullt {{count}} Repos. Repos mit uncommitteten Änderungen werden übersprungen und gemeldet.",
+      "pull_all_confirm_body_one": "Das pullt {{count}} Repo. Repos mit uncommitteten Änderungen an versionierten Dateien werden übersprungen und gemeldet.",
+      "pull_all_confirm_body_other": "Das pullt {{count}} Repos. Repos mit uncommitteten Änderungen an versionierten Dateien werden übersprungen und gemeldet.",
       "pulled_partial": "{{ok}} gepullt, {{failed}} übersprungen: {{repos}}"
     }
   },
@@ -1006,6 +1006,7 @@
       "status_connected": "Verbunden",
       "status_disconnected": "Nicht verbunden",
       "status_invalid": "Token abgelehnt",
+      "status_unreachable": "Nicht überprüfbar",
       "token_placeholder": "Personal Access Token einfügen"
     },
     "saved": "Einstellungen gespeichert",

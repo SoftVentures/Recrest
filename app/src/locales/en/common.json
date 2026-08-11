@@ -338,8 +338,8 @@
       "pulled_other": "Pulled {{count}} repos",
       "pull_all_error": "Pull all failed",
       "pull_all_confirm_title": "Pull all repos?",
-      "pull_all_confirm_body_one": "This pulls {{count}} repo. Repos with uncommitted changes are skipped and reported.",
-      "pull_all_confirm_body_other": "This pulls {{count}} repos. Repos with uncommitted changes are skipped and reported.",
+      "pull_all_confirm_body_one": "This pulls {{count}} repo. Repos with uncommitted changes to tracked files are skipped and reported.",
+      "pull_all_confirm_body_other": "This pulls {{count}} repos. Repos with uncommitted changes to tracked files are skipped and reported.",
       "pulled_partial": "Pulled {{ok}}, {{failed}} skipped: {{repos}}"
     }
   },
@@ -1006,6 +1006,7 @@
       "status_connected": "Connected",
       "status_disconnected": "Not connected",
       "status_invalid": "Token rejected",
+      "status_unreachable": "Couldn't verify",
       "token_placeholder": "Paste your personal access token"
     },
     "saved": "Settings saved",

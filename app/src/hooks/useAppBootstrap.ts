@@ -44,22 +44,26 @@ export function useAppBootstrap(): void {
 
   useEffect(() => {
     if (!isTauri()) return;
+    // A settings.json that failed to parse is quarantined rather than
+    // overwritten, but the boot detection happens before this renderer exists —
+    // so it has to be pulled, not awaited as an event. Fired detached: the
+    // condition is almost never true, and awaiting it ahead of the real
+    // bootstrap put a serial IPC round-trip in front of every cold start.
     void (async () => {
-      // A settings.json that failed to parse is quarantined rather than
-      // overwritten, but the boot detection happens before this renderer
-      // exists — so it has to be pulled, not awaited as an event.
       const corruption = await invoke<SettingsCorruption | null>(
         TauriCommand.GET_SETTINGS_CORRUPTION,
       ).catch(() => null);
-      if (corruption) {
-        toast.error(tRef.current("settings_corrupt.title"), {
-          description: corruption.quarantinePath
-            ? tRef.current("settings_corrupt.quarantined", { path: corruption.quarantinePath })
-            : tRef.current("settings_corrupt.not_quarantined"),
-          duration: Infinity,
-          closeButton: true,
-        });
-      }
+      if (!corruption) return;
+      toast.error(tRef.current("settings_corrupt.title"), {
+        description: corruption.quarantinePath
+          ? tRef.current("settings_corrupt.quarantined", { path: corruption.quarantinePath })
+          : tRef.current("settings_corrupt.not_quarantined"),
+        duration: Infinity,
+        closeButton: true,
+      });
+    })();
+
+    void (async () => {
       const [settings, repos] = await Promise.all([
         dispatch(loadSettings())
           .unwrap()

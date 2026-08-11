@@ -2,7 +2,12 @@ import type { AppSettings } from "@recrest/shared";
 
 import { describe, expect, it } from "vitest";
 
-import { deleteRepo, forgetReposUnderPath, removeRepo } from "@/store/actions/repos.actions";
+import {
+  deleteRepo,
+  forgetReposUnderPath,
+  removeRepo,
+  repoRemoved,
+} from "@/store/actions/repos.actions";
 import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import {
   bumpRefreshNonce,
@@ -13,6 +18,7 @@ import {
   setSearchOpen,
   setSelectedRepo,
   setSidebarCollapsed,
+  setSidebarCollapsedAuto,
   setUpdaterBanner,
   togglePinnedRepo,
   toggleSidebar,
@@ -176,7 +182,10 @@ describe("uiReducer", () => {
     const start = uiReducer(initial(), setPinnedRepos(["keep"]));
     const collapsed = uiReducer(start, setSidebarCollapsed(true));
     const payload = {} as unknown as AppSettings;
-    const next = uiReducer(collapsed, saveSettings.fulfilled(payload, "internal-id", {}));
+    const next = uiReducer(
+      collapsed,
+      saveSettings.fulfilled(payload, "internal-id", {}, { seq: 1 }),
+    );
     expect(next.pinnedRepoIds).toEqual(["keep"]);
     expect(next.sidebarCollapsed).toBe(true);
   });
@@ -188,9 +197,95 @@ describe("uiReducer", () => {
     } as unknown as AppSettings;
     const next = uiReducer(
       uiReducer(initial(), setSidebarCollapsed(true)),
-      saveSettings.fulfilled(payload, "internal-id", {}),
+      saveSettings.fulfilled(payload, "internal-id", {}, { seq: 1 }),
     );
     expect(next.pinnedRepoIds).toEqual(["saved"]);
     expect(next.sidebarCollapsed).toBe(false);
+  });
+
+  it("ignores a superseded saveSettings snapshot", () => {
+    const newest = { pinnedRepoIds: ["newest"] } as unknown as AppSettings;
+    const stale = { pinnedRepoIds: ["stale"] } as unknown as AppSettings;
+
+    let state = uiReducer(initial(), saveSettings.fulfilled(newest, "id-2", {}, { seq: 2 }));
+    state = uiReducer(state, saveSettings.fulfilled(stale, "id-1", {}, { seq: 1 }));
+
+    expect(state.pinnedRepoIds).toEqual(["newest"]);
+  });
+
+  describe("viewport-forced collapse", () => {
+    it("records the forced flag without touching the stored preference", () => {
+      const next = uiReducer(initial(), setSidebarCollapsedAuto(true, true));
+      expect(next.sidebarCollapsed).toBe(true);
+      expect(next.sidebarAutoCollapsed).toBe(true);
+      expect(next.sidebarCollapsedPref).toBe(false);
+    });
+
+    it("does not apply the stored preference while a forced collapse is active", () => {
+      // The regression: hydration replayed `windowState.sidebarCollapsed`
+      // unconditionally, so every settings load/save expanded the sidebar back
+      // on a compact window.
+      const forced = uiReducer(initial(), setSidebarCollapsedAuto(true, true));
+      const payload = { windowState: { sidebarCollapsed: false } } as unknown as AppSettings;
+
+      const next = uiReducer(forced, loadSettings.fulfilled(payload, "internal-id", undefined));
+
+      expect(next.sidebarCollapsed).toBe(true);
+      // The preference is still recorded, ready for the release.
+      expect(next.sidebarCollapsedPref).toBe(false);
+    });
+
+    it("records a hydrated preference so releasing the collapse can restore it", () => {
+      const forced = uiReducer(initial(), setSidebarCollapsedAuto(true, true));
+      const payload = { windowState: { sidebarCollapsed: true } } as unknown as AppSettings;
+      const hydrated = uiReducer(forced, loadSettings.fulfilled(payload, "internal-id", undefined));
+
+      const released = uiReducer(
+        hydrated,
+        setSidebarCollapsedAuto(hydrated.sidebarCollapsedPref, false),
+      );
+
+      expect(released.sidebarCollapsed).toBe(true);
+      expect(released.sidebarAutoCollapsed).toBe(false);
+    });
+
+    it("keeps hydrating the effective value when no collapse is forced", () => {
+      const payload = { windowState: { sidebarCollapsed: true } } as unknown as AppSettings;
+      const next = uiReducer(initial(), loadSettings.fulfilled(payload, "internal-id", undefined));
+      expect(next.sidebarCollapsed).toBe(true);
+      expect(next.sidebarCollapsedPref).toBe(true);
+    });
+
+    it("treats a user toggle as the new preference and clears the forced flag", () => {
+      const forced = uiReducer(initial(), setSidebarCollapsedAuto(true, true));
+      const toggled = uiReducer(forced, toggleSidebar());
+      expect(toggled.sidebarCollapsed).toBe(false);
+      expect(toggled.sidebarCollapsedPref).toBe(false);
+      expect(toggled.sidebarAutoCollapsed).toBe(false);
+    });
+  });
+
+  describe("repoRemoved (watcher event)", () => {
+    const seeded = () => {
+      let state = uiReducer(initial(), setPinnedRepos(["repo-1", "repo-2"]));
+      state = uiReducer(state, setSelectedRepo("repo-1"));
+      return state;
+    };
+
+    it("unpins and deselects a repo the watcher reports as forgotten", () => {
+      // The `repo://removed` event reaches no thunk, so before this the repo
+      // stayed pinned to the sidebar with a dangling selection.
+      const next = uiReducer(seeded(), repoRemoved({ repoId: "repo-1", forgotten: true }));
+
+      expect(next.pinnedRepoIds).toEqual(["repo-2"]);
+      expect(next.selectedRepoId).toBeNull();
+    });
+
+    it("keeps the pin and selection when the record is kept, only flagged missing", () => {
+      const next = uiReducer(seeded(), repoRemoved({ repoId: "repo-1", forgotten: false }));
+
+      expect(next.pinnedRepoIds).toEqual(["repo-1", "repo-2"]);
+      expect(next.selectedRepoId).toBe("repo-1");
+    });
   });
 });

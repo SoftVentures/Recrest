@@ -1,6 +1,11 @@
 import { createReducer } from "@reduxjs/toolkit";
 
-import { deleteRepo, forgetReposUnderPath, removeRepo } from "@/store/actions/repos.actions";
+import {
+  deleteRepo,
+  forgetReposUnderPath,
+  removeRepo,
+  repoRemoved,
+} from "@/store/actions/repos.actions";
 import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import {
   bumpRefreshNonce,
@@ -15,10 +20,13 @@ import {
   togglePinnedRepo,
   toggleSidebar,
 } from "@/store/actions/ui.actions";
+import { INITIAL_SAVE_SEQ, acceptSaveSnapshot } from "@/store/reducers/saveSettingsSeq";
 import type { UiState } from "@/store/types/ui.types";
 
 const initialState: UiState = {
   sidebarCollapsed: false,
+  sidebarCollapsedPref: false,
+  sidebarAutoCollapsed: false,
   searchOpen: false,
   activeView: "dashboard",
   importDialogOpen: false,
@@ -27,15 +35,26 @@ const initialState: UiState = {
   pinnedRepoIds: [],
   selectedRepoId: null,
   onboardingOverride: false,
+  lastAppliedSaveSeq: INITIAL_SAVE_SEQ,
 };
 
 export const uiReducer = createReducer(initialState, (builder) => {
   builder
     .addCase(toggleSidebar, (state) => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
+      state.sidebarCollapsedPref = state.sidebarCollapsed;
+      state.sidebarAutoCollapsed = false;
     })
     .addCase(setSidebarCollapsed, (state, action) => {
       state.sidebarCollapsed = action.payload;
+      if (action.meta.forced) {
+        state.sidebarAutoCollapsed = true;
+        return;
+      }
+      // Releasing the forced collapse (transient, `forced: false`) restores the
+      // preference without rewriting it; anything else is the user choosing.
+      state.sidebarAutoCollapsed = false;
+      if (!action.meta.transient) state.sidebarCollapsedPref = action.payload;
     })
     .addCase(setSearchOpen, (state, action) => {
       state.searchOpen = action.payload;
@@ -75,12 +94,17 @@ export const uiReducer = createReducer(initialState, (builder) => {
     .addCase(loadSettings.fulfilled, (state, action) => {
       hydrateUiFromBackend(state, action.payload);
     })
+    // A superseded `update_settings` response must not replay its older
+    // snapshot over the newest one this slice already applied.
     .addCase(saveSettings.fulfilled, (state, action) => {
+      if (!acceptSaveSnapshot(state, action.meta)) return;
       hydrateUiFromBackend(state, action.payload);
     })
     // A repo that left Recrest must not stay pinned to the sidebar, and
     // `selectedRepoId` must not keep pointing at a record no reducer holds
-    // any more (mirrors `branchesReducer` / `prsReducer` / `activityReducer`).
+    // any more. Every slice that caches per-repo data purges on the same four
+    // actions — `branchesReducer`, `prsReducer` and `activityReducer` do the
+    // same, `repoRemoved` included.
     .addCase(removeRepo.fulfilled, (state, action) => {
       pruneRepos(state, [action.payload]);
     })
@@ -89,6 +113,15 @@ export const uiReducer = createReducer(initialState, (builder) => {
     })
     .addCase(forgetReposUnderPath.fulfilled, (state, action) => {
       pruneRepos(state, action.payload ?? []);
+    })
+    // The watcher's `repo://removed` event is the fourth way a repo leaves, and
+    // it bypasses every thunk above. Only a *forgotten* removal drops the
+    // record: a kept one (`forgotten: false`) merely flags the repo missing, so
+    // the row, its pin and the selection must survive — the user still has to be
+    // able to find it in the sidebar to re-point or remove it deliberately.
+    .addCase(repoRemoved, (state, action) => {
+      if (!action.payload.forgotten) return;
+      pruneRepos(state, [action.payload.repoId]);
     });
 });
 
@@ -109,7 +142,14 @@ function hydrateUiFromBackend(state: UiState, payload: unknown): void {
     state.pinnedRepoIds = p.pinnedRepoIds.filter((id): id is string => typeof id === "string");
   }
   if (p.windowState && typeof p.windowState.sidebarCollapsed === "boolean") {
-    state.sidebarCollapsed = p.windowState.sidebarCollapsed;
+    state.sidebarCollapsedPref = p.windowState.sidebarCollapsed;
+    // A viewport-forced collapse outranks the stored preference. Applying it
+    // here would expand the sidebar on a compact window, and the responsive
+    // effect keys on the viewport class — which did not change — so nothing
+    // would ever collapse it again for the rest of the session. The preference
+    // is still recorded above and gets applied the moment the collapse is
+    // released.
+    if (!state.sidebarAutoCollapsed) state.sidebarCollapsed = p.windowState.sidebarCollapsed;
   }
 }
 

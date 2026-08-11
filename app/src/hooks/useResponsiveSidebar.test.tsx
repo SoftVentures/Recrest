@@ -8,7 +8,9 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useResponsiveSidebar } from "@/hooks/useResponsiveSidebar";
+import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
 import { setSidebarCollapsed } from "@/store/actions/ui.actions";
+import { makeAppSettings } from "@/test/fixtures/appSettings";
 import { makeTestStore } from "@/test/utils";
 
 const device = { isMobile: false, isTablet: false, isDesktop: true };
@@ -117,6 +119,86 @@ describe("useResponsiveSidebar", () => {
     renderSidebarHook(store);
     act(() => setViewportWidth(ROOMY_WIDTH));
     expect(actions.filter((a) => setSidebarCollapsed.match(a))).toHaveLength(0);
+    expect(store.getState().ui.sidebarCollapsed).toBe(false);
+  });
+
+  it("survives settings hydration landing after the forced collapse", () => {
+    // The regression this guards: `hydrateUiFromBackend` re-applied the stored
+    // (manual) preference on `loadSettings.fulfilled`, which is `false` by
+    // default. On a 1100–1199px window that expanded the sidebar right back and
+    // the viewport class never changed again, so nothing re-collapsed it for the
+    // rest of the session.
+    const { store } = makeRecordingStore(false);
+    setViewportWidth(COMPACT_WIDTH);
+    renderSidebarHook(store);
+    expect(store.getState().ui.sidebarCollapsed).toBe(true);
+
+    act(() => {
+      store.dispatch(
+        loadSettings.fulfilled(
+          makeAppSettings({ windowState: { sidebarCollapsed: false } }),
+          "internal-id",
+          undefined,
+        ),
+      );
+    });
+
+    expect(store.getState().ui.sidebarCollapsed).toBe(true);
+  });
+
+  it("survives any settings save while the window is narrow", () => {
+    // Same defect via the other hydration entry point: a theme toggle, a slider
+    // drag or a pin toggle all resolve `saveSettings.fulfilled`.
+    const { store } = makeRecordingStore(false);
+    setViewportWidth(COMPACT_WIDTH);
+    renderSidebarHook(store);
+
+    act(() => {
+      store.dispatch(
+        saveSettings.fulfilled(
+          makeAppSettings({ windowState: { sidebarCollapsed: false } }),
+          "internal-id",
+          {},
+          { seq: 1 },
+        ),
+      );
+    });
+
+    expect(store.getState().ui.sidebarCollapsed).toBe(true);
+  });
+
+  it("restores a preference that only arrived via hydration once the window widens", () => {
+    const { store } = makeRecordingStore(false);
+    setViewportWidth(COMPACT_WIDTH);
+    renderSidebarHook(store);
+
+    act(() => {
+      store.dispatch(
+        loadSettings.fulfilled(
+          makeAppSettings({ windowState: { sidebarCollapsed: true } }),
+          "internal-id",
+          undefined,
+        ),
+      );
+    });
+    act(() => setViewportWidth(ROOMY_WIDTH));
+
+    // The hydrated preference wins, not the pre-hydration default.
+    expect(store.getState().ui.sidebarCollapsed).toBe(true);
+  });
+
+  it("lets the user expand the sidebar while the window is still narrow", () => {
+    const { store } = makeRecordingStore(false);
+    setViewportWidth(COMPACT_WIDTH);
+    renderSidebarHook(store);
+    expect(store.getState().ui.sidebarCollapsed).toBe(true);
+
+    act(() => {
+      store.dispatch(setSidebarCollapsed(false));
+    });
+
+    // The effect now re-runs on every `collapsed` change (that is what makes it
+    // immune to hydration), so it must not fight the toggle.
     expect(store.getState().ui.sidebarCollapsed).toBe(false);
   });
 

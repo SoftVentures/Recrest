@@ -33,6 +33,7 @@ import {
   upsertRepo,
 } from "@/store/actions/repos.actions";
 import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
+import { INITIAL_SAVE_SEQ, acceptSaveSnapshot } from "@/store/reducers/saveSettingsSeq";
 import type { ReposState } from "@/store/types/repos.types";
 
 const initialState: ReposState = {
@@ -41,6 +42,7 @@ const initialState: ReposState = {
   scanPaths: [],
   loading: false,
   error: null,
+  lastAppliedSaveSeq: INITIAL_SAVE_SEQ,
 };
 
 export const reposReducer = createReducer(initialState, (builder) => {
@@ -54,7 +56,10 @@ export const reposReducer = createReducer(initialState, (builder) => {
     .addCase(loadSettings.fulfilled, (state, action) => {
       state.scanPaths = action.payload.scanPaths;
     })
+    // A superseded `update_settings` response must not replay its older
+    // snapshot over the newest one this slice already applied.
     .addCase(saveSettings.fulfilled, (state, action) => {
+      if (!acceptSaveSnapshot(state, action.meta)) return;
       state.scanPaths = action.payload.scanPaths;
     })
     .addCase(upsertRepo, (state, action) => {

@@ -2,7 +2,7 @@ import { Box, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
-import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { StatusTone, toneChip, toneText } from "@/lib/utils/toneColor.utils";
 
 export function GithubGlyph({ size = 16 }: { size?: number }) {
   return (
@@ -62,35 +62,45 @@ export const BrandName = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
+/** Tinted-pill tones. `unreachable` is deliberately its own tone: stored
+ *  credentials whose validity we could not confirm used to render identical to
+ *  `connected`, so a failed verification was invisible. */
+export type StatusPillTone =
+  | "connected"
+  | "disconnected"
+  | "invalid"
+  | "unreachable"
+  | "self-hosted";
+
+const PILL_TONES: Record<Exclude<StatusPillTone, "disconnected">, [StatusTone, number]> = {
+  connected: [StatusTone.SUCCESS, 18],
+  invalid: [StatusTone.ERROR, 20],
+  unreachable: [StatusTone.INFO, 20],
+  "self-hosted": [StatusTone.WARNING, 22],
+};
+
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 export const StatusPill = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
-  tone: "connected" | "disconnected" | "invalid" | "self-hosted";
-}>(({ theme, tone }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  fontSize: 9.5,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  padding: "2px 7px",
-  borderRadius: 100,
-  color:
-    tone === "connected"
-      ? toneText(theme, StatusTone.SUCCESS)
-      : tone === "self-hosted"
-        ? toneText(theme, StatusTone.WARNING)
-        : tone === "invalid"
-          ? toneText(theme, StatusTone.ERROR)
-          : theme.palette.text.information,
-  backgroundColor:
-    tone === "connected"
-      ? `color-mix(in srgb, ${theme.palette.success.main} 18%, transparent)`
-      : tone === "self-hosted"
-        ? `color-mix(in srgb, ${theme.palette.warning.main} 22%, transparent)`
-        : tone === "invalid"
-          ? `color-mix(in srgb, ${theme.palette.error.main} 20%, transparent)`
-          : theme.palette.surface.interface.backElevation,
-}));
+  tone: StatusPillTone;
+}>(({ theme, tone }) => {
+  const mapped = tone === "disconnected" ? null : PILL_TONES[tone];
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: 9.5,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    padding: "2px 7px",
+    borderRadius: 100,
+    ...(mapped
+      ? toneChip(theme, mapped[0], mapped[1])
+      : {
+          color: theme.palette.text.information,
+          backgroundColor: theme.palette.surface.interface.backElevation,
+        }),
+  };
+});
 
 export const Spacer = styled(Box)({ flex: 1 }) as typeof Box;
 

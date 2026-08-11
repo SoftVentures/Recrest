@@ -13,7 +13,12 @@ import {
   setFilters,
   setPrs,
 } from "@/store/actions/prs.actions";
-import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
+import {
+  deleteRepo,
+  forgetReposUnderPath,
+  removeRepo,
+  repoRemoved,
+} from "@/store/actions/repos.actions";
 import { prsReducer } from "@/store/reducers/prsReducer";
 import type { PrsState } from "@/store/types/prs.types";
 
@@ -253,5 +258,102 @@ describe("prsReducer", () => {
     const next = prsReducer(state, deleteRepo.fulfilled("r1", "internal-id", { repoId: "r1" }));
     expect(next.items["r1"]).toBeUndefined();
     expect(next.items["r2"]).toBeDefined();
+  });
+
+  it("purges every repo forgotten with a removed scan root", () => {
+    // `prsReducer` was the only per-repo slice missing this case, so removing a
+    // scan root left the repo's items, detail and — worse — its `errorByRepo`
+    // entry behind, pinning `state.error` non-null indefinitely.
+    let state = prsReducer(initial(), setPrs({ repoId: "r1", prs: [pr({ number: 1 })] }));
+    state = prsReducer(state, setPrs({ repoId: "r2", prs: [pr({ number: 2 })] }));
+    const key = detailKey("r1", 1);
+    state = prsReducer(
+      state,
+      loadPrDetail.fulfilled({ key, detail: detail(1) }, "internal-id", {
+        repoId: "r1",
+        prNumber: 1,
+      }),
+    );
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("r1 boom"), "id-1", "r1"));
+    expect(state.error).toBe("r1 boom");
+
+    const next = prsReducer(
+      state,
+      forgetReposUnderPath.fulfilled(["r1"], "internal-id", {
+        removedPath: "/dev",
+        remainingPaths: [],
+      }),
+    );
+
+    expect(next.items["r1"]).toBeUndefined();
+    expect(next.detail[key]).toBeUndefined();
+    expect(next.errorByRepo["r1"]).toBeUndefined();
+    expect(next.error).toBeNull();
+    expect(next.items["r2"]).toBeDefined();
+  });
+
+  it("tolerates a null payload from forgetReposUnderPath", () => {
+    const state = prsReducer(initial(), setPrs({ repoId: "r1", prs: [pr({ number: 1 })] }));
+    const next = prsReducer(
+      state,
+      forgetReposUnderPath.fulfilled(null as unknown as string[], "internal-id", {
+        removedPath: "/dev",
+        remainingPaths: [],
+      }),
+    );
+    expect(next.items["r1"]).toBeDefined();
+  });
+
+  it("purges a repo the watcher reports as forgotten", () => {
+    // `repo://removed` reaches no thunk, so the repo's PRs kept feeding the
+    // merge-request views after it left Recrest.
+    let state = prsReducer(initial(), setPrs({ repoId: "r1", prs: [pr({ number: 1 })] }));
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("boom"), "id-1", "r1"));
+
+    const next = prsReducer(state, repoRemoved({ repoId: "r1", forgotten: true }));
+
+    expect(next.items["r1"]).toBeUndefined();
+    expect(next.errorByRepo["r1"]).toBeUndefined();
+    expect(next.error).toBeNull();
+  });
+
+  it("keeps a repo whose record was kept, only flagged missing", () => {
+    const state = prsReducer(initial(), setPrs({ repoId: "r1", prs: [pr({ number: 1 })] }));
+    const next = prsReducer(state, repoRemoved({ repoId: "r1", forgotten: false }));
+    expect(next.items["r1"]).toBeDefined();
+  });
+
+  it("surfaces the newest failure as the aggregate, not the oldest", () => {
+    // Insertion order made `error` the first key ever inserted, so a long-gone
+    // outage outranked the failure that just happened.
+    let state = prsReducer(initial(), fetchPullRequests.rejected(new Error("old"), "id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("new"), "id-2", "r2"));
+
+    expect(state.error).toBe("new");
+  });
+
+  it("promotes a repeat failure to the newest aggregate", () => {
+    let state = prsReducer(
+      initial(),
+      fetchPullRequests.rejected(new Error("r1 old"), "id-1", "r1"),
+    );
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("r2 boom"), "id-2", "r2"));
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("r1 again"), "id-3", "r1"));
+
+    expect(state.error).toBe("r1 again");
+  });
+
+  it("clears loading and error tracking together with a repo's PRs", () => {
+    let state = prsReducer(initial(), fetchPullRequests.pending("id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.rejected(new Error("boom"), "id-1", "r1"));
+    state = prsReducer(state, fetchPullRequests.pending("id-2", "r1"));
+    expect(state.loading).toBe(true);
+
+    const next = prsReducer(state, clearPrs("r1"));
+
+    expect(next.loadingRepoIds).toEqual([]);
+    expect(next.loading).toBe(false);
+    expect(next.errorByRepo["r1"]).toBeUndefined();
+    expect(next.error).toBeNull();
   });
 });

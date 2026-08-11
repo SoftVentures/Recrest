@@ -100,8 +100,23 @@ describe("reposReducer", () => {
 
   it("mirrors scan paths from saveSettings.fulfilled", () => {
     const payload = { scanPaths: ["/y"] } as unknown as AppSettings;
-    const next = reposReducer(initial(), saveSettings.fulfilled(payload, "internal-id", {}));
+    const next = reposReducer(
+      initial(),
+      saveSettings.fulfilled(payload, "internal-id", {}, { seq: 1 }),
+    );
     expect(next.scanPaths).toEqual(["/y"]);
+  });
+
+  it("ignores a superseded saveSettings snapshot", () => {
+    // Concurrent `update_settings` responses complete out of order; the older
+    // one must not restore the scan root the user just removed.
+    const newest = { scanPaths: ["/a", "/b"] } as unknown as AppSettings;
+    const stale = { scanPaths: ["/a"] } as unknown as AppSettings;
+
+    let state = reposReducer(initial(), saveSettings.fulfilled(newest, "id-2", {}, { seq: 2 }));
+    state = reposReducer(state, saveSettings.fulfilled(stale, "id-1", {}, { seq: 1 }));
+
+    expect(state.scanPaths).toEqual(["/a", "/b"]);
   });
 
   it("upserts a repo keyed by id", () => {

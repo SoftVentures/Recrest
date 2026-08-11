@@ -340,10 +340,11 @@ function WorkingCopyPanel({ repoId, onCommitClick }: WorkingCopyPanelProps) {
             {stash.map((s) => (
               <StashRow key={s.oid} data-testid={TEST_IDS.workingCopy.stashRow(s.index)}>
                 <StashIndex component="span" data-testid={TEST_IDS.workingCopy.stashIndex(s.index)}>
-                  {/* Braces are added here, not in the bundle: i18next has no way to escape a
-                      literal `{` next to a placeholder, and git's own notation is `stash@{0}` —
-                      which is what users paste into `git stash apply`. */}
-                  {t("stash_index", { index: `{${s.index}}` })}
+                  {/* Not translatable and deliberately not a bundle key: this is git's own ref
+                      syntax, byte-identical in every locale and exactly what the user pastes
+                      into `git stash apply`. As a key it also had no way to express that the
+                      braces belong to the label rather than to the interpolated number. */}
+                  {`stash@{${s.index}}`}
                 </StashIndex>
                 <StashMessage component="span">{s.message}</StashMessage>
                 <GeneralButton

@@ -38,11 +38,17 @@ function getCompactLayoutServerSnapshot(): boolean {
  * The automatic collapse is dispatched as `setSidebarCollapsedAuto`, which
  * `settingsBackendSync` deliberately does **not** persist. Persisting it made
  * one narrow session overwrite the stored preference for good: the next cold
- * start hydrated `sidebarCollapsed: true`, the `narrow && !collapsed` branch
- * below then never fired, `forcedRef` stayed `false`, and widening the window
- * had nothing to restore. Only a collapse the user performed themselves
- * (`toggleSidebar` / `setSidebarCollapsed` from the sidebar chrome) is written
- * back to settings.
+ * start hydrated `sidebarCollapsed: true` and widening the window had nothing
+ * to restore. Only a collapse the user performed themselves (`toggleSidebar` /
+ * `setSidebarCollapsed` from the sidebar chrome) is written back to settings.
+ *
+ * The preference itself lives in the store (`ui.sidebarCollapsedPref`) rather
+ * than in a ref here, because settings hydration lands in the reducer and this
+ * hook cannot tell a hydration echo apart from a real toggle click. The reducer
+ * suppresses the effective-value write while `ui.sidebarAutoCollapsed` is set,
+ * which is what stops `loadSettings`/`saveSettings` from silently expanding the
+ * sidebar on a compact window (and never collapsing it again, because the
+ * viewport class this effect keys on never changed).
  */
 export function useResponsiveSidebar(): void {
   const device = useDevice();
@@ -53,42 +59,36 @@ export function useResponsiveSidebar(): void {
   );
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.ui.sidebarCollapsed);
+  const autoCollapsed = useAppSelector((s) => s.ui.sidebarAutoCollapsed);
+  const collapsedPref = useAppSelector((s) => s.ui.sidebarCollapsedPref);
   const narrow = device.isMobile || device.isTablet || compact;
 
-  const collapsedRef = useRef(collapsed);
-  collapsedRef.current = collapsed;
+  const prefRef = useRef(collapsedPref);
+  prefRef.current = collapsedPref;
 
-  /** The user's own preference — the value we restore on widening. */
-  const userPrefRef = useRef(collapsed);
-  /** The value this hook last forced, so the echo back through the store
-   *  isn't mistaken for the user reaching for the toggle. */
-  const pendingAutoRef = useRef<boolean | null>(null);
+  /** We are the reason the sidebar is collapsed right now. */
   const forcedRef = useRef(false);
-
-  // Any change to `sidebarCollapsed` we did not cause ourselves is the user
-  // clicking the toggle (or settings hydration replaying an earlier click) —
-  // that is the value worth remembering.
-  useEffect(() => {
-    if (pendingAutoRef.current === collapsed) {
-      pendingAutoRef.current = null;
-      return;
-    }
-    pendingAutoRef.current = null;
-    userPrefRef.current = collapsed;
-  }, [collapsed]);
+  /** The user expanded the sidebar back while the viewport is still narrow.
+   *  The effect re-runs on every `collapsed` change (that is what makes it
+   *  immune to hydration), so without this it would re-collapse on the same
+   *  tick and the toggle button would look dead. */
+  const userOverrodeRef = useRef(false);
 
   useEffect(() => {
-    if (narrow) {
-      if (collapsedRef.current) return;
-      pendingAutoRef.current = true;
-      forcedRef.current = true;
-      dispatch(setSidebarCollapsedAuto(true));
+    if (!narrow) {
+      forcedRef.current = false;
+      userOverrodeRef.current = false;
+      // Only release a collapse we imposed — a user-driven one has to survive.
+      if (autoCollapsed) dispatch(setSidebarCollapsedAuto(prefRef.current, false));
       return;
     }
-    if (!forcedRef.current) return;
-    forcedRef.current = false;
-    if (collapsedRef.current === userPrefRef.current) return;
-    pendingAutoRef.current = userPrefRef.current;
-    dispatch(setSidebarCollapsedAuto(userPrefRef.current));
-  }, [narrow, dispatch]);
+    if (collapsed) return;
+    // Expanded again while still narrow, and we are the ones who collapsed it:
+    // only a user-driven write clears `sidebarAutoCollapsed`, so this is the
+    // user overruling us. Stand down until the viewport changes class.
+    if (forcedRef.current) userOverrodeRef.current = true;
+    if (userOverrodeRef.current) return;
+    forcedRef.current = true;
+    dispatch(setSidebarCollapsedAuto(true, true));
+  }, [narrow, collapsed, autoCollapsed, dispatch]);
 }
