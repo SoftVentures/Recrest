@@ -19,12 +19,20 @@
     branch on every run on `main`, so body edits made on that branch can be
     regenerated away — re-apply them if the PR gets updated.
   * `ci.yml::version-sync` compares this H1 against package.json on every PR, so
-    a mismatch reddens the Release PR instead of the tag. It also covers
-    `shared/src/constants/app.ts::APP_VERSION` — release-please DOES bump that
-    one now (its marker was moved onto the value's own line in 0.11.0; before
-    that it sat one line above and was silently never rewritten) — and
-    `tests/src/helpers/constants.ts::EXPECTED_APP_VERSION`, which is
-    hand-maintained by design and is the one value you must still edit yourself.
+    a mismatch reddens the Release PR instead of the tag. Every version-bearing
+    file is now bumped by release-please, so that gate should never fire on a
+    release PR — if it does, an `extra-files` entry lost its marker. Two of them
+    were silently NOT bumped before 0.11.0 and are worth knowing about:
+    `shared/src/constants/app.ts::APP_VERSION` (marker sat one line above the
+    value, and the Generic updater only rewrites the marker's own line) and
+    `tests/src/helpers/constants.ts::EXPECTED_APP_VERSION` (was hand-maintained
+    on purpose; the manual step reddened the release PR at the worst moment).
+  * `app/src-tauri/Cargo.lock` is deliberately NOT in `extra-files`. Its version
+    lives inside a `[[package]]` array, which release-please's TOML updater
+    cannot address (jsonpath filter expressions are not supported — verified),
+    and a marker comment would not survive cargo regenerating the file. Nothing
+    builds with `--locked`, so cargo rewrites it on the next build and the lag
+    is cosmetic. `cargo update -p recrest` fixes it whenever it bothers you.
 
   Why it is gated: this file is copied verbatim into the GitHub Release body
   AND becomes the `notes` field of `latest.json`, the update manifest every
