@@ -2,6 +2,7 @@ use std::sync::RwLock;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
+use futures::StreamExt;
 use serde::Deserialize;
 
 use super::api::{
@@ -21,9 +22,19 @@ pub const PROVIDER_ID: &str = "github";
 const API_BASE: &str = "https://api.github.com";
 const PER_PAGE: u32 = 100;
 const MAX_PAGES: u32 = 10; // hard cap: 1000 repos / orgs per request
-/// Hard cap for the open-PR listing: 10 × 100 = 1000 open PRs per repo. The
-/// list used to stop dead at a single unpaginated 50, silently.
-const MAX_PR_PAGES: u32 = 10;
+/// Hard cap for the open-PR listing: 3 × 100 = 300 open PRs per repo. The list
+/// used to stop dead at a single unpaginated 50, silently; the first fix
+/// overshot to 1000, which is both more PRs than the UI can present and — with
+/// one CI-status request per PR — a self-inflicted rate limit.
+const MAX_PR_PAGES: u32 = 3;
+/// How many per-PR CI-status lookups may be in flight at once.
+///
+/// These used to run strictly sequentially: 300 open PRs meant 300 serialised
+/// round-trips per refresh (~45s at 150ms RTT) and 300 of the 5000/hr budget
+/// per repo per refresh — which manufactures the 403 rate-limit condition the
+/// error mapping now carves out. 8 keeps the fan-out well under GitHub's
+/// concurrent-request guidance while cutting the wall time by ~8×.
+const CI_STATUS_CONCURRENCY: usize = 8;
 
 /// OAuth app credentials, baked in at compile time via `option_env!`. When
 /// either value is missing the provider reports `supports_oauth() == false`
@@ -40,18 +51,37 @@ pub struct GithubProvider {
     tokens: TokenStore,
     http: reqwest::Client,
     base_url_override: RwLock<Option<String>>,
+    /// Key this provider's token is stored under. Always `PROVIDER_ID` in
+    /// production. Tests override it so each test owns an isolated slot in the
+    /// process-global mock token store (`install_keyring_mock`) — sharing one
+    /// `github` entry made `clear_token()` in one test race a sibling's
+    /// `set_token()`, which flipped `auth_status()` between `Disconnected` and
+    /// `Invalid` roughly once in four runs.
+    token_key: String,
 }
 
 impl GithubProvider {
     pub fn new() -> Self {
-        let http = reqwest::Client::builder()
-            .user_agent("recrest/0.1 (+https://github.com/softventures/recrest)")
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
             tokens: TokenStore::new(),
-            http,
+            http: super::provider_http_client(
+                "recrest/0.1 (+https://github.com/softventures/recrest)",
+            ),
             base_url_override: RwLock::new(None),
+            token_key: PROVIDER_ID.to_string(),
+        }
+    }
+
+    /// A provider whose token lives under a namespaced key, so concurrent
+    /// tests can't clobber each other's credentials in the shared mock store.
+    #[cfg(test)]
+    fn with_isolated_token_key() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let n = SEQ.fetch_add(1, Ordering::Relaxed);
+        Self {
+            token_key: format!("{PROVIDER_ID}#test{n}"),
+            ..Self::new()
         }
     }
 
@@ -63,17 +93,16 @@ impl GithubProvider {
     ///      built-in default but never an explicit user setting.
     ///   3. `API_BASE` cloud default.
     fn api_base(&self) -> String {
-        if let Some(url) = self.base_url_override.read().ok().and_then(|g| g.clone()) {
-            return url;
-        }
-        if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
-            return url;
-        }
-        API_BASE.to_string()
+        let override_ = self.base_url_override.read().ok().and_then(|g| g.clone());
+        super::resolve_api_base(
+            override_.as_deref(),
+            super::env_base_url_for(PROVIDER_ID).as_deref(),
+            API_BASE,
+        )
     }
 
     async fn token(&self) -> Result<Option<String>, CommandError> {
-        Ok(self.tokens.read(PROVIDER_ID)?)
+        Ok(self.tokens.read(&self.token_key)?)
     }
 
     async fn require_token(&self) -> Result<String, CommandError> {
@@ -134,29 +163,34 @@ impl GithubProvider {
 /// The `api.` host prefix is not a special case for github.com: GitHub
 /// Enterprise with subdomain isolation serves its REST root at
 /// `https://api.HOSTNAME` with no path prefix, exactly like the cloud.
-pub fn normalize_api_base(raw: &str) -> String {
+///
+/// # Security
+///
+/// The input is parsed with `url::Url` and validated by
+/// [`providers::parse_provider_base_url`] before any decision is taken. Doing
+/// the `api.` check on a *string* split was a credential-exfiltration path:
+/// `"https://api.github.com@evil.tld"` split to the pseudo-host
+/// `api.github.com@evil.tld`, which starts with `api.`, so the value was
+/// accepted verbatim — and `format!("{base}/user")` + `bearer_auth(token)`
+/// then delivered the user's PAT to `evil.tld` with `api.github.com` as mere
+/// userinfo. Non-loopback `http://` is rejected for the same reason (cleartext
+/// PAT). The host prefix is now read from `Url::host_str()`, which cannot
+/// contain userinfo.
+pub fn normalize_api_base(raw: &str) -> Result<String, CommandError> {
     let trimmed = raw.trim().trim_end_matches('/');
     if trimmed.is_empty() {
-        return API_BASE.to_string();
+        return Ok(API_BASE.to_string());
     }
-    if trimmed.ends_with("/api/v3") {
-        return trimmed.to_string();
-    }
-    if host_of(trimmed).is_some_and(|h| h.starts_with("api.")) {
-        return trimmed.to_string();
-    }
-    format!("{trimmed}/api/v3")
-}
+    let url = super::parse_provider_base_url(PROVIDER_ID, trimmed)?;
+    let host = url.host_str().unwrap_or_default().to_string();
+    // Canonical serialisation: `Url` lower-cases the host and always emits a
+    // path, so re-trim the trailing slash a path-less root picks up.
+    let canonical = url.as_str().trim_end_matches('/').to_string();
 
-/// Host (with port, if any) of a URL that may or may not carry a scheme.
-fn host_of(url: &str) -> Option<&str> {
-    let after_scheme = url.split("://").nth(1).unwrap_or(url);
-    let host = after_scheme.split('/').next()?;
-    if host.is_empty() {
-        None
-    } else {
-        Some(host)
+    if canonical.ends_with("/api/v3") || host.starts_with("api.") {
+        return Ok(canonical);
     }
+    Ok(format!("{canonical}/api/v3"))
 }
 
 /// Extracts `on.workflow_dispatch.inputs` from a GitHub Actions workflow YAML
@@ -294,23 +328,28 @@ impl GitProvider for GithubProvider {
     }
 
     async fn set_token(&self, token: &str, _username: Option<&str>) -> Result<(), CommandError> {
-        self.tokens.store(PROVIDER_ID, token)?;
+        self.tokens.store(&self.token_key, token)?;
         Ok(())
     }
 
     async fn clear_token(&self) -> Result<(), CommandError> {
-        self.tokens.delete(PROVIDER_ID)?;
+        self.tokens.delete(&self.token_key)?;
         Ok(())
     }
 
-    /// Normalises on the way in (see `normalize_api_base`) so the stored
-    /// override, the value hydrated from `settings.json` on boot, and the URL
-    /// `verify_credentials` probed are all the same API root.
+    /// Normalises **and validates** on the way in (see `normalize_api_base`)
+    /// so the stored override, the value hydrated from `settings.json` on
+    /// boot, and the URL `verify_credentials` probed are all the same API
+    /// root — and so a URL that would leak the PAT to another host never
+    /// reaches the client. A rejected value leaves the previous override in
+    /// place and surfaces as a `bad_request` the Accounts tab can render.
     async fn set_base_url(&self, base_url: Option<String>) -> Result<(), CommandError> {
+        let normalized = match base_url.filter(|s| !s.trim().is_empty()) {
+            Some(raw) => Some(normalize_api_base(&raw)?),
+            None => None,
+        };
         if let Ok(mut guard) = self.base_url_override.write() {
-            *guard = base_url
-                .filter(|s| !s.trim().is_empty())
-                .map(|s| normalize_api_base(&s));
+            *guard = normalized;
         }
         Ok(())
     }
@@ -356,12 +395,22 @@ impl GitProvider for GithubProvider {
             }
         }
 
-        let mut out = Vec::with_capacity(items.len());
-        for pr in items {
-            let ci =
-                fetch_combined_status(&self.http, &token, &base, &owner, &repo, &pr.head.sha).await;
-            out.push(map_pr(pr, Some(ci)));
-        }
+        // Bounded fan-out: one CI-status request per PR, `CI_STATUS_CONCURRENCY`
+        // in flight. `buffered` (not `buffer_unordered`) so the output keeps the
+        // API's ordering — the UI renders the list in the order it arrives.
+        let http = &self.http;
+        let token = &token;
+        let base = &base;
+        let owner = &owner;
+        let repo = &repo;
+        let out: Vec<PullRequestDto> = futures::stream::iter(items)
+            .map(|pr| async move {
+                let ci = fetch_combined_status(http, token, base, owner, repo, &pr.head.sha).await;
+                map_pr(pr, Some(ci))
+            })
+            .buffered(CI_STATUS_CONCURRENCY)
+            .collect()
+            .await;
         Ok(out)
     }
 
@@ -736,16 +785,18 @@ impl GitProvider for GithubProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "github oauth token: {}",
-                res.status()
-            )));
+            // Goes through `http_error` like every other non-2xx in this file,
+            // so a 401/403 from the token endpoint renders as the localized
+            // "unauthorized" copy instead of a raw internal error. The context
+            // string is a fixed label — never the request body, which carries
+            // the client secret and the authorization code.
+            return Err(super::http_error(PROVIDER_ID, &res, "oauth token"));
         }
         let body: GhTokenResponse = res.json().await?;
         let token = body
             .access_token
             .ok_or_else(|| CommandError::internal("github oauth: missing access_token"))?;
-        self.tokens.store(PROVIDER_ID, &token)?;
+        self.tokens.store(&self.token_key, &token)?;
         Ok(())
     }
 
@@ -1300,8 +1351,18 @@ pub async fn verify_with_base(
     token: &str,
 ) -> Result<super::verify::VerifiedAccount, crate::commands::error::ProviderVerifyError> {
     use crate::commands::error::ProviderVerifyError;
-    let url = format!("{}/user", normalize_api_base(base_url));
+    // Validation happens here too, not just in `set_base_url`: verify is the
+    // first thing that ever attaches the token to a request, so a base URL
+    // that would send it to another host must be refused before the client is
+    // even built. `NotProviderResponse` is the closest structured kind — the
+    // UI renders its `hint` verbatim.
+    let base =
+        normalize_api_base(base_url).map_err(|e| ProviderVerifyError::NotProviderResponse {
+            hint: e.to_string(),
+        })?;
+    let url = format!("{base}/user");
     let client = match reqwest::Client::builder()
+        .connect_timeout(super::PROVIDER_CONNECT_TIMEOUT)
         .timeout(std::time::Duration::from_secs(10))
         .build()
     {
@@ -1648,7 +1709,7 @@ mod tests {
     /// the normalising path explicitly.
     async fn provider_with_token(server: &MockServer) -> GithubProvider {
         install_keyring_mock();
-        let p = GithubProvider::new();
+        let p = GithubProvider::with_isolated_token_key();
         *p.base_url_override.write().unwrap() = Some(server.uri());
         p.set_token("test-token", None).await.unwrap();
         p
@@ -2207,37 +2268,103 @@ on:
     /// there would break every existing github.com connection.
     #[test]
     fn normalize_api_base_covers_cloud_enterprise_and_subdomain_isolation() {
+        let ok = |raw: &str| normalize_api_base(raw).expect(raw);
+        assert_eq!(ok("https://api.github.com"), "https://api.github.com");
+        assert_eq!(ok("https://api.github.com/"), "https://api.github.com");
         assert_eq!(
-            normalize_api_base("https://api.github.com"),
-            "https://api.github.com"
-        );
-        assert_eq!(
-            normalize_api_base("https://api.github.com/"),
-            "https://api.github.com"
-        );
-        assert_eq!(
-            normalize_api_base("https://github.acme.com"),
+            ok("https://github.acme.com"),
             "https://github.acme.com/api/v3"
         );
         assert_eq!(
-            normalize_api_base("https://github.acme.com/"),
+            ok("https://github.acme.com/"),
             "https://github.acme.com/api/v3"
         );
         assert_eq!(
-            normalize_api_base("https://github.acme.com/api/v3"),
+            ok("https://github.acme.com/api/v3"),
             "https://github.acme.com/api/v3"
         );
         assert_eq!(
-            normalize_api_base("  https://github.acme.com/api/v3/  "),
+            ok("  https://github.acme.com/api/v3/  "),
             "https://github.acme.com/api/v3"
         );
         // GHE with subdomain isolation serves the REST root path-less.
         assert_eq!(
-            normalize_api_base("https://api.github.acme.com"),
+            ok("https://api.github.acme.com"),
             "https://api.github.acme.com"
         );
         // Empty falls back to the cloud default rather than producing "/api/v3".
-        assert_eq!(normalize_api_base("   "), "https://api.github.com");
+        assert_eq!(ok("   "), "https://api.github.com");
+    }
+
+    /// The exfiltration path: `host_of("https://api.github.com@evil.tld")`
+    /// returned `api.github.com@evil.tld`, which `starts_with("api.")`, so the
+    /// value was stored verbatim and `{base}/user` + `bearer_auth` handed the
+    /// PAT to `evil.tld`. Against the pre-fix code this returns
+    /// `"https://api.github.com@evil.tld"` instead of an error.
+    #[test]
+    fn normalize_api_base_rejects_userinfo_hosts() {
+        for raw in [
+            "https://api.github.com@evil.tld",
+            "https://api.github.com@evil.tld/api/v3",
+            "https://attacker:pat@github.acme.com",
+        ] {
+            let err = normalize_api_base(raw).expect_err(raw);
+            assert!(
+                matches!(err, CommandError::BadRequest(_)),
+                "expected BadRequest for {raw}, got {err:?}"
+            );
+        }
+    }
+
+    /// A stored `http://` base would send the PAT in cleartext. Loopback is
+    /// exempt so the E2E mock servers (127.0.0.1) and local self-hosted dev
+    /// instances keep working.
+    #[test]
+    fn normalize_api_base_requires_https_off_loopback() {
+        assert!(normalize_api_base("http://github.acme.com").is_err());
+        assert_eq!(
+            normalize_api_base("http://localhost:9002").expect("loopback"),
+            "http://localhost:9002/api/v3"
+        );
+        assert_eq!(
+            normalize_api_base("http://127.0.0.1:9001/api/v3").expect("loopback"),
+            "http://127.0.0.1:9001/api/v3"
+        );
+    }
+
+    /// A rejected base URL must not silently become the effective one, and it
+    /// must not wipe the override that was already in place.
+    #[tokio::test]
+    async fn github_set_base_url_rejects_userinfo_and_keeps_the_previous_override() {
+        install_keyring_mock();
+        let p = GithubProvider::with_isolated_token_key();
+        p.set_base_url(Some("https://github.acme.com".into()))
+            .await
+            .unwrap();
+
+        let err = p
+            .set_base_url(Some("https://api.github.com@evil.tld".into()))
+            .await
+            .expect_err("userinfo base URL must be refused");
+        assert!(matches!(err, CommandError::BadRequest(_)));
+        assert_eq!(
+            p.base_url().await.as_deref(),
+            Some("https://github.acme.com/api/v3"),
+            "a refused value must not replace the working override"
+        );
+    }
+
+    /// Verify must refuse the same shapes `set_base_url` does — it is the
+    /// first call that ever attaches the token to a request.
+    #[tokio::test]
+    async fn github_verify_rejects_a_userinfo_base_url_before_sending_the_token() {
+        let err = super::verify_with_base("https://api.github.com@evil.tld", "tok")
+            .await
+            .expect_err("must not send the token");
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::NotProviderResponse { .. }
+        ));
     }
 
     /// `set_base_url` and `verify_with_base` must resolve identically —
@@ -2245,7 +2372,7 @@ on:
     #[tokio::test]
     async fn github_set_base_url_normalises_to_the_same_root_as_verify() {
         install_keyring_mock();
-        let p = GithubProvider::new();
+        let p = GithubProvider::with_isolated_token_key();
 
         p.set_base_url(Some("https://github.acme.com".into()))
             .await
@@ -2270,15 +2397,45 @@ on:
         );
     }
 
-    /// The user's own override must win over the debug-only E2E env-var —
-    /// the precedence used to be the other way round.
+    /// `api_base()` reads the stored override.
     #[tokio::test]
-    async fn github_user_base_url_wins_over_env_override() {
+    async fn github_api_base_uses_the_user_override() {
         install_keyring_mock();
-        let p = GithubProvider::new();
+        let p = GithubProvider::with_isolated_token_key();
         *p.base_url_override.write().unwrap() = Some("https://github.acme.com/api/v3".into());
-        // Whatever the env says, the explicit user setting is what we use.
         assert_eq!(p.api_base(), "https://github.acme.com/api/v3");
+    }
+
+    /// All four override × env combinations against GitHub's own default.
+    ///
+    /// The previous version of this test never set the env layer, so it passed
+    /// identically whether the env was consulted first or last — the
+    /// security-relevant half of the precedence rule was unverified. Driving
+    /// the pure resolver directly makes the ordering observable without
+    /// mutating the process environment (which raced every other provider
+    /// test). Inverting the precedence in `resolve_api_base` fails case 1.
+    #[test]
+    fn github_api_base_precedence_is_override_then_env_then_default() {
+        use crate::providers::resolve_api_base;
+        let env = Some("http://127.0.0.1:9001");
+        let user = Some("https://github.acme.com/api/v3");
+        // 1. override + env → override wins.
+        assert_eq!(
+            resolve_api_base(user, env, API_BASE),
+            "https://github.acme.com/api/v3"
+        );
+        // 2. env only → env replaces the cloud default.
+        assert_eq!(
+            resolve_api_base(None, env, API_BASE),
+            "http://127.0.0.1:9001"
+        );
+        // 3. override only.
+        assert_eq!(
+            resolve_api_base(user, None, API_BASE),
+            "https://github.acme.com/api/v3"
+        );
+        // 4. neither → built-in default.
+        assert_eq!(resolve_api_base(None, None, API_BASE), API_BASE);
     }
 
     #[tokio::test]
@@ -2333,13 +2490,29 @@ on:
         assert_eq!(status.username.as_deref(), Some("octocat"));
     }
 
+    /// The mock token store is process-global, so this test must not assert
+    /// against the shared `github` key: a sibling test storing a token in the
+    /// same window made `auth_status()` take the network path and report
+    /// `Invalid` instead — reproducibly, about one run in four. The isolated
+    /// key means "never populated" is a property of *this* provider instance,
+    /// and `clear_token()` is no longer needed to establish it.
     #[tokio::test]
     async fn github_auth_status_reports_disconnected_without_token() {
         install_keyring_mock();
-        let provider = GithubProvider::new();
-        provider.clear_token().await.unwrap();
+        let provider = GithubProvider::with_isolated_token_key();
         let status = provider.auth_status().await;
         assert_eq!(status.state, ProviderAuthState::Disconnected);
+    }
+
+    /// `clear_token()` must actually remove the entry it stored.
+    #[tokio::test]
+    async fn github_clear_token_removes_the_stored_token() {
+        install_keyring_mock();
+        let provider = GithubProvider::with_isolated_token_key();
+        provider.set_token("ghp_x", None).await.unwrap();
+        assert!(provider.is_authenticated().await.unwrap());
+        provider.clear_token().await.unwrap();
+        assert!(!provider.is_authenticated().await.unwrap());
     }
 
     /// A 403 that carries a rate-limit signal is not an auth failure — the
@@ -2358,6 +2531,68 @@ on:
         assert!(
             matches!(err, CommandError::Internal(_)),
             "rate limit must not be reported as unauthorized, got {err:?}"
+        );
+    }
+
+    /// The per-PR CI-status lookups must be fanned out, not serialised.
+    ///
+    /// 24 PRs × a 100ms CI response is a hard 2.4s floor for the old
+    /// sequential loop, so the 1.2s ceiling below cannot be met without
+    /// concurrency; `buffered(8)` lands around 0.3s. The assertion also pins
+    /// the *order*, which `buffer_unordered` would break.
+    #[tokio::test]
+    async fn github_list_pull_requests_fetches_ci_status_concurrently_and_in_order() {
+        const PR_COUNT: u64 = 24;
+        const CI_DELAY_MS: u64 = 100;
+
+        let server = MockServer::start().await;
+        let items: Vec<serde_json::Value> = (1..=PR_COUNT)
+            .map(|n| {
+                serde_json::json!({
+                    "id": n, "number": n, "title": format!("PR {n}"),
+                    "html_url": "u", "state": "open", "user": null,
+                    "head": { "ref": "feature", "sha": format!("sha{n}") },
+                    "base": { "ref": "main", "sha": "base" },
+                    "merged_at": null,
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "updated_at": "2024-01-01T00:00:00Z"
+                })
+            })
+            .collect();
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/repos/[^/]+/[^/]+/pulls$"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(items))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/commits/[^/]+/status$"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_string(r#"{"state":"success"}"#)
+                    .set_delay(std::time::Duration::from_millis(CI_DELAY_MS)),
+            )
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let started = std::time::Instant::now();
+        let prs = provider
+            .list_pull_requests("https://github.com/acme/widget.git")
+            .await
+            .unwrap();
+        let elapsed = started.elapsed();
+
+        assert_eq!(prs.len() as u64, PR_COUNT);
+        let numbers: Vec<u64> = prs.iter().map(|p| p.number).collect();
+        assert_eq!(
+            numbers,
+            (1..=PR_COUNT).collect::<Vec<_>>(),
+            "API ordering must survive the fan-out"
+        );
+        assert!(
+            elapsed < std::time::Duration::from_millis(1_200),
+            "CI status must be fetched concurrently; took {elapsed:?} (sequential floor is {}ms)",
+            PR_COUNT * CI_DELAY_MS
         );
     }
 

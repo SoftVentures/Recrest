@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
@@ -55,17 +57,27 @@ async fn connection_dto(
     }
 }
 
+/// Probes every provider **concurrently** and returns one DTO each, in
+/// registry order.
+///
+/// `auth_status()` performs a live authenticated round-trip, so the previous
+/// sequential loop made the Accounts tab wait for the sum of three network
+/// calls. One unreachable provider (captive portal, blackholed self-hosted
+/// host) also blocked the other two — with no ceiling at all until the shared
+/// clients gained a connect timeout.
+async fn connection_dtos(providers: &[Arc<dyn GitProvider>]) -> Vec<ProviderConnectionDto> {
+    futures::future::join_all(providers.iter().map(|provider| async move {
+        let status = provider.auth_status().await;
+        connection_dto(provider.as_ref(), status).await
+    }))
+    .await
+}
+
 #[tauri::command]
 pub async fn list_providers(
     state: State<'_, AppState>,
 ) -> Result<Vec<ProviderConnectionDto>, CommandError> {
-    let providers = state.providers.list();
-    let mut out = Vec::with_capacity(providers.len());
-    for provider in providers {
-        let status = provider.auth_status().await;
-        out.push(connection_dto(provider.as_ref(), status).await);
-    }
-    Ok(out)
+    Ok(connection_dtos(&state.providers.list()).await)
 }
 
 #[tauri::command]
@@ -463,7 +475,22 @@ async fn ping_github_inner(client: &reqwest::Client, trimmed: &str) -> ProviderP
     // `/api/v3` here (the old behaviour) probed the Enterprise web app, which
     // never carries the API dictionary — so a perfectly good GHE host was
     // reported as "reachable, but doesn't look like GitHub".
-    let root = crate::providers::github::normalize_api_base(trimmed);
+    //
+    // The resolver also validates (no userinfo, https off loopback). The ping
+    // is unauthenticated, so a rejected URL is not a credential leak here —
+    // but reporting it now, before the user pastes a token, is the whole point
+    // of the probe.
+    let root = match crate::providers::github::normalize_api_base(trimmed) {
+        Ok(root) => root,
+        Err(e) => {
+            return ProviderPingResult {
+                reachable: false,
+                looks_like_provider: false,
+                version: None,
+                error: Some(e.to_string()),
+            }
+        }
+    };
     // `GET <root>` returns a JSON dictionary of API URLs (including
     // `current_user_url`) on both cloud (https://api.github.com) and
     // Enterprise (`<host>/api/v3`). Cheap, unauthenticated, no scope needed.
@@ -695,7 +722,100 @@ mod ping_provider_tests {
         ];
         for (input, expected) in cases {
             let trimmed = input.trim().trim_end_matches('/').to_string();
-            assert_eq!(normalize_api_base(&trimmed), expected, "for input {input}");
+            assert_eq!(
+                normalize_api_base(&trimmed).expect(input),
+                expected,
+                "for input {input}"
+            );
         }
+    }
+
+    /// A base URL carrying userinfo must be refused by the probe too, instead
+    /// of being reported as a reachable provider the user should paste a token
+    /// into.
+    #[tokio::test]
+    async fn github_ping_rejects_a_userinfo_base_url() {
+        let r = ping_provider("github".into(), "https://api.github.com@evil.tld".into()).await;
+        assert!(!r.reachable);
+        assert!(!r.looks_like_provider);
+        assert!(r.error.is_some());
+    }
+}
+
+#[cfg(test)]
+mod list_providers_tests {
+    use super::*;
+    use crate::commands::error::CommandError;
+    use crate::providers::api::PullRequestDto;
+    use async_trait::async_trait;
+    use std::time::Duration;
+
+    /// Provider double whose credential check takes `delay` of *virtual* time.
+    /// Paused-clock tests can therefore tell a sequential loop (sum of the
+    /// delays) from a concurrent one (max of the delays) deterministically,
+    /// with no wall-clock flake.
+    struct SlowProvider {
+        id: &'static str,
+        delay: Duration,
+    }
+
+    #[async_trait]
+    impl GitProvider for SlowProvider {
+        fn id(&self) -> &'static str {
+            self.id
+        }
+        fn display_name(&self) -> &'static str {
+            self.id
+        }
+        async fn is_authenticated(&self) -> Result<bool, CommandError> {
+            Ok(true)
+        }
+        async fn username(&self) -> Result<Option<String>, CommandError> {
+            tokio::time::sleep(self.delay).await;
+            Ok(Some(format!("{}-user", self.id)))
+        }
+        async fn set_token(&self, _: &str, _: Option<&str>) -> Result<(), CommandError> {
+            Ok(())
+        }
+        async fn clear_token(&self) -> Result<(), CommandError> {
+            Ok(())
+        }
+        async fn list_pull_requests(&self, _: &str) -> Result<Vec<PullRequestDto>, CommandError> {
+            Ok(Vec::new())
+        }
+    }
+
+    /// Against the old sequential loop the elapsed virtual time is 3s (the sum);
+    /// concurrently it is 1s (the max).
+    #[tokio::test(start_paused = true)]
+    async fn list_providers_probes_every_provider_concurrently() {
+        let providers: Vec<Arc<dyn GitProvider>> = vec![
+            Arc::new(SlowProvider {
+                id: "github",
+                delay: Duration::from_secs(1),
+            }),
+            Arc::new(SlowProvider {
+                id: "gitlab",
+                delay: Duration::from_secs(1),
+            }),
+            Arc::new(SlowProvider {
+                id: "bitbucket",
+                delay: Duration::from_secs(1),
+            }),
+        ];
+
+        let started = tokio::time::Instant::now();
+        let out = connection_dtos(&providers).await;
+        let elapsed = started.elapsed();
+
+        assert!(
+            elapsed < Duration::from_millis(1_500),
+            "auth probes must run concurrently; took {elapsed:?}"
+        );
+        // Registry order must survive the fan-out — the Accounts tab renders
+        // the list in this order.
+        let ids: Vec<&str> = out.iter().map(|d| d.provider_id.as_str()).collect();
+        assert_eq!(ids, ["github", "gitlab", "bitbucket"]);
+        assert_eq!(out[0].username.as_deref(), Some("github-user"));
     }
 }

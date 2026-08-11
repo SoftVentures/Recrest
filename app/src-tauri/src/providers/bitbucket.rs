@@ -2,6 +2,7 @@ use std::sync::RwLock;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use futures::StreamExt;
 use serde::Deserialize;
 
 use super::api::{
@@ -16,13 +17,20 @@ use crate::auth::token::TokenStore;
 use crate::commands::error::CommandError;
 
 pub const PROVIDER_ID: &str = "bitbucket";
-const USERNAME_KEY: &str = "bitbucket:username";
+/// Suffix appended to the token key for the companion account-name entry.
+/// `commands::git_ops` reads the resulting `"bitbucket:username"` literal.
+const USERNAME_KEY_SUFFIX: &str = ":username";
 const API_BASE: &str = "https://api.bitbucket.org/2.0";
 const PAGELEN: u32 = 100;
 const MAX_PAGES: u32 = 10;
-/// Hard cap for the open-PR listing: 10 x 100 = 1000 open PRs per repo.
-/// The list used to stop dead at a single unpaginated 50, silently.
-const MAX_PR_PAGES: u32 = 10;
+/// Hard cap for the open-PR listing: 3 x 100 = 300 open PRs per repo. The list
+/// used to stop dead at a single unpaginated 50, silently; the first fix
+/// overshot to 1000, which is both more PRs than the UI can present and — with
+/// one CI-status request per PR — a self-inflicted rate limit.
+const MAX_PR_PAGES: u32 = 3;
+/// How many per-PR CI-status lookups may be in flight at once. See
+/// `github::CI_STATUS_CONCURRENCY`.
+const CI_STATUS_CONCURRENCY: usize = 8;
 
 /// Bitbucket's OAuth flow issues access tokens (treated as passwords for the
 /// Basic-auth API requests Recrest already makes). The refresh-token dance is
@@ -37,19 +45,40 @@ pub struct BitbucketProvider {
     tokens: TokenStore,
     http: reqwest::Client,
     base_url_override: RwLock<Option<String>>,
+    /// Key the app password is stored under; the companion account name lives
+    /// under `<token_key>:username`. Always `PROVIDER_ID` (hence
+    /// `bitbucket:username`, which `commands::git_ops` also reads) in
+    /// production; tests namespace it so they can't clobber each other in the
+    /// process-global mock token store. See `GithubProvider::token_key`.
+    token_key: String,
 }
 
 impl BitbucketProvider {
     pub fn new() -> Self {
-        let http = reqwest::Client::builder()
-            .user_agent("recrest/0.1")
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
             tokens: TokenStore::new(),
-            http,
+            http: super::provider_http_client("recrest/0.1"),
             base_url_override: RwLock::new(None),
+            token_key: PROVIDER_ID.to_string(),
         }
+    }
+
+    #[cfg(test)]
+    fn with_isolated_token_key() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let n = SEQ.fetch_add(1, Ordering::Relaxed);
+        Self {
+            token_key: format!("{PROVIDER_ID}#test{n}"),
+            ..Self::new()
+        }
+    }
+
+    /// Storage key for the account name that pairs with the stored app
+    /// password. `"bitbucket:username"` in production — the literal
+    /// `commands::git_ops` reads when it builds push credentials.
+    fn username_key(&self) -> String {
+        format!("{}{USERNAME_KEY_SUFFIX}", self.token_key)
     }
 
     /// Effective API base URL. See `github::api_base` for the layering
@@ -57,20 +86,19 @@ impl BitbucketProvider {
     /// env-var (`RECREST_PROVIDER_BASE_URLS`) only replaces the built-in
     /// cloud default.
     fn api_base(&self) -> String {
-        if let Some(url) = self.base_url_override.read().ok().and_then(|g| g.clone()) {
-            return url;
-        }
-        if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
-            return url;
-        }
-        API_BASE.to_string()
+        let override_ = self.base_url_override.read().ok().and_then(|g| g.clone());
+        super::resolve_api_base(
+            override_.as_deref(),
+            super::env_base_url_for(PROVIDER_ID).as_deref(),
+            API_BASE,
+        )
     }
 
     async fn credentials(&self) -> Result<Option<(String, String)>, CommandError> {
-        let Some(token) = self.tokens.read(PROVIDER_ID)? else {
+        let Some(token) = self.tokens.read(&self.token_key)? else {
             return Ok(None);
         };
-        let Some(username) = self.tokens.read(USERNAME_KEY)? else {
+        let Some(username) = self.tokens.read(&self.username_key())? else {
             return Ok(None);
         };
         Ok(Some((username, token)))
@@ -140,20 +168,29 @@ impl GitProvider for BitbucketProvider {
         let username = username.ok_or_else(|| {
             CommandError::bad_request("bitbucket requires both username and app-password")
         })?;
-        self.tokens.store(PROVIDER_ID, token)?;
-        self.tokens.store(USERNAME_KEY, username)?;
+        self.tokens.store(&self.token_key, token)?;
+        self.tokens.store(&self.username_key(), username)?;
         Ok(())
     }
 
     async fn clear_token(&self) -> Result<(), CommandError> {
-        let _ = self.tokens.delete(PROVIDER_ID);
-        let _ = self.tokens.delete(USERNAME_KEY);
+        let _ = self.tokens.delete(&self.token_key);
+        let _ = self.tokens.delete(&self.username_key());
         Ok(())
     }
 
+    /// Validated on the way in. The stored value is interpolated into every
+    /// request URL and those requests carry Basic auth (account name + app
+    /// password), so an unparsed string was a credential-exfiltration path:
+    /// `https://api.bitbucket.org@evil.tld` reaches host `evil.tld` with the
+    /// app password attached. See `providers::parse_provider_base_url`.
     async fn set_base_url(&self, base_url: Option<String>) -> Result<(), CommandError> {
+        let normalized = match base_url.filter(|s| !s.trim().is_empty()) {
+            Some(raw) => Some(super::normalize_provider_base_url(PROVIDER_ID, &raw)?),
+            None => None,
+        };
         if let Ok(mut guard) = self.base_url_override.write() {
-            *guard = base_url.filter(|s| !s.trim().is_empty());
+            *guard = normalized;
         }
         Ok(())
     }
@@ -195,30 +232,40 @@ impl GitProvider for BitbucketProvider {
 
             let body: BbPage<BbPr> = res.json().await?;
             items.extend(body.values);
-            match body.next {
-                Some(next) if !next.is_empty() => url = next,
-                _ => break,
+            match next_page_url(&base, body.next.as_deref()) {
+                Some(next) => url = next,
+                None => break,
             }
         }
 
-        let mut out = Vec::with_capacity(items.len());
-        for pr in items {
-            let sha = pr
-                .source
-                .as_ref()
-                .and_then(|s| s.commit.as_ref())
-                .and_then(|c| c.hash.clone());
-            let ci = match sha {
-                Some(sha) => Some(
-                    fetch_bb_ci_status(
-                        &self.http, &username, &password, &base, &workspace, &repo, &sha,
-                    )
-                    .await,
-                ),
-                None => None,
-            };
-            out.push(map_pr(pr, ci));
-        }
+        // Bounded fan-out for the per-PR CI status. `buffered` (not
+        // `buffer_unordered`) so the API's ordering survives; sequentially this
+        // was one round-trip per PR, up to 300 of them per refresh.
+        let http = &self.http;
+        let username = &username;
+        let password = &password;
+        let base = &base;
+        let workspace = &workspace;
+        let repo = &repo;
+        let out: Vec<PullRequestDto> = futures::stream::iter(items)
+            .map(|pr| async move {
+                let sha = pr
+                    .source
+                    .as_ref()
+                    .and_then(|s| s.commit.as_ref())
+                    .and_then(|c| c.hash.clone());
+                let ci = match sha {
+                    Some(sha) => Some(
+                        fetch_bb_ci_status(http, username, password, base, workspace, repo, &sha)
+                            .await,
+                    ),
+                    None => None,
+                };
+                map_pr(pr, ci)
+            })
+            .buffered(CI_STATUS_CONCURRENCY)
+            .collect()
+            .await;
         Ok(out)
     }
 
@@ -357,9 +404,9 @@ impl GitProvider for BitbucketProvider {
             for r in page.values {
                 out.push(map_repo(r));
             }
-            match page.next {
-                Some(next) if !next.is_empty() => url = next,
-                _ => break,
+            match next_page_url(&base, page.next.as_deref()) {
+                Some(next) => url = next,
+                None => break,
             }
         }
         Ok(out)
@@ -434,6 +481,13 @@ impl GitProvider for BitbucketProvider {
             .bearer_auth(&token)
             .send()
             .await?;
+        // Deliberately NOT routed through `http_error`: a failure here is
+        // non-fatal. The access token is valid (we just exchanged it) and is
+        // worth persisting even when the identity lookup fails — the user can
+        // still type their account name in the Accounts tab, whereas aborting
+        // would throw away a working token. The empty username is the signal
+        // for "not resolved": `credentials()` then reports "not configured"
+        // rather than sending Basic auth with a blank user.
         let username = if me.status().is_success() {
             me.json::<BbCurrentUser>()
                 .await
@@ -441,12 +495,16 @@ impl GitProvider for BitbucketProvider {
                 .and_then(|u| u.username.or(u.nickname))
                 .unwrap_or_default()
         } else {
+            tracing::warn!(
+                "[bitbucket] oauth: /user returned {} — token stored without an account name",
+                me.status()
+            );
             String::new()
         };
 
-        self.tokens.store(PROVIDER_ID, &token)?;
+        self.tokens.store(&self.token_key, &token)?;
         if !username.is_empty() {
-            self.tokens.store(USERNAME_KEY, &username)?;
+            self.tokens.store(&self.username_key(), &username)?;
         }
         Ok(())
     }
@@ -464,9 +522,9 @@ impl GitProvider for BitbucketProvider {
             for r in page.values {
                 out.push(map_repo(r));
             }
-            match page.next {
-                Some(next) if !next.is_empty() => url = next,
-                _ => break,
+            match next_page_url(&base, page.next.as_deref()) {
+                Some(next) => url = next,
+                None => break,
             }
         }
         Ok(out)
@@ -1118,14 +1176,24 @@ fn map_repo(r: BbRepo) -> RemoteRepositoryDto {
 }
 
 /// Authenticated GET `/user` against an arbitrary Bitbucket-flavoured base URL.
+///
+/// The base URL is validated first: this is the first call that ever attaches
+/// the app password to a request, so a URL that would deliver it to another
+/// host must be refused before the client is built.
 pub async fn verify_with_base(
     base_url: &str,
     username: &str,
     app_password: &str,
 ) -> Result<super::verify::VerifiedAccount, crate::commands::error::ProviderVerifyError> {
     use crate::commands::error::ProviderVerifyError;
-    let url = format!("{}/user", base_url.trim_end_matches('/'));
+    let base = super::normalize_provider_base_url(PROVIDER_ID, base_url).map_err(|e| {
+        ProviderVerifyError::NotProviderResponse {
+            hint: e.to_string(),
+        }
+    })?;
+    let url = format!("{base}/user");
     let client = match reqwest::Client::builder()
+        .connect_timeout(super::PROVIDER_CONNECT_TIMEOUT)
         .timeout(std::time::Duration::from_secs(10))
         .build()
     {
@@ -1182,6 +1250,39 @@ pub async fn verify_with_base(
             message: format!("unexpected status {s}"),
         }),
     }
+}
+
+/// Validates a Bitbucket pagination cursor before it is re-requested.
+///
+/// # Security
+///
+/// `next` arrives in the **response body**, and the follow-up request re-sends
+/// `basic_auth(username, app_password)`. reqwest strips `Authorization` when a
+/// *redirect* crosses hosts, but this is an explicit new request, so that
+/// protection does not apply: a single crafted (or compromised) response body
+/// was enough to hand the user's app password to any host it named. Only a
+/// cursor on the same origin as the configured API base is followed; anything
+/// else stops pagination.
+///
+/// Returns `None` when the cursor is absent, empty, unparseable, or
+/// foreign-origin — all of which mean "stop paginating".
+fn next_page_url(base: &str, next: Option<&str>) -> Option<String> {
+    let next = next.map(str::trim).filter(|s| !s.is_empty())?;
+    let base_url = url::Url::parse(base).ok()?;
+    let Ok(next_url) = url::Url::parse(next) else {
+        tracing::warn!("[bitbucket] ignoring unparseable pagination cursor");
+        return None;
+    };
+    if !super::same_origin(&base_url, &next_url) {
+        // Log the host only — never the cursor, which may carry query-string
+        // secrets, and never the credentials.
+        tracing::warn!(
+            "[bitbucket] refusing cross-origin pagination cursor to host {:?}; stopping",
+            next_url.host_str()
+        );
+        return None;
+    }
+    Some(next_url.to_string())
 }
 
 async fn bb_json<T: serde::de::DeserializeOwned>(
@@ -1516,9 +1617,12 @@ mod tests {
     use wiremock::matchers::{method, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
+    /// Per-test token keys: the mock store is process-global, so a shared
+    /// `bitbucket` / `bitbucket:username` pair let concurrent tests overwrite
+    /// and delete each other's credentials.
     async fn provider_with_credentials(server: &MockServer) -> BitbucketProvider {
         install_keyring_mock();
-        let p = BitbucketProvider::new();
+        let p = BitbucketProvider::with_isolated_token_key();
         p.set_base_url(Some(server.uri())).await.unwrap();
         p.set_token("test-token", Some("test-user")).await.unwrap();
         p
@@ -1919,15 +2023,45 @@ mod tests {
         assert_eq!(status.username.as_deref(), Some("alice"));
     }
 
+    /// Reproduced flake, ~1 run in 4 of `cargo test --lib providers::`:
+    /// `left: Invalid  right: Disconnected`. `install_keyring_mock()` installs
+    /// a **process-global** map, so `clear_token()` here raced a sibling test
+    /// storing `bitbucket` + `bitbucket:username`; `credentials()` then
+    /// returned `Some` and `auth_status()` took the network path. The provider
+    /// now owns a namespaced key that no other test ever writes, so "never
+    /// populated" holds by construction and `clear_token()` is unnecessary.
     #[tokio::test]
     async fn bitbucket_auth_status_reports_disconnected_without_credentials() {
         install_keyring_mock();
-        let provider = BitbucketProvider::new();
-        provider.clear_token().await.unwrap();
+        let provider = BitbucketProvider::with_isolated_token_key();
         assert_eq!(
             provider.auth_status().await.state,
             ProviderAuthState::Disconnected
         );
+    }
+
+    /// A token without its companion account name is not usable credentials —
+    /// and `clear_token()` must remove both entries.
+    #[tokio::test]
+    async fn bitbucket_clear_token_removes_both_entries() {
+        install_keyring_mock();
+        let provider = BitbucketProvider::with_isolated_token_key();
+        provider
+            .set_token("app-password", Some("alice"))
+            .await
+            .unwrap();
+        assert!(provider.is_authenticated().await.unwrap());
+        provider.clear_token().await.unwrap();
+        assert!(!provider.is_authenticated().await.unwrap());
+    }
+
+    /// The production key layout must not drift: `commands::git_ops` reads the
+    /// `"bitbucket:username"` literal when it builds push credentials.
+    #[test]
+    fn bitbucket_username_key_is_the_documented_literal() {
+        let provider = BitbucketProvider::new();
+        assert_eq!(provider.token_key, "bitbucket");
+        assert_eq!(provider.username_key(), "bitbucket:username");
     }
 
     /// Regression: the open-PR list took a single 50-item page and dropped the
@@ -1985,14 +2119,147 @@ mod tests {
         );
     }
 
-    /// The user's own override must win over the debug-only E2E env-var.
+    /// `api_base()` reads the stored override.
     #[tokio::test]
-    async fn bitbucket_user_base_url_wins_over_env_override() {
+    async fn bitbucket_api_base_uses_the_user_override() {
         install_keyring_mock();
-        let p = BitbucketProvider::new();
+        let p = BitbucketProvider::with_isolated_token_key();
         p.set_base_url(Some("https://bb.acme.test/2.0".into()))
             .await
             .unwrap();
         assert_eq!(p.api_base(), "https://bb.acme.test/2.0");
+    }
+
+    /// All four override × env combinations. The old test never set the env
+    /// layer, so it passed against both orderings; inverting the precedence in
+    /// `resolve_api_base` now fails case 1.
+    #[test]
+    fn bitbucket_api_base_precedence_is_override_then_env_then_default() {
+        use crate::providers::resolve_api_base;
+        let env = Some("http://127.0.0.1:9003");
+        let user = Some("https://bb.acme.test/2.0");
+        assert_eq!(
+            resolve_api_base(user, env, API_BASE),
+            "https://bb.acme.test/2.0"
+        );
+        assert_eq!(
+            resolve_api_base(None, env, API_BASE),
+            "http://127.0.0.1:9003"
+        );
+        assert_eq!(
+            resolve_api_base(user, None, API_BASE),
+            "https://bb.acme.test/2.0"
+        );
+        assert_eq!(resolve_api_base(None, None, API_BASE), API_BASE);
+    }
+
+    /// `https://api.bitbucket.org@evil.tld` reaches host `evil.tld` with the
+    /// app password attached via Basic auth. The base URL used to be stored
+    /// unparsed, so this returned `Ok`.
+    #[tokio::test]
+    async fn bitbucket_set_base_url_rejects_userinfo_and_plain_http() {
+        install_keyring_mock();
+        let p = BitbucketProvider::with_isolated_token_key();
+        for raw in [
+            "https://api.bitbucket.org@evil.tld",
+            "https://user:app-password@bb.acme.test/2.0",
+            "http://bb.acme.test/2.0",
+        ] {
+            let err = p
+                .set_base_url(Some(raw.into()))
+                .await
+                .expect_err("must be refused");
+            assert!(
+                matches!(err, CommandError::BadRequest(_)),
+                "expected BadRequest for {raw}, got {err:?}"
+            );
+        }
+        assert_eq!(p.api_base(), API_BASE);
+    }
+
+    /// The pagination cursor comes from the response body. Following it
+    /// re-sends Basic auth, and reqwest's cross-host `Authorization` stripping
+    /// does not apply because this is a new request, not a redirect.
+    #[test]
+    fn next_page_url_only_follows_same_origin_cursors() {
+        let base = "https://api.bitbucket.org/2.0";
+        assert_eq!(
+            next_page_url(base, Some("https://api.bitbucket.org/2.0/x?page=2")).as_deref(),
+            Some("https://api.bitbucket.org/2.0/x?page=2")
+        );
+        for hostile in [
+            "https://evil.tld/2.0/x?page=2",
+            "http://api.bitbucket.org/2.0/x?page=2",
+            "https://api.bitbucket.org.evil.tld/2.0",
+            "https://api.bitbucket.org:8443/2.0",
+            "not a url",
+            "",
+            "   ",
+        ] {
+            assert!(
+                next_page_url(base, Some(hostile)).is_none(),
+                "must refuse cursor {hostile:?}"
+            );
+        }
+        assert!(next_page_url(base, None).is_none());
+    }
+
+    /// End-to-end: a foreign-origin `next` must stop pagination without
+    /// issuing a second authenticated request. The old code assigned
+    /// `url = next` unconditionally and would have sent the app password to
+    /// the foreign server.
+    #[tokio::test]
+    async fn bitbucket_list_pull_requests_refuses_a_foreign_origin_cursor() {
+        use wiremock::matchers::path;
+
+        // Stands in for the attacker-controlled host named by the cursor. Any
+        // request reaching it is the bug.
+        let foreign = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/pr-page-2"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "values": [],
+            })))
+            .mount(&foreign)
+            .await;
+
+        let server = MockServer::start().await;
+        let values: Vec<serde_json::Value> = (1..=3)
+            .map(|n| {
+                serde_json::json!({
+                    "id": n, "title": format!("PR {n}"),
+                    "state": "OPEN",
+                    "links": { "html": { "href": "u" } },
+                    "source": { "branch": { "name": "feature" } },
+                    "destination": { "branch": { "name": "main" } },
+                    "created_on": "2024-01-01T00:00:00Z",
+                    "updated_on": "2024-01-01T00:00:00Z"
+                })
+            })
+            .collect();
+        Mock::given(method("GET"))
+            .and(path("/repositories/acme/widget/pullrequests"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "values": values,
+                "next": format!("{}/pr-page-2", foreign.uri()),
+            })))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_credentials(&server).await;
+        let prs = provider
+            .list_pull_requests("https://bitbucket.org/acme/widget.git")
+            .await
+            .unwrap();
+
+        assert_eq!(prs.len(), 3, "first page must still be returned");
+        assert!(
+            foreign
+                .received_requests()
+                .await
+                .unwrap_or_default()
+                .is_empty(),
+            "no authenticated request may be sent to a foreign-origin cursor"
+        );
     }
 }

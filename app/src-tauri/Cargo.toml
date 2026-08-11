@@ -65,6 +65,11 @@ dirs = "6.0"
 zeroize = "1"
 anyhow = "1.0"
 async-trait = "0.1"
+# Bounded-concurrency streams (`buffered`) for the per-PR CI-status fan-out in
+# the GitHub/Bitbucket providers, and `join_all` for the per-provider auth
+# probes in `commands::providers::list_providers`. Already in the lockfile as a
+# transitive dep of reqwest/tauri, so promoting it adds no new crate.
+futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.11", features = ["v4", "serde"] }
 tracing = "0.1"
