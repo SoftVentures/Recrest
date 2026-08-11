@@ -16,6 +16,7 @@ const connection = (providerId: ProviderId, baseUrl: string | null): ProviderCon
   username: null,
   supportsOauth: false,
   baseUrl,
+  authState: "disconnected",
 });
 
 function renderProviderRow(providerId: ProviderId, baseUrl: string | null = null) {
@@ -92,4 +93,52 @@ describe("ProviderRow base URL editing", () => {
       expect(typeof (args as { baseUrl: string }).baseUrl).toBe("string");
     },
   );
+});
+
+describe("ProviderRow connection status", () => {
+  const renderWithState = (state: ProviderConnection["authState"], connected: boolean) => {
+    const store = makeTestStore({
+      providers: {
+        connections: {
+          github: { ...connection("github", null), connected, authState: state },
+        },
+      },
+    });
+    return renderWithProviders(<ProviderRow providerId="github" />, { store });
+  };
+
+  it("separates a rejected token from a provider that was never connected", () => {
+    const { getByTestId } = renderWithState("invalid", false);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Token rejected");
+  });
+
+  it("shows the plain disconnected state when no credentials are stored", () => {
+    const { getByTestId } = renderWithState("disconnected", false);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Not connected");
+  });
+
+  it("shows the connected state when the token is accepted", () => {
+    const { getByTestId } = renderWithState("connected", true);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Connected");
+    expect(pill.dataset.tone).toBe("connected");
+  });
+
+  it("distinguishes a credential it could not verify from a verified one", () => {
+    // `unreachable` used to render pixel-identical to `connected`, so a user
+    // whose verification failed got no signal at all.
+    const { getByTestId } = renderWithState("unreachable", true);
+    const pill = getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    expect(pill.textContent).toBe("Couldn't verify");
+    expect(pill.dataset.tone).toBe("unreachable");
+  });
+
+  it("keeps an unverifiable account usable", () => {
+    // The credentials are stored and `connected` stays true — the row must still
+    // offer Disconnect rather than collapsing to the connect form.
+    const { getByTestId } = renderWithState("unreachable", true);
+    expect(getByTestId(TEST_IDS.settings.accounts.disconnectButton)).toBeInTheDocument();
+  });
 });

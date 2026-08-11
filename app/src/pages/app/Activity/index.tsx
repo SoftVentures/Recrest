@@ -505,7 +505,7 @@ export default function ActivityPage() {
             {rangeBusy && (
               <GeneralCircularLoader
                 size={CircularLoaderSize.SM}
-                aria-label={t("activity.loading", { defaultValue: "Loading activity…" })}
+                aria-label={t("activity.loading")}
               />
             )}
             <FilterSelect

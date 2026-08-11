@@ -127,4 +127,30 @@ describe("WorkingCopyPanel", () => {
     expect(getByTestId(TEST_IDS.workingCopy.row("staged", "src/dual.ts"))).toBeTruthy();
     expect(getByTestId(TEST_IDS.workingCopy.row("unstaged", "src/dual.ts"))).toBeTruthy();
   });
+
+  it("interpolates the stash index instead of rendering the raw template", async () => {
+    const repo = makeRepo();
+    const store = makeTestStore({ repos: { items: { [repo.id]: repo } } });
+
+    const mocked = vi.mocked(mockedInvoke);
+    mocked.mockReset();
+    mocked.mockImplementation(async (cmd: unknown) => {
+      if (cmd === TauriCommand.GIT_STASH_LIST) {
+        return [
+          { index: 0, message: "WIP on main", oid: "aaa" },
+          { index: 1, message: "WIP on feature", oid: "bbb" },
+        ];
+      }
+      return repo.status;
+    });
+
+    const { findByTestId } = renderWithProviders(<WorkingCopyPanel repoId={repo.id} />, { store });
+
+    const first = await findByTestId(TEST_IDS.workingCopy.stashIndex(0));
+    const second = await findByTestId(TEST_IDS.workingCopy.stashIndex(1));
+
+    expect(first.textContent).toBe("stash@{0}");
+    expect(second.textContent).toBe("stash@{1}");
+    expect(first.textContent).not.toContain("{{");
+  });
 });

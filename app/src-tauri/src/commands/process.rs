@@ -36,6 +36,9 @@ pub fn configure(cmd: &mut Command) -> &mut Command {
 /// and runs invisibly — `spawn()` succeeds but no window ever appears. GUI
 /// terminals (Windows Terminal, WezTerm, …) draw their own window and must NOT
 /// get this flag, or they'd pop an extra empty console. No-op off Windows.
+// Only ever called from a `#[cfg(windows)]` branch in `terminal.rs`, so on
+// every other platform it is genuinely dead rather than merely unused.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn with_new_console(cmd: &mut Command) -> &mut Command {
     #[cfg(target_os = "windows")]
     {

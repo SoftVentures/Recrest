@@ -20,6 +20,7 @@ import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { BackBar, BackButton, Content, Root } from "@/pages/app/MrDetail/MrDetail.styles";
 import MrDescriptionCard from "@/pages/app/MrDetail/parts/MrDescriptionCard";
 import MrDetailHeader from "@/pages/app/MrDetail/parts/MrDetailHeader";
+import MrDetailLoading from "@/pages/app/MrDetail/parts/MrDetailLoading";
 import MrDiffCard from "@/pages/app/MrDetail/parts/MrDiffCard";
 import MrMetadataCard from "@/pages/app/MrDetail/parts/MrMetadataCard";
 import MrNotFound from "@/pages/app/MrDetail/parts/MrNotFound";
@@ -78,14 +79,25 @@ export default function MrDetailPage() {
   const repos = useAppSelector((s) => s.repos.items);
   const repoName = repoId ? (repos[repoId]?.name ?? null) : null;
   const prs = useAppSelector((s) => (repoId ? (s.prs.items[repoId] ?? NO_PRS) : NO_PRS));
-  const pr: PullRequest | undefined = useMemo(
-    () => (parsedNumber != null ? prs.find((p) => p.number === parsedNumber) : undefined),
-    [prs, parsedNumber],
-  );
 
   const key = repoId && parsedNumber != null ? detailKey(repoId, parsedNumber) : null;
   const detail = useAppSelector((s) => (key ? s.prs.detail[key] : undefined));
   const detailLoading = useAppSelector((s) => (key ? (s.prs.detailLoading[key] ?? false) : false));
+  // `detailLoading` only gets a key once `loadPrDetail.pending` ran, so its
+  // absence means "the fetch this route owns hasn't started yet" — which is
+  // still a loading state, not a miss.
+  const detailAttempted = useAppSelector((s) =>
+    key ? s.prs.detailLoading[key] !== undefined : false,
+  );
+  // The list is filled by the merge-requests page, which this route never
+  // mounts. On a deep link / hard refresh the detail fetch is the only source,
+  // and `PullRequestDetail` already extends `PullRequest`.
+  const pr: PullRequest | undefined = useMemo(
+    () =>
+      parsedNumber != null ? (prs.find((p) => p.number === parsedNumber) ?? detail) : undefined,
+    [prs, parsedNumber, detail],
+  );
+
   const diff = useAppSelector((s) => (key ? s.prs.diff[key] : undefined));
   const diffLoading = useAppSelector((s) => (key ? (s.prs.diffLoading[key] ?? false) : false));
   const comments = useAppSelector((s) => (key ? s.prs.comments[key] : undefined));
@@ -111,7 +123,17 @@ export default function MrDetailPage() {
 
   const goBack = () => navigate(AppRoute.MERGE_REQUESTS);
 
-  if (!repoId || parsedNumber == null || !pr) {
+  if (!repoId || parsedNumber == null) {
+    return <MrNotFound prNumber={parsedNumber} onBack={goBack} />;
+  }
+
+  if (!pr) {
+    // Only the detail fetch can tell us the MR is genuinely gone. Claiming
+    // "not found" before it settled makes every deep link / hard refresh flash
+    // the empty state — and makes it permanent when the fetch is still queued.
+    if (isTauri() && (detailLoading || !detailAttempted)) {
+      return <MrDetailLoading onBack={goBack} />;
+    }
     return <MrNotFound prNumber={parsedNumber} onBack={goBack} />;
   }
 

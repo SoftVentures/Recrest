@@ -183,3 +183,19 @@ export interface RepoSettings {
   defaultIde: string | null;
   pinned: boolean;
 }
+
+/** Report of a `settings.json` that existed on boot but could not be parsed.
+ *  The file is quarantined instead of being silently overwritten with
+ *  defaults, so the user can still recover their repos, groups and pins. */
+export interface SettingsCorruption {
+  /** Where the unparseable file was moved to, or null if even the rename
+   *  failed — in which case the original is still in place. Display-only: the
+   *  backend sends a lossy string (`Option<String>`, not `Option<PathBuf>`)
+   *  because serializing a non-UTF-8 path errors, and that would fail this
+   *  whole response exactly when the user needs it to recover their data. */
+  quarantinePath: string | null;
+  /** Unix seconds at detection; matches the timestamp in the file name. */
+  detectedAt: number;
+  /** The parser error, verbatim. */
+  message: string;
+}

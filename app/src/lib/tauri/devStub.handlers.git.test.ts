@@ -62,10 +62,10 @@ describe("gitStub — git_fetch_all", () => {
 });
 
 describe("gitStub — git_pull_all", () => {
-  it("returns the number of seed repos", () => {
+  it("reports every seed repo as pulled, with no failures", () => {
     const state = freshState();
     const result = gitStub("git_pull_all", {}, state);
-    expect(result).toBe(DEFAULT_SEED.repos.length);
+    expect(result).toEqual({ ok: DEFAULT_SEED.repos.length, failures: [] });
   });
 });
 

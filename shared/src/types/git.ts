@@ -25,6 +25,21 @@ export interface GitMergeResult {
   conflicts: string[];
 }
 
+/** One repo that could not be pulled during `git_pull_all`. */
+export interface GitPullFailure {
+  repoId: string;
+  message: string;
+}
+
+/** Result of `git_pull_all`. `ok` is the number of repos that pulled
+ *  successfully; `failures` lists the ones that refused (dirty working tree,
+ *  diverged history, no upstream, auth) so the UI can surface them instead of
+ *  reporting a bare success count. */
+export interface GitPullAllResult {
+  ok: number;
+  failures: GitPullFailure[];
+}
+
 export interface BranchCommit {
   sha: string;
   summary: string;

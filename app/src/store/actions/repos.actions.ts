@@ -5,6 +5,7 @@ import {
   type GitConfigEntry,
   type GitConfigLayer,
   type GitMergeResult,
+  type RepoRemovedEventPayload,
   type Repository,
   type RepositoryGroup,
   type RepositoryId,
@@ -20,8 +21,23 @@ export const setScanPaths = createAction<string[]>("repos/setScanPaths");
 export const upsertRepo = createAction<Repository>("repos/upsertRepo");
 export const setGroups = createAction<Record<string, RepositoryGroup>>("repos/setGroups");
 
+/** Mirrors the `repo://removed` backend event into the store. The backend has
+ *  already decided whether the record survives in `settings.json`; the payload's
+ *  `forgotten` flag carries that decision so the reducer doesn't have to guess. */
+export const repoRemoved = createAction<RepoRemovedEventPayload>("repos/removed");
+
 export const scanForRepos = createAsyncThunk<Repository[], string[]>("repos/scan", async (paths) =>
   invoke<Repository[]>(TauriCommand.SCAN_REPOS, { paths }),
+);
+
+/** Same backend walk as {@link scanForRepos}, but for the unattended triggers
+ *  (`useRepoAutoRescan`'s interval and window-focus). It carries its own action
+ *  type so the reducer can keep `loading`/`error` untouched: those two fields
+ *  drive the header refresh spinner and the dashboard skeletons, and a scan the
+ *  user never asked for must not make the app look busy or surface a banner. */
+export const backgroundScanForRepos = createAsyncThunk<Repository[], string[]>(
+  "repos/backgroundScan",
+  async (paths) => invoke<Repository[]>(TauriCommand.SCAN_REPOS, { paths }),
 );
 
 export const loadRepos = createAsyncThunk<Repository[]>("repos/list", async () =>

@@ -33,6 +33,22 @@ describe("planFetchWindow", () => {
     expect(planFetchWindow(["repo-1", "repo-2"], commitsByRepo, RANGE)).toEqual(RANGE);
   });
 
+  it("treats a repo that reported zero commits as fetched, not as unloaded", () => {
+    // `list_commits` emits a totals/truncated entry for every repo it visited —
+    // including one it could not open — so the reducer gives it a non-null
+    // rangeLoaded even though it contributed no commits. Without that the
+    // planner would re-walk the whole window on every range switch forever.
+    const commitsByRepo = { "repo-1": loaded(RANGE), "unreadable-repo": loaded(RANGE) };
+    expect(planFetchWindow(["repo-1", "unreadable-repo"], commitsByRepo, RANGE)).toBeNull();
+  });
+
+  it("keeps the cache warm across repeated plans once every repo is marked fetched", () => {
+    const commitsByRepo = { "repo-1": loaded(RANGE), "unreadable-repo": loaded(RANGE) };
+    const ids = ["repo-1", "unreadable-repo"];
+    expect(planFetchWindow(ids, commitsByRepo, RANGE)).toBeNull();
+    expect(planFetchWindow(ids, commitsByRepo, RANGE)).toBeNull();
+  });
+
   it("fetches only the missing later gap when loaded repos partially cover the range", () => {
     const partial: ActivityRange = {
       since: "2026-01-01T00:00:00.000Z",

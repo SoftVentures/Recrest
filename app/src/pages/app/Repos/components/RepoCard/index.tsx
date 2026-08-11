@@ -9,6 +9,7 @@ import { GitBranch } from "lucide-react";
 
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
+import RepoMissingChip from "@/components/atoms/chips/RepoMissingChip";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import IconSlot from "@/components/atoms/layout/IconSlot";
 import GeneralSparkline from "@/components/atoms/sparklines/GeneralSparkline";
@@ -48,6 +49,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
   const { t } = useTranslation(I18nNamespace.REPOS);
   const theme = useTheme();
   const dirty = !!repo.status.dirty;
+  const missing = !!repo.missing;
   const activity = useRepoActivitySeries(repo.id, repo.activity);
   const ctx = useContextMenu();
 
@@ -61,6 +63,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
       data-testid={TEST_IDS.repos.card}
       data-repo-id={repo.id}
       data-dirty={dirty ? "true" : undefined}
+      data-missing={missing ? "true" : undefined}
       data-context-menu-open={ctx.open ? "true" : undefined}
       onClick={() => onClick?.(repo)}
       onContextMenu={ctx.onContextMenu}
@@ -71,7 +74,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
         }
       }}
     >
-      <CardTop>
+      <CardTop data-missing-keep>
         <RepoAvatar repo={repo} size={36} radius={8} />
         <Actions onClick={stop}>
           <RepoActions repo={repo} iconSize={IconButtonSize.SM} />
@@ -92,25 +95,31 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
         </BranchRow>
       </Body>
 
-      <Footer>
+      <Footer data-missing-keep>
         <StatusGroup>
-          <StatusDot component="span" data-dirty={dirty ? "true" : undefined} />
-          {dirty ? (
-            <Diff component="span">
-              <Box component="span" className="add">
-                +{repo.added}
-              </Box>
-              <Box component="span" className="rem">
-                −{repo.removed}
-              </Box>
-              <FilesMeta component="span" variant="caption">
-                {t("list.card_files_meta", { count: repo.filesChanged })}
-              </FilesMeta>
-            </Diff>
+          {missing ? (
+            <RepoMissingChip />
           ) : (
-            <StatusText component="span" variant="caption">
-              {t("list.clean")}
-            </StatusText>
+            <>
+              <StatusDot component="span" data-dirty={dirty ? "true" : undefined} />
+              {dirty ? (
+                <Diff component="span">
+                  <Box component="span" className="add">
+                    +{repo.added}
+                  </Box>
+                  <Box component="span" className="rem">
+                    −{repo.removed}
+                  </Box>
+                  <FilesMeta component="span" variant="caption">
+                    {t("list.card_files_meta", { count: repo.filesChanged })}
+                  </FilesMeta>
+                </Diff>
+              ) : (
+                <StatusText component="span" variant="caption">
+                  {t("list.clean")}
+                </StatusText>
+              )}
+            </>
           )}
         </StatusGroup>
         <GeneralSparkline

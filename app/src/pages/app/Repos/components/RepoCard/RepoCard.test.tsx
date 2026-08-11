@@ -1,0 +1,41 @@
+import { screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { RepoCard } from "@/pages/app/Repos/components/RepoCard";
+import { renderWithProviders } from "@/test/utils";
+
+function makeRepo(overrides: Partial<EnrichedRepo> = {}): EnrichedRepo {
+  return {
+    id: "r1",
+    name: "alpha",
+    path: "/x/alpha",
+    group: "Local",
+    pinned: false,
+    status: { branch: "main", ahead: 0, behind: 0, dirty: false },
+    added: 0,
+    removed: 0,
+    filesChanged: 0,
+    activity: [],
+    ...overrides,
+  } as EnrichedRepo;
+}
+
+describe("RepoCard", () => {
+  it("marks a repo whose folder vanished and offers the removal shortcut", () => {
+    renderWithProviders(<RepoCard repo={makeRepo({ missing: true })} onClick={vi.fn()} />);
+
+    expect(screen.getByTestId(TEST_IDS.repos.missingBadge)).toBeTruthy();
+    expect(screen.getByTestId(TEST_IDS.repos.card).getAttribute("data-missing")).toBe("true");
+    expect(screen.getByTestId(TEST_IDS.repos.rowForget)).toBeTruthy();
+  });
+
+  it("renders no missing marker when the folder is present", () => {
+    renderWithProviders(<RepoCard repo={makeRepo({ missing: false })} onClick={vi.fn()} />);
+
+    expect(screen.queryByTestId(TEST_IDS.repos.missingBadge)).toBeNull();
+    expect(screen.queryByTestId(TEST_IDS.repos.rowForget)).toBeNull();
+    expect(screen.getByTestId(TEST_IDS.repos.card).getAttribute("data-missing")).toBeNull();
+  });
+});

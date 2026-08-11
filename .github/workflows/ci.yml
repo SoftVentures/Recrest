@@ -88,6 +88,82 @@ jobs:
           fi
           echo "OK: devtools feature not enabled."
 
+  # Every file that carries the product version must agree with the root
+  # package.json. release-please bumps them together via
+  # `.github/release-please-config.json::extra-files`, so a divergence means one
+  # of them is not actually wired in (or its `x-release-please-version` marker
+  # is on the wrong line — the Generic updater only rewrites the marker's OWN
+  # line).
+  #
+  # Why here and not only in the release workflow: `release-tauri.yml`'s
+  # `verify-metadata` job is the same assertion, but it fires on the
+  # `push: tags` trigger — after the tag exists. At that point the only recovery
+  # is amending `main` and re-dispatching, and manual dispatch DELETES the
+  # release. Running it on every PR turns that into a red Release PR instead.
+  version-sync:
+    name: Version sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Assert every version-bearing file matches the root package.json
+        shell: bash
+        run: |
+          set -uo pipefail
+          rc=0
+
+          # Every capture below ends in `|| true`: GitHub runs `shell: bash` as
+          # `bash --noprofile --norc -eo pipefail`, so `-e` is on and a failing
+          # `jq`/`grep`/`sed` inside `$( )` would kill the step before the
+          # ::error:: line that explains what diverged.
+          version="$(jq -r '.version // empty' package.json || true)"
+          if [ -z "$version" ]; then
+            echo "::error::could not read .version from the root package.json"
+            exit 1
+          fi
+          echo "root package.json → $version"
+
+          check() {
+            local label="$1" got="$2"
+            if [ -z "$got" ]; then
+              echo "::error::could not read a version from $label — its format changed, or the file moved"
+              rc=1; return
+            fi
+            if [ "$got" != "$version" ]; then
+              echo "::error::$label is $got but the root package.json is $version. These are bumped together by release-please; check .github/release-please-config.json::extra-files."
+              rc=1; return
+            fi
+            echo "✓ $label → $got"
+          }
+
+          for f in \
+            app/package.json \
+            shared/package.json \
+            landingpage/package.json \
+            tests/package.json \
+            app/src-tauri/tauri.conf.json; do
+            check "$f" "$(jq -r '.version // empty' "$f" || true)"
+          done
+
+          # Anchored on the release-please marker, same as `verify-metadata`.
+          check "app/src-tauri/Cargo.toml" \
+            "$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)"[[:space:]]*#[[:space:]]*x-release-please-version.*/\1/p' app/src-tauri/Cargo.toml | head -n1 || true)"
+          check "shared/src/constants/app.ts (APP_VERSION)" \
+            "$(sed -n 's/^export const APP_VERSION[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' shared/src/constants/app.ts | head -n1 || true)"
+          # Hand-maintained on purpose (see the comment on the constant) — this
+          # check is what makes "consciously" mean "before merge".
+          check "tests/src/helpers/constants.ts (EXPECTED_APP_VERSION)" \
+            "$(sed -n 's/^export const EXPECTED_APP_VERSION[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' tests/src/helpers/constants.ts | head -n1 || true)"
+
+          # RELEASE.md becomes both the GitHub Release body and the in-app
+          # updater's `notes`. Same grep/sed pair as `verify-metadata`, so the
+          # two gates cannot disagree about what the H1 says.
+          heading="$(grep -m1 -E '^#[[:space:]]*Recrest[[:space:]]+[0-9]' RELEASE.md || true)"
+          check "RELEASE.md (H1)" \
+            "$(printf '%s\n' "$heading" \
+              | sed -n 's/^#[[:space:]]*Recrest[[:space:]]\{1,\}\([0-9][0-9A-Za-z.+-]*\).*/\1/p' || true)"
+
+          exit $rc
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
@@ -147,6 +223,20 @@ jobs:
 
   e2e:
     name: Playwright E2E (optional)
+    # ADVISORY, NOT GATING — and the two halves of that are wired in two
+    # different places, so changing one alone does nothing:
+    #   * `continue-on-error: true` below keeps this job's failure from failing
+    #     the workflow run;
+    #   * `e2e` is deliberately absent from `ci-pass`'s `needs:` list, which is
+    #     the aggregate check Branch Protection actually requires.
+    # Consequence to be honest about: no Playwright spec in `tests/` can turn a
+    # PR red today. Reason it stays that way for now: the suite fails with
+    # pre-existing failures across all seven projects and has been red on `main`
+    # too, so requiring it would block unrelated work on inherited breakage.
+    # Triaging those failures and promoting this job to required is tracked in
+    # `docs/plans/09-bug-audit-remediation.md`. Until then, verify new specs
+    # locally — see `tests/CLAUDE.md`.
+    #
     # Ubuntu 24.04 is required: Playwright 1.59 ships a WebKit build that
     # links against libgtk-4, libavif.so.13, libmanette, libhyphen — none of
     # which are available on the 22.04 image, so `browserType.launch` dies
@@ -203,6 +293,10 @@ jobs:
       - uses: ./.github/actions/install-deps
       - run: yarn workspace @recrest/shared build
       - run: yarn workspace @recrest/app build
+      # The dev IPC stub and its seed data must never reach a desktop user.
+      # Reuses the bundle built above instead of rebuilding it.
+      - name: Guard — dev IPC stub must not ship in the production bundle
+        run: yarn guard:devstub:check
 
   landingpage-build:
     name: Landingpage production build
@@ -218,6 +312,9 @@ jobs:
 
   # Aggregate required-status-check referenced by Branch Protection.
   # Keeps the protection rule stable even if we rename or split jobs above.
+  #
+  # `e2e` is deliberately NOT in this list — see the note on that job. Adding it
+  # is what "make Playwright gating" means; nothing else has to change.
   ci-pass:
     name: CI pass
     runs-on: ubuntu-latest
@@ -226,6 +323,7 @@ jobs:
         branch-name,
         dependabot-type,
         tauri-devtools-guard,
+        version-sync,
         typecheck,
         lint,
         format,
@@ -236,6 +334,12 @@ jobs:
       ]
     if: always()
     steps:
+      # `skipped` is deliberately NOT treated as a failure here, unlike in
+      # `rust.yml::rust-pass`: `branch-name` and `dependabot-type` are
+      # `if: github.event_name == 'pull_request'`, so both legitimately skip on
+      # every push to `main`/`develop`. Any job added to `needs` above that has
+      # no `if:` therefore cannot be distinguished from those two if it skips —
+      # keep new unconditional jobs unconditional.
       - name: Verify all required jobs passed
         run: |
           if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || \

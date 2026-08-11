@@ -2,6 +2,7 @@ import { createReducer } from "@reduxjs/toolkit";
 
 import {
   addRepo,
+  backgroundScanForRepos,
   clearRepoLogo,
   deleteRepo,
   forgetReposUnderPath,
@@ -22,6 +23,7 @@ import {
   loadRepos,
   refreshRepoStatus,
   removeRepo,
+  repoRemoved,
   scanForRepos,
   setGroups,
   setRepoLogo,
@@ -31,6 +33,7 @@ import {
   upsertRepo,
 } from "@/store/actions/repos.actions";
 import { loadSettings, saveSettings } from "@/store/actions/settings.actions";
+import { INITIAL_SAVE_SEQ, acceptSaveSnapshot } from "@/store/reducers/saveSettingsSeq";
 import type { ReposState } from "@/store/types/repos.types";
 
 const initialState: ReposState = {
@@ -39,6 +42,7 @@ const initialState: ReposState = {
   scanPaths: [],
   loading: false,
   error: null,
+  lastAppliedSaveSeq: INITIAL_SAVE_SEQ,
 };
 
 export const reposReducer = createReducer(initialState, (builder) => {
@@ -52,7 +56,10 @@ export const reposReducer = createReducer(initialState, (builder) => {
     .addCase(loadSettings.fulfilled, (state, action) => {
       state.scanPaths = action.payload.scanPaths;
     })
+    // A superseded `update_settings` response must not replay its older
+    // snapshot over the newest one this slice already applied.
     .addCase(saveSettings.fulfilled, (state, action) => {
+      if (!acceptSaveSnapshot(state, action.meta)) return;
       state.scanPaths = action.payload.scanPaths;
     })
     .addCase(upsertRepo, (state, action) => {
@@ -75,6 +82,14 @@ export const reposReducer = createReducer(initialState, (builder) => {
     .addCase(scanForRepos.rejected, (state, action) => {
       state.loading = false;
       state.error = action.error.message ?? "scan failed";
+    })
+    // The unattended rescan deliberately handles only `fulfilled`: touching
+    // `loading` would blink the header refresh indicator (and disable its
+    // button) every 10 minutes and on every alt-tab, and touching `error` would
+    // pop a failure banner for work the user never started. A silent trigger
+    // may update data, never chrome.
+    .addCase(backgroundScanForRepos.fulfilled, (state, action) => {
+      state.items = Object.fromEntries(action.payload.map((r) => [r.id, r]));
     })
     .addCase(loadRepos.pending, (state) => {
       state.loading = true;
@@ -118,6 +133,19 @@ export const reposReducer = createReducer(initialState, (builder) => {
     })
     .addCase(deleteRepo.fulfilled, (state, action) => {
       delete state.items[action.payload];
+    })
+    .addCase(repoRemoved, (state, action) => {
+      const { repoId, forgotten } = action.payload;
+      // Forgotten means the backend also dropped the record from settings.json,
+      // so there is nothing left to point the row at. A kept record (manually
+      // added repo) only lost its folder — keeping the row flagged lets the user
+      // re-point or remove it deliberately instead of silently losing it.
+      if (forgotten) {
+        delete state.items[repoId];
+        return;
+      }
+      const repo = state.items[repoId];
+      if (repo) repo.missing = true;
     })
     .addCase(gitFetch.fulfilled, (state, action) => {
       const repo = state.items[action.payload.repoId];
@@ -178,6 +206,7 @@ export const reposReducer = createReducer(initialState, (builder) => {
 
 export {
   addRepo,
+  backgroundScanForRepos,
   clearRepoLogo,
   deleteRepo,
   forgetReposUnderPath,
@@ -191,6 +220,7 @@ export {
   loadRepos,
   refreshRepoStatus,
   removeRepo,
+  repoRemoved,
   scanForRepos,
   setGroups,
   setRepoLogo,

@@ -35,7 +35,9 @@ import GeneralIconButton, {
   IconButtonSize,
   IconButtonVariant,
 } from "@/components/atoms/buttons/GeneralIconButton";
+import RepoMissingChip from "@/components/atoms/chips/RepoMissingChip";
 import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
+import DisabledReasonTooltip from "@/components/atoms/feedback/DisabledReasonTooltip";
 import AheadBehind from "@/components/atoms/git/AheadBehind";
 import EditableRepoAvatar from "@/components/molecules/repos/EditableRepoAvatar";
 import CreateBranchDialog from "@/components/organisms/repos/CreateBranchDialog";
@@ -122,6 +124,10 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
   const fetch = useActionFeedback();
   const busy = pull.state === "loading" || fetch.state === "loading";
   const [createOpen, setCreateOpen] = useState(false);
+  // Everything that touches the working copy is doomed once the folder is
+  // gone. Opening the remote host still works — that lives on the server.
+  const missing = !!repo.missing;
+  const missingReason = missing ? t("missing.action_unavailable") : null;
 
   const run = async (cmd: TauriCommandName, label: string) => {
     if (!isTauri()) return;
@@ -155,6 +161,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           <HeaderTitleStack>
             <RepoName>{repo.name}</RepoName>
             <RepoPath>{repo.path}</RepoPath>
+            {missing && <RepoMissingChip data-testid={TEST_IDS.repos.detailPaneMissingBadge} />}
             {repo.lang && (
               <LangPill component="span" variant="caption">
                 <LangDot component="span" variant="caption" />
@@ -173,15 +180,22 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
         </HeaderTopRow>
 
         <IconRow>
-          <PrimaryIde type="button" onClick={() => void run(TauriCommand.OPEN_IN_IDE, ideLabel)}>
-            <IdeIcon id={ide.iconId} size={13} color="currentColor" style={{ opacity: 1 }} />
-            <Box component="span">{ideLabel}</Box>
-          </PrimaryIde>
+          <DisabledReasonTooltip reason={missingReason} stretch>
+            <PrimaryIde
+              type="button"
+              disabled={missing}
+              onClick={() => void run(TauriCommand.OPEN_IN_IDE, ideLabel)}
+            >
+              <IdeIcon id={ide.iconId} size={13} color="currentColor" style={{ opacity: 1 }} />
+              <Box component="span">{ideLabel}</Box>
+            </PrimaryIde>
+          </DisabledReasonTooltip>
           <GeneralIconButton
             size={IconButtonSize.MD}
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_terminal")}
-            tooltip={t("detail_pane.open_in_terminal")}
+            tooltip={missingReason ?? t("detail_pane.open_in_terminal")}
+            disabled={missing}
             onClick={() => void run(TauriCommand.OPEN_TERMINAL, t("detail_pane.open_in_terminal"))}
             icon={<TerminalLucide size={13} />}
           />
@@ -189,7 +203,8 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             size={IconButtonSize.MD}
             variant={IconButtonVariant.OUTLINE}
             aria-label={tAria("repo.open_in_explorer")}
-            tooltip={t("detail_pane.open_in_explorer")}
+            tooltip={missingReason ?? t("detail_pane.open_in_explorer")}
+            disabled={missing}
             onClick={() =>
               void run(TauriCommand.OPEN_IN_EXPLORER, t("detail_pane.open_in_explorer"))
             }
@@ -226,39 +241,49 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           />
         </BranchTop>
         <BranchQuick>
-          <GhostBtn
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              void runGit(
-                pull,
-                TauriCommand.GIT_PULL,
-                "detail.toast_pulled",
-                "detail.toast_pull_failed",
-              )
-            }
-          >
-            <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={11} />} size={11} />{" "}
-            {t("detail_pane.pull")}
-          </GhostBtn>
-          <GhostBtn
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              void runGit(
-                fetch,
-                TauriCommand.GIT_FETCH,
-                "detail.toast_fetched",
-                "detail.toast_fetch_failed",
-              )
-            }
-          >
-            <ActionFeedbackIcon state={fetch.state} fallback={<RefreshCw size={11} />} size={11} />{" "}
-            {t("detail_pane.fetch")}
-          </GhostBtn>
-          <GhostBtn type="button" onClick={() => setCreateOpen(true)}>
-            <Plus size={11} /> {t("detail_pane.branch")}
-          </GhostBtn>
+          <DisabledReasonTooltip reason={missingReason} stretch>
+            <GhostBtn
+              type="button"
+              disabled={busy || missing}
+              onClick={() =>
+                void runGit(
+                  pull,
+                  TauriCommand.GIT_PULL,
+                  "detail.toast_pulled",
+                  "detail.toast_pull_failed",
+                )
+              }
+            >
+              <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={11} />} size={11} />{" "}
+              {t("detail_pane.pull")}
+            </GhostBtn>
+          </DisabledReasonTooltip>
+          <DisabledReasonTooltip reason={missingReason} stretch>
+            <GhostBtn
+              type="button"
+              disabled={busy || missing}
+              onClick={() =>
+                void runGit(
+                  fetch,
+                  TauriCommand.GIT_FETCH,
+                  "detail.toast_fetched",
+                  "detail.toast_fetch_failed",
+                )
+              }
+            >
+              <ActionFeedbackIcon
+                state={fetch.state}
+                fallback={<RefreshCw size={11} />}
+                size={11}
+              />{" "}
+              {t("detail_pane.fetch")}
+            </GhostBtn>
+          </DisabledReasonTooltip>
+          <DisabledReasonTooltip reason={missingReason} stretch>
+            <GhostBtn type="button" disabled={missing} onClick={() => setCreateOpen(true)}>
+              <Plus size={11} /> {t("detail_pane.branch")}
+            </GhostBtn>
+          </DisabledReasonTooltip>
         </BranchQuick>
       </BranchCard>
 

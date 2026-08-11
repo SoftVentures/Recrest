@@ -26,7 +26,11 @@
     "current": "(aktuell {{version}})",
     "install": "Installieren & neu starten",
     "download": "Herunterladen",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "installing": "Wird installiert…",
+    "installing_percent": "Wird installiert… {{percent}} %",
+    "install_failed": "Update konnte nicht installiert werden. Bitte manuell von der Release-Seite herunterladen.",
+    "download_failed": "Die Download-Seite konnte nicht geöffnet werden."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -332,7 +336,11 @@
       "fetch_all_error": "Fetch fehlgeschlagen",
       "pulled_one": "{{count}} Repo gepullt",
       "pulled_other": "{{count}} Repos gepullt",
-      "pull_all_error": "Pull fehlgeschlagen"
+      "pull_all_error": "Pull fehlgeschlagen",
+      "pull_all_confirm_title": "Alle Repos pullen?",
+      "pull_all_confirm_body_one": "Das pullt {{count}} Repo. Repos mit uncommitteten Änderungen an versionierten Dateien werden übersprungen und gemeldet.",
+      "pull_all_confirm_body_other": "Das pullt {{count}} Repos. Repos mit uncommitteten Änderungen an versionierten Dateien werden übersprungen und gemeldet.",
+      "pulled_partial": "{{ok}} gepullt, {{failed}} übersprungen: {{repos}}"
     }
   },
   "titlebar": {
@@ -480,6 +488,7 @@
       "remote": "Remote"
     },
     "commits": "Commits",
+    "loading": "Aktivität wird geladen…",
     "empty": "Keine Commits passen zum Filter.",
     "kpi": {
       "commits_week": "Commits · diese Woche",
@@ -996,6 +1005,8 @@
       "self_hosted": "Selbst gehostet",
       "status_connected": "Verbunden",
       "status_disconnected": "Nicht verbunden",
+      "status_invalid": "Token abgelehnt",
+      "status_unreachable": "Nicht überprüfbar",
       "token_placeholder": "Personal Access Token einfügen"
     },
     "saved": "Einstellungen gespeichert",
@@ -1156,5 +1167,10 @@
     "url_hint": "HTTPS oder SSH — GitHub, GitLab, Bitbucket oder selbst gehostet.",
     "connect_first": "Verbinde GitHub, GitLab oder Bitbucket in den Einstellungen, um deine Remote-Repositories hier zu durchsuchen.",
     "desc": "Importiere von einem verbundenen Anbieter, füge einen bestehenden Ordner hinzu oder klone von einer URL."
+  },
+  "settings_corrupt": {
+    "title": "Deine Einstellungsdatei konnte nicht gelesen werden",
+    "quarantined": "Recrest ist mit Standardwerten gestartet. Deine bisherigen Einstellungen — Repos, Gruppen, Pins und Scan-Pfade — liegen weiterhin unter {{path}} und lassen sich von Hand wiederherstellen.",
+    "not_quarantined": "Recrest ist mit Standardwerten gestartet. Die unlesbare Datei konnte nicht beiseitegelegt werden und liegt noch am alten Ort — sichere sie, bevor du eine Einstellung änderst."
   }
 }

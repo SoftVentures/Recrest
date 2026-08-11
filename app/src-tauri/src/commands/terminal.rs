@@ -88,6 +88,203 @@ fn is_console_terminal(id: &str) -> bool {
     matches!(id, "cmd" | "powershell")
 }
 
+/// A custom terminal command split into the program to run and its arguments.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CustomCommand {
+    pub program: String,
+    pub args: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Token {
+    text: String,
+    quoted: bool,
+}
+
+/// Split on whitespace but keep `"…"` and `'…'` segments intact. Backslashes
+/// stay literal: on Windows they are path separators, and treating them as
+/// POSIX escapes would mangle every native path the user pastes in.
+fn tokenize(raw: &str) -> Vec<Token> {
+    let mut out: Vec<Token> = Vec::new();
+    let mut cur = String::new();
+    let mut started = false;
+    let mut quoted = false;
+    let mut open_quote: Option<char> = None;
+
+    for c in raw.chars() {
+        match open_quote {
+            Some(q) if c == q => open_quote = None,
+            Some(_) => cur.push(c),
+            None if c == '"' || c == '\'' => {
+                open_quote = Some(c);
+                quoted = true;
+                started = true;
+            }
+            None if c.is_whitespace() => {
+                if started {
+                    out.push(Token {
+                        text: std::mem::take(&mut cur),
+                        quoted,
+                    });
+                    started = false;
+                    quoted = false;
+                }
+            }
+            None => {
+                cur.push(c);
+                started = true;
+            }
+        }
+    }
+    if started {
+        out.push(Token { text: cur, quoted });
+    }
+    out
+}
+
+/// Does `candidate` name an executable file on disk?
+///
+/// Unix additionally requires an execute bit: any regular file used to
+/// qualify, so a data file that happened to sit at the guessed path was
+/// accepted as the program and the spawn then failed with a confusing
+/// "permission denied". Windows accepts a program path without its extension,
+/// so the usual suffixes are probed too.
+fn looks_like_program(candidate: &str) -> bool {
+    if is_executable_file(Path::new(candidate)) {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        for ext in ["exe", "cmd", "bat", "com"] {
+            if is_executable_file(Path::new(&format!("{candidate}.{ext}"))) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+#[cfg(unix)]
+fn is_executable_file(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(path)
+        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable_file(path: &Path) -> bool {
+    // Windows has no execute bit; the extension carries that meaning and is
+    // handled by the caller.
+    path.is_file()
+}
+
+/// The forms a multi-token program candidate may take on disk.
+///
+/// On Unix the natural way to write a spaced path is `\ `-escaped
+/// (`/opt/my\ terminal --foo`). `tokenize` keeps backslashes literal — correct
+/// for Windows paths — so the rejoined candidate is `/opt/my\ terminal` while
+/// the real file is `/opt/my terminal`, and the probe never matched. Probing
+/// the unescaped form too makes the POSIX spelling work; the unescaped string
+/// is also what gets spawned, since `Command::new` does no shell processing.
+fn program_candidates(candidate: &str) -> Vec<String> {
+    #[cfg(unix)]
+    {
+        let mut out = vec![candidate.to_string()];
+        if candidate.contains("\\ ") {
+            out.push(candidate.replace("\\ ", " "));
+        }
+        out
+    }
+    #[cfg(not(unix))]
+    {
+        // Windows: a backslash is a path separator, never an escape.
+        vec![candidate.to_string()]
+    }
+}
+
+/// Parse the user's custom terminal command into program + args.
+///
+/// Naive whitespace splitting turns the default Windows install location
+/// (`C:\Program Files\Alacritty\alacritty.exe`) into the program `C:\Program`,
+/// so both the launcher and the Test button reported a nonsense error. Quoted
+/// segments are honoured, and an unquoted **absolute** program path containing
+/// spaces is recovered by probing leading runs of tokens for a real executable.
+pub fn parse_custom_command(raw: &str) -> Result<CustomCommand, CommandError> {
+    parse_custom_command_with(raw, looks_like_program)
+}
+
+/// Testable core of [`parse_custom_command`] with an injected file probe.
+///
+/// Two subtleties the probe/spawn pair depends on:
+///
+/// * Multi-token candidates must be **absolute**. The probe resolves a
+///   relative path against Recrest's process CWD while the spawn runs with
+///   `current_dir(repo)`, so a relative candidate could validate one file and
+///   execute a different one — or execute something the user never named,
+///   simply because a matching file happened to sit in the repo.
+/// * Shortest matching prefix wins, not longest. With longest-first a file
+///   literally named `foo.exe bar` would swallow the `bar` argument; the
+///   shortest match is the least surprising reading of the input.
+pub fn parse_custom_command_with(
+    raw: &str,
+    is_program: impl Fn(&str) -> bool,
+) -> Result<CustomCommand, CommandError> {
+    let tokens = tokenize(raw.trim());
+    let first = tokens
+        .first()
+        .ok_or_else(|| CommandError::bad_request("empty custom terminal command"))?;
+
+    let args_from =
+        |from: usize| -> Vec<String> { tokens[from..].iter().map(|t| t.text.clone()).collect() };
+
+    // An explicitly quoted program needs no guessing. `"" foo` tokenizes to an
+    // empty quoted first token, which would spawn the empty program.
+    if first.quoted {
+        return non_empty_program(CustomCommand {
+            program: first.text.clone(),
+            args: args_from(1),
+        });
+    }
+
+    for split in 2..=tokens.len() {
+        if tokens[..split].iter().any(|t| t.quoted) {
+            continue;
+        }
+        let joined = tokens[..split]
+            .iter()
+            .map(|t| t.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        for candidate in program_candidates(&joined) {
+            if !Path::new(&candidate).is_absolute() {
+                continue;
+            }
+            if is_program(&candidate) {
+                return non_empty_program(CustomCommand {
+                    program: candidate,
+                    args: args_from(split),
+                });
+            }
+        }
+    }
+
+    // Bare binary name resolved via PATH (`alacritty --working-directory …`).
+    non_empty_program(CustomCommand {
+        program: first.text.clone(),
+        args: args_from(1),
+    })
+}
+
+fn non_empty_program(cmd: CustomCommand) -> Result<CustomCommand, CommandError> {
+    if cmd.program.trim().is_empty() {
+        return Err(CommandError::bad_request(
+            "custom terminal command has no program",
+        ));
+    }
+    Ok(cmd)
+}
+
 /// Opens a terminal at `path`, honoring the user's `TerminalSettings`.
 /// Resolution order: explicit `custom_command` → chosen `id` → auto-detect.
 pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandError> {
@@ -97,12 +294,9 @@ pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandEr
         .as_deref()
         .filter(|s| !s.trim().is_empty())
     {
-        let mut parts = cmd.split_whitespace();
-        let program = parts
-            .next()
-            .ok_or_else(|| CommandError::bad_request("empty custom terminal command"))?;
-        let mut c = Command::new(program);
-        c.args(parts).current_dir(path);
+        let parsed = parse_custom_command(cmd)?;
+        let mut c = Command::new(&parsed.program);
+        c.args(&parsed.args).current_dir(path);
         return c
             .spawn()
             .map(|_| ())
@@ -459,11 +653,9 @@ pub async fn test_custom_terminal(command: String, cwd: String) -> Result<(), Co
     if trimmed.is_empty() {
         return Err(CommandError::bad_request("empty command"));
     }
-    let mut parts = trimmed.split_whitespace();
-    let bin = parts
-        .next()
-        .ok_or_else(|| CommandError::bad_request("empty command"))?;
-    let args: Vec<&str> = parts.collect();
+    // Same parser as `open_at`, so the Test button and the real launch can
+    // never disagree about what gets spawned.
+    let parsed = parse_custom_command(trimmed)?;
 
     let cwd_path = if cwd.trim().is_empty() {
         dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
@@ -475,8 +667,8 @@ pub async fn test_custom_terminal(command: String, cwd: String) -> Result<(), Co
     // to open — this command exists to verify the custom command actually
     // launches one. Spawning is treated as success because terminal emulators
     // detach into a long-running GUI process; waiting on the child would hang.
-    let mut cmd = tokio::process::Command::new(bin);
-    cmd.args(&args).current_dir(&cwd_path);
+    let mut cmd = tokio::process::Command::new(&parsed.program);
+    cmd.args(&parsed.args).current_dir(&cwd_path);
     cmd.spawn()
         .map(|_| ())
         .map_err(|e| CommandError::internal(format!("spawn failed: {e}")))
@@ -644,6 +836,216 @@ mod tests {
         let probe = |_: &str| true;
         let out = detect_terminals_with(&["kitty", "alacritty", "wezterm"], probe);
         assert!(out.iter().all(|d| d.available));
+    }
+
+    fn parse_no_files(raw: &str) -> CustomCommand {
+        parse_custom_command_with(raw, |_| false).expect("parsed")
+    }
+
+    #[test]
+    fn custom_command_rejects_blank_input() {
+        assert!(parse_custom_command_with("   ", |_| false).is_err());
+    }
+
+    #[test]
+    fn custom_command_keeps_bare_binary_and_args() {
+        let c = parse_no_files("alacritty --working-directory /work/my repo");
+        assert_eq!(c.program, "alacritty");
+        assert_eq!(
+            c.args,
+            vec![
+                "--working-directory".to_string(),
+                "/work/my".to_string(),
+                "repo".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn custom_command_honours_double_quoted_program_with_args() {
+        let c = parse_no_files("\"C:\\Program Files\\Alacritty\\alacritty.exe\" -e pwsh");
+        assert_eq!(c.program, "C:\\Program Files\\Alacritty\\alacritty.exe");
+        assert_eq!(c.args, vec!["-e".to_string(), "pwsh".to_string()]);
+    }
+
+    #[test]
+    fn custom_command_honours_single_quoted_posix_program() {
+        let c = parse_no_files("'/opt/my terminals/kitty' --single-instance");
+        assert_eq!(c.program, "/opt/my terminals/kitty");
+        assert_eq!(c.args, vec!["--single-instance".to_string()]);
+    }
+
+    #[test]
+    fn custom_command_keeps_quoted_arguments_intact() {
+        let c = parse_no_files("wezterm start --cwd \"/work/my repo\"");
+        assert_eq!(c.program, "wezterm");
+        assert_eq!(
+            c.args,
+            vec![
+                "start".to_string(),
+                "--cwd".to_string(),
+                "/work/my repo".to_string(),
+            ]
+        );
+    }
+
+    /// `C:\…` is only an absolute path on Windows, and multi-token candidates
+    /// must be absolute (the probe resolves relative paths against the process
+    /// CWD, the spawn against the repo dir). The Unix spelling of this case is
+    /// covered by `custom_command_recovers_unquoted_posix_path_with_spaces`.
+    #[cfg(windows)]
+    #[test]
+    fn custom_command_recovers_unquoted_program_path_with_spaces() {
+        // The probe stands in for "this file exists on disk".
+        let exe = "C:\\Program Files\\Alacritty\\alacritty.exe";
+        let c = parse_custom_command_with(&format!("{exe} --working-directory ."), |candidate| {
+            candidate == exe
+        })
+        .expect("parsed");
+        assert_eq!(c.program, exe);
+        assert_eq!(
+            c.args,
+            vec!["--working-directory".to_string(), ".".to_string()]
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn custom_command_recovers_unquoted_program_path_without_args() {
+        let exe = "C:\\Program Files\\Alacritty\\alacritty.exe";
+        let c = parse_custom_command_with(exe, |candidate| candidate == exe).expect("parsed");
+        assert_eq!(c.program, exe);
+        assert!(c.args.is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn custom_command_recovers_unquoted_posix_path_with_spaces() {
+        let exe = "/opt/my terminals/kitty";
+        let c = parse_custom_command_with(&format!("{exe} --single-instance"), |candidate| {
+            candidate == exe
+        })
+        .expect("parsed");
+        assert_eq!(c.program, exe);
+        assert_eq!(c.args, vec!["--single-instance".to_string()]);
+    }
+
+    /// A relative multi-token candidate must never be accepted: the probe
+    /// resolves it against Recrest's process CWD, while `open_at` spawns with
+    /// `current_dir(repo)` — so the file that was validated and the file that
+    /// runs can be two different files. Against the pre-fix parser the probe
+    /// matched and `program` became `my terminal`.
+    #[test]
+    fn custom_command_refuses_relative_multi_token_program() {
+        let c =
+            parse_custom_command_with("my terminal --foo", |candidate| candidate == "my terminal")
+                .expect("parsed");
+        assert_eq!(
+            c.program, "my",
+            "a relative spaced candidate must fall back to the bare first token"
+        );
+        assert_eq!(c.args, vec!["terminal".to_string(), "--foo".to_string()]);
+    }
+
+    /// Longest-prefix-first let a file literally named `foo.exe bar` swallow
+    /// the `bar` argument. Shortest match wins now.
+    #[test]
+    fn custom_command_prefers_the_shortest_matching_program_prefix() {
+        // Absolute on the host OS, so the multi-token path is eligible.
+        let short = if cfg!(windows) {
+            "C:\\bin\\a b"
+        } else {
+            "/bin/a b"
+        };
+        let long = format!("{short} c");
+        let c =
+            parse_custom_command_with(&long, |candidate| candidate == short || candidate == long)
+                .expect("parsed");
+        assert_eq!(
+            c.program, short,
+            "a file named `a b c` must not swallow the `c` argument"
+        );
+        assert_eq!(c.args, vec!["c".to_string()]);
+    }
+
+    /// `"" foo` used to produce an empty program and a spawn of "".
+    #[test]
+    fn custom_command_rejects_an_empty_quoted_program() {
+        assert!(parse_custom_command_with("\"\" foo", |_| false).is_err());
+        assert!(parse_custom_command_with("''", |_| false).is_err());
+    }
+
+    /// End-to-end against the real filesystem probe: an unquoted path with a
+    /// space, followed by an argument, must not be split at the space.
+    #[test]
+    fn custom_command_probes_the_real_filesystem_for_spaced_paths() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let dir = tmp.path().join("Program Files");
+        std::fs::create_dir_all(&dir).unwrap();
+        let exe = dir.join("my terminal.exe");
+        std::fs::write(&exe, "").unwrap();
+        mark_executable(&exe);
+
+        let raw = format!("{} --working-directory .", exe.display());
+        let c = parse_custom_command(&raw).expect("parsed");
+        assert_eq!(Path::new(&c.program), exe);
+        assert_eq!(
+            c.args,
+            vec!["--working-directory".to_string(), ".".to_string()]
+        );
+    }
+
+    /// On Unix the natural spelling of a spaced path is `\ `-escaped. The
+    /// tokenizer keeps the backslash literal (it is a Windows path separator),
+    /// so the probe has to try the unescaped form as well — and the
+    /// *unescaped* string is what must be spawned, since `Command::new` does
+    /// no shell processing. Against the pre-fix parser the program came back
+    /// as the bare first token `/…/my\`.
+    #[cfg(unix)]
+    #[test]
+    fn custom_command_resolves_a_backslash_escaped_posix_path() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let exe = tmp.path().join("my terminal");
+        std::fs::write(&exe, "").unwrap();
+        mark_executable(&exe);
+
+        let escaped = exe.display().to_string().replace(' ', "\\ ");
+        let c = parse_custom_command(&format!("{escaped} --foo")).expect("parsed");
+        assert_eq!(Path::new(&c.program), exe);
+        assert_eq!(c.args, vec!["--foo".to_string()]);
+    }
+
+    /// Unix: a regular file without an execute bit is not a program. It used
+    /// to qualify, so the probe accepted a data file and the spawn then failed
+    /// with a confusing permission error.
+    #[cfg(unix)]
+    #[test]
+    fn non_executable_file_is_not_treated_as_a_program() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let data = tmp.path().join("notes.txt");
+        std::fs::write(&data, "hello").unwrap();
+        assert!(!looks_like_program(&data.display().to_string()));
+        mark_executable(&data);
+        assert!(looks_like_program(&data.display().to_string()));
+    }
+
+    #[cfg(unix)]
+    fn mark_executable(path: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    #[cfg(not(unix))]
+    fn mark_executable(_path: &Path) {}
+
+    #[test]
+    fn custom_command_preserves_backslashes_as_path_separators() {
+        let c = parse_no_files("wt.exe -d C:\\repos\\recrest");
+        assert_eq!(c.program, "wt.exe");
+        assert_eq!(
+            c.args,
+            vec!["-d".to_string(), "C:\\repos\\recrest".to_string()]
+        );
     }
 
     #[test]

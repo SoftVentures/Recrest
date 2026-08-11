@@ -16,6 +16,13 @@ interface LoadedRepo {
  * `null` (existing repos cover the range) and the new repo would never be
  * walked until a manual refresh. When any known repo isn't fully covered we
  * re-walk the whole `range`; the reducer's sha index dedupes the overlap.
+ *
+ * This relies on `list_commits` returning a per-repo entry for **every** repo it
+ * visited, including ones it could not open — see `walk_commit_ranges` in
+ * `src-tauri/src/commands/repos.rs`. A repo that yields zero commits therefore
+ * still ends up with a non-null `rangeLoaded` ("fetched, empty"), which is what
+ * separates it from "not fetched yet". Without that marker a single unopenable
+ * repo pinned `hasUnloadedRepo` to `true` and defeated the cache permanently.
  */
 export function planFetchWindow(
   knownRepoIds: readonly string[],

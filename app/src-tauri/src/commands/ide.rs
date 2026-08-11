@@ -17,15 +17,16 @@ const IDE_COMMANDS: &[(&str, &str)] = &[
     ("idea", "idea"),
 ];
 
-/// Windows nutzt Wrapper-Skripte (`code.cmd`, `cursor.cmd`). Rust's
-/// `Command::new("code")` sucht standardmäßig nicht nach `.cmd`/`.bat`-Suffixen
-/// im PATH; wir müssen explizit jede Extension probieren.
+/// Windows ships wrapper scripts (`code.cmd`, `cursor.cmd`). Rust's
+/// `Command::new("code")` does not probe `.cmd`/`.bat` suffixes on the PATH by
+/// itself, so we try every extension explicitly. `.ps1` is listed last: it is
+/// launchable, but only through `powershell.exe` (see `plan_launch`).
 #[cfg(windows)]
 const WINDOWS_EXTENSIONS: &[&str] = &["cmd", "bat", "exe", "ps1"];
 
-/// Typische Installationspfade, wenn das CLI-Wrapper-Skript nicht auf dem
-/// PATH landet. GUI-App-Installationen (Drag-to-Applications, MSI, RPM) legen
-/// das CLI oft an diesen Orten ab ohne den PATH anzufassen.
+/// Typical install locations for when the CLI wrapper script never lands on
+/// the PATH. GUI installs (drag-to-Applications, MSI, RPM) frequently drop the
+/// CLI in one of these without touching the PATH.
 fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
     #[cfg(target_os = "macos")]
     {
@@ -60,9 +61,9 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
     #[cfg(windows)]
     {
         let _ = bin;
-        // LocalAppData/Programs ist der Default-Ort für per-User-Installs von
-        // VS Code / Cursor. Programme/ JetBrains Toolbox installiert Tools in
-        // scripts/ mit dem JetBrains-Toolbox-CLI.
+        // LocalAppData/Programs is the default location for per-user installs
+        // of VS Code / Cursor. JetBrains Toolbox installs its shims under
+        // scripts/ next to the Toolbox CLI.
         let mut paths = vec![];
         if let Some(local) = dirs::data_local_dir() {
             paths.push(local.join("Programs").join("Microsoft VS Code").join("bin"));
@@ -83,10 +84,9 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
     }
 }
 
-/// Versucht das Binary über `which` zu finden; greift bei Fehlschlag auf die
-/// plattformspezifischen Fallback-Verzeichnisse zurück. Gibt den **vollen
-/// Pfad** zurück, damit `Command::new(...)` keine eigene PATH-Auflösung
-/// machen muss (GUI-Apps haben oft reduzierten PATH).
+/// Resolves the binary via `which`, falling back to the platform-specific
+/// directories above. Returns the **full path** so `Command::new(...)` never
+/// has to do its own PATH lookup (GUI apps often inherit a reduced PATH).
 fn resolve_binary(bin: &str) -> Option<PathBuf> {
     if let Ok(path) = which::which(bin) {
         return Some(path);
@@ -204,20 +204,50 @@ fn file_args(ide_id: &str, file: &Path, line: u32, column: u32) -> Vec<OsString>
     }
 }
 
-/// Startet den IDE-Prozess so, dass er die Recrest-App **nicht** als
-/// Eltern-Prozess festhält — unter Windows sonst flackert ein Konsolen-Fenster
-/// auf, unter macOS/Linux ist es für Subprozess-Cleanup sauberer.
+/// Starts the IDE so it does **not** keep the Recrest app as its parent
+/// process — on Windows that would otherwise flash a console window, and on
+/// macOS/Linux it keeps subprocess cleanup tidy.
 fn spawn_detached(binary: &Path, repo_path: &Path) -> std::io::Result<()> {
     spawn_detached_args(binary, &[repo_path.as_os_str().to_owned()])
 }
 
+/// Decides what actually gets handed to `CreateProcess` / `execvp`.
+///
+/// Rust's `Command` special-cases `.bat`/`.cmd` (it routes them through
+/// `cmd.exe`), but `CreateProcess` cannot execute a `.ps1` at all — the spawn
+/// fails with the opaque "%1 is not a valid Win32 application". Some IDE CLIs
+/// only ship a PowerShell wrapper, and `resolve_binary` happily finds it, so
+/// launch those through `powershell.exe -File` instead of letting the spawn
+/// fail. `-NoProfile`/`-NonInteractive` keep a slow or prompting user profile
+/// from stalling the launch.
+fn plan_launch(binary: &Path, args: &[OsString], windows: bool) -> (OsString, Vec<OsString>) {
+    let is_ps1 = windows
+        && binary
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("ps1"));
+    if !is_ps1 {
+        return (binary.as_os_str().to_owned(), args.to_vec());
+    }
+    let mut wrapped = vec![
+        OsString::from("-NoProfile"),
+        OsString::from("-NonInteractive"),
+        OsString::from("-ExecutionPolicy"),
+        OsString::from("Bypass"),
+        OsString::from("-File"),
+        binary.as_os_str().to_owned(),
+    ];
+    wrapped.extend(args.iter().cloned());
+    (OsString::from("powershell.exe"), wrapped)
+}
+
 fn spawn_detached_args(binary: &Path, args: &[OsString]) -> std::io::Result<()> {
-    let mut cmd = Command::new(binary);
-    cmd.args(args);
+    let (program, args) = plan_launch(binary, args, cfg!(windows));
+    let mut cmd = Command::new(program);
+    cmd.args(&args);
 
     #[cfg(windows)]
     {
-        // CREATE_NO_WINDOW verhindert das kurze schwarze Konsolenfenster.
+        // CREATE_NO_WINDOW suppresses the brief black console window.
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         cmd.creation_flags(CREATE_NO_WINDOW);
@@ -226,9 +256,9 @@ fn spawn_detached_args(binary: &Path, args: &[OsString]) -> std::io::Result<()> 
     cmd.spawn().map(|_| ())
 }
 
-/// Listet die IDs aller IDEs auf, deren CLI-Binary wir auf dem System finden.
-/// Nutzt dieselbe Auflösung wie `open_repo`, damit Settings-Dropdown und
-/// tatsächlicher Launch konsistent bleiben.
+/// Lists the ids of every IDE whose CLI binary we can find on this system.
+/// Uses the same resolution as `open_repo` so the Settings dropdown and the
+/// actual launch stay consistent.
 pub fn detect_installed_ides() -> Vec<String> {
     IDE_COMMANDS
         .iter()
@@ -239,4 +269,58 @@ pub fn detect_installed_ides() -> Vec<String> {
 #[tauri::command]
 pub fn detect_ides() -> Vec<String> {
     detect_installed_ides()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn os(v: &str) -> OsString {
+        OsString::from(v)
+    }
+
+    #[test]
+    fn plain_executables_are_launched_directly() {
+        let binary = PathBuf::from("C:\\Program Files\\Microsoft VS Code\\bin\\code.cmd");
+        let args = vec![os("C:\\repos\\recrest")];
+        let (program, planned) = plan_launch(&binary, &args, true);
+        assert_eq!(program, binary.as_os_str());
+        assert_eq!(planned, args);
+    }
+
+    #[test]
+    fn ps1_wrappers_are_launched_through_powershell() {
+        let binary = PathBuf::from("C:\\tools\\cursor.ps1");
+        let args = vec![os("--goto"), os("C:\\repos\\recrest\\main.rs:12:3")];
+        let (program, planned) = plan_launch(&binary, &args, true);
+        assert_eq!(program, os("powershell.exe"));
+        assert_eq!(
+            planned,
+            vec![
+                os("-NoProfile"),
+                os("-NonInteractive"),
+                os("-ExecutionPolicy"),
+                os("Bypass"),
+                os("-File"),
+                binary.as_os_str().to_owned(),
+                os("--goto"),
+                os("C:\\repos\\recrest\\main.rs:12:3"),
+            ]
+        );
+    }
+
+    #[test]
+    fn ps1_detection_is_case_insensitive() {
+        let (program, _) = plan_launch(&PathBuf::from("C:\\tools\\cursor.PS1"), &[], true);
+        assert_eq!(program, os("powershell.exe"));
+    }
+
+    #[test]
+    fn ps1_handling_is_windows_only() {
+        let binary = PathBuf::from("/opt/weird/cursor.ps1");
+        let args = vec![os("/work/repo")];
+        let (program, planned) = plan_launch(&binary, &args, false);
+        assert_eq!(program, binary.as_os_str());
+        assert_eq!(planned, args);
+    }
 }

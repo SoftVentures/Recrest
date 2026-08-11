@@ -108,11 +108,14 @@ export const TEST_IDS = {
     row: "repo-row",
     rowName: "repo-row-name",
     rowDelete: "repo-row-delete",
+    rowForget: "repo-row-forget",
     rowPinToggle: "repo-row-pin-toggle",
+    missingBadge: "repo-missing-badge",
     card: "repo-card",
     cardName: "repo-card-name",
     contextMenu: "repo-context-menu",
     detailPane: "detail-pane",
+    detailPaneMissingBadge: "detail-pane-missing-badge",
   },
 
   contextMenu: {
@@ -122,6 +125,7 @@ export const TEST_IDS = {
   repoDetail: {
     page: "repo-detail-page",
     back: "repo-detail-back",
+    missingBadge: "repo-detail-missing-badge",
     avatarEdit: "repo-detail-avatar-edit",
     avatarReset: "repo-detail-avatar-reset",
     avatarMenu: "repo-avatar-menu",
@@ -213,6 +217,7 @@ export const TEST_IDS = {
     stateBadge: "mr-row-state-badge",
     detailPanel: "mr-detail-panel",
     detailPage: "mr-detail-page",
+    detailLoading: "mr-detail-loading",
     openFullView: "mr-detail-open-full",
     backToList: "mr-detail-back",
     editDescription: "mr-detail-edit-description",
@@ -412,6 +417,7 @@ export const TEST_IDS = {
 
     accounts: {
       connectButton: "settings-accounts-connect",
+      disconnectButton: "settings-accounts-disconnect",
       tokenCreateLink: "settings-accounts-token-create-link",
       providerRow: <T extends string>(id: T) => `settings-accounts-provider-${id}` as const,
       statusPill: <T extends string>(id: T) => `settings-accounts-status-${id}` as const,
@@ -439,6 +445,8 @@ export const TEST_IDS = {
       contributorsError: "settings-about-contributors-error",
       contributorRow: <T extends string>(login: T) =>
         `settings-about-contributor-${login}` as const,
+      contributorCommits: <T extends string>(login: T) =>
+        `settings-about-contributor-commits-${login}` as const,
     },
 
     developer: {
@@ -507,6 +515,7 @@ export const TEST_IDS = {
     install: "updater-banner-install",
     download: "updater-banner-download",
     dismiss: "updater-banner-dismiss",
+    progress: "updater-banner-progress",
   },
 
   confirmDialog: {
@@ -637,6 +646,7 @@ export const TEST_IDS = {
     stashSave: "working-copy-stash-save",
     stashList: "working-copy-stash-list",
     stashRow: (index: number) => `working-copy-stash-row-${index}` as const,
+    stashIndex: (index: number) => `working-copy-stash-index-${index}` as const,
     stashPop: (index: number) => `working-copy-stash-pop-${index}` as const,
     stashDrop: (index: number) => `working-copy-stash-drop-${index}` as const,
     commit: "working-copy-commit",
@@ -679,6 +689,9 @@ export const TEST_IDS = {
     providerConnected: "onboarding-provider-connected",
     patHelpDocs: "onboarding-pat-help-docs",
     patHelpCreate: "onboarding-pat-help-create",
+    /** Scope ids carry provider punctuation (`read:user`, `account:read`) —
+     *  kept verbatim so the testid maps 1:1 onto the rendered scope. */
+    patHelpScope: <T extends string>(scope: T) => `onboarding-pat-help-scope-${scope}` as const,
     gitlabVariantCloud: "onboarding-gitlab-variant-cloud",
     gitlabVariantSelf: "onboarding-gitlab-variant-self",
     gitlabVariantDomain: "onboarding-gitlab-variant-domain",

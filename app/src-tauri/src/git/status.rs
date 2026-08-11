@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
-use git2::{DiffOptions, Repository, Status, StatusOptions, TreeWalkMode, TreeWalkResult};
+use git2::{
+    BranchType, DiffOptions, Repository, Status, StatusOptions, TreeWalkMode, TreeWalkResult,
+};
 use serde::Serialize;
 
 /// Cap the `changed_files` list so a mega-dirty working tree never sends
@@ -62,8 +64,8 @@ pub struct CommitInfo {
 pub struct ChangedFile {
     pub path: String,
     pub status: ChangedFileStatus,
-    /// Art der Änderung (added/modified/deleted/…) unabhängig vom Staging-State.
-    /// Das Frontend färbt Listen-Einträge danach.
+    /// Kind of change (added/modified/deleted/…), independent of the staging
+    /// state. The frontend colours list entries by this.
     pub kind: ChangedFileKind,
     pub has_unstaged_changes: bool,
 }
@@ -245,11 +247,11 @@ pub fn read_status(path: &Path) -> Result<RepoStatusDto, git2::Error> {
     })
 }
 
-/// Leitet die Art der Änderung aus den git2-Status-Flags ab. Für Staged-
-/// Einträge schauen wir auf die Index-Flags, sonst auf die Worktree-Flags;
-/// Untracked zählt als Added (die Datei ist komplett neu). Conflicts bleiben
-/// als „Modified" klassifiziert — die Diff-Sicht muss eh vom User aufgelöst
-/// werden, die Zusatzinfo hilft der Listenfarbe nicht.
+/// Derives the kind of change from git2's status flags. Staged entries are
+/// read from the index flags, everything else from the worktree flags;
+/// untracked counts as added (the file is entirely new). Conflicts stay
+/// classified as "modified" — the user has to resolve them in the diff view
+/// anyway, and the extra detail wouldn't help the row colour.
 fn classify_kind(s: Status, primary: ChangedFileStatus) -> ChangedFileKind {
     match primary {
         ChangedFileStatus::Untracked => ChangedFileKind::Added,
@@ -308,10 +310,30 @@ fn ahead_behind(repo: &Repository) -> Option<(usize, usize)> {
     let head = repo.head().ok()?;
     let local_oid = head.target()?;
     let shorthand = head.shorthand()?;
-    let upstream_name = format!("refs/remotes/origin/{shorthand}");
-    let upstream = repo.find_reference(&upstream_name).ok()?;
-    let upstream_oid = upstream.target()?;
+    let upstream_oid = upstream_oid(repo, shorthand)?;
     repo.graph_ahead_behind(local_oid, upstream_oid).ok()
+}
+
+/// OID of the branch's upstream. Reads the branch's own tracking configuration
+/// first — hardcoding `origin` reported 0/0 for every fork whose remote is
+/// named anything else, which reads as "up to date" while arbitrarily far
+/// behind. `git/branches.rs` has always resolved it this way.
+///
+/// The `refs/remotes/origin/<branch>` fallback only covers branches with no
+/// tracking config at all, where guessing `origin` is still better than
+/// reporting nothing.
+fn upstream_oid(repo: &Repository, branch: &str) -> Option<git2::Oid> {
+    let configured = repo
+        .find_branch(branch, BranchType::Local)
+        .ok()
+        .and_then(|local| local.upstream().ok())
+        .and_then(|up| up.get().target());
+    if configured.is_some() {
+        return configured;
+    }
+    repo.find_reference(&format!("refs/remotes/origin/{branch}"))
+        .ok()?
+        .target()
 }
 
 /// Walk HEAD backwards and bucket commits into the last 14 local-time days.
@@ -392,20 +414,19 @@ fn worktree_diff_lines(repo: &Repository) -> Result<(u64, u64), git2::Error> {
     Ok((stats.insertions() as u64, stats.deletions() as u64))
 }
 
+/// The dominant file extension plus the full byte-weighted breakdown across
+/// extensions, as produced by one HEAD-tree walk.
+type LanguageDetection = (
+    Option<String>,
+    Option<std::collections::BTreeMap<String, u64>>,
+);
+
 /// Walks the HEAD tree (capped), groups paths by file extension, and returns
 /// both the single dominant extension AND the full byte-weighted breakdown
 /// across extensions. The frontend maps extensions to language names/colors
 /// via the `linguist-languages` dataset — keeping linguist-logic off the
 /// Rust side.
-fn detect_languages(
-    repo: &Repository,
-) -> Result<
-    (
-        Option<String>,
-        Option<std::collections::BTreeMap<String, u64>>,
-    ),
-    git2::Error,
-> {
+fn detect_languages(repo: &Repository) -> Result<LanguageDetection, git2::Error> {
     let Ok(head) = repo.head() else {
         return Ok((None, None));
     };
@@ -465,4 +486,118 @@ fn trailing_extension(name: &str) -> Option<String> {
         return None;
     }
     Some(ext.to_ascii_lowercase())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::TempRepo;
+    use tempfile::TempDir;
+
+    fn head_branch(repo: &Repository) -> String {
+        repo.head()
+            .expect("head")
+            .shorthand()
+            .expect("shorthand")
+            .to_string()
+    }
+
+    /// Upstream repo + a working clone of it on disk. Local-path remotes let
+    /// the fetch run for real without a network.
+    struct ClonePair {
+        origin: TempRepo,
+        clone_dir: TempDir,
+        branch: String,
+    }
+
+    impl ClonePair {
+        fn new() -> Self {
+            let origin = TempRepo::init();
+            origin.commit_file("file.txt", "v1\n", "initial");
+            let branch = head_branch(&origin.repo);
+
+            let clone_dir = TempDir::new().expect("tempdir");
+            let url = origin.dir.path().to_string_lossy().replace('\\', "/");
+            Repository::clone(&url, clone_dir.path().join("clone")).expect("clone");
+
+            Self {
+                origin,
+                clone_dir,
+                branch,
+            }
+        }
+
+        fn clone_path(&self) -> std::path::PathBuf {
+            self.clone_dir.path().join("clone")
+        }
+
+        fn fetch_clone(&self, remote: &str) {
+            let repo = Repository::open(self.clone_path()).expect("open clone");
+            let mut r = repo.find_remote(remote).expect("find remote");
+            r.fetch(&[] as &[&str], None, None).expect("fetch");
+        }
+    }
+
+    #[test]
+    fn ahead_behind_follows_a_renamed_remote_via_the_branch_upstream() {
+        let pair = ClonePair::new();
+        {
+            let repo = Repository::open(pair.clone_path()).expect("open clone");
+            let problems = repo.remote_rename("origin", "upstream").expect("rename");
+            assert!(problems.is_empty(), "refspec problems after rename");
+        }
+        pair.origin
+            .commit_file("file.txt", "v2\n", "upstream change");
+        pair.fetch_clone("upstream");
+
+        let status = read_status(&pair.clone_path()).expect("status");
+        assert_eq!(
+            (status.ahead, status.behind),
+            (0, 1),
+            "a fork whose remote isn't called 'origin' must still report divergence"
+        );
+    }
+
+    #[test]
+    fn ahead_behind_uses_the_configured_upstream_for_a_normal_clone() {
+        let pair = ClonePair::new();
+        pair.origin
+            .commit_file("file.txt", "v2\n", "upstream change");
+        pair.fetch_clone("origin");
+
+        let status = read_status(&pair.clone_path()).expect("status");
+        assert_eq!((status.ahead, status.behind), (0, 1));
+        assert_eq!(status.branch.as_deref(), Some(pair.branch.as_str()));
+    }
+
+    #[test]
+    fn ahead_behind_falls_back_to_origin_when_no_tracking_config_exists() {
+        let tr = TempRepo::init();
+        let first = tr.commit_file("a.txt", "a\n", "init");
+        tr.commit_file("a.txt", "b\n", "second");
+        let branch = head_branch(&tr.repo);
+
+        // A remote-tracking ref with no `branch.<name>.remote` config at all —
+        // the only case where guessing `origin` is still the best we can do.
+        tr.repo
+            .reference(
+                &format!("refs/remotes/origin/{branch}"),
+                first,
+                true,
+                "test: seed remote ref",
+            )
+            .expect("seed remote ref");
+
+        let status = read_status(tr.dir.path()).expect("status");
+        assert_eq!((status.ahead, status.behind), (1, 0));
+    }
+
+    #[test]
+    fn ahead_behind_is_zero_without_any_upstream() {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+
+        let status = read_status(tr.dir.path()).expect("status");
+        assert_eq!((status.ahead, status.behind), (0, 0));
+    }
 }

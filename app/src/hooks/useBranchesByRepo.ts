@@ -49,10 +49,22 @@ export function useBranchesByRepo(repos: EnrichedRepo[]): {
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let cancelled = false;
+
     void (async () => {
-      unlisten = await listen<{ repoId: string }>(EventChannel.REPO_STATUS, () => reload());
+      const off = await listen<{ repoId: string }>(EventChannel.REPO_STATUS, () => reload());
+      // `reload` changes as soon as the repo set resolves, so the cleanup for
+      // the first effect run routinely fires before `listen` resolved. Without
+      // this guard that subscription leaks and re-fetches branches for every
+      // repo on every `repo://status` event.
+      if (cancelled) off();
+      else unlisten = off;
     })();
-    return () => unlisten?.();
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, [reload]);
 
   const data = useMemo<BranchesByRepo[]>(

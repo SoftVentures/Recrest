@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { PILL_TONE_ATTR, PROVIDER_STATUS_COPY } from "../../helpers/constants.js";
 import { TEST_IDS } from "../../helpers/test-ids";
 
 /**
@@ -19,10 +20,11 @@ test.describe("app / settings — connect provider token", () => {
     const row = page.getByTestId(TEST_IDS.settings.accounts.providerRow("gitlab"));
     await expect(row).toBeVisible();
 
-    // Starts disconnected ("Not connected").
-    await expect(row.getByTestId(TEST_IDS.settings.accounts.statusPill("gitlab"))).toHaveText(
-      /not connected/i,
-    );
+    // State via data-tone, label via the EN bundle — a rewording must not fail
+    // a state assertion.
+    const pill = row.getByTestId(TEST_IDS.settings.accounts.statusPill("gitlab"));
+    await expect(pill).toHaveAttribute(PILL_TONE_ATTR, "disconnected");
+    await expect(pill).toHaveText(PROVIDER_STATUS_COPY.disconnected);
 
     // Expand the token form, paste a token, save.
     await row.getByTestId(TEST_IDS.settings.accounts.connectButton).click();
@@ -33,11 +35,9 @@ test.describe("app / settings — connect provider token", () => {
 
     await row.getByTestId(TEST_IDS.settings.accounts.tokenSave).click();
 
-    // The row now reports connected (exact "Connected", not "Not connected")
-    // and the connect button is gone.
-    await expect(row.getByTestId(TEST_IDS.settings.accounts.statusPill("gitlab"))).toHaveText(
-      "Connected",
-    );
+    // The row now reports connected and the connect button is gone.
+    await expect(pill).toHaveAttribute(PILL_TONE_ATTR, "connected");
+    await expect(pill).toHaveText(PROVIDER_STATUS_COPY.connected);
     await expect(row.getByTestId(TEST_IDS.settings.accounts.connectButton)).toHaveCount(0);
   });
 
@@ -48,8 +48,8 @@ test.describe("app / settings — connect provider token", () => {
 
     const row = page.getByTestId(TEST_IDS.settings.accounts.providerRow("github"));
     await expect(row).toBeVisible();
-    await expect(row.getByTestId(TEST_IDS.settings.accounts.statusPill("github"))).toHaveText(
-      "Connected",
-    );
+    const pill = row.getByTestId(TEST_IDS.settings.accounts.statusPill("github"));
+    await expect(pill).toHaveAttribute(PILL_TONE_ATTR, "connected");
+    await expect(pill).toHaveText(PROVIDER_STATUS_COPY.connected);
   });
 });

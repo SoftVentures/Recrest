@@ -43,6 +43,8 @@
     "open_folder": "Ordner öffnen",
     "open_terminal": "Terminal öffnen",
     "more_actions": "Weitere Aktionen",
+    "missing": "Repository-Ordner existiert nicht mehr auf der Festplatte",
+    "remove_missing": "Fehlendes Repository aus Recrest entfernen",
     "close_detail_pane": "Detailbereich schließen",
     "view_toggle": "Repository-Ansicht",
     "heatmap": "Aktivitäts-Heatmap",

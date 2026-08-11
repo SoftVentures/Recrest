@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addRepo,
+  backgroundScanForRepos,
   clearRepoLogo,
   deleteRepo,
   forgetReposUnderPath,
@@ -31,6 +32,7 @@ import {
   loadRepos,
   refreshRepoStatus,
   removeRepo,
+  repoRemoved,
   scanForRepos,
   setGroups,
   setRepoLogo,
@@ -98,8 +100,23 @@ describe("reposReducer", () => {
 
   it("mirrors scan paths from saveSettings.fulfilled", () => {
     const payload = { scanPaths: ["/y"] } as unknown as AppSettings;
-    const next = reposReducer(initial(), saveSettings.fulfilled(payload, "internal-id", {}));
+    const next = reposReducer(
+      initial(),
+      saveSettings.fulfilled(payload, "internal-id", {}, { seq: 1 }),
+    );
     expect(next.scanPaths).toEqual(["/y"]);
+  });
+
+  it("ignores a superseded saveSettings snapshot", () => {
+    // Concurrent `update_settings` responses complete out of order; the older
+    // one must not restore the scan root the user just removed.
+    const newest = { scanPaths: ["/a", "/b"] } as unknown as AppSettings;
+    const stale = { scanPaths: ["/a"] } as unknown as AppSettings;
+
+    let state = reposReducer(initial(), saveSettings.fulfilled(newest, "id-2", {}, { seq: 2 }));
+    state = reposReducer(state, saveSettings.fulfilled(stale, "id-1", {}, { seq: 1 }));
+
+    expect(state.scanPaths).toEqual(["/a", "/b"]);
   });
 
   it("upserts a repo keyed by id", () => {
@@ -137,6 +154,29 @@ describe("reposReducer", () => {
       scanForRepos.rejected(new Error("scan boom"), "internal-id", []),
     );
     expect(next.error).toBe("scan boom");
+  });
+
+  it("replaces items on backgroundScanForRepos.fulfilled without touching chrome state", () => {
+    const start = withRepo(repo({ id: "old" }));
+    const pending = reposReducer(start, backgroundScanForRepos.pending("internal-id", ["/dev"]));
+    // The header refresh indicator reads `loading` — an unattended scan must
+    // never make it spin.
+    expect(pending.loading).toBe(false);
+    const next = reposReducer(
+      pending,
+      backgroundScanForRepos.fulfilled([repo({ id: "new" })], "internal-id", ["/dev"]),
+    );
+    expect(Object.keys(next.items)).toEqual(["new"]);
+    expect(next.loading).toBe(false);
+  });
+
+  it("keeps the error banner clear when a background rescan fails", () => {
+    const next = reposReducer(
+      initial(),
+      backgroundScanForRepos.rejected(new Error("scan boom"), "internal-id", ["/dev"]),
+    );
+    expect(next.error).toBeNull();
+    expect(next.loading).toBe(false);
   });
 
   it("sets loading on loadRepos.pending and replaces items on fulfilled", () => {
@@ -239,6 +279,26 @@ describe("reposReducer", () => {
     const start = withRepo(repo({ id: "r1" }));
     const next = reposReducer(start, deleteRepo.fulfilled("r1", "internal-id", { repoId: "r1" }));
     expect(next.items["r1"]).toBeUndefined();
+  });
+
+  it("drops the repo on repoRemoved when the record was forgotten", () => {
+    let state = withRepo(repo({ id: "gone" }));
+    state = reposReducer(state, upsertRepo(repo({ id: "kept" })));
+    const next = reposReducer(state, repoRemoved({ repoId: "gone", forgotten: true }));
+    expect(next.items["gone"]).toBeUndefined();
+    expect(next.items["kept"]).toBeDefined();
+  });
+
+  it("flags the repo as missing on repoRemoved when the record was kept", () => {
+    const start = withRepo(repo({ id: "r1" }));
+    const next = reposReducer(start, repoRemoved({ repoId: "r1", forgotten: false }));
+    expect(next.items["r1"]).toBeDefined();
+    expect(next.items["r1"]?.missing).toBe(true);
+  });
+
+  it("ignores repoRemoved for an unknown repo", () => {
+    const next = reposReducer(initial(), repoRemoved({ repoId: "ghost", forgotten: false }));
+    expect(next.items["ghost"]).toBeUndefined();
   });
 
   it("updates repo.status from a direct-status git action (gitFetch)", () => {

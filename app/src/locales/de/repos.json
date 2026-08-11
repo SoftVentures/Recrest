@@ -51,7 +51,14 @@
   "status": {
     "clean": "Sauber",
     "dirty": "Uncommittete Änderungen",
-    "conflicted": "Konflikte"
+    "conflicted": "Konflikte",
+    "missing": "Ordner fehlt"
+  },
+  "missing": {
+    "title": "Ordner existiert nicht mehr",
+    "description": "Recrest erreicht \"{{path}}\" nicht mehr. Stelle den Ordner wieder her oder entferne das Repository aus Recrest.",
+    "action_unavailable": "Der Ordner dieses Repositories existiert nicht mehr auf der Festplatte.",
+    "remove": "Aus Recrest entfernen"
   },
   "detail": {
     "branch": "Branch",
@@ -195,7 +202,6 @@
     "submit_error": "Commit fehlgeschlagen",
     "missing_git_config": "Setze user.name und user.email in Einstellungen → Git-Config, um zu committen."
   },
-  "stash_index": "stash@{{{index}}}",
   "add_modal": {
     "clone_url_placeholder": "https://github.com/owner/repo.git",
     "clone_dest_placeholder": "/Users/du/Code",

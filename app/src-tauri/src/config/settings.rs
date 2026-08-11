@@ -575,7 +575,10 @@ mod tests {
         assert!(changed, "glassy must trigger a rewrite");
         assert_eq!(appearance.theme_id, "dark");
         assert!(appearance.translucency.enabled);
-        assert_eq!(appearance.translucency.intensity, default_translucency_intensity());
+        assert_eq!(
+            appearance.translucency.intensity,
+            default_translucency_intensity()
+        );
     }
 
     #[test]
@@ -694,7 +697,10 @@ mod tests {
         let parsed: AppSettings = serde_json::from_str(legacy).expect("legacy appearance json");
         assert_eq!(parsed.appearance.theme_id, "dark");
         assert!(!parsed.appearance.translucency.enabled);
-        assert_eq!(parsed.appearance.translucency.intensity, default_translucency_intensity());
+        assert_eq!(
+            parsed.appearance.translucency.intensity,
+            default_translucency_intensity()
+        );
     }
 
     /// Legacy `RepoRecord` (no `sshKeyPath`) still loads.

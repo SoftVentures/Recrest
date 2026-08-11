@@ -4,9 +4,23 @@ export type { ProviderId };
 
 export type ProviderAuthMethod = "oauth" | "pat";
 
+/** Live credential state of a provider connection. Mirrors the Rust
+ *  `providers::r#trait::ProviderAuthState` (serde camelCase).
+ *
+ *  - `disconnected` — no credentials stored.
+ *  - `connected` — credentials stored and just accepted by the provider.
+ *  - `invalid` — credentials stored but rejected (revoked / expired /
+ *    missing scope). This is the state a revoked PAT used to hide in.
+ *  - `unreachable` — credentials stored, provider not reachable, validity
+ *    unknown. Deliberately not `invalid`: offline is not a revoked token. */
+export type ProviderAuthState = "disconnected" | "connected" | "invalid" | "unreachable";
+
 export interface ProviderConnection {
   providerId: ProviderId;
   displayName: string;
+  /** Whether the account is usable. `false` for both "no credentials" and
+   *  "credentials rejected" — read `authState` to tell those apart. A
+   *  provider that merely could not be reached stays `true`. */
   connected: boolean;
   username: string | null;
   supportsOauth: boolean;
@@ -14,6 +28,11 @@ export interface ProviderConnection {
    *  default otherwise. Null only for providers that don't expose one
    *  (none today). */
   baseUrl: string | null;
+  /** Live credential state. Required: the backend always sends it, and making
+   *  it optional let the UI fall back to `disconnected` — which is exactly the
+   *  bug being fixed, a revoked token reading as "Not connected". A regressed
+   *  backend DTO now fails the typecheck instead of degrading silently. */
+  authState: ProviderAuthState;
 }
 
 export interface ProviderConfig {

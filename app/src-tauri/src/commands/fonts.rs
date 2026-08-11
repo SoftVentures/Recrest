@@ -123,7 +123,7 @@ pub async fn list_custom_fonts(app: AppHandle) -> Result<Vec<CustomFont>, Comman
         .filter(|p| p.is_file())
         .filter_map(|p| read_font(&p))
         .collect();
-    fonts.sort_by(|a, b| a.family.to_lowercase().cmp(&b.family.to_lowercase()));
+    fonts.sort_by_key(|f| f.family.to_lowercase());
     Ok(fonts)
 }
 

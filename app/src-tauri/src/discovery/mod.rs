@@ -41,14 +41,14 @@ pub enum LaunchSpec {
     #[serde(rename_all = "camelCase")]
     AppBundle { bundle_path: PathBuf },
     #[serde(rename_all = "camelCase")]
-    Executable {
-        binary: PathBuf,
-        args: Vec<String>,
-    },
+    Executable { binary: PathBuf, args: Vec<String> },
     #[serde(rename_all = "camelCase")]
     DesktopEntry { exec: String },
 }
 
+// cfg-dispatch chain: each arm is a block *statement*, so the `return` is
+// required on every platform; clippy only sees the active one.
+#[allow(clippy::needless_return)]
 fn scan_now() -> Vec<DiscoveredApp> {
     #[cfg(target_os = "macos")]
     {

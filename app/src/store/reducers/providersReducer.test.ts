@@ -22,6 +22,7 @@ function connection(overrides: Partial<ProviderConnection> = {}): ProviderConnec
     username: overrides.username ?? "octocat",
     supportsOauth: overrides.supportsOauth ?? false,
     baseUrl: overrides.baseUrl ?? "https://api.github.com",
+    authState: overrides.authState ?? "connected",
   };
 }
 

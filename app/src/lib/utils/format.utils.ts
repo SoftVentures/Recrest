@@ -1,3 +1,7 @@
+import { useMemo } from "react";
+
+import { useResolvedLocale } from "@/lib/utils/datetime.utils";
+
 /**
  * Human-readable binary byte size. Uses 1024-based units (KiB, MiB, GiB) but
  * keeps the more familiar abbreviations the user sees on Finder/Explorer
@@ -20,4 +24,41 @@ export function formatBytes(bytes: number): string {
   }
   const decimals = idx === 0 ? 0 : value >= 10 ? 1 : 2;
   return `${value.toFixed(decimals)} ${units[idx]}`;
+}
+
+/**
+ * Locale-aware number rendering (grouping + decimal separators). The
+ * counterpart to `datetime.utils`' date helpers: bare `toLocaleString()` picks
+ * up the *host* locale, so a German UI on a US machine would render
+ * "1,234" instead of "1.234". Always route user-visible numbers through here.
+ *
+ * Non-finite input collapses to an em dash so callers can pass raw backend
+ * numbers without guarding. An unknown/malformed locale tag falls back to
+ * `en` rather than throwing.
+ */
+export function formatNumber(
+  value: number,
+  locale: string = "en",
+  options?: Intl.NumberFormatOptions,
+): string {
+  if (!Number.isFinite(value)) return "—";
+  try {
+    return new Intl.NumberFormat(locale || "en", options).format(value);
+  } catch {
+    return new Intl.NumberFormat("en", options).format(value);
+  }
+}
+
+/** `formatNumber` bound to the active UI language + region preference.
+ *  Mirrors `useDateTimeFormat` so components never reach for `Intl` directly. */
+export function useNumberFormat() {
+  const locale = useResolvedLocale();
+  return useMemo(
+    () => ({
+      locale,
+      formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+        formatNumber(value, locale, options),
+    }),
+    [locale],
+  );
 }

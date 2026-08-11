@@ -61,10 +61,16 @@ import "@fontsource/space-grotesk/700.css";
  * (installed via `addInitScript` before the page loads) are never overridden.
  */
 async function bootstrap(): Promise<void> {
-  const isDemoBuild = import.meta.env.MODE === "demo";
-  if ((import.meta.env.DEV || isDemoBuild) && !("__TAURI_INTERNALS__" in window)) {
+  // Both `import.meta.env.*` reads MUST stay inline literals — hoisting either
+  // into a `const` hides the statically replaced value behind a runtime binding
+  // and defeats the bundler's dead-code elimination, which would ship the dev
+  // IPC stub + seed to desktop users. `yarn guard:devstub` asserts this.
+  if (
+    (import.meta.env.DEV || import.meta.env.MODE === "demo") &&
+    !("__TAURI_INTERNALS__" in window)
+  ) {
     const { installDevTauriStub } = await import("@/lib/tauri/devStub");
-    if (isDemoBuild) {
+    if (import.meta.env.MODE === "demo") {
       const { installDemoBridge, readDemoParams } = await import("@/lib/demo/demoBridge");
       const params = readDemoParams();
       installDevTauriStub(params.themeId ? { themeId: params.themeId } : undefined);

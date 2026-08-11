@@ -105,6 +105,7 @@ export const TauriCommand = {
 
   // settings
   GET_SETTINGS: "get_settings",
+  GET_SETTINGS_CORRUPTION: "get_settings_corruption",
   UPDATE_SETTINGS: "update_settings",
   FACTORY_RESET: "factory_reset",
 

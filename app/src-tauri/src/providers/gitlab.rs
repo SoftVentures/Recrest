@@ -21,6 +21,11 @@ pub const PROVIDER_ID: &str = "gitlab";
 const API_BASE: &str = "https://gitlab.com/api/v4";
 const PER_PAGE: u32 = 100;
 const MAX_PAGES: u32 = 10;
+/// Hard cap for the open-MR listing: 3 x 100 = 300 open MRs per project. The
+/// list used to stop dead at a single unpaginated 50, silently; the first fix
+/// overshot to 1000, which is far more than the UI can present. Kept in step
+/// with `github::MAX_PR_PAGES` / `bitbucket::MAX_PR_PAGES`.
+const MAX_PR_PAGES: u32 = 3;
 
 const OAUTH_CLIENT_ID: Option<&str> = option_env!("RECREST_GITLAB_OAUTH_CLIENT_ID");
 const OAUTH_CLIENT_SECRET: Option<&str> = option_env!("RECREST_GITLAB_OAUTH_CLIENT_SECRET");
@@ -32,37 +37,62 @@ pub struct GitlabProvider {
     tokens: TokenStore,
     http: reqwest::Client,
     base_url_override: RwLock<Option<String>>,
+    /// Key this provider's token is stored under. Always `PROVIDER_ID` in
+    /// production; tests namespace it so they can't clobber each other in the
+    /// process-global mock token store. See `GithubProvider::token_key`.
+    token_key: String,
 }
 
 impl GitlabProvider {
     pub fn new() -> Self {
-        let http = reqwest::Client::builder()
-            .user_agent("recrest/0.1")
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
             tokens: TokenStore::new(),
-            http,
+            http: super::provider_http_client("recrest/0.1"),
             base_url_override: RwLock::new(None),
+            token_key: PROVIDER_ID.to_string(),
         }
+    }
+
+    #[cfg(test)]
+    fn with_isolated_token_key() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let n = SEQ.fetch_add(1, Ordering::Relaxed);
+        Self {
+            token_key: format!("{PROVIDER_ID}#test{n}"),
+            ..Self::new()
+        }
+    }
+
+    /// Test-only: swap the shared client for one without timeouts.
+    ///
+    /// `#[tokio::test(start_paused = true)]` auto-advances virtual time
+    /// whenever every task is idle — and a pending socket read counts as idle,
+    /// so the shared client's request timeout fires before the real response
+    /// arrives and the request dies with "error sending request". A
+    /// paused-clock test that still performs real HTTP has to opt out of the
+    /// timeouts; it is testing polling logic, not transport deadlines.
+    #[cfg(test)]
+    fn without_http_timeouts(mut self) -> Self {
+        self.http = reqwest::Client::new();
+        self
     }
 
     /// Effective API base URL. See `github::api_base` for the layering
-    /// rationale — the Plan-8 E2E env-var (`RECREST_PROVIDER_BASE_URLS`)
-    /// wins over the user-configured self-hosted GitLab override.
+    /// rationale — the user's own self-hosted override wins, and the
+    /// debug-only E2E env-var (`RECREST_PROVIDER_BASE_URLS`) only replaces
+    /// the built-in cloud default.
     fn api_base(&self) -> String {
-        if let Some(url) = super::env_base_url_for(PROVIDER_ID) {
-            return url;
-        }
-        self.base_url_override
-            .read()
-            .ok()
-            .and_then(|g| g.clone())
-            .unwrap_or_else(|| API_BASE.to_string())
+        let override_ = self.base_url_override.read().ok().and_then(|g| g.clone());
+        super::resolve_api_base(
+            override_.as_deref(),
+            super::env_base_url_for(PROVIDER_ID).as_deref(),
+            API_BASE,
+        )
     }
 
     async fn token(&self) -> Result<Option<String>, CommandError> {
-        Ok(self.tokens.read(PROVIDER_ID)?)
+        Ok(self.tokens.read(&self.token_key)?)
     }
 
     async fn require_token(&self) -> Result<String, CommandError> {
@@ -92,37 +122,50 @@ impl GitProvider for GitlabProvider {
         Ok(self.token().await?.is_some())
     }
 
+    /// See the `GitProvider::username` contract: `Ok(None)` only when no
+    /// token is stored; a stored-but-rejected token surfaces as
+    /// `Unauthorized` so `auth_status()` can tell the two apart.
     async fn username(&self) -> Result<Option<String>, CommandError> {
         let Some(token) = self.token().await? else {
             return Ok(None);
         };
         let base = self.api_base();
+        let url = format!("{base}/user");
         let res = self
             .http
-            .get(format!("{base}/user"))
+            .get(&url)
             .header("PRIVATE-TOKEN", &token)
             .send()
             .await?;
         if !res.status().is_success() {
-            return Ok(None);
+            return Err(super::http_error(PROVIDER_ID, &res, &url));
         }
         let user: GlUser = res.json().await?;
         Ok(Some(user.username))
     }
 
     async fn set_token(&self, token: &str, _username: Option<&str>) -> Result<(), CommandError> {
-        self.tokens.store(PROVIDER_ID, token)?;
+        self.tokens.store(&self.token_key, token)?;
         Ok(())
     }
 
     async fn clear_token(&self) -> Result<(), CommandError> {
-        self.tokens.delete(PROVIDER_ID)?;
+        self.tokens.delete(&self.token_key)?;
         Ok(())
     }
 
+    /// Validated on the way in. The stored value is interpolated into every
+    /// request URL and those requests carry the `PRIVATE-TOKEN` header, so an
+    /// unparsed string was a credential-exfiltration path: a base URL of
+    /// `https://gitlab.com@evil.tld` reaches host `evil.tld` with the PAT
+    /// attached. See `providers::parse_provider_base_url`.
     async fn set_base_url(&self, base_url: Option<String>) -> Result<(), CommandError> {
+        let normalized = match base_url.filter(|s| !s.trim().is_empty()) {
+            Some(raw) => Some(normalize_api_base(&raw)?),
+            None => None,
+        };
         if let Ok(mut guard) = self.base_url_override.write() {
-            *guard = base_url.filter(|s| !s.trim().is_empty());
+            *guard = normalized;
         }
         Ok(())
     }
@@ -142,20 +185,30 @@ impl GitProvider for GitlabProvider {
         let encoded = urlencoding::encode(&project_path);
         let base = self.api_base();
 
-        let res = self
-            .http
-            .get(format!("{base}/projects/{encoded}/merge_requests"))
-            .header("PRIVATE-TOKEN", &token)
-            .query(&[("state", "opened"), ("per_page", "50")])
-            .send()
-            .await?;
+        let mut out: Vec<PullRequestDto> = Vec::new();
+        for page in 1..=MAX_PR_PAGES {
+            let url = format!(
+                "{base}/projects/{encoded}/merge_requests?state=opened&per_page={PER_PAGE}&page={page}"
+            );
+            let res = self
+                .http
+                .get(&url)
+                .header("PRIVATE-TOKEN", &token)
+                .send()
+                .await?;
 
-        if !res.status().is_success() {
-            return Err(CommandError::internal(format!("gitlab: {}", res.status())));
+            if !res.status().is_success() {
+                return Err(super::http_error(PROVIDER_ID, &res, &url));
+            }
+
+            let batch: Vec<GlMr> = res.json().await?;
+            let batch_len = batch.len() as u32;
+            out.extend(batch.into_iter().map(map_mr));
+            if batch_len < PER_PAGE {
+                break;
+            }
         }
-
-        let items: Vec<GlMr> = res.json().await?;
-        Ok(items.into_iter().map(map_mr).collect())
+        Ok(out)
     }
 
     async fn get_pull_request_detail(
@@ -320,16 +373,13 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab oauth token: {}",
-                res.status()
-            )));
+            return Err(super::http_error(PROVIDER_ID, &res, "oauth token"));
         }
         let body: GlTokenResponse = res.json().await?;
         let token = body
             .access_token
             .ok_or_else(|| CommandError::internal("gitlab oauth: missing access_token"))?;
-        self.tokens.store(PROVIDER_ID, &token)?;
+        self.tokens.store(&self.token_key, &token)?;
         Ok(())
     }
 
@@ -504,10 +554,11 @@ impl GitProvider for GitlabProvider {
                 .send()
                 .await?;
             if !res.status().is_success() {
-                return Err(CommandError::internal(format!(
-                    "gitlab post discussion: {} ({url})",
-                    res.status()
-                )));
+                return Err(super::http_error(
+                    PROVIDER_ID,
+                    &res,
+                    &format!("post discussion {url}"),
+                ));
             }
             let disc: GlDiscussion = res.json().await?;
             // A new discussion has exactly one note — return that.
@@ -544,10 +595,11 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab post note: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("post note {url}"),
+            ));
         }
         let note: GlNote = res.json().await?;
         Ok(CommentDto {
@@ -642,10 +694,11 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab trigger pipeline: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("trigger pipeline {url}"),
+            ));
         }
         let run: GlPipelineRun = res.json().await?;
         Ok(map_pipeline_run(run))
@@ -670,10 +723,11 @@ impl GitProvider for GitlabProvider {
             .send()
             .await?;
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab cancel pipeline: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("cancel pipeline {url}"),
+            ));
         }
         Ok(())
     }
@@ -701,10 +755,11 @@ impl GitProvider for GitlabProvider {
             return Ok(None);
         }
         if !res.status().is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab pages: {} ({url})",
-                res.status()
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("pages {url}"),
+            ));
         }
         let pages: GlPages = res.json().await?;
         let custom_domain = pages
@@ -826,9 +881,11 @@ impl GitProvider for GitlabProvider {
             })));
         }
         if !status.is_success() {
-            return Err(CommandError::internal(format!(
-                "gitlab merge: {status} ({merge_url})"
-            )));
+            return Err(super::http_error(
+                PROVIDER_ID,
+                &res,
+                &format!("merge {merge_url}"),
+            ));
         }
 
         let merged: GlMrMerged = res.json().await?;
@@ -1011,6 +1068,29 @@ fn map_project(p: GlProject) -> RemoteRepositoryDto {
     }
 }
 
+/// Normalises **and validates** a user-supplied GitLab base URL.
+///
+/// GitLab's API root is `<host>/api/v4`, but the value the user typed (and the
+/// value persisted in `settings.json`) may be either the host root or the
+/// already-suffixed API URL. Both shapes are accepted and returned verbatim —
+/// GitLab endpoint paths are appended to whatever was stored, so reshaping the
+/// path here would break existing connections.
+///
+/// # Security
+///
+/// The string used to be stored unparsed, which made it an exfiltration path
+/// identical to GitHub's: `https://gitlab.com@evil.tld` is interpolated into
+/// `{base}/user`, resolves to host `evil.tld`, and the request carries the
+/// user's `PRIVATE-TOKEN`. `parse_provider_base_url` rejects embedded
+/// credentials and non-loopback `http`.
+pub fn normalize_api_base(raw: &str) -> Result<String, CommandError> {
+    let trimmed = raw.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        return Ok(API_BASE.to_string());
+    }
+    super::normalize_provider_base_url(PROVIDER_ID, trimmed)
+}
+
 /// Authenticated GET `<base>/api/v4/user` against an arbitrary GitLab-flavoured
 /// base URL. `base_url` may be either the host root (`https://gitlab.com`) or
 /// an already-suffixed API URL (`https://gitlab.com/api/v4`); the function
@@ -1021,10 +1101,17 @@ pub async fn verify_with_base(
     token: &str,
 ) -> Result<super::verify::VerifiedAccount, crate::commands::error::ProviderVerifyError> {
     use crate::commands::error::ProviderVerifyError;
-    let trimmed = base_url.trim_end_matches('/');
+    // Validate before the token is ever attached — same rationale as
+    // `github::verify_with_base`.
+    let validated =
+        normalize_api_base(base_url).map_err(|e| ProviderVerifyError::NotProviderResponse {
+            hint: e.to_string(),
+        })?;
+    let trimmed = validated.trim_end_matches('/');
     let trimmed = trimmed.strip_suffix("/api/v4").unwrap_or(trimmed);
     let url = format!("{}/api/v4/user", trimmed);
     let client = match reqwest::Client::builder()
+        .connect_timeout(super::PROVIDER_CONNECT_TIMEOUT)
         .timeout(std::time::Duration::from_secs(10))
         .build()
     {
@@ -1047,16 +1134,14 @@ pub async fn verify_with_base(
             let txt = resp.text().await.unwrap_or_default();
             let json: serde_json::Value = serde_json::from_str(&txt).map_err(|_| {
                 ProviderVerifyError::NotProviderResponse {
-                    hint: "response body was not JSON — base URL does not look like GitLab"
-                        .into(),
+                    hint: "response body was not JSON — base URL does not look like GitLab".into(),
                 }
             })?;
-            let username = json
-                .get("username")
-                .and_then(|v| v.as_str())
-                .ok_or(ProviderVerifyError::NotProviderResponse {
+            let username = json.get("username").and_then(|v| v.as_str()).ok_or(
+                ProviderVerifyError::NotProviderResponse {
                     hint: "no username field — base URL does not look like GitLab".into(),
-                })?;
+                },
+            )?;
             Ok(super::verify::VerifiedAccount {
                 login: username.to_string(),
             })
@@ -1079,11 +1164,7 @@ async fn gl_json<T: serde::de::DeserializeOwned>(
 ) -> Result<T, CommandError> {
     let res = http.get(url).header("PRIVATE-TOKEN", token).send().await?;
     if !res.status().is_success() {
-        return Err(CommandError::internal(format!(
-            "gitlab {}: {}",
-            res.status(),
-            url
-        )));
+        return Err(super::http_error(PROVIDER_ID, &res, url));
     }
     Ok(res.json::<T>().await?)
 }
@@ -1302,15 +1383,17 @@ struct GlGroup {
 mod tests {
     use super::*;
     use crate::auth::token::install_keyring_mock;
+    use crate::providers::r#trait::ProviderAuthState;
     use wiremock::matchers::{method, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     async fn provider_with_token(server: &MockServer) -> GitlabProvider {
         install_keyring_mock();
-        let p = GitlabProvider::new();
+        // Per-test token key: the mock store is process-global, so a shared
+        // `gitlab` entry let concurrent tests overwrite and delete each
+        // other's credentials.
+        let p = GitlabProvider::with_isolated_token_key();
         p.set_base_url(Some(server.uri())).await.unwrap();
-        // Provider id is namespaced so tests for different providers don't
-        // share keyring entries even with the mock backend.
         p.set_token("test-token", None).await.unwrap();
         p
     }
@@ -1716,7 +1799,8 @@ mod tests {
             .mount(&server)
             .await;
 
-        let provider = provider_with_token(&server).await;
+        // Paused clock + real HTTP: see `without_http_timeouts`.
+        let provider = provider_with_token(&server).await.without_http_timeouts();
         let err = provider
             .merge_pull_request(
                 "https://gitlab.com/group/proj",
@@ -1824,6 +1908,198 @@ mod tests {
         let err = super::verify_with_base(&server.uri(), "tok")
             .await
             .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::commands::error::ProviderVerifyError::NotProviderResponse { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn gitlab_username_maps_401_to_unauthorized() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let err = provider.username().await.unwrap_err();
+        assert!(
+            matches!(err, CommandError::Unauthorized(_)),
+            "expected Unauthorized, got {err:?}"
+        );
+        assert!(serde_json::to_string(&err)
+            .unwrap()
+            .contains("\"kind\":\"unauthorized\""));
+    }
+
+    /// A revoked PAT must not keep the account looking connected.
+    #[tokio::test]
+    async fn gitlab_auth_status_reports_invalid_for_revoked_token() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let status = provider.auth_status().await;
+        assert_eq!(status.state, ProviderAuthState::Invalid);
+        assert!(!status.is_usable());
+    }
+
+    #[tokio::test]
+    async fn gitlab_auth_status_reports_connected_with_username() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/user$"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r#"{"username":"tanuki"}"#))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let status = provider.auth_status().await;
+        assert_eq!(status.state, ProviderAuthState::Connected);
+        assert_eq!(status.username.as_deref(), Some("tanuki"));
+    }
+
+    /// Asserted against a provider whose (namespaced) store was never
+    /// populated. The old version called `clear_token()` on the shared
+    /// `gitlab` key, which raced any sibling test storing a token in the same
+    /// window and intermittently reported `Invalid`.
+    #[tokio::test]
+    async fn gitlab_auth_status_reports_disconnected_without_token() {
+        install_keyring_mock();
+        let provider = GitlabProvider::with_isolated_token_key();
+        assert_eq!(
+            provider.auth_status().await.state,
+            ProviderAuthState::Disconnected
+        );
+    }
+
+    #[tokio::test]
+    async fn gitlab_clear_token_removes_the_stored_token() {
+        install_keyring_mock();
+        let provider = GitlabProvider::with_isolated_token_key();
+        provider.set_token("glpat_x", None).await.unwrap();
+        assert!(provider.is_authenticated().await.unwrap());
+        provider.clear_token().await.unwrap();
+        assert!(!provider.is_authenticated().await.unwrap());
+    }
+
+    /// Regression: the open-MR list stopped at a single unpaginated page of 50.
+    #[tokio::test]
+    async fn gitlab_list_pull_requests_paginates_past_the_first_page() {
+        use wiremock::matchers::query_param;
+
+        let server = MockServer::start().await;
+        let page = |from: u64, count: u64| {
+            let items: Vec<serde_json::Value> = (from..from + count)
+                .map(|n| {
+                    serde_json::json!({
+                        "id": n, "iid": n, "title": format!("MR {n}"),
+                        "web_url": "u", "state": "opened",
+                        "source_branch": "feature", "target_branch": "main",
+                        "created_at": "2024-01-01T00:00:00Z",
+                        "updated_at": "2024-01-01T00:00:00Z"
+                    })
+                })
+                .collect();
+            serde_json::Value::Array(items)
+        };
+
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/merge_requests$"))
+            .and(query_param("page", "1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(1, 100)))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_regex(r".*/merge_requests$"))
+            .and(query_param("page", "2"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(101, 3)))
+            .mount(&server)
+            .await;
+
+        let provider = provider_with_token(&server).await;
+        let prs = provider
+            .list_pull_requests("https://gitlab.com/group/proj")
+            .await
+            .unwrap();
+        assert_eq!(prs.len(), 103, "second page must be fetched, not truncated");
+    }
+
+    /// `api_base()` reads the stored override.
+    #[tokio::test]
+    async fn gitlab_api_base_uses_the_user_override() {
+        install_keyring_mock();
+        let p = GitlabProvider::with_isolated_token_key();
+        p.set_base_url(Some("https://gl.acme.test/api/v4".into()))
+            .await
+            .unwrap();
+        assert_eq!(p.api_base(), "https://gl.acme.test/api/v4");
+    }
+
+    /// All four override × env combinations. The old test never set the env
+    /// layer, so it passed against both orderings; inverting the precedence in
+    /// `resolve_api_base` now fails case 1.
+    #[test]
+    fn gitlab_api_base_precedence_is_override_then_env_then_default() {
+        use crate::providers::resolve_api_base;
+        let env = Some("http://127.0.0.1:9002");
+        let user = Some("https://gl.acme.test/api/v4");
+        assert_eq!(
+            resolve_api_base(user, env, API_BASE),
+            "https://gl.acme.test/api/v4"
+        );
+        assert_eq!(
+            resolve_api_base(None, env, API_BASE),
+            "http://127.0.0.1:9002"
+        );
+        assert_eq!(
+            resolve_api_base(user, None, API_BASE),
+            "https://gl.acme.test/api/v4"
+        );
+        assert_eq!(resolve_api_base(None, None, API_BASE), API_BASE);
+    }
+
+    /// `https://gitlab.com@evil.tld` reaches host `evil.tld` with the
+    /// `PRIVATE-TOKEN` header attached. The base URL used to be stored
+    /// unparsed, so this returned `Ok` and the PAT went to the attacker.
+    #[tokio::test]
+    async fn gitlab_set_base_url_rejects_userinfo_and_plain_http() {
+        install_keyring_mock();
+        let p = GitlabProvider::with_isolated_token_key();
+        for raw in [
+            "https://gitlab.com@evil.tld",
+            "https://user:pat@gl.acme.test/api/v4",
+            "http://gl.acme.test/api/v4",
+        ] {
+            let err = p
+                .set_base_url(Some(raw.into()))
+                .await
+                .expect_err("must be refused");
+            assert!(
+                matches!(err, CommandError::BadRequest(_)),
+                "expected BadRequest for {raw}, got {err:?}"
+            );
+        }
+        // Untouched: still the cloud default.
+        assert_eq!(p.api_base(), API_BASE);
+        // Loopback http stays usable for the E2E mocks / local dev instances.
+        p.set_base_url(Some("http://127.0.0.1:9002".into()))
+            .await
+            .expect("loopback must be accepted");
+        assert_eq!(p.api_base(), "http://127.0.0.1:9002");
+    }
+
+    #[tokio::test]
+    async fn gitlab_verify_rejects_a_userinfo_base_url_before_sending_the_token() {
+        let err = super::verify_with_base("https://gitlab.com@evil.tld", "tok")
+            .await
+            .expect_err("must not send the token");
         assert!(matches!(
             err,
             crate::commands::error::ProviderVerifyError::NotProviderResponse { .. }

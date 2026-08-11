@@ -66,6 +66,93 @@ jobs:
           fi
           echo "tag=$resolved" >> "$GITHUB_OUTPUT"
 
+  # Asserts the hand-maintained release metadata actually describes the tag
+  # being built, BEFORE anything destructive or publishable happens.
+  #
+  # RELEASE.md is copied verbatim into the GitHub Release body AND becomes the
+  # `notes` field the in-app updater shows, so a stale file advertises the
+  # wrong version to every user who opens the update dialog. The version
+  # triple (package.json / tauri.conf.json / Cargo.toml) is bumped by
+  # release-please in the same commit that creates the tag; tauri writes
+  # `tauri.conf.json`'s value into `latest.json` as the update's `version`, so
+  # a divergence there means the updater either never offers the update or
+  # offers it forever.
+  #
+  # Deliberately ordered before `prepare-assets`: on a manual dispatch that
+  # job DELETES the existing release, which must not happen for a build that
+  # is going to be rejected anyway.
+  verify-metadata:
+    name: Verify release metadata matches tag
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+
+      - name: Assert RELEASE.md and the version files match the tag
+        shell: bash
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -uo pipefail
+          rc=0
+          version="${TAG#v}"
+          echo "tag=$TAG → expected version=$version"
+
+          # Every capture below ends in `|| true`: GitHub runs `shell: bash` as
+          # `bash --noprofile --norc -eo pipefail`, so `-e` is on and a failing
+          # command inside `$( )` would kill the step before the ::error:: line
+          # that explains what is actually wrong.
+          if [ ! -f RELEASE.md ]; then
+            echo "::error::RELEASE.md is missing — the release body and the updater notes would be empty."
+            exit 1
+          fi
+
+          # Contract: RELEASE.md carries a `# Recrest <version> — <headline>`
+          # H1. Matched with grep rather than `head -n1` so a leading HTML
+          # comment (which is what documents this contract inside the file)
+          # cannot turn the gate into a false red.
+          heading="$(grep -m1 -E '^#[[:space:]]*Recrest[[:space:]]+[0-9]' RELEASE.md || true)"
+          notes_version="$(printf '%s\n' "$heading" \
+            | sed -n 's/^#[[:space:]]*Recrest[[:space:]]\{1,\}\([0-9][0-9A-Za-z.+-]*\).*/\1/p' || true)"
+          if [ -z "$notes_version" ]; then
+            echo "::error::RELEASE.md has no '# Recrest <version> — <headline>' heading (found: '$heading')"
+            echo "Expected the form: # Recrest $version — <headline>"
+            rc=1
+          elif [ "$notes_version" != "$version" ]; then
+            echo "::error::RELEASE.md documents $notes_version but the tag is $TAG. Update RELEASE.md before releasing — it becomes both the release body and the in-app updater's notes."
+            rc=1
+          else
+            echo "✓ RELEASE.md → $notes_version"
+          fi
+
+          check_version() {
+            local label="$1" got="$2"
+            if [ -z "$got" ]; then
+              echo "::error::could not read the version from $label"; rc=1; return
+            fi
+            if [ "$got" != "$version" ]; then
+              echo "::error::$label is $got but the tag is $TAG"; rc=1; return
+            fi
+            echo "✓ $label → $got"
+          }
+
+          check_version "package.json" "$(jq -r '.version // empty' package.json || true)"
+          check_version "app/src-tauri/tauri.conf.json" \
+            "$(jq -r '.version // empty' app/src-tauri/tauri.conf.json || true)"
+          # Anchored on the `# x-release-please-version` marker, not on "the
+          # first column-0 `version =` line". The latter is correct only as
+          # long as `[package]` stays the first table: a `[dependencies.foo]`
+          # block with a column-0 `version` above it would silently gate the
+          # release on a dependency's version. The marker is the exact line
+          # release-please rewrites, so keying on it makes "the line that gets
+          # bumped" and "the line we assert" the same fact.
+          check_version "app/src-tauri/Cargo.toml" \
+            "$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)"[[:space:]]*#[[:space:]]*x-release-please-version.*/\1/p' app/src-tauri/Cargo.toml | head -n1 || true)"
+
+          exit $rc
+
   # Generates the NSIS / DMG branding bitmaps from the SVG sources once on
   # Linux and passes them to every platform build via an artifact. The
   # `tauri.conf.json` references these files directly; without them, the
@@ -77,7 +164,7 @@ jobs:
   # asset names and leave stale files behind). The git tag is preserved.
   prepare-assets:
     name: Generate installer assets
-    needs: resolve
+    needs: [resolve, verify-metadata]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -186,12 +273,23 @@ jobs:
           node-version-file: .nvmrc
           cache: yarn
 
+      # Third-party actions in this job are pinned to a commit SHA, never a
+      # branch or a moving tag: this job holds TAURI_SIGNING_PRIVATE_KEY and
+      # the workflow has `contents: write`, so a force-pushed `@stable` /
+      # re-pointed `@v2` would run attacker-controlled code with the signing
+      # key in scope. Dependabot's `github-actions` ecosystem bumps the SHA and
+      # rewrites the trailing version comment.
+      #
+      # `toolchain:` must be given explicitly with a SHA pin — the action
+      # defaults the toolchain to the ref it was called with, and a SHA is not
+      # a valid rustup toolchain name.
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable @ 2026-08-05
         with:
+          toolchain: stable
           targets: ${{ matrix.rustTarget }}
 
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: "./app/src-tauri -> target"
 
@@ -221,14 +319,29 @@ jobs:
             exit 1
           fi
 
+      # The delimiter is deliberately not `EOF`: $GITHUB_OUTPUT's heredoc ends
+      # at the first line equal to it, so a RELEASE.md that ever contains a
+      # bare `EOF` line (a shell snippet in an install note is all it takes)
+      # would terminate the value early and let the remainder be parsed as
+      # further output keys. Same guard as the `__RECREST_EOF__` used when
+      # forwarding signing secrets below.
       - name: Load release notes
         id: release_notes
         shell: bash
         run: |
+          set -uo pipefail
+          if [ ! -f RELEASE.md ]; then
+            echo "::error::RELEASE.md is missing — the release body would be empty"
+            exit 1
+          fi
+          if grep -qx '__RECREST_NOTES_EOF__' RELEASE.md; then
+            echo "::error::RELEASE.md contains the heredoc delimiter __RECREST_NOTES_EOF__"
+            exit 1
+          fi
           {
-            echo 'body<<EOF'
+            echo 'body<<__RECREST_NOTES_EOF__'
             cat RELEASE.md
-            echo 'EOF'
+            echo '__RECREST_NOTES_EOF__'
           } >> "$GITHUB_OUTPUT"
 
       # Forward signing secrets only when populated. Tauri's bundler reads the
@@ -279,7 +392,7 @@ jobs:
           forward TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -294,6 +407,82 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
           projectPath: ./app
+
+      # Gate the macOS bundle before it is published. Recrest ships WITHOUT an
+      # Apple Developer certificate, so `bundle.macOS.signingIdentity` is `-`
+      # (ad-hoc). That is not cosmetic: on Apple Silicon, Gatekeeper refuses to
+      # launch a quarantined arm64 app whose signature envelope is incomplete
+      # and reports "Recrest is damaged and can't be opened" — and unlike the
+      # plain unidentified-developer prompt, right-click → Open does NOT bypass
+      # it. Up to and including v0.10.2 the bundle carried only the linker's
+      # ad-hoc signature on the Mach-O and had no `Contents/_CodeSignature/`
+      # at all, which is exactly that failure. x64 is unaffected because
+      # Gatekeeper does not require a signature for x86_64 code, so this can
+      # only be caught by asserting on the bundle itself.
+      #
+      # Also asserts the slice architecture matches the matrix leg, so an
+      # arm64-labelled asset can never contain an x64 binary (or vice versa).
+      - name: Verify macOS bundle (signature + architecture)
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -uo pipefail
+          # `find`, not a glob list: GitHub runs `shell: bash` as
+          # `bash --noprofile --norc -eo pipefail`, so `-e` is on and `set -uo`
+          # does not clear it. Both mac legs build with `--target <triple>`, so
+          # a bare `target/release/bundle/macos/*.app` never matches, `ls` exits
+          # 2, pipefail propagates it, and the assignment kills the step before
+          # the first echo. `find` exits 0 when it merely matches nothing —
+          # but NOT when its root is missing (a build that never produced
+          # `target/` at all), and `find | head -n1` can also end in 141 on
+          # SIGPIPE, either of which pipefail would turn into a silent step
+          # death. Hence `|| true`: an empty `$APP` must reach the ::error::
+          # below, which is the line that says what went wrong.
+          # `-prune` stops the descent at the bundle so a nested .app can't win.
+          APP="$(find app/src-tauri/target -type d -path '*/release/bundle/macos/*.app' -prune 2>/dev/null | head -n1 || true)"
+          if [ -z "$APP" ]; then
+            echo "::error::no .app bundle produced under app/src-tauri/target"
+            exit 1
+          fi
+          echo "Verifying $APP"
+
+          # The exact artefact that was missing in the broken releases. codesign
+          # --verify alone is not enough: a bundle can pass the executable check
+          # while carrying no resource envelope, which is what Gatekeeper trips on.
+          if [ ! -f "$APP/Contents/_CodeSignature/CodeResources" ]; then
+            echo "::error::$APP has no Contents/_CodeSignature/CodeResources — the bundle is unsigned. Apple Silicon will report it as damaged. Check bundle.macOS.signingIdentity in tauri.conf.json."
+            exit 1
+          fi
+
+          if ! codesign --verify --strict --verbose=2 "$APP"; then
+            echo "::error::codesign --verify failed for $APP"
+            exit 1
+          fi
+          codesign -dvv "$APP" 2>&1 | sed 's/^/  /'
+
+          # `|| true` on both captures for the same reason as the `find` above:
+          # `-e` is on, so a failing `ls` (no Contents/MacOS) or `lipo` (not a
+          # Mach-O) would kill the step instead of reaching the ::error:: line
+          # that says what is wrong.
+          BIN="$(ls "$APP/Contents/MacOS" 2>/dev/null | head -n1 || true)"
+          if [ -z "$BIN" ]; then
+            echo "::error::$APP has no executable in Contents/MacOS"
+            exit 1
+          fi
+          case "$ARCH" in
+            arm64) want=arm64 ;;
+            x64)   want=x86_64 ;;
+            *)     echo "::error::unmapped mac arch '$ARCH'"; exit 1 ;;
+          esac
+          got="$(lipo -archs "$APP/Contents/MacOS/$BIN" || true)"
+          echo "  archs: $got (expected $want)"
+          case " $got " in
+            *" $want "*) ;;
+            *) echo "::error::$APP/Contents/MacOS/$BIN is '$got', expected '$want' for the $ARCH leg"; exit 1 ;;
+          esac
+          echo "✓ macOS bundle verified: signed + $want"
 
       # Publish the per-arch installers under the download-page contract names.
       # tauri-action already uploaded the bundles under their default names
@@ -416,98 +605,473 @@ jobs:
 
   # Removes the tauri-default-named INSTALLERS that tauri-action uploaded
   # alongside the contract-named copies, so the release page shows exactly one
-  # friendly asset per arch instead of duplicate names. Updater payloads and
-  # their signatures are KEPT untouched under their tauri names because
-  # `latest.json` references them by those exact names — deleting/renaming them
-  # would break the auto-updater.
+  # friendly asset per arch instead of duplicate names.
+  #
+  # The keep-list is derived from `latest.json` itself rather than a
+  # hand-maintained glob list. A static list drifts: through v0.10.2 the
+  # patterns kept `*.msi` / `*.app.tar.gz` / `*.AppImage` but NOT the
+  # tauri-named `.deb` / `.rpm`, so the manifest's `linux-x86_64-deb` and
+  # `-rpm` URLs pointed at assets this job had just deleted (verified: both
+  # 404 on the v0.10.2 release). Reading the manifest makes "referenced by the
+  # updater" and "kept" the same fact, so a bundler rename cannot strand a
+  # payload again. It also lets the un-suffixed `Recrest.app.tar.gz` go: both
+  # macOS legs clobber that one name, so it is a coin-flip duplicate of the
+  # arch-suffixed payloads and is referenced by nothing.
   #
   # Keep (never delete):
-  #   recrest-v*                      — the download-page contract assets
-  #   *.msi / *.app.tar.gz            — Windows / macOS updater payloads
-  #   *.AppImage                      — Linux updater payload (also a download
-  #                                     asset, but its tauri-named original must
-  #                                     stay for the updater)
-  #   *.sig                           — minisign signatures for updater payloads
-  #   latest.json                     — updater manifest
-  #   SHA256SUMS.txt                  — checksums file (checksums job)
-  # Delete (tauri-named duplicates now superseded by contract names):
-  #   Recrest_*.dmg, Recrest_*-setup.exe, Recrest_*.deb, Recrest*.rpm
+  #   every basename referenced by latest.json  — updater payloads
+  #   <kept asset>.sig                          — their minisign signatures
+  #   recrest-v*                                — download-page contract assets
+  #   latest.json, SHA256SUMS.txt               — manifest + checksums
+  #
+  # Consequence worth knowing before someone "fixes" this back: latest.json
+  # references the NSIS .exe, the .deb and the .rpm under their tauri names, so
+  # those are now kept and the release page shows them next to the contract-named
+  # copies. Only the .dmg duplicates and the un-suffixed `Recrest.app.tar.gz` are
+  # actually removed. Keeping a referenced asset beats a tidy asset list — a
+  # deleted one is a 404 in the updater. The kept duplicates are absent from
+  # SHA256SUMS.txt (which covers `recrest-v*`, the assets the download page
+  # links); that is fine because the updater verifies them via minisign, which
+  # is a stronger guarantee than a checksum a user has to compare by hand.
   prune:
     name: Prune tauri-named installer duplicates
     needs: [resolve, build]
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.resolve.outputs.tag }}
+      REPO: ${{ github.repository }}
     steps:
       - name: Delete tauri-named installer duplicates
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Anything matching a keep pattern survives; the remaining .dmg/.exe/
-          # .deb/.rpm are the tauri-named duplicates we re-published as
-          # recrest-v* and can remove. (The contract assets all start with
-          # "recrest-v" so they match the keep pattern first.)
-          keep_patterns=("recrest-v*" "*.msi" "*.app.tar.gz" "*.AppImage" "*.sig" "latest.json" "SHA256SUMS.txt")
-          assets="$(gh release view "$TAG" \
-            --repo "${{ github.repository }}" \
-            --json assets \
-            --jq '.assets[].name')"
+
+          # Abort rather than prune blind: an unreadable manifest would make the
+          # referenced-set empty and delete every updater payload on the release.
+          # `|| true` so an unreadable manifest reaches the guard below instead
+          # of dying on the assignment under `set -e` with no explanation.
+          referenced="$(gh release download "$TAG" --repo "$REPO" \
+            --pattern 'latest.json' --output - 2>/dev/null \
+            | jq -r '.platforms[].url' | sed 's#.*/##' | sort -u || true)"
+          if [ -z "$referenced" ]; then
+            echo "::error::could not read latest.json from $TAG — refusing to prune"
+            exit 1
+          fi
+          echo "referenced by latest.json:"
+          echo "$referenced" | sed 's/^/  /'
+
+          keep_patterns=("recrest-v*" "latest.json" "SHA256SUMS.txt")
+
+          # A `.sig` survives exactly as long as the payload it signs does, so
+          # deleting a duplicate never leaves an orphan signature behind.
+          keeps() {
+            case "$1" in *.sig) base="${1%.sig}" ;; *) base="$1" ;; esac
+            if echo "$referenced" | grep -Fxq "$base"; then return 0; fi
+            for p in "${keep_patterns[@]}"; do
+              case "$base" in $p) return 0 ;; esac
+            done
+            return 1
+          }
+
+          # Same `|| true` + explicit guard as above. Without it a transient
+          # API failure would kill the step on the assignment (`-e` is on) with
+          # no log line, and a silently empty `$assets` would make the loop a
+          # no-op that still reports success.
+          assets="$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' || true)"
+          if [ -z "$assets" ]; then
+            echo "::error::could not list the assets of $TAG — refusing to prune"
+            exit 1
+          fi
           while IFS= read -r asset; do
             [ -n "$asset" ] || continue
-            keep=0
-            for p in "${keep_patterns[@]}"; do
-              case "$asset" in $p) keep=1;; esac
-            done
-            if [ "$keep" = 1 ]; then
+            if keeps "$asset"; then
               echo "keep: $asset"
               continue
             fi
             echo "deleting: $asset"
-            gh release delete-asset "$TAG" "$asset" \
-              --repo "${{ github.repository }}" \
-              --yes
+            gh release delete-asset "$TAG" "$asset" --repo "$REPO" --yes
           done <<< "$assets"
 
+  # RELEASE.md tells users to verify their download against SHA256SUMS.txt, so
+  # a PARTIAL file is worse than none: a user whose installer is missing from
+  # it has no way to tell "not covered by this release" from "tampered with",
+  # and `sha256sum -c` reports success after checking only the lines it found.
+  #
+  # The old shape produced exactly that. `gh release download … || true`
+  # swallowed a failed/partial download, `sha256sum recrest-v*` hashed whatever
+  # happened to arrive, and `--clobber` overwrote the published file with the
+  # short list. Now the expected set is derived from the release itself and the
+  # local set must match it exactly before anything is hashed or uploaded.
   checksums:
     name: Checksums
     needs: [resolve, prune]
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.resolve.outputs.tag }}
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Download per-arch installers
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
           mkdir -p assets
+          # No `|| true` here on purpose — a download that fails outright must
+          # fail the step. The completeness assertion below is the backstop for
+          # the partial case, which `gh` itself reports as success.
           gh release download "$TAG" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPO" \
             --dir assets \
             --pattern 'recrest-v*.dmg' \
             --pattern 'recrest-v*.exe' \
             --pattern 'recrest-v*.AppImage' \
             --pattern 'recrest-v*.deb' \
-            --pattern 'recrest-v*.rpm' \
-            || true
-          ls -la assets || true
+            --pattern 'recrest-v*.rpm'
+          ls -la assets
+
+      # Two independent assertions:
+      #   1. the release carries the full download-page contract set (a build
+      #      leg died silently — the matrix runs continue-on-error);
+      #   2. every `recrest-v*` asset on the release also arrived locally and
+      #      is not a truncated stub, so the hashes we publish cover all of them.
+      - name: Assert the installer set is complete before hashing
+        run: |
+          set -uo pipefail
+          rc=0
+          MIN_BYTES=1000000
+
+          # `|| true` on both captures: `-e` is on under `shell: bash`
+          # (`bash --noprofile --norc -eo pipefail`), and `grep` exits 1 on no
+          # match, which would kill the step on the assignment line.
+          published="$(gh release view "$TAG" --repo "$REPO" --json assets \
+            --jq '.assets[].name' | grep '^recrest-v' | sort || true)"
+          if [ -z "$published" ]; then
+            echo "::error::$TAG has no recrest-v* installer assets — refusing to publish a checksum file"
+            exit 1
+          fi
+          echo "published installers:"
+          printf '%s\n' "$published" | sed 's/^/  /'
+
+          # windows-arm64 is the documented exception: the `windows-11-arm`
+          # runner's availability varies by plan/region (see the build matrix),
+          # so its absence is a warning, not a hole in the release.
+          for name in \
+            "recrest-${TAG}-mac-arm64.dmg" \
+            "recrest-${TAG}-mac-x64.dmg" \
+            "recrest-${TAG}-windows-x64.exe" \
+            "recrest-${TAG}-linux-x64.AppImage" \
+            "recrest-${TAG}-linux-x64.deb" \
+            "recrest-${TAG}-linux-x64.rpm"; do
+            if ! printf '%s\n' "$published" | grep -Fxq "$name"; then
+              echo "::error::$TAG is missing the contract asset $name — a build leg failed; not publishing a partial SHA256SUMS.txt"
+              rc=1
+            fi
+          done
+          if ! printf '%s\n' "$published" | grep -Fxq "recrest-${TAG}-windows-arm64.exe"; then
+            echo "::warning::recrest-${TAG}-windows-arm64.exe is absent (windows-11-arm runner availability) — it will not appear in SHA256SUMS.txt"
+          fi
+
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            f="assets/$name"
+            if [ ! -f "$f" ]; then
+              echo "::error::$name is published on $TAG but did not download — SHA256SUMS.txt would not cover it"
+              rc=1
+              continue
+            fi
+            size="$(wc -c < "$f" | tr -d ' ' || true)"
+            if [ -z "$size" ] || [ "$size" -lt "$MIN_BYTES" ]; then
+              echo "::error::$name downloaded as only ${size:-0} bytes — truncated; its checksum would be wrong"
+              rc=1
+              continue
+            fi
+            echo "✓ $name ($size bytes)"
+          done <<< "$published"
+
+          exit $rc
+
       - name: Compute SHA256SUMS
         run: |
+          set -uo pipefail
           cd assets
-          # Hash the published per-arch installers (no ZIPs anymore).
-          if compgen -G "recrest-v*" > /dev/null; then
-            sha256sum recrest-v* > SHA256SUMS.txt
-            cat SHA256SUMS.txt
-          else
-            echo "no per-arch installer assets found — skipping checksum step"
-            exit 0
+          # Sorted so the published file has a stable, diffable order. A
+          # read loop rather than `xargs sha256sum`, which would block on
+          # stdin if the list were ever empty.
+          : > SHA256SUMS.txt
+          count=0
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            sha256sum "$f" >> SHA256SUMS.txt || exit 1
+            count=$((count + 1))
+          done <<< "$(find . -maxdepth 1 -type f -name 'recrest-v*' | sed 's#^\./##' | sort || true)"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::no recrest-v* installers in ./assets — nothing to checksum"
+            exit 1
           fi
+          echo "hashed $count assets:"
+          cat SHA256SUMS.txt
+
       - name: Upload checksums to release
-        if: hashFiles('assets/SHA256SUMS.txt') != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
           gh release upload "$TAG" \
             assets/SHA256SUMS.txt \
-            --repo "${{ github.repository }}" \
+            --repo "$REPO" \
             --clobber
+
+  # Final gate on the DRAFT release, before a human presses Publish. This job
+  # is the one that must stay green — the `build` matrix runs with
+  # `continue-on-error: true` (one platform must not block the others), so a
+  # leg that dies produces no asset yet still lets `prune`/`checksums` succeed.
+  # Nothing else notices the hole.
+  #
+  # Runs on macOS because verifying what actually ships to Apple Silicon needs
+  # `hdiutil` (mount the real DMG, not the pre-bundle build output), `codesign`
+  # and `lipo`. It re-checks the signature on the mounted app rather than
+  # trusting the build-leg check, so a bundling/DMG step that strips or
+  # invalidates the signature after the build is still caught here.
+  verify-release:
+    name: Verify draft assets
+    needs: [resolve, checksums]
+    # Runs even when `checksums` failed, as long as we know which tag to look
+    # at: this is the job that explains WHAT is wrong with the release, and a
+    # skipped final gate is the least useful outcome of a red run. It still
+    # fails on its own findings, so nothing is weakened by running it.
+    if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+    runs-on: macos-latest
+    env:
+      TAG: ${{ needs.resolve.outputs.tag }}
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download published assets
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          gh release download "$TAG" --repo "$REPO" --dir assets \
+            --pattern 'recrest-v*' \
+            --pattern '*.app.tar.gz' \
+            --pattern 'latest.json' \
+            --pattern 'SHA256SUMS.txt'
+          ls -la assets
+
+      # The download page links these by exact name; a missing one is a dead
+      # button on the site. windows-arm64 is the documented exception — the
+      # `windows-11-arm` runner's availability varies by plan/region, so its
+      # absence is reported but does not block the release.
+      - name: Assert the download-page contract set is complete
+        run: |
+          set -uo pipefail
+          rc=0
+          MIN_BYTES=1000000
+
+          check() {
+            local name="$1" required="$2" f="assets/$1"
+            if [ ! -f "$f" ]; then
+              if [ "$required" = "required" ]; then
+                echo "::error::missing release asset: $name"; rc=1
+              else
+                echo "::warning::optional release asset missing: $name"
+              fi
+              return
+            fi
+            local size
+            size="$(wc -c < "$f" | tr -d ' ')"
+            if [ "$size" -lt "$MIN_BYTES" ]; then
+              echo "::error::$name is only $size bytes — truncated or a failed upload"; rc=1
+              return
+            fi
+            echo "✓ $name ($size bytes)"
+          }
+
+          check "recrest-${TAG}-mac-arm64.dmg"        required
+          check "recrest-${TAG}-mac-x64.dmg"          required
+          check "recrest-${TAG}-windows-x64.exe"      required
+          check "recrest-${TAG}-linux-x64.AppImage"   required
+          check "recrest-${TAG}-linux-x64.deb"        required
+          check "recrest-${TAG}-linux-x64.rpm"        required
+          check "recrest-${TAG}-windows-arm64.exe"    optional
+          exit $rc
+
+      # RELEASE.md instructs users to run `sha256sum -c SHA256SUMS.txt`, and
+      # that command reports success after checking only the lines it finds —
+      # an installer missing from the file verifies as "nothing to check", not
+      # as a failure. So the file must cover EVERY published `recrest-v*`
+      # asset, and the hashes in it must match the bytes actually on the
+      # release (a re-uploaded asset after a stale checksum run would not).
+      - name: Assert SHA256SUMS.txt covers every published installer
+        run: |
+          set -uo pipefail
+          rc=0
+          if [ ! -f assets/SHA256SUMS.txt ]; then
+            echo "::error::SHA256SUMS.txt is not attached to $TAG — RELEASE.md tells users to verify with it"
+            exit 1
+          fi
+
+          # `|| true` on every capture — `-e` is on and `grep` exits 1 on no
+          # match, which would kill the step before the ::error:: lines below.
+          published="$(gh release view "$TAG" --repo "$REPO" --json assets \
+            --jq '.assets[].name' | grep '^recrest-v' | sort || true)"
+          if [ -z "$published" ]; then
+            echo "::error::$TAG has no recrest-v* installer assets"
+            exit 1
+          fi
+          # `sha256sum` writes `<hash>  <name>` in text mode and `<hash> *<name>`
+          # in binary mode; strip the marker so the comparison holds either way.
+          covered="$(awk '{ n = $NF; sub(/^\*/, "", n); print n }' assets/SHA256SUMS.txt | sort || true)"
+
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            if printf '%s\n' "$covered" | grep -Fxq "$name"; then
+              echo "✓ SHA256SUMS.txt → $name"
+            else
+              echo "::error::$name is published on $TAG but absent from SHA256SUMS.txt — users verifying that file would silently skip it"
+              rc=1
+            fi
+          done <<< "$published"
+
+          # And the other direction: a line for an asset that no longer exists
+          # means the file is stale, which makes `-c` fail for every user.
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            if ! printf '%s\n' "$published" | grep -Fxq "$name"; then
+              echo "::error::SHA256SUMS.txt lists $name, which is not an asset of $TAG"
+              rc=1
+            fi
+          done <<< "$covered"
+
+          # Verify the hashes themselves against the downloaded bytes.
+          # `shasum -a 256 -c` is the macOS equivalent of `sha256sum -c` and
+          # reads the same format.
+          if ! (cd assets && shasum -a 256 -c SHA256SUMS.txt); then
+            echo "::error::SHA256SUMS.txt does not match the published assets"
+            rc=1
+          fi
+          exit $rc
+
+      # Every URL the auto-updater resolves must exist on the release. Through
+      # v0.10.2 the deb/rpm entries pointed at assets `prune` had deleted.
+      - name: Assert latest.json references resolve
+        run: |
+          set -uo pipefail
+          rc=0
+          # This step has two independent ways of passing vacuously, and the
+          # file-existence guard only closes the first one.
+          #
+          # (1) MISSING manifest — the here-string is empty, the loop body never
+          #     runs, rc stays 0.
+          if [ ! -f assets/latest.json ]; then
+            echo "::error::latest.json was not downloaded from $TAG — the updater manifest is missing"
+            exit 1
+          fi
+          # `|| true` + guard: `-e` is on, so a transient API failure here
+          # would kill the step on the assignment with no explanation, and an
+          # empty list would make every comparison below a false negative.
+          present="$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' || true)"
+          if [ -z "$present" ]; then
+            echo "::error::could not list the assets of $TAG"
+            exit 1
+          fi
+          # (2) CORRUPT or platform-less manifest — the case the existence
+          #     guard does not cover. A failing command substitution inside a
+          #     `<<<` here-string does not trip `-e`: the substitution is part
+          #     of a word expansion, not a command of its own, so a `jq` parse
+          #     error left the loop with nothing to read and the step green.
+          #     (The run still died later, on an unguarded `jq` in the macOS
+          #     step, but with a raw jq error and none of these annotations.)
+          #     So: capture, assert non-empty, and only then feed the loop.
+          referenced="$(jq -r '.platforms[].url' assets/latest.json | sed 's#.*/##' | sort -u || true)"
+          if [ -z "$referenced" ]; then
+            echo "::error::latest.json carries no .platforms[].url entries — it is malformed, empty, or lost its platform map, so the updater has nothing to resolve. First 2 kB follow:"
+            head -c 2000 assets/latest.json | sed 's/^/  /' || true
+            exit 1
+          fi
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            if echo "$present" | grep -Fxq "$name"; then
+              echo "✓ latest.json → $name"
+            else
+              echo "::error::latest.json references $name, which is not an asset of $TAG"; rc=1
+            fi
+          done <<< "$referenced"
+          exit $rc
+
+      # The regression that shipped broken Apple Silicon builds: without a
+      # bundle signature, Gatekeeper reports "Recrest is damaged and can't be
+      # opened" on arm64 and right-click → Open does not help. Verified on the
+      # real DMG and on the updater payload, since both paths install an app.
+      - name: Verify macOS apps (signature + architecture)
+        run: |
+          set -uo pipefail
+          rc=0
+
+          verify_app() {
+            local app="$1" want="$2" origin="$3"
+            if [ ! -d "$app" ]; then
+              echo "::error::$origin: no .app found"; rc=1; return
+            fi
+            if [ ! -f "$app/Contents/_CodeSignature/CodeResources" ]; then
+              echo "::error::$origin: bundle is unsigned (no Contents/_CodeSignature/CodeResources). Apple Silicon will refuse it as damaged."
+              rc=1; return
+            fi
+            # Not piped into sed on purpose — a pipeline would report sed's
+            # exit status and swallow a codesign failure.
+            if ! codesign --verify --strict "$app"; then
+              echo "::error::$origin: codesign --verify failed"; rc=1; return
+            fi
+            local bin got
+            # `|| true` on every capture in this job: `-e` is on (see the build
+            # leg's note), so a failing `ls`/`lipo` would kill the step instead
+            # of reaching the ::error:: line that explains what is wrong.
+            bin="$(ls "$app/Contents/MacOS" 2>/dev/null | head -n1 || true)"
+            if [ -z "$bin" ]; then
+              echo "::error::$origin: no executable in Contents/MacOS"; rc=1; return
+            fi
+            got="$(lipo -archs "$app/Contents/MacOS/$bin" || true)"
+            case " $got " in
+              *" $want "*) echo "✓ $origin: signed, $got" ;;
+              *) echo "::error::$origin: architecture is '$got', expected '$want'"; rc=1 ;;
+            esac
+          }
+
+          # DMG path — what a website visitor downloads.
+          for pair in "arm64:arm64" "x64:x86_64"; do
+            label="${pair%%:*}"; want="${pair##*:}"
+            dmg="assets/recrest-${TAG}-mac-${label}.dmg"
+            [ -f "$dmg" ] || { echo "::error::missing $dmg"; rc=1; continue; }
+            mnt="$(mktemp -d)"
+            if ! hdiutil attach -nobrowse -readonly -noverify -mountpoint "$mnt" "$dmg" >/dev/null; then
+              echo "::error::$dmg could not be mounted"; rc=1; continue
+            fi
+            verify_app "$(ls -d "$mnt"/*.app 2>/dev/null | head -n1 || true)" "$want" "$(basename "$dmg")"
+            hdiutil detach "$mnt" >/dev/null || true
+          done
+
+          # Updater payload path — what the in-app updater installs. The
+          # filenames come from latest.json rather than being hard-coded, for
+          # the same reason `prune` derives its keep-list from it: a bundler
+          # rename would otherwise turn the final release gate into a false red.
+          for pair in "darwin-aarch64:arm64" "darwin-x86_64:x86_64"; do
+            key="${pair%%:*}"; want="${pair##*:}"
+            # `|| true` for the same reason as everywhere else in this job: on a
+            # malformed manifest `jq` exits non-zero, and without it the step
+            # dies on the assignment with a bare jq error instead of the
+            # ::error:: line right below.
+            name="$(jq -r --arg k "$key" '.platforms[$k].url // empty' assets/latest.json | sed 's#.*/##' || true)"
+            if [ -z "$name" ]; then
+              echo "::error::latest.json has no $key platform entry — macOS updates would not resolve"
+              rc=1; continue
+            fi
+            tgz="assets/$name"
+            [ -f "$tgz" ] || { echo "::error::missing updater payload $tgz"; rc=1; continue; }
+            out="$(mktemp -d)"
+            # Guarded: an unguarded `tar` on a truncated or non-gzip payload
+            # kills the step with tar's own message and no annotation, which
+            # reads as an infrastructure failure rather than a bad release.
+            if ! tar -xzf "$tgz" -C "$out"; then
+              echo "::error::$(basename "$tgz") could not be extracted — the updater payload is corrupt or truncated"
+              rc=1; continue
+            fi
+            verify_app "$(ls -d "$out"/*.app 2>/dev/null | head -n1 || true)" "$want" "$(basename "$tgz")"
+          done
+          exit $rc

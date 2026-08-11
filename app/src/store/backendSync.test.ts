@@ -31,6 +31,7 @@ import {
 import {
   setPinnedRepos,
   setSidebarCollapsed,
+  setSidebarCollapsedAuto,
   togglePinnedRepo,
   toggleSidebar,
 } from "@/store/actions/ui.actions";
@@ -230,6 +231,20 @@ describe("settingsBackendSync", () => {
     const store = makeStore();
     store.dispatch(setSidebarCollapsed(true));
     expect(lastPatch()).toMatchObject({ windowState: { sidebarCollapsed: true } });
+  });
+
+  it("never persists a viewport-forced sidebar write", () => {
+    // Same action type as the user-driven write; only `TRANSIENT_META` separates
+    // them. Persisting it let one narrow session overwrite the stored preference.
+    const store = makeStore();
+    store.dispatch(setSidebarCollapsedAuto(true, true));
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("never persists the release of a viewport-forced sidebar write either", () => {
+    const store = makeStore();
+    store.dispatch(setSidebarCollapsedAuto(false, false));
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 
   it("reads the freshly toggled sidebar value off state", () => {
