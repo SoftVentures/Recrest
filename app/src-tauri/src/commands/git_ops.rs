@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
 use git2::{FetchOptions, PushOptions, RemoteCallbacks, Repository};
@@ -722,9 +723,6 @@ fn merge_blocking(
         ));
     }
 
-    // Refuse to merge with a dirty working tree — mirrors git's own safety rail.
-    ensure_clean_worktree(&repo, "merging")?;
-
     let source_branch = repo
         .find_branch(source, git2::BranchType::Local)
         .map_err(|_| CommandError::bad_request(format!("source branch '{source}' not found")))?;
@@ -743,6 +741,12 @@ fn merge_blocking(
     if analysis.is_up_to_date() {
         return Ok((GitMergeState::UpToDate, Vec::new()));
     }
+
+    // Refuse to merge with a dirty working tree — mirrors git's own safety rail.
+    // Checked *after* the analysis, exactly like `pull_blocking`: merging an
+    // already-merged branch writes nothing, so a dirty tree is harmless there
+    // and real git just prints "Already up to date".
+    ensure_clean_worktree(&repo, "merging")?;
 
     if analysis.is_fast_forward() {
         fast_forward_to(&repo, &head_branch, source_oid, "fast-forward merge")?;
@@ -926,14 +930,8 @@ fn checkout_remote_blocking(path: &Path, remote: &str, branch: &str) -> Result<(
     let mut new_branch = repo
         .branch(branch, &commit, false)
         .map_err(|e| CommandError::internal(format!("create local branch failed: {e}")))?;
-    // Surface a failure here instead of dropping it: a local branch without
-    // tracking config reports 0/0 ahead-behind forever and cannot be pulled.
     let upstream_short = format!("{remote}/{branch}");
-    new_branch
-        .set_upstream(Some(&upstream_short))
-        .map_err(|e| {
-            CommandError::internal(format!("set upstream '{upstream_short}' failed: {e}"))
-        })?;
+    set_upstream_or_delete(&mut new_branch, branch, &upstream_short)?;
 
     let full_ref = format!("refs/heads/{branch}");
     let (object, _) = repo
@@ -944,6 +942,37 @@ fn checkout_remote_blocking(path: &Path, remote: &str, branch: &str) -> Result<(
     repo.set_head(&full_ref)
         .map_err(|e| CommandError::internal(format!("set_head failed: {e}")))?;
     Ok(())
+}
+
+/// Points a **freshly created** local branch at its remote-tracking upstream,
+/// and deletes the branch again when that fails.
+///
+/// A failing `set_upstream` must not be dropped: a local branch without
+/// tracking config reports 0/0 ahead-behind forever and cannot be pulled. But
+/// turning it into an error without rolling back left the user with exactly
+/// that branch — created, unconfigured, not checked out — and a retry of
+/// `git_checkout_remote` would then take the "local branch already exists"
+/// shortcut and never repair the tracking config. Deleting is safe precisely
+/// because the caller only reaches here when no local branch of that name
+/// existed a moment ago and nothing has been checked out yet, so the failure
+/// becomes a clean no-op the user can retry.
+fn set_upstream_or_delete(
+    branch: &mut git2::Branch<'_>,
+    branch_name: &str,
+    upstream: &str,
+) -> Result<(), CommandError> {
+    let Err(err) = branch.set_upstream(Some(upstream)) else {
+        return Ok(());
+    };
+    if let Err(delete_err) = branch.delete() {
+        tracing::warn!(
+            "checkout_remote: could not roll back branch '{branch_name}' after \
+             set_upstream('{upstream}') failed: {delete_err}"
+        );
+    }
+    Err(CommandError::internal(format!(
+        "set upstream '{upstream}' for '{branch_name}' failed: {err}"
+    )))
 }
 
 fn checkout_blocking(path: &Path, branch: &str) -> Result<(), CommandError> {
@@ -999,31 +1028,59 @@ fn push_blocking(
     Ok(())
 }
 
-/// Refuses to continue when the working tree carries uncommitted changes **or
-/// untracked files**. Untracked files count because a checkout happily
-/// overwrites an untracked file the incoming tree also carries — which is
-/// exactly the data loss `git merge --ff-only` refuses to cause, and exactly
-/// the files `git_index::is_protected` defends elsewhere (`.env`, `*.pem`,
-/// `id_*`).
+/// Refuses to continue when the working tree carries **tracked**
+/// modifications, staged or unstaged.
+///
+/// Merely-present untracked files are deliberately allowed through. Real
+/// `git pull --ff-only` / `git merge --ff-only` only refuse when an untracked
+/// file would actually be *overwritten*, and that narrow case is caught one
+/// layer down by libgit2 itself: a SAFE-mode `checkout_tree` maps a path the
+/// target tree adds over an existing working-tree file to
+/// `CHECKOUT_ACTION__CONFLICT` (`checkout.c::checkout_action_with_wd`,
+/// `GIT_DELTA_ADDED` without `GIT_CHECKOUT_FORCE`) and returns `GIT_ECONFLICT`,
+/// which `fast_forward_to` turns into a `bad_request` naming the files.
+/// Refusing on every untracked file was stricter than git, and now that
+/// `git_pull_all` surfaces per-repo failures instead of swallowing them, one
+/// new-but-not-yet-added file per repo would have filled the bulk-pull result
+/// with refusals for repos that were perfectly pullable.
 ///
 /// A failing `statuses()` read (index lock held by a concurrent `git`,
 /// unreadable file) is propagated, never treated as "clean": the one signal
 /// that says we cannot tell must not green-light a destructive checkout.
 fn ensure_clean_worktree(repo: &Repository, action: &str) -> Result<(), CommandError> {
     let mut status_opts = git2::StatusOptions::new();
-    status_opts
-        .include_untracked(true)
-        .recurse_untracked_dirs(true)
-        .include_ignored(false);
+    // Untracked and ignored entries are excluded at the source rather than
+    // filtered afterwards: they can't make us refuse, and recursing untracked
+    // directories is the expensive half of a `statuses()` walk.
+    status_opts.include_untracked(false).include_ignored(false);
     let statuses = repo
         .statuses(Some(&mut status_opts))
         .map_err(|e| CommandError::internal(format!("working tree status failed: {e}")))?;
-    if statuses.iter().any(|e| e.status().bits() != 0) {
+    if statuses.iter().any(|e| is_tracked_modification(e.status())) {
         return Err(CommandError::bad_request(format!(
-            "working tree has uncommitted changes or untracked files — commit, stash or remove them before {action}"
+            "working tree has uncommitted changes — commit or stash them before {action}"
         )));
     }
     Ok(())
+}
+
+/// `true` when the status bits say a **tracked** path diverges from HEAD or the
+/// index. `WT_NEW` (untracked) and `IGNORED` are absent on purpose — the whole
+/// point of the list is that those two are not a reason to refuse; see
+/// `ensure_clean_worktree`.
+fn is_tracked_modification(status: git2::Status) -> bool {
+    status.intersects(
+        git2::Status::INDEX_NEW
+            | git2::Status::INDEX_MODIFIED
+            | git2::Status::INDEX_DELETED
+            | git2::Status::INDEX_RENAMED
+            | git2::Status::INDEX_TYPECHANGE
+            | git2::Status::WT_MODIFIED
+            | git2::Status::WT_DELETED
+            | git2::Status::WT_RENAMED
+            | git2::Status::WT_TYPECHANGE
+            | git2::Status::CONFLICTED,
+    )
 }
 
 /// The remote a branch pulls from: its configured upstream remote, falling back
@@ -1117,36 +1174,108 @@ fn pull_blocking(
 
 /// Moves `branch` (which must be HEAD) to `target`, working tree included.
 ///
-/// The working tree is checked out **before** the ref moves, and in `.safe()`
-/// mode. Both details matter:
+/// Three details matter, in this order:
 ///
+/// * The branch reference is resolved **before** anything is written.
+///   `git_repository_head` hands back a synthetic *direct* reference literally
+///   named `"HEAD"` when HEAD is detached, so a caller deriving `branch` from
+///   `head().shorthand()` passes `"HEAD"` — and `refs/heads/HEAD` does not
+///   exist. Resolving it after the checkout would rewrite the working tree to
+///   the target while HEAD still pointed at the old commit, leaving the repo
+///   with a large phantom diff; resolving it first fails fast and writes
+///   nothing.
 /// * `.force()` overwrites every colliding file in the working tree — the data
 ///   loss this whole path exists to avoid. Safe mode makes libgit2 itself
-///   refuse on conflict, behind `ensure_clean_worktree`'s own check.
-/// * libgit2 takes the *index* as the checkout baseline, so moving the ref
-///   first (and then calling `checkout_head`) makes a clean tree look dirty and
-///   silently checks nothing out at all. This is the documented pitfall in
-///   `git_checkout_head`.
+///   refuse on conflict, which is now also what protects an untracked file the
+///   incoming tree would overwrite (`ensure_clean_worktree` no longer does).
+/// * The checkout runs **before** the ref moves. libgit2 defaults the checkout
+///   baseline to the **HEAD tree** (`checkout.c:2465-2473`; `baseline_index` is
+///   an explicit opt-in we never set), and SAFE mode's decision table reads
+///   "target == baseline → no action" for every workdir state
+///   (`include/git2/checkout.h:46-56`). Moving the ref first would make
+///   baseline and target the same tree, so the checkout would do nothing at all
+///   and the working tree would silently stay on the old commit.
 fn fast_forward_to(
     repo: &Repository,
     branch: &str,
     target: git2::Oid,
     reflog_action: &str,
 ) -> Result<(), CommandError> {
+    let branch_ref_name = format!("refs/heads/{branch}");
+    let mut branch_ref = repo.find_reference(&branch_ref_name).map_err(|_| {
+        CommandError::bad_request(format!(
+            "HEAD is not on a branch ('{branch_ref_name}' does not exist) — check out a branch before a {reflog_action}"
+        ))
+    })?;
+
     let object = repo
         .find_object(target, None)
         .map_err(|e| CommandError::internal(format!("target object failed: {e}")))?;
-    repo.checkout_tree(&object, Some(git2::build::CheckoutBuilder::new().safe()))
-        .map_err(|e| CommandError::bad_request(format!("checkout failed: {e}")))?;
 
-    let branch_ref_name = format!("refs/heads/{branch}");
-    repo.find_reference(&branch_ref_name)
-        .map_err(|e| CommandError::internal(format!("head ref failed: {e}")))?
+    // libgit2's own `GIT_ECONFLICT` message counts the conflicts but never
+    // names them, and the paths are the user's only signal about which file is
+    // in the way. Collect them from the notify callback.
+    let conflicts: RefCell<Vec<String>> = RefCell::new(Vec::new());
+    let checkout = {
+        let mut opts = git2::build::CheckoutBuilder::new();
+        opts.safe()
+            .notify_on(git2::CheckoutNotificationType::CONFLICT)
+            .notify(|_kind, path, _baseline, _target, _workdir| {
+                if let Some(path) = path {
+                    conflicts.borrow_mut().push(path.display().to_string());
+                }
+                true
+            });
+        repo.checkout_tree(&object, Some(&mut opts))
+    };
+    if let Err(err) = checkout {
+        return Err(checkout_conflict_error(
+            reflog_action,
+            &conflicts.borrow(),
+            &err,
+        ));
+    }
+
+    branch_ref
         .set_target(target, &format!("recrest: {reflog_action}"))
         .map_err(|e| CommandError::internal(format!("set_target failed: {e}")))?;
     repo.set_head(&branch_ref_name)
         .map_err(|e| CommandError::internal(format!("set_head failed: {e}")))?;
     Ok(())
+}
+
+/// How many conflicting paths the error message spells out before it
+/// summarises. A refused checkout on a large incoming tree can conflict on
+/// hundreds of files, and an unbounded list makes the toast unreadable.
+const MAX_NAMED_CONFLICTS: usize = 10;
+
+/// Renders a refused SAFE-mode checkout as a user-facing error, naming the
+/// conflicting paths when libgit2 handed any to the notify callback. Its own
+/// message is only "N conflicts prevent checkout" (`checkout.c:1360-1367`),
+/// which tells the user nothing actionable.
+fn checkout_conflict_error(
+    reflog_action: &str,
+    conflicts: &[String],
+    err: &git2::Error,
+) -> CommandError {
+    if conflicts.is_empty() {
+        return CommandError::bad_request(format!("checkout failed: {err}"));
+    }
+    let named = conflicts
+        .iter()
+        .take(MAX_NAMED_CONFLICTS)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let remaining = conflicts.len().saturating_sub(MAX_NAMED_CONFLICTS);
+    let suffix = if remaining > 0 {
+        format!(" and {remaining} more")
+    } else {
+        String::new()
+    };
+    CommandError::bad_request(format!(
+        "untracked working tree files would be overwritten by the {reflog_action}: {named}{suffix} — move or remove them first"
+    ))
 }
 
 #[cfg(test)]
@@ -1277,15 +1406,45 @@ mod tests {
 
         let err = fx
             .pull()
-            .expect_err("pull must refuse when untracked files are present");
+            .expect_err("pull must refuse when an untracked file is in the way");
+        // The refusal now comes from libgit2's SAFE-mode checkout, not from a
+        // blanket untracked-files guard — so it must still say "untracked" *and*
+        // name the file, which is the user's only signal about what to move.
         assert!(
             err.to_string().contains("untracked"),
             "unexpected error: {err}"
+        );
+        assert!(
+            err.to_string().contains("notes.md"),
+            "the conflicting file must be named: {err}"
         );
         assert_eq!(
             fx.clone_file("notes.md").as_deref(),
             Some("MY LOCAL NOTES\n"),
             "untracked file must survive a refused pull"
+        );
+    }
+
+    /// The regression guard for the over-strict guard: real `git pull --ff-only`
+    /// pulls happily with an unrelated new file lying around, and since
+    /// `git_pull_all` surfaces per-repo failures, refusing here showed a wall of
+    /// refusals for repos that were perfectly pullable.
+    #[test]
+    fn pull_fast_forwards_past_an_untracked_file_that_is_not_overwritten() {
+        let fx = PullFixture::new();
+        fx.advance_origin("v2-from-upstream\n");
+        fx.write_in_clone("scratch.md", "MY LOCAL SCRATCH\n");
+
+        fx.pull()
+            .expect("an untracked file the incoming tree doesn't carry must not block a pull");
+        assert_eq!(
+            fx.clone_file("file.txt").as_deref(),
+            Some("v2-from-upstream\n")
+        );
+        assert_eq!(
+            fx.clone_file("scratch.md").as_deref(),
+            Some("MY LOCAL SCRATCH\n"),
+            "the untracked file must be left alone"
         );
     }
 
@@ -1414,10 +1573,17 @@ mod tests {
         tr.write_file("notes.md", "MY LOCAL NOTES\n");
 
         let err = merge_blocking(tr.dir.path(), "feature", None, None)
-            .expect_err("merge must refuse when untracked files are present");
+            .expect_err("merge must refuse when an untracked file is in the way");
+        // Naming the file is only possible from the checkout's own conflict
+        // notification, so this also pins *where* the refusal comes from: the
+        // SAFE-mode `checkout_tree`, not a blanket untracked-files guard.
         assert!(
             err.to_string().contains("untracked"),
             "unexpected error: {err}"
+        );
+        assert!(
+            err.to_string().contains("notes.md"),
+            "the conflicting file must be named: {err}"
         );
         assert_eq!(
             read_normalized(&tr.dir.path().join("notes.md")),
@@ -1440,17 +1606,151 @@ mod tests {
         );
     }
 
+    /// A merge that resolves to "already up to date" writes nothing, so a dirty
+    /// tree is harmless — real git prints "Already up to date" here. The guard
+    /// runs after the analysis so this stays a no-op, matching `pull_blocking`.
     #[test]
-    fn ensure_clean_worktree_flags_untracked_files() {
+    fn merge_of_an_already_merged_branch_is_a_noop_on_a_dirty_tree() {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+        {
+            let commit = tr
+                .repo
+                .head()
+                .expect("head")
+                .peel_to_commit()
+                .expect("peel");
+            tr.repo
+                .branch("feature", &commit, false)
+                .expect("create feature at the initial commit");
+        }
+        // HEAD moves ahead of `feature`, so merging it is a no-op.
+        tr.commit_file("b.txt", "b\n", "second commit on the base branch");
+        tr.write_file("a.txt", "DIRTY LOCAL WORK\n");
+
+        let (state, conflicts) = merge_blocking(tr.dir.path(), "feature", None, None)
+            .expect("an already-merged branch must be a no-op even on a dirty tree");
+        assert!(matches!(state, GitMergeState::UpToDate));
+        assert!(conflicts.is_empty());
+        assert_eq!(
+            read_normalized(&tr.dir.path().join("a.txt")),
+            Some("DIRTY LOCAL WORK\n".to_string()),
+            "local work must be untouched"
+        );
+    }
+
+    /// `repo.head()` yields a synthetic reference named `"HEAD"` on a detached
+    /// HEAD, so `head_branch` is `"HEAD"` and `refs/heads/HEAD` does not exist.
+    /// The lookup must happen before the checkout: otherwise the working tree is
+    /// rewritten to the source branch while HEAD stays put.
+    #[test]
+    fn merge_refuses_a_fast_forward_on_a_detached_head_and_leaves_the_worktree_alone() {
+        let (tr, _base) = merge_fixture();
+        let head_oid = tr
+            .repo
+            .head()
+            .expect("head")
+            .peel_to_commit()
+            .expect("peel")
+            .id();
+        tr.repo.set_head_detached(head_oid).expect("detach HEAD");
+
+        let err = merge_blocking(tr.dir.path(), "feature", None, None)
+            .expect_err("a merge on a detached HEAD must fail");
+        assert!(
+            err.to_string().contains("HEAD is not on a branch"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            !tr.dir.path().join("notes.md").exists(),
+            "the working tree must not have been checked out to the source branch"
+        );
+        assert_eq!(
+            tr.repo
+                .head()
+                .expect("head")
+                .peel_to_commit()
+                .expect("peel")
+                .id(),
+            head_oid,
+            "HEAD must still point at the original commit"
+        );
+    }
+
+    #[test]
+    fn ensure_clean_worktree_allows_untracked_files_but_flags_tracked_edits() {
         let tr = TempRepo::init();
         tr.commit_file("a.txt", "a\n", "init");
         ensure_clean_worktree(&tr.repo, "testing").expect("clean tree passes");
 
+        // Untracked: not a reason to refuse — a checkout that would actually
+        // overwrite it is stopped by libgit2's SAFE mode instead.
         tr.write_file("stray.txt", "stray\n");
-        let err = ensure_clean_worktree(&tr.repo, "testing").expect_err("untracked file is dirty");
+        ensure_clean_worktree(&tr.repo, "testing").expect("untracked files are not dirty");
+
+        // Tracked and modified: still a hard refusal.
+        tr.write_file("a.txt", "modified\n");
+        let err =
+            ensure_clean_worktree(&tr.repo, "testing").expect_err("tracked edits are still dirty");
         assert!(
-            err.to_string().contains("untracked"),
+            err.to_string().contains("uncommitted changes"),
             "unexpected error: {err}"
+        );
+    }
+
+    /// A staged-but-uncommitted new file is a tracked modification even though
+    /// its working-tree bit is `INDEX_NEW`, not `WT_MODIFIED`.
+    #[test]
+    fn ensure_clean_worktree_flags_a_staged_new_file() {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+        tr.write_file("staged.txt", "staged\n");
+        {
+            let mut index = tr.repo.index().expect("index");
+            index
+                .add_path(Path::new("staged.txt"))
+                .expect("stage the new file");
+            index.write().expect("write index");
+        }
+
+        let err = ensure_clean_worktree(&tr.repo, "testing")
+            .expect_err("a staged addition is uncommitted work");
+        assert!(
+            err.to_string().contains("uncommitted changes"),
+            "unexpected error: {err}"
+        );
+    }
+
+    /// The rollback path of `set_upstream_or_delete`: a branch whose tracking
+    /// config could not be written must not survive, or the retry takes the
+    /// "local branch already exists" shortcut and never repairs it.
+    #[test]
+    fn failing_to_set_the_upstream_deletes_the_freshly_created_branch() {
+        let tr = TempRepo::init();
+        tr.commit_file("a.txt", "a\n", "init");
+        let commit = tr
+            .repo
+            .head()
+            .expect("head")
+            .peel_to_commit()
+            .expect("peel");
+        let mut created = tr
+            .repo
+            .branch("feature", &commit, false)
+            .expect("create feature");
+
+        // No such remote-tracking ref, so libgit2 returns ENOTFOUND.
+        let err = set_upstream_or_delete(&mut created, "feature", "origin/does-not-exist")
+            .expect_err("set_upstream must fail for a missing upstream");
+        assert!(
+            err.to_string().contains("set upstream"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            tr.repo
+                .find_branch("feature", git2::BranchType::Local)
+                .is_err(),
+            "the half-configured branch must have been rolled back"
         );
     }
 }

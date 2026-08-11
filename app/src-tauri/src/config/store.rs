@@ -2,6 +2,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
@@ -24,6 +25,9 @@ const CORRUPT_SUFFIX: &str = ".corrupt-";
 /// into a non-event instead of a lost save.
 const RENAME_ATTEMPTS: u32 = 4;
 const RENAME_RETRY_DELAY_MS: u64 = 20;
+/// Distinguishes successive scratch files written by this process; see
+/// `tmp_path_for`.
+static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Whether a missing folder may be treated as proof that a scanned repo is gone.
 ///
@@ -57,7 +61,13 @@ pub enum MissingFolderEvidence {
 pub struct SettingsCorruption {
     /// Where the unparseable file was moved to, or `None` if even the rename
     /// failed (in which case the original is still in place and untouched).
-    pub quarantine_path: Option<PathBuf>,
+    ///
+    /// A lossy `String`, not a `PathBuf`: `Serialize for PathBuf` *errors* on a
+    /// non-UTF-8 path instead of degrading, which would fail the whole
+    /// `get_settings_corruption` response at the worst possible moment — the app
+    /// is already reporting a broken config, and this string is the user's only
+    /// pointer to their recoverable data. Display-only, so lossy is enough.
+    pub quarantine_path: Option<String>,
     /// Unix seconds at detection — matches the `<unix-ts>` in the file name.
     pub detected_at: u64,
     /// The serde error, verbatim (line/column included).
@@ -235,7 +245,19 @@ impl ConfigStore {
                 // Gated on the repo sitting under a root the scan actually got
                 // through: for any other root the walk never observed the repo's
                 // neighbourhood, so its absence is a mount failure, not a delete.
-                if walked_roots.iter().any(|root| r.path.starts_with(root)) && !r.path.exists() {
+                //
+                // Presence-of-*repo*, not presence-of-folder, and the two really
+                // are different questions here. This branch asks "could the scan
+                // that just walked this root still have produced this record?" —
+                // and `scanner` only yields directories that carry a `.git`. A
+                // folder that survived but lost its `.git` is therefore no longer
+                // reproducible: keeping it leaves a row the scan can never
+                // re-confirm, already flagged by `RepoDto::missing` and by the
+                // reconciler, yet never pruned. `is_repo_present` is the single
+                // definition that keeps those three answering the same way.
+                if walked_roots.iter().any(|root| r.path.starts_with(root))
+                    && !crate::git::is_repo_present(&r.path)
+                {
                     return true;
                 }
                 // Outside every scan root. Guarded on a non-empty root list so
@@ -307,7 +329,9 @@ fn quarantine(path: &Path, err: &serde_json::Error) -> SettingsCorruption {
         ),
     }
     SettingsCorruption {
-        quarantine_path,
+        quarantine_path: quarantine_path
+            .as_deref()
+            .map(|p| p.to_string_lossy().into_owned()),
         detected_at,
         message: err.to_string(),
     }
@@ -392,12 +416,27 @@ fn write_settings_atomically(path: &Path, settings: &AppSettings) -> anyhow::Res
     ))
 }
 
+/// `settings.json` → `settings.json.tmp.<pid>.<n>`.
+///
+/// The scratch name must be unique per writer, not merely per file. Inside one
+/// process the config `Mutex` serialises saves, but two processes can share an
+/// app-data dir — a dev build next to a release build, or two
+/// `RECREST_TEST_PROFILE` runs pointed at the same tmpdir — and a fixed name let
+/// them write the same scratch file concurrently, so one could rename the
+/// other's half-written bytes over `settings.json`. The pid separates processes,
+/// the counter separates writes within one (and keeps a pid recycled by the OS
+/// from colliding with a leftover file).
 fn tmp_path_for(path: &Path) -> PathBuf {
     let mut name = path
         .file_name()
         .map(OsString::from)
         .unwrap_or_else(|| OsString::from(SETTINGS_FILE));
     name.push(TMP_SUFFIX);
+    name.push(format!(
+        ".{}.{}",
+        std::process::id(),
+        TMP_COUNTER.fetch_add(1, Ordering::Relaxed)
+    ));
     path.with_file_name(name)
 }
 
@@ -466,8 +505,8 @@ mod tests {
         dir
     }
 
-    /// Every `settings.json.corrupt-*` sibling of `path`.
-    fn corrupt_siblings(path: &Path) -> Vec<PathBuf> {
+    /// Siblings of `path` whose file name contains `needle`.
+    fn siblings_matching(path: &Path, needle: &str) -> Vec<PathBuf> {
         let parent = path.parent().expect("parent");
         let mut found: Vec<PathBuf> = fs::read_dir(parent)
             .expect("read config dir")
@@ -476,11 +515,16 @@ mod tests {
             .filter(|p| {
                 p.file_name()
                     .and_then(|n| n.to_str())
-                    .is_some_and(|n| n.contains(CORRUPT_SUFFIX))
+                    .is_some_and(|n| n.contains(needle))
             })
             .collect();
         found.sort();
         found
+    }
+
+    /// Every `settings.json.corrupt-*` sibling of `path`.
+    fn corrupt_siblings(path: &Path) -> Vec<PathBuf> {
+        siblings_matching(path, CORRUPT_SUFFIX)
     }
 
     /// The write path must never truncate `settings.json` in place: a crash
@@ -502,9 +546,11 @@ mod tests {
         store.save_for_tests().expect("save");
 
         assert!(path.exists(), "settings.json must exist after save");
+        // The scratch name is unique per write, so this scans for leftovers
+        // instead of probing one fixed name (which would always be absent).
         assert!(
-            !tmp_path_for(&path).exists(),
-            "the scratch file must be gone once the rename succeeded"
+            siblings_matching(&path, TMP_SUFFIX).is_empty(),
+            "no scratch file may survive a successful rename"
         );
 
         // A second save over an existing file must also succeed — on Windows
@@ -529,6 +575,37 @@ mod tests {
         );
 
         let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// Two writers sharing an app-data dir (dev + release build, or two
+    /// `RECREST_TEST_PROFILE` runs pointed at one tmpdir) must not share a
+    /// scratch path, or one can rename the other's half-written bytes over
+    /// `settings.json`.
+    #[test]
+    fn tmp_path_is_unique_per_write_and_carries_the_pid() {
+        let path = PathBuf::from("/cfg/settings.json");
+
+        let first = tmp_path_for(&path);
+        let second = tmp_path_for(&path);
+
+        assert_ne!(first, second, "two writes must not share a scratch path");
+        let name = first
+            .file_name()
+            .and_then(|n| n.to_str())
+            .expect("scratch file name");
+        assert!(
+            name.starts_with("settings.json.tmp"),
+            "unexpected scratch name: {name}"
+        );
+        assert!(
+            name.contains(&std::process::id().to_string()),
+            "the scratch name must carry the pid: {name}"
+        );
+        assert_eq!(
+            first.parent(),
+            path.parent(),
+            "the scratch file must stay on the same volume as the target"
+        );
     }
 
     /// The data-loss path: a `settings.json` that exists but doesn't parse
@@ -564,10 +641,15 @@ mod tests {
 
         // The original bytes survive under a .corrupt-<ts> name, and the
         // defaults were NOT written back over them.
-        let quarantined = corruption
-            .quarantine_path
-            .as_ref()
-            .expect("quarantine path must be set");
+        // Carried as a display string (a non-UTF-8 path must not break the
+        // response), so the test re-hydrates it to touch the file.
+        let quarantined = PathBuf::from(
+            corruption
+                .quarantine_path
+                .as_ref()
+                .expect("quarantine path must be set"),
+        );
+        let quarantined = &quarantined;
         assert!(quarantined.exists(), "quarantine file must exist on disk");
         assert_eq!(
             fs::read_to_string(quarantined).expect("read quarantine"),
@@ -717,6 +799,13 @@ mod tests {
         }
     }
 
+    /// Create a directory that `scanner` would recognise as a repository —
+    /// i.e. one carrying a `.git` entry, which is what `is_repo_present` and
+    /// the scan itself both key off.
+    fn create_repo_dir(path: &Path) {
+        fs::create_dir_all(path.join(".git")).expect("create repo dir with .git");
+    }
+
     /// A scanned repo deleted *inside* a still-configured scan root keeps
     /// matching the root's `starts_with` test, so before the missing-folder
     /// check it survived even a full rescan.
@@ -724,7 +813,7 @@ mod tests {
     fn prune_drops_scanned_repo_whose_folder_vanished_inside_a_scan_root() {
         let root = tempfile::tempdir().expect("tmpdir");
         let alive = root.path().join("alive");
-        fs::create_dir_all(&alive).expect("create alive repo dir");
+        create_repo_dir(&alive);
         let vanished = root.path().join("vanished"); // never created on disk
         let manual_vanished = root.path().join("manual-vanished");
 
@@ -764,6 +853,49 @@ mod tests {
         );
         assert!(!repos.contains_key("vanished"));
         assert_eq!(store.settings().pinned_repo_ids, vec!["alive".to_string()]);
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// A folder that survived but lost its `.git` is not reproducible by a scan
+    /// (`scanner` only yields dirs carrying one), so it must be pruned just like
+    /// a deleted folder. Before this it stayed forever: flagged as `missing` by
+    /// the DTO and by the reconciler, yet never dropped by any rescan.
+    #[test]
+    fn prune_drops_scanned_repo_whose_git_dir_vanished_but_folder_remains() {
+        let root = tempfile::tempdir().expect("tmpdir");
+        let alive = root.path().join("alive");
+        create_repo_dir(&alive);
+        let de_gitted = root.path().join("no-longer-a-repo");
+        fs::create_dir_all(&de_gitted).expect("create folder without .git");
+
+        let settings_path = fresh_settings_path("prune-no-git-dir");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![root.path().to_string_lossy().to_string()];
+            settings
+                .repos
+                .insert("alive".into(), scanned_record("alive", &alive, false));
+            settings.repos.insert(
+                "no-longer-a-repo".into(),
+                scanned_record("no-longer-a-repo", &de_gitted, false),
+            );
+        }
+
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Authoritative {
+            walked_roots: vec![root.path().to_path_buf()],
+        });
+
+        assert_eq!(
+            pruned.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            vec!["no-longer-a-repo"]
+        );
+        assert!(
+            store.settings().repos.contains_key("alive"),
+            "a real repo under the same root must survive"
+        );
 
         let _ = fs::remove_dir_all(&parent);
     }

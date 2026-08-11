@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use notify::RecursiveMode;
 use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, RecommendedCache};
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 
 use super::status;
 
@@ -74,7 +74,7 @@ impl RepoWatcher {
         // Repo directory may have been deleted or moved since it was registered
         // (e.g. user threw the folder in the Recycle Bin). Skip silently — the
         // caller can't do anything about it and a warn! would spam logs.
-        if !git_dir.exists() {
+        if !super::is_repo_present(path) {
             tracing::debug!(
                 "watch_repo: skipping {id} — {} no longer exists",
                 git_dir.display()
@@ -186,8 +186,15 @@ fn take_subscriptions_for_root(map: &mut WatchedRepos, repo_root: &Path) -> Vec<
 /// order and the first match wins, so `.git/**` always passes (git writes
 /// its own internals during every operation we care about) while
 /// `node_modules/**/.git` — a vendored nested repo — stays filtered.
+///
+/// Only segments *below the repo root* are inspected. A path we cannot make
+/// relative fails **open** (nothing is ignored): matching against the absolute
+/// path would let a segment of the repo's own location decide, so a repo at
+/// `D:\dev\build\myrepo` would have every one of its events dropped.
 fn is_ignored_event_path(path: &Path, repo_root: &Path) -> bool {
-    let relative = path.strip_prefix(repo_root).unwrap_or(path);
+    let Ok(relative) = path.strip_prefix(repo_root) else {
+        return false;
+    };
     for component in relative.components() {
         let Component::Normal(segment) = component else {
             continue;
@@ -203,6 +210,22 @@ fn is_ignored_event_path(path: &Path, repo_root: &Path) -> bool {
         }
     }
     false
+}
+
+/// Upper bound on `read_status` walks running at the same time across *all*
+/// debounce batches. Deliberately process-wide rather than per-batch: batches
+/// arrive every 500 ms and each one spawns its own `handle_events` task, so a
+/// per-batch cap would still let an event storm stack unbounded work. 8 keeps a
+/// storm from saturating the blocking pool (and the disk) while staying well
+/// above the handful of repos a normal edit touches.
+const MAX_CONCURRENT_STATUS_READS: usize = 8;
+
+/// The process-wide permit pool for `MAX_CONCURRENT_STATUS_READS`. Lazily built
+/// because `Semaphore::new` is not a `const fn`; never closed, so `acquire`
+/// only ever fails if that changes.
+fn status_read_permits() -> &'static Arc<Semaphore> {
+    static PERMITS: OnceLock<Arc<Semaphore>> = OnceLock::new();
+    PERMITS.get_or_init(|| Arc::new(Semaphore::new(MAX_CONCURRENT_STATUS_READS)))
 }
 
 /// Why an off-thread status read produced no status. `Gone` folds in the
@@ -250,18 +273,31 @@ async fn handle_events(
     // `commands::repos::list_repos`) and await the handles in the order they
     // were spawned — the emitted events, their order and their payloads are
     // byte-for-byte what they were before.
+    //
+    // The fan-out is capped: each task is a full status walk plus a worktree
+    // diff, a 14-day commit walk and a HEAD-tree language detection, and this
+    // path is event-driven and repeats every 500 ms — an IDE reindex or a
+    // cloud-sync pass touching many repos at once would otherwise queue
+    // hundreds of concurrent heavy git2 walks. The permit is acquired *before*
+    // the spawn so the queue never forms in the first place, and it is moved
+    // into the task so it is released the moment that walk finishes.
     let touched: Vec<(String, PathBuf)> = touched.into_iter().collect();
-    let handles: Vec<_> = touched
-        .iter()
-        .map(|(_, root)| {
-            let path = root.clone();
-            tokio::task::spawn_blocking(move || match status::read_status(&path) {
+    let mut handles = Vec::with_capacity(touched.len());
+    for (_, root) in &touched {
+        let path = root.clone();
+        let permit = Arc::clone(status_read_permits()).acquire_owned().await.ok();
+        handles.push(tokio::task::spawn_blocking(move || {
+            let _permit = permit;
+            match status::read_status(&path) {
                 Ok(status) => Ok(status),
-                Err(_) if !path.join(".git").exists() => Err(StatusFailure::Gone),
+                // `is_repo_present` is the single definition of "still a repo"
+                // shared with `RepoDto::missing` and the reconciler's sweep;
+                // inlining the `.git` probe here is how those three drifted apart.
+                Err(_) if !super::is_repo_present(&path) => Err(StatusFailure::Gone),
                 Err(err) => Err(StatusFailure::Failed(err)),
-            })
-        })
-        .collect();
+            }
+        }));
+    }
 
     for ((id, _), handle) in touched.iter().zip(handles) {
         match handle.await {
@@ -391,6 +427,36 @@ mod tests {
 
         assert!(taken.is_empty());
         assert_eq!(map.len(), 1);
+    }
+
+    /// A path that isn't under the repo root must fail open. Matching the
+    /// absolute path instead would let the repo's *own* location decide: a repo
+    /// at `D:\dev\build\myrepo` carries an ignored segment in its prefix, so
+    /// every one of its events would be dropped.
+    #[test]
+    fn a_path_outside_the_repo_root_is_not_ignored() {
+        assert!(!is_ignored_event_path(
+            Path::new("/elsewhere/build/artifact.bin"),
+            Path::new("/repos/demo")
+        ));
+    }
+
+    /// The same repo, addressed relatively: an ignored segment in the *root's*
+    /// path must not leak into the decision for a working-tree file.
+    #[test]
+    fn ignored_segments_in_the_repo_root_do_not_filter_its_own_events() {
+        let root = Path::new("/dev/build/myrepo");
+        assert!(!is_ignored_event_path(&root.join("src/main.rs"), root));
+    }
+
+    #[test]
+    fn the_status_read_permit_pool_is_bounded_and_shared() {
+        let permits = status_read_permits();
+        assert_eq!(permits.available_permits(), MAX_CONCURRENT_STATUS_READS);
+        assert!(
+            Arc::ptr_eq(permits, status_read_permits()),
+            "every batch must share one pool, or the cap is per-batch only"
+        );
     }
 
     /// A vendored nested repo lives below `node_modules`; its `.git` churn is
