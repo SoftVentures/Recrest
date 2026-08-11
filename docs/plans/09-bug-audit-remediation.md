@@ -170,6 +170,66 @@ handle_events` — plausibly a real contributor to the freeze symptom this branc
 
 ---
 
+## Landed after this document was written
+
+Everything above describes the tree at `8c59dcc`. Four things arrived after it; two of them
+change statements made above.
+
+### E2E coverage for three of the fixes — `d80dff5`, `a7dd4d4`
+
+Three Playwright specs were added under `tests/src/e2e/app/`:
+
+- `21-pull-all-confirmation.spec.ts` — the "Pull all" confirmation, including the assertion a unit
+  test cannot make: cancelling must not reach the backend at all. Read off the stub's command log,
+  because an un-dispatched IPC call leaves no DOM trace.
+- `22-i18n-runtime-keys.spec.ts` — the `nsSeparator` fix from P1/8, plus the `stash@{n}` label.
+- `23-provider-auth-state.spec.ts` — the "Token rejected" vs "Not connected" distinction from P2.
+
+`a7dd4d4` added the `data-testid` on the provider disconnect button that spec 23's flow needs.
+
+### Visual Tester rework — `ae22f73`
+
+The `📸 Visual Tester` workflow now captures the **app** on Linux/Windows/macOS via
+`99-visual-tour.spec.ts` instead of shooting the landing page. The landing page's baselines are
+pinned to Chromium-on-Linux, so running them on three OSes produced only font-diff noise.
+
+### A defect in that rework, found in review and fixed on this branch
+
+Neither audit document mentions it, so it is recorded here. The workflow's "artifact must not be
+empty" guard counted **every** PNG flattened out of `.screenshots/playwright/`. But
+`playwright.config.ts` sets `screenshot: "only-on-failure"` with `retries: 2` in CI, so a tour that
+_fails_ on every view writes `test-failed-<n>.png` per test per retry — the count looks healthy while
+the artifact contains nothing but failure shots. Simulated: 14 tests × 3 attempts = 42 PNGs, old
+guard green, zero actual captures. It now counts only what the tour itself wrote
+(`.screenshots/playwright/visual-tour/`) and asserts at least one per non-skipped tour test (13
+today, a constant in the workflow tied to the spec).
+
+### Corrections to statements made above and elsewhere
+
+- **`ci.yml::e2e` is advisory, not gating.** Three places claimed a "gating pixel-diff in
+  `ci.yml::e2e`". The job is named `Playwright E2E (optional)`, carries `continue-on-error: true`,
+  and is absent from the `ci-pass` `needs:` list Branch Protection requires — so no Playwright spec
+  can turn a PR red. The wording in `visual-tester.yml` and `tests/CLAUDE.md` is corrected. The job
+  is deliberately left advisory for now: it fails with pre-existing failures across all seven
+  projects and has been failing on `main` too (verified: the last two `main` runs both show
+  `Playwright E2E (optional)` = failure while `CI pass` = success), so requiring it would block
+  unrelated work on inherited breakage. **Triaging those failures and adding `e2e` to `ci-pass` is
+  the tracked follow-up.** Nothing else has to change to make it gating.
+- **`RELEASE.md` was not wired into release-please.** `verify-metadata` (added by this work) asserts
+  `RELEASE.md` against the tag, but `release-please-config.json` bumped the other four version files
+  and not this one — and the job only runs on `push: tags`, i.e. after the tag exists, where the one
+  recovery path is the manual dispatch that _deletes_ the release. `RELEASE.md` is now a `generic`
+  extra-file with an `x-release-please-version` marker on its H1, and a new `ci.yml::version-sync`
+  job compares every version-bearing file against the root `package.json` on every PR, so a
+  divergence reddens the Release PR instead of the tag.
+- **`shared/src/constants/app.ts::APP_VERSION` is silently NOT bumped.** Found while verifying the
+  above. Its `// x-release-please-version` marker sits on the line _above_ the constant, and
+  release-please's Generic updater only rewrites the marker's **own** line (verified against
+  release-please 17.11.1: the file comes back byte-identical). Needs a one-line fix in `shared/` —
+  move the marker to a trailing comment on the `APP_VERSION` line. Until then `version-sync` catches
+  the drift at PR time. `tests/src/helpers/constants.ts::EXPECTED_APP_VERSION` is hand-maintained by
+  design and is also covered by `version-sync`.
+
 ## Not done, and why
 
 - **`v0.10.2`'s four dead `latest.json` URLs.** The prune fix on this branch prevents recurrence but
@@ -186,5 +246,15 @@ handle_events` — plausibly a real contributor to the freeze symptom this branc
   `loadingRepoIds` / `errorByRepo`, and the global `loading`/`error` are derived so existing
   consumers keep working. Moving the PR views onto per-repo granularity is a UI decision, not a bug
   fix.
-- **Nothing was verified at runtime.** The app was never launched, no E2E run, and the macOS arm64
-  signing fix still needs Apple Silicon hardware.
+- **Runtime verification is partial.** Corrected: the three specs added in `d80dff5` **have** been
+  run against the dev server — 9 tests, all passing on `--project=app-desktop`, and each hardened
+  assertion was confirmed to fail when its subject was mutated (spec 22's scope assertions fail with
+  the `nsSeparator` fix removed; spec 21's negative assertion fails when pointed at a command the app
+  does dispatch, and its non-empty guard fails when the stub log global is renamed; spec 23 fails
+  when the pill copy is read from the wrong locale key). What remains unverified is everything a
+  local Chromium run cannot cover: **the macOS arm64 signing fix still needs Apple Silicon
+  hardware**, the repo-refresh path has had no manual smoke test, and the release/beta workflow
+  changes have been simulated against synthetic inputs but never executed on a real runner.
+- **`ci.yml::e2e` still fails** for pre-existing reasons unrelated to this branch (see above), so the
+  full suite is not green. It cannot block anything today, which is exactly why the three new specs
+  were verified by hand.

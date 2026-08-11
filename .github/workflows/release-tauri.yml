@@ -141,8 +141,15 @@ jobs:
           check_version "package.json" "$(jq -r '.version // empty' package.json || true)"
           check_version "app/src-tauri/tauri.conf.json" \
             "$(jq -r '.version // empty' app/src-tauri/tauri.conf.json || true)"
+          # Anchored on the `# x-release-please-version` marker, not on "the
+          # first column-0 `version =` line". The latter is correct only as
+          # long as `[package]` stays the first table: a `[dependencies.foo]`
+          # block with a column-0 `version` above it would silently gate the
+          # release on a dependency's version. The marker is the exact line
+          # release-please rewrites, so keying on it makes "the line that gets
+          # bumped" and "the line we assert" the same fact.
           check_version "app/src-tauri/Cargo.toml" \
-            "$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/src-tauri/Cargo.toml | head -n1 || true)"
+            "$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)"[[:space:]]*#[[:space:]]*x-release-please-version.*/\1/p' app/src-tauri/Cargo.toml | head -n1 || true)"
 
           exit $rc
 
@@ -427,9 +434,14 @@ jobs:
           # does not clear it. Both mac legs build with `--target <triple>`, so
           # a bare `target/release/bundle/macos/*.app` never matches, `ls` exits
           # 2, pipefail propagates it, and the assignment kills the step before
-          # the first echo. `find` exits 0 when nothing matches.
+          # the first echo. `find` exits 0 when it merely matches nothing —
+          # but NOT when its root is missing (a build that never produced
+          # `target/` at all), and `find | head -n1` can also end in 141 on
+          # SIGPIPE, either of which pipefail would turn into a silent step
+          # death. Hence `|| true`: an empty `$APP` must reach the ::error::
+          # below, which is the line that says what went wrong.
           # `-prune` stops the descent at the bundle so a nested .app can't win.
-          APP="$(find app/src-tauri/target -type d -path '*/release/bundle/macos/*.app' -prune 2>/dev/null | head -n1)"
+          APP="$(find app/src-tauri/target -type d -path '*/release/bundle/macos/*.app' -prune 2>/dev/null | head -n1 || true)"
           if [ -z "$APP" ]; then
             echo "::error::no .app bundle produced under app/src-tauri/target"
             exit 1
@@ -943,8 +955,11 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          # Without this the step is vacuously green: a missing manifest makes
-          # the here-string empty, the loop never runs and rc stays 0.
+          # This step has two independent ways of passing vacuously, and the
+          # file-existence guard only closes the first one.
+          #
+          # (1) MISSING manifest — the here-string is empty, the loop body never
+          #     runs, rc stays 0.
           if [ ! -f assets/latest.json ]; then
             echo "::error::latest.json was not downloaded from $TAG — the updater manifest is missing"
             exit 1
@@ -957,6 +972,20 @@ jobs:
             echo "::error::could not list the assets of $TAG"
             exit 1
           fi
+          # (2) CORRUPT or platform-less manifest — the case the existence
+          #     guard does not cover. A failing command substitution inside a
+          #     `<<<` here-string does not trip `-e`: the substitution is part
+          #     of a word expansion, not a command of its own, so a `jq` parse
+          #     error left the loop with nothing to read and the step green.
+          #     (The run still died later, on an unguarded `jq` in the macOS
+          #     step, but with a raw jq error and none of these annotations.)
+          #     So: capture, assert non-empty, and only then feed the loop.
+          referenced="$(jq -r '.platforms[].url' assets/latest.json | sed 's#.*/##' | sort -u || true)"
+          if [ -z "$referenced" ]; then
+            echo "::error::latest.json carries no .platforms[].url entries — it is malformed, empty, or lost its platform map, so the updater has nothing to resolve. First 2 kB follow:"
+            head -c 2000 assets/latest.json | sed 's/^/  /' || true
+            exit 1
+          fi
           while IFS= read -r name; do
             [ -n "$name" ] || continue
             if echo "$present" | grep -Fxq "$name"; then
@@ -964,7 +993,7 @@ jobs:
             else
               echo "::error::latest.json references $name, which is not an asset of $TAG"; rc=1
             fi
-          done <<< "$(jq -r '.platforms[].url' assets/latest.json | sed 's#.*/##' | sort -u)"
+          done <<< "$referenced"
           exit $rc
 
       # The regression that shipped broken Apple Silicon builds: without a
@@ -1024,7 +1053,11 @@ jobs:
           # rename would otherwise turn the final release gate into a false red.
           for pair in "darwin-aarch64:arm64" "darwin-x86_64:x86_64"; do
             key="${pair%%:*}"; want="${pair##*:}"
-            name="$(jq -r --arg k "$key" '.platforms[$k].url // empty' assets/latest.json | sed 's#.*/##')"
+            # `|| true` for the same reason as everywhere else in this job: on a
+            # malformed manifest `jq` exits non-zero, and without it the step
+            # dies on the assignment with a bare jq error instead of the
+            # ::error:: line right below.
+            name="$(jq -r --arg k "$key" '.platforms[$k].url // empty' assets/latest.json | sed 's#.*/##' || true)"
             if [ -z "$name" ]; then
               echo "::error::latest.json has no $key platform entry — macOS updates would not resolve"
               rc=1; continue
@@ -1032,7 +1065,13 @@ jobs:
             tgz="assets/$name"
             [ -f "$tgz" ] || { echo "::error::missing updater payload $tgz"; rc=1; continue; }
             out="$(mktemp -d)"
-            tar -xzf "$tgz" -C "$out"
+            # Guarded: an unguarded `tar` on a truncated or non-gzip payload
+            # kills the step with tar's own message and no annotation, which
+            # reads as an infrastructure failure rather than a bad release.
+            if ! tar -xzf "$tgz" -C "$out"; then
+              echo "::error::$(basename "$tgz") could not be extracted — the updater payload is corrupt or truncated"
+              rc=1; continue
+            fi
             verify_app "$(ls -d "$out"/*.app 2>/dev/null | head -n1 || true)" "$want" "$(basename "$tgz")"
           done
           exit $rc

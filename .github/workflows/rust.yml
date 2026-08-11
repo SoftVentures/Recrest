@@ -95,15 +95,19 @@ jobs:
       # `fix-path-env` from git) and `app/src-tauri/target`, keyed on
       # Cargo.lock + rustc version, with intermediate artifacts pruned.
       #
-      # Only pushes to main/develop and manual runs write the cache: PR
-      # branches are short-lived and would each claim ~1–2 GB of the repo's
-      # 10 GB budget, evicting the entries every other PR then reads.
+      # Only `main` writes the cache, matching `e2e-tauri.yml`'s `save-if`. The
+      # earlier `github.event_name != 'pull_request'` also wrote from every
+      # `develop` push AND from a `workflow_dispatch` on any branch, and this
+      # workflow stores 3 platforms × (registry + target) — against a 10 GB
+      # per-repo budget shared with the Playwright and tauri-bin caches, that
+      # churn evicts exactly the entries PR runs read. `main` is the release
+      # path, so it is also the ref whose cache is worth keeping warm.
       - name: Cache cargo registry + target
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: app/src-tauri -> target
           key: ${{ matrix.platform }}
-          save-if: ${{ github.event_name != 'pull_request' }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # `tauri::generate_context!` embeds `build.frontendDist` when it is
       # compiled outside dev mode. Debug builds take the `devUrl` branch and do
@@ -147,12 +151,22 @@ jobs:
     needs: [rust]
     if: always()
     steps:
+      # `skipped` is checked as well as `failure`/`cancelled`. `rust` has no
+      # `if:` today so it cannot legitimately skip — but a job that is skipped
+      # (an `if:` added later, or a `needs:` chain that short-circuits) reports
+      # neither failure nor cancellation, and a two-state check reads that as
+      # green. That is the shape that lets an aggregate gate pass on a matrix
+      # that never ran. Note this is NOT symmetrical with `ci.yml::ci-pass`,
+      # which deliberately tolerates `skipped`: two of its needs
+      # (`branch-name`, `dependabot-type`) are `if: pull_request`-gated and are
+      # legitimately skipped on every push to `main`/`develop`.
       - name: Verify the Rust matrix passed
         run: |
           set -uo pipefail
           if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || \
-             [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
-            echo "::error::the Rust matrix failed or was cancelled."
+             [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ] || \
+             [ "${{ contains(needs.*.result, 'skipped') }}" = "true" ]; then
+            echo "::error::the Rust matrix failed, was cancelled, or did not run at all (results: ${{ join(needs.*.result, ', ') }})."
             exit 1
           fi
           echo "All Rust jobs passed."

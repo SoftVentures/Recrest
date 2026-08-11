@@ -6,7 +6,24 @@
   * <version> must equal the tag being released (tag `vX.Y.Z` → `X.Y.Z`) and
     match package.json, app/src-tauri/tauri.conf.json and
     app/src-tauri/Cargo.toml — all four are bumped together by release-please.
-  * Update this file in the release PR, before the tag exists.
+  * The `x-release-please-version` marker comment trailing the H1 is what puts
+    THIS file in that set. Without it, release-please bumped the other four and
+    left this one behind — and `verify-metadata` only fires on the `push: tags`
+    trigger, i.e. AFTER the tag exists, where the sole recovery is amending
+    `main` and re-dispatching, and manual dispatch DELETES the release. Do not
+    remove the marker, and keep the version the first `d.d.d` token on the line:
+    the updater rewrites the first semver match on the marker's own line, and
+    nothing else in this file.
+  * The headline and the body are still yours to write in the release PR;
+    release-please only rewrites the version token. It force-pushes the release
+    branch on every run on `main`, so body edits made on that branch can be
+    regenerated away — re-apply them if the PR gets updated.
+  * `ci.yml::version-sync` compares this H1 against package.json on every PR, so
+    a mismatch reddens the Release PR instead of the tag. It also covers the two
+    version constants release-please does NOT bump and you must edit by hand:
+    `tests/src/helpers/constants.ts::EXPECTED_APP_VERSION` (hand-maintained by
+    design) and `shared/src/constants/app.ts::APP_VERSION` (whose marker sits on
+    the wrong line — see docs/plans/09-bug-audit-remediation.md).
 
   Why it is gated: this file is copied verbatim into the GitHub Release body
   AND becomes the `notes` field of `latest.json`, the update manifest every
@@ -15,9 +32,12 @@
 
   This block is invisible where it lands: GitHub's markdown renderer strips
   HTML comments from release bodies, and the app never displays the raw notes.
+  (Which is also why the marker below is written as a comment: it disappears
+  the same way. It is NOT spelled out inside this block, because a literal
+  comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.10.2 — Unstyled-app fix
+# Recrest 0.10.2 — Unstyled-app fix <!-- x-release-please-version -->
 
 Patch release on top of `0.10.1`. Fixes the real cause of the unstyled-app regression that `0.10.0`/`0.10.1` misdiagnosed — everything from `0.10.0` (dashboard polish, responsive Activity/Statistics, the "Pull all" quick action) is unchanged.
 

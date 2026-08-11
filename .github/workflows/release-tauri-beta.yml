@@ -96,7 +96,16 @@ jobs:
             args: ""
             releaseLto: "fat"
     runs-on: ${{ matrix.platform }}
-    continue-on-error: true
+    # Scoped to the ONE leg whose availability genuinely varies. A job-level
+    # `continue-on-error: true` "allows a workflow run to pass when this job
+    # fails" (GitHub's own wording) — so with it applied to the whole matrix, a
+    # macOS leg that bundled nothing failed its step, showed red on the leg, and
+    # the RUN still concluded success. Combined with the consolidated upload's
+    # old `if-no-files-found: warn`, `recrest-beta-<sha>` could ship without any
+    # macOS installer and look fine. `windows-11-arm` keeps the exemption
+    # because a GitHub-hosted arm64 Windows runner is not guaranteed by plan or
+    # region; every other leg must be able to fail the run.
+    continue-on-error: ${{ matrix.platform == 'windows-11-arm' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -281,9 +290,14 @@ jobs:
           # `find`, not a glob list: `-e` is on (see the staging step) and both
           # mac legs build with `--target <triple>`, so a bare
           # `target/release/bundle/macos/*.app` never matches and `ls` would
-          # exit 2, killing the step before the first echo. `-prune` stops the
-          # descent at the bundle so a nested .app can't win.
-          APP="$(find app/src-tauri/target -type d -path '*/release/bundle/macos/*.app' -prune 2>/dev/null | head -n1)"
+          # exit 2, killing the step before the first echo. `find` exits 0 when
+          # it merely matches nothing — but NOT when its root is missing (a
+          # build that produced no `target/` at all), and `find | head -n1` can
+          # also end in 141 on SIGPIPE; pipefail would turn either into a silent
+          # step death, hence `|| true` so an empty `$APP` reaches the ::error::
+          # below. `-prune` stops the descent at the bundle so a nested .app
+          # can't win.
+          APP="$(find app/src-tauri/target -type d -path '*/release/bundle/macos/*.app' -prune 2>/dev/null | head -n1 || true)"
           if [ -z "$APP" ]; then
             echo "::error::no .app bundle produced under app/src-tauri/target"
             exit 1
@@ -340,5 +354,69 @@ jobs:
         with:
           name: recrest-beta-${{ github.sha }}
           path: merged/
-          if-no-files-found: warn
+          # `error`, not `warn`: an empty consolidated artifact was half the
+          # cause of a beta that shipped without macOS installers and still
+          # looked green. The per-installer assertion below is the other half.
+          if-no-files-found: error
           retention-days: 14
+
+      # The half of the original defect that the `if-no-files-found` fix never
+      # reached. `continue-on-error` at job level used to let the RUN conclude
+      # success even when a leg bundled nothing, so a macOS-less
+      # `recrest-beta-<sha>` looked fine to everyone downstream. That flag is now
+      # scoped to `windows-11-arm`; this step is the positive assertion, and it
+      # names the missing installer instead of leaving a reviewer to notice an
+      # absent folder inside a zip.
+      #
+      # Deliberately AFTER the upload — same reasoning as the macOS gate in the
+      # build job: a partial beta must still be downloadable for post-mortem
+      # while the run goes red. `if: always()` because the upload's
+      # `if-no-files-found: error` fails the step when merged/ is empty, and the
+      # per-installer breakdown is exactly what you want in that log.
+      - name: Assert every expected installer arrived
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          rc=0
+
+          # $1 = label, $2 = folder under merged/, $3 = filename glob,
+          # $4 = required|optional
+          expect_one() {
+            local label="$1" dir="merged/$2" glob="$3" severity="$4" n
+            # `|| true` + `tr -d ' '`: `-e` is on under `shell: bash`, and
+            # `find` on a MISSING root exits non-zero — pipefail would turn that
+            # into a silent step death on the assignment, before the annotation
+            # that explains which installer is absent.
+            n="$(find "$dir" -maxdepth 1 -type f -name "$glob" 2>/dev/null | wc -l | tr -d ' ' || true)"
+            if [ "${n:-0}" -gt 0 ]; then
+              echo "✓ $label ($glob)"
+              return
+            fi
+            if [ "$severity" = "required" ]; then
+              echo "::error::no $label in merged/$2 matching '$glob' — that build leg produced no installer, so the beta artifact would ship without it"
+              rc=1
+            else
+              echo "::warning::no $label in merged/$2 matching '$glob' (optional — runner availability, see the build matrix)"
+            fi
+          }
+
+          # Tauri-default bundle names: nothing in this workflow renames them,
+          # so `productName` "Recrest" yields e.g. `Recrest_0.10.2_aarch64.dmg`
+          # and `Recrest_0.10.2_x64-setup.exe`. Asserted per ARCH, not just per
+          # OS, so a dead arm64 leg cannot hide behind its x64 sibling. If tauri
+          # ever changes an arch token this list is what goes red — update it
+          # together with the staging step's extension list above.
+          expect_one "macOS arm64 DMG"    macos   '*aarch64*.dmg'      required
+          expect_one "macOS x64 DMG"      macos   '*x64*.dmg'          required
+          expect_one "Windows x64 NSIS"   windows '*x64*-setup.exe'    required
+          expect_one "Windows x64 MSI"    windows '*x64*.msi'          required
+          expect_one "Linux AppImage"     linux   '*.AppImage'         required
+          expect_one "Linux .deb"         linux   '*.deb'              required
+          expect_one "Linux .rpm"         linux   '*.rpm'              required
+          # The documented `windows-11-arm` exception — same one
+          # release-tauri.yml's `checksums` job downgrades to a warning.
+          expect_one "Windows arm64 NSIS" windows '*arm64*-setup.exe'  optional
+          expect_one "Windows arm64 MSI"  windows '*arm64*.msi'        optional
+
+          exit $rc

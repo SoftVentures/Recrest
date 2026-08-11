@@ -15,6 +15,7 @@
         { "type": "json", "path": "tests/package.json", "jsonpath": "$.version" },
         { "type": "json", "path": "app/src-tauri/tauri.conf.json", "jsonpath": "$.version" },
         { "type": "generic", "path": "shared/src/constants/app.ts" },
+        { "type": "generic", "path": "RELEASE.md" },
         "app/src-tauri/Cargo.toml"
       ]
     }
