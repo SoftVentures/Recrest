@@ -81,7 +81,14 @@ try {
 }
 
 const jsFiles = files.filter((f) => f.endsWith(".js"));
-if (jsFiles.length === 0) fail(`no JS assets found under ${DIST}`);
+// `{ leak: false }`: an empty or JS-less dist means the BUILD did not happen —
+// printing the "the dev IPC stub leaked into the production bundle" paragraph
+// here sends the reader hunting through `main.tsx` for a gate that is fine.
+if (jsFiles.length === 0) {
+  fail(`no JS assets found under ${DIST} — the bundle was never built (or was built elsewhere)`, {
+    leak: false,
+  });
+}
 
 const badChunks = files.filter((f) => FORBIDDEN_CHUNK_PATTERN.test(path.basename(f)));
 if (badChunks.length > 0) {
