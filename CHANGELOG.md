@@ -2,6 +2,27 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.10.2...recrest-v0.11.0) (2026-08-11)
+
+
+### Features
+
+* **landing:** Enhanced live demonstration & landing page overhaul ([a4c03c7](https://github.com/SoftVentures/Recrest/commit/a4c03c79ef362676094b29992d74a68d40d8db80))
+* **landing:** privacy, accessibility & imprint legal compliance ([848d855](https://github.com/SoftVentures/Recrest/commit/848d85501d8cf280a004cb2361ee162ef6bbb3b5))
+
+
+### Bug Fixes
+
+* **linux:** adapt discovery to freedesktop-desktop-entry 0.7.19 Iter::new ([fd37e35](https://github.com/SoftVentures/Recrest/commit/fd37e3553f7a45c6ad7b443d2e526beeb99f6dc0))
+* live repo refresh and openable Apple Silicon builds ([391f39c](https://github.com/SoftVentures/Recrest/commit/391f39ce143d7983a3be0905aa0681ae57a52a65))
+* **tauri:** exempt style-src from CSP nonce injection so packaged MUI/Emotion styles apply ([ba9a98a](https://github.com/SoftVentures/Recrest/commit/ba9a98a454f926ba3fe6670a17339d9952f1b1aa))
+* use workspace wildcards for @recrest/shared in tests and landingpage ([1c9e7a1](https://github.com/SoftVentures/Recrest/commit/1c9e7a1401cdf1d4f1046d269e2da9510f8d723a))
+
+
+### Maintenance
+
+* suppress Windows console flashes and brand the MSI installer (v0.9.1) ([bcb58c9](https://github.com/SoftVentures/Recrest/commit/bcb58c9e069c1e32b4f3ac73991d4ec486be8ae2))
+
 ## [0.10.2] — 2026-06-26
 
 Patch release fixing the real cause of the unstyled-app regression that 0.10.0/0.10.1 misdiagnosed.
