@@ -1,6 +1,6 @@
 {
   "name": "recrest",
-  "version": "0.10.2",
+  "version": "0.11.0",
   "private": true,
   "description": "Recrest — A lightweight developer dashboard built with Tauri.",
   "license": "MIT",

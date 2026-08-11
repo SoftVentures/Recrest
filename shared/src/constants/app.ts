@@ -3,7 +3,7 @@ export const APP_IDENTIFIER = "eu.softventures.recrest";
 // The marker must sit on the SAME line as the value: release-please's Generic
 // updater only rewrites the line the marker is on. With it one line above, this
 // constant was silently never bumped.
-export const APP_VERSION = "0.10.2"; // x-release-please-version
+export const APP_VERSION = "0.11.0"; // x-release-please-version
 
 export const URLS = {
   homepage: "https://github.com/softventures/recrest",

@@ -46,7 +46,7 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.10.2 — Live repo data and openable Apple Silicon builds <!-- x-release-please-version -->
+# Recrest 0.11.0 — Live repo data and openable Apple Silicon builds <!-- x-release-please-version -->
 
 Two user-reported breakages, plus everything a follow-up audit turned up while fixing them. Repo data now updates while the app runs, Apple Silicon downloads open again, and three ways to lose work have been closed.
 
