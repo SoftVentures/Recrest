@@ -19,11 +19,20 @@
     branch on every run on `main`, so body edits made on that branch can be
     regenerated away — re-apply them if the PR gets updated.
   * `ci.yml::version-sync` compares this H1 against package.json on every PR, so
-    a mismatch reddens the Release PR instead of the tag. It also covers the two
-    version constants release-please does NOT bump and you must edit by hand:
-    `tests/src/helpers/constants.ts::EXPECTED_APP_VERSION` (hand-maintained by
-    design) and `shared/src/constants/app.ts::APP_VERSION` (whose marker sits on
-    the wrong line — see docs/plans/09-bug-audit-remediation.md).
+    a mismatch reddens the Release PR instead of the tag. Every version-bearing
+    file is now bumped by release-please, so that gate should never fire on a
+    release PR — if it does, an `extra-files` entry lost its marker. Two of them
+    were silently NOT bumped before 0.11.0 and are worth knowing about:
+    `shared/src/constants/app.ts::APP_VERSION` (marker sat one line above the
+    value, and the Generic updater only rewrites the marker's own line) and
+    `tests/src/helpers/constants.ts::EXPECTED_APP_VERSION` (was hand-maintained
+    on purpose; the manual step reddened the release PR at the worst moment).
+  * `app/src-tauri/Cargo.lock` is deliberately NOT in `extra-files`. Its version
+    lives inside a `[[package]]` array, which release-please's TOML updater
+    cannot address (jsonpath filter expressions are not supported — verified),
+    and a marker comment would not survive cargo regenerating the file. Nothing
+    builds with `--locked`, so cargo rewrites it on the next build and the lag
+    is cosmetic. `cargo update -p recrest` fixes it whenever it bothers you.
 
   Why it is gated: this file is copied verbatim into the GitHub Release body
   AND becomes the `notes` field of `latest.json`, the update manifest every
@@ -37,21 +46,58 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.10.2 — Unstyled-app fix <!-- x-release-please-version -->
+# Recrest 0.10.2 — Live repo data and openable Apple Silicon builds <!-- x-release-please-version -->
 
-Patch release on top of `0.10.1`. Fixes the real cause of the unstyled-app regression that `0.10.0`/`0.10.1` misdiagnosed — everything from `0.10.0` (dashboard polish, responsive Activity/Statistics, the "Pull all" quick action) is unchanged.
+Two user-reported breakages, plus everything a follow-up audit turned up while fixing them. Repo data now updates while the app runs, Apple Silicon downloads open again, and three ways to lose work have been closed.
 
-## What's fixed
+## Fixed — could lose your work
 
-- **The app no longer launches unstyled.** The packaged app could render completely unstyled — huge logo, oversized text, broken layout — on every launch. Tauri rewrites the Content-Security-Policy at build time and injects a `nonce` into `style-src`; per the CSP spec that makes `'unsafe-inline'` ignored, so every stylesheet MUI/Emotion injects at runtime was blocked and only the static reset stylesheet survived. The dev server skips Tauri's CSP rewrite, which is why this only ever showed in installed builds. We now exclude `style-src` from Tauri's CSP injection so runtime styles apply again; `script-src` stays locked down with its nonce.
+- **`Pull` no longer overwrites uncommitted changes.** The doc comment claimed it refused to pull into a dirty working tree; no such check existed. A fast-forward force-checkout silently replaced modified files, and untracked files the incoming branch also carried — exactly the `.env` / key files the discard path already protects. Both the single-repo pull and `Pull all` now refuse, name the files in the way, and leave the branch where it was.
+- **`Pull all` asks first and tells you what failed.** It ran across every registered repo from one dashboard click with no confirmation, and per-repo failures were dropped — the toast reported a success count that quietly excluded them.
+- **A corrupt settings file no longer resets the app.** `settings.json` was rewritten in place, so a crash mid-write truncated it; the next launch swallowed the parse error and started at defaults, losing every repo record, group, pin and scan path — permanently, on the next save. Writes are now atomic, and an unreadable file is set aside as `settings.json.corrupt-<timestamp>` and reported instead of discarded.
+
+## Fixed — repo data was stale until you restarted
+
+- **Working-tree edits reach the UI.** The file watcher only ever subscribed to each repo's `.git` directory, so `dirty`, changed-file counts and line stats froze until the app was restarted.
+- **Repos deleted or moved outside the app are visible.** They now surface within about 15 seconds as a dimmed row with a _Folder missing_ badge, actions that would fail disabled, and a way to remove the record. A folder that is merely unreachable — unplugged drive, dropped network share — is never removed on its own.
+- **Newly created repos are discovered** without a restart.
+- **Ahead/behind is correct on forks.** It was hardcoded to `origin`, so any branch tracking a differently-named remote reported "up to date" while arbitrarily far behind.
+- **The app blocks less.** Git status reads happened on the runtime's worker threads at two dozen call sites, including once per repo inside the watcher's event loop.
+
+## Fixed — macOS Apple Silicon
+
+The arm64 installers could not be opened at all: macOS reported _"Recrest is damaged and can't be opened"_, and unlike the usual unidentified-developer prompt, right-click → **Open** did not get past it. The bundle shipped without a signature envelope, which Gatekeeper rejects outright on Apple Silicon. It is now ad-hoc signed, and the release pipeline verifies the signature and the architecture of every macOS build before publishing.
+
+This is still not Apple Developer signing — you will see the unidentified-developer prompt on first launch — but right-click → **Open** now works.
+
+## Fixed — accounts and providers
+
+- **GitHub Enterprise can be connected.** Verification hit the GHE web app instead of its API, so no self-hosted host could be added, with either URL form the onboarding hint suggested.
+- **A revoked token no longer reads as connected.** Rejected credentials, a host that cannot be reached, and "nothing entered yet" are now three distinct states — the first needs replacing, not adding.
+- **Pull-request lists are no longer cut off at 50.** They now page through up to 300 open pull requests per repository, and their CI status is fetched in parallel rather than one request at a time.
+- **A rejected credential is reported as one.** Every failed request surfaced as a generic internal error, so an expired token looked like a bug in the app.
+- **Base URLs are validated.** A URL embedding credentials, or plain `http` to a non-loopback host, is refused instead of accepted — either would have sent your token somewhere you did not intend.
+
+## Fixed — smaller, still annoying
+
+- The updater's manual download offered the **wrong CPU architecture** — x64 machines were handed the arm64 installer, Intel Macs the arm64 disk image.
+- **Update notifications never appeared,** and the banner's _Install_ and _Download_ buttons did nothing when it did.
+- **Permission descriptions on the token screens rendered as raw ids** (`account:read`), leaving Bitbucket's list entirely unexplained.
+- The stash list printed its own template instead of `stash@{0}`.
+- A **custom terminal path containing spaces** — the default install location for most Windows terminals — failed to launch.
+- **Cloning into a folder with non-ASCII characters** no longer strips them (`Übersicht` stayed `Übersicht`).
+- Cloning over SSH failed while a token was connected.
+- An unusual `[includeIf]` git config could **crash the whole app**.
+- Removing a repo now clears it from the dashboard KPIs, heatmap, language mix and pins instead of counting it for the rest of the session.
+- The sidebar no longer forgets its expanded state after one launch at a narrow window size.
 
 ## Install
 
 - **Windows** — run the `.msi`. SmartScreen will warn about an unknown publisher → **More info → Run anyway**.
-- **macOS** — open the `.dmg`, drag Recrest into Applications. On first launch, Gatekeeper may block; right-click the app → **Open**, or `xattr -cr /Applications/Recrest.app`.
+- **macOS** — open the `.dmg`, drag Recrest into Applications. On first launch, right-click the app → **Open** to get past Gatekeeper's unidentified-developer prompt.
 - **Linux** — `chmod +x Recrest_*.AppImage && ./Recrest_*.AppImage`, or install the `.deb` / `.rpm`.
 
-Already on 0.10.0 / 0.10.1? The in-app updater picks 0.10.2 up automatically on next launch (or via **Settings → Updates → Check for updates**). The signing key and endpoint are unchanged, so it verifies and installs without a manual reinstall.
+Already on 0.10.x? The in-app updater picks this release up automatically on next launch (or via **Settings → Updates → Check for updates**). The signing key and endpoint are unchanged, so it verifies and installs without a manual reinstall.
 
 ## Verify the download
 
@@ -66,7 +112,7 @@ Get-FileHash <file> -Algorithm SHA256 # Windows PowerShell
 ## Known limitations
 
 - Auth is PAT / app-password only; OAuth is scaffolded but not user-facing yet.
-- Installers remain **unsigned** — macOS Gatekeeper / Windows SmartScreen will warn on first launch. Verify via `SHA256SUMS.txt` above.
+- Installers are **not** signed with a paid developer certificate. macOS builds carry an ad-hoc signature — enough for Apple Silicon to open them, not enough to skip the first-launch prompt — and Windows SmartScreen still warns. Verify via `SHA256SUMS.txt` above.
 
 ## Feedback
 

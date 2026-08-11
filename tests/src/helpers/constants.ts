@@ -14,10 +14,16 @@ export const REPO_URL = "https://github.com/SoftVentures/Recrest";
 export const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`;
 
 /** Version pulled from the root package.json at build time on the landing page
- *  (`__APP_VERSION__`). We hard-code the expected value so a bump must update
- *  both sides consciously — drift between `package.json` and the rendered text
- *  becomes a failing test. */
-export const EXPECTED_APP_VERSION = "0.10.2";
+ *  (`__APP_VERSION__`). Hard-coding the expected value is what makes the spec a
+ *  real check: it asserts the build-time injection actually happened, rather
+ *  than comparing package.json against itself.
+ *
+ *  Bumped by release-please via `extra-files` — the marker must stay on THIS
+ *  line, because the Generic updater only rewrites the line it sits on. It used
+ *  to be hand-maintained "so a bump is conscious", but `ci.yml::version-sync`
+ *  now enforces that consciously enough, and the manual step reddened every
+ *  release PR at the one moment nobody wants a red gate. */
+export const EXPECTED_APP_VERSION = "0.10.2"; // x-release-please-version
 
 /** Mirrors `landingpage/src/components/DownloadButton.tsx::directDownloadUrl`.
  *  For a known OS the button links directly to the asset zip; only the
