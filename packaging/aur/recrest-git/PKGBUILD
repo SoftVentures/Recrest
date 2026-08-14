@@ -7,8 +7,18 @@ pkgdesc="Lightweight native developer dashboard for local git repos, pull reques
 arch=('x86_64' 'aarch64')
 url="https://github.com/SoftVentures/Recrest"
 license=('MIT')
-depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme')
+# `dbus`: the keyring crate's Secret Service backend links libdbus-1 directly
+# (see the keyring dependency comment in app/src-tauri/Cargo.toml).
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme' 'dbus')
 makedepends=('rust' 'nodejs>=22' 'yarn' 'git' 'pkgconf')
+# Tokens are written to the DBus Secret Service. With no provider running the
+# save fails outright (keyring rolls the keyutils cache write back), so the app
+# is usable but cannot persist provider logins.
+optdepends=(
+  'gnome-keyring: Secret Service provider for persisting provider tokens'
+  'kwallet-secrets: Secret Service provider for persisting provider tokens (KDE)'
+  'keepassxc: Secret Service provider for persisting provider tokens'
+)
 provides=("${pkgname%-git}=$pkgver")
 conflicts=("${pkgname%-git}" "${pkgname%-git}-bin")
 # See the stable PKGBUILD — the Rust release profile handles LTO and stripping

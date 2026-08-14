@@ -70,6 +70,12 @@ makepkg --printsrcinfo > .SRCINFO
 wired into release-please's `extra-files` — an auto-bumped version with a stale
 checksum would break every install until someone noticed.
 
+> **Pending for the next release bump:** `recrest-git` carries a `dbus`
+> dependency and `optdepends` on Secret Service providers that `recrest` does
+> not, because the keyring fix that links libdbus landed after `v0.11.0`. Copy
+> the `depends` / `optdepends` lines from `recrest-git/PKGBUILD` into
+> `recrest/PKGBUILD` when bumping to the first release that contains it.
+
 Then push to the AUR remotes (`ssh://aur@aur.archlinux.org/<pkgname>.git`), which
 only accept `PKGBUILD` + `.SRCINFO` + any local files, not this README.
 

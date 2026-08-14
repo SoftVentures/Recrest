@@ -16,6 +16,10 @@ pkgbase = recrest-git
 	depends = libayatana-appindicator
 	depends = librsvg
 	depends = hicolor-icon-theme
+	depends = dbus
+	optdepends = gnome-keyring: Secret Service provider for persisting provider tokens
+	optdepends = kwallet-secrets: Secret Service provider for persisting provider tokens (KDE)
+	optdepends = keepassxc: Secret Service provider for persisting provider tokens
 	provides = recrest=0.11.0.r0.g7be7302
 	conflicts = recrest
 	conflicts = recrest-bin
