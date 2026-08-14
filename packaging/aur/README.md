@@ -6,7 +6,7 @@ copied into those clones, so changes land here first and get pushed out second.
 
 | Directory      | AUR package   | Builds from                                                                    |
 | -------------- | ------------- | ------------------------------------------------------------------------------ |
-| `recrest/`     | `recrest`     | the GitHub source tarball for a `vX.Y.Z` tag                                   |
+| `recrest/`     | `recrest`     | a git clone pinned to the `vX.Y.Z` tag                                         |
 | `recrest-git/` | `recrest-git` | `main` at build time (`pkgver()` derives `X.Y.Z.rN.gHASH` from `git describe`) |
 
 Both build from source with `yarn` + `cargo` and install the same layout:
@@ -15,7 +15,7 @@ Both build from source with `yarn` + `cargo` and install the same layout:
 /usr/bin/recrest                                  # the Tauri executable
 /usr/bin/recrest-launcher                         # GDK_BACKEND wrapper, execs the above
 /usr/share/applications/recrest.desktop           # Exec=recrest-launcher %U
-/usr/share/icons/hicolor/{32,64,128,256,512}/apps/recrest.png
+/usr/share/icons/hicolor/{32x32,64x64,128x128,256x256,512x512}/apps/recrest.png
 /usr/share/licenses/<pkgname>/LICENSE
 ```
 
@@ -62,19 +62,17 @@ For the stable package, after a `vX.Y.Z` release lands:
 cd packaging/aur/recrest
 sed -i "s/^pkgver=.*/pkgver=X.Y.Z/" PKGBUILD
 sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-updpkgsums                        # from pacman-contrib; refreshes sha256sums
 makepkg --printsrcinfo > .SRCINFO
 ```
 
-`pkgver` and `sha256sums` have to move together, so this is deliberately _not_
-wired into release-please's `extra-files` — an auto-bumped version with a stale
-checksum would break every install until someone noticed.
+No `updpkgsums` step: the source is a git clone pinned to `#tag=v$pkgver` with
+`sha256sums=('SKIP')`, so `pkgver` is the only thing that moves. That is also
+why this is deliberately _not_ wired into release-please's `extra-files` — the
+bump lands on `main` **before** the tag exists, and a `pkgver` pointing at a
+missing tag fails every build until the tag catches up.
 
-> **Pending for the next release bump:** `recrest-git` carries a `dbus`
-> dependency and `optdepends` on Secret Service providers that `recrest` does
-> not, because the keyring fix that links libdbus landed after `v0.11.0`. Copy
-> the `depends` / `optdepends` lines from `recrest-git/PKGBUILD` into
-> `recrest/PKGBUILD` when bumping to the first release that contains it.
+Both PKGBUILDs carry the same `depends`; there is nothing to copy between them
+when bumping.
 
 Then push to the AUR remotes (`ssh://aur@aur.archlinux.org/<pkgname>.git`), which
 only accept `PKGBUILD` + `.SRCINFO` + any local files, not this README.
@@ -82,7 +80,17 @@ only accept `PKGBUILD` + `.SRCINFO` + any local files, not this README.
 ## Known caveat: the in-app updater
 
 `tauri.conf.json` enables `tauri-plugin-updater`, and `src/update/github.rs` adds
-a GitHub-Releases fallback check, so a pacman-installed Recrest can still surface
-"an update is available" notices pointing at upstream artifacts. Neither PKGBUILD
-patches that out — it is upstream behaviour, and disabling it would mean editing
-the config at package time. Worth revisiting if AUR users report confusion.
+a GitHub-Releases fallback check, so a pacman-installed Recrest still surfaces
+"an update is available" notices pointing at upstream artifacts.
+
+It is worse than a cosmetic notice: `src/update/mod.rs` emits
+`updater://available` with `"canAutoInstall": true` unconditionally, so the
+banner offers an **Install** action. Taking it calls `update.download_and_install`,
+which on a Linux install that is not an AppImage fails — and the failure is only
+logged (`tracing::warn!("updater: download_and_install failed")`). To the user
+the button does nothing at all, with no error surfaced.
+
+Neither PKGBUILD patches that out — it is upstream behaviour, and disabling it
+would mean editing the config at package time. The real fix belongs upstream:
+gate `canAutoInstall` on the install being an AppImage, and report the failure to
+the frontend instead of swallowing it. AUR users should update via pacman.

@@ -7,7 +7,21 @@ pkgdesc="Lightweight native developer dashboard for local git repos, pull reques
 arch=('x86_64' 'aarch64')
 url="https://github.com/SoftVentures/Recrest"
 license=('MIT')
-depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme')
+# `dbus`: `tao` (Tauri's windowing layer) links libdbus-1 via libdbus-sys on
+# every Linux build, so this is needed regardless of how tokens are stored.
+# Until now it was only satisfied transitively via the webkit2gtk-4.1 chain.
+# `desktop-file-utils`: recrest.desktop declares
+# `MimeType=x-scheme-handler/recrest`, and pacman only runs its
+# `update-desktop-database` hook when this package is installed. Without it the
+# `recrest://` scheme is never registered and deep links silently do nothing.
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme'
+         'dbus' 'desktop-file-utils')
+# `nodejs>=22` is a floor, not the upstream contract: the root package.json pins
+# `engines.node` to an exact patch version and `prepare()` passes
+# `--ignore-engines` to get past it (see the note there). That means a future
+# Node in [extra] can only surface as a build failure on the user's machine —
+# upstream CI pins its own version and stays green. Bump the floor here when
+# upstream raises its major.
 makedepends=('rust' 'nodejs>=22' 'yarn' 'git' 'pkgconf')
 provides=("$pkgname=$pkgver")
 conflicts=("$pkgname-git" "$pkgname-bin")
@@ -15,21 +29,26 @@ conflicts=("$pkgname-git" "$pkgname-bin")
 # own LTO flags only apply to the C sources compiled by cc-rs (vendored libgit2 /
 # openssl) and have caused link failures there, so opt out.
 options=('!lto')
-source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('0cd8cc673ade95ea18f4932cb33ce41d2ca125bab89de2674458debafc7bffbc')
-
-_srcname="Recrest-$pkgver"
+# A git source pinned to the tag, NOT `archive/refs/tags/v$pkgver.tar.gz`.
+# GitHub generates those tarballs on demand and does not guarantee them to be
+# byte-stable — when its gzip implementation changed in 2023 every checksummed
+# auto-tarball in the AUR broke at once, without any upstream release. A tag is
+# an immutable git ref, so `SKIP` here is not a weaker guarantee than a checksum
+# over a file that upstream cannot keep stable. Upstream publishes installers as
+# release assets but no source tarball, so there is nothing stable to checksum.
+source=("$pkgname::git+$url.git#tag=v$pkgver")
+sha256sums=('SKIP')
 
 prepare() {
-  cd "$_srcname"
+  cd "$pkgname"
 
   # `--ignore-engines` is required: .yarnrc sets `engine-strict true` and the root
   # package.json pins `engines.node` to the exact version upstream develops
   # against, which will not match the `nodejs` package in [extra].
   #
   # `--ignore-scripts` skips the repo's postinstall hooks (`check-node.cjs`, which
-  # hard-fails on that same version mismatch, and `husky`, which needs a .git dir
-  # the release tarball does not ship). The one postinstall step that actually
+  # hard-fails on that same version mismatch, and `husky`, which would install git
+  # hooks into this throwaway clone). The one postinstall step that actually
   # matters — building @recrest/shared — is run explicitly below, because
   # app/tsconfig.app.json references shared/dist as a TS project.
   yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
@@ -37,7 +56,7 @@ prepare() {
 }
 
 build() {
-  cd "$_srcname"
+  cd "$pkgname"
 
   # `--no-bundle` stops the Tauri CLI after linking the executable. We do not want
   # its .deb/.rpm/.AppImage bundles (tauri.conf.json sets `targets: "all"`), and
@@ -47,7 +66,7 @@ build() {
 }
 
 package() {
-  cd "$_srcname"
+  cd "$pkgname"
 
   # [[bin]] name in Cargo.toml is capitalised ("Recrest") for the macOS Dock label;
   # on Linux the installed command is lowercase, which is what recrest.desktop's

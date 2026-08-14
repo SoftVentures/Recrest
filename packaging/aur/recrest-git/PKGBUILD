@@ -7,18 +7,26 @@ pkgdesc="Lightweight native developer dashboard for local git repos, pull reques
 arch=('x86_64' 'aarch64')
 url="https://github.com/SoftVentures/Recrest"
 license=('MIT')
-# `dbus`: the keyring crate's Secret Service backend links libdbus-1 directly
-# (see the keyring dependency comment in app/src-tauri/Cargo.toml).
-depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme' 'dbus')
+# `dbus`: `tao` (Tauri's windowing layer) links libdbus-1 via libdbus-sys on
+# every Linux build. NOT the keyring crate — upstream builds `keyring` with
+# `features = ["apple-native", "windows-native", "linux-native"]`, so the Linux
+# backend is linux-keyutils and no Secret Service / zbus code is linked at all
+# (`Cargo.lock` carries no `secret-service`). Same reasoning in the stable
+# PKGBUILD; both packages need this.
+# `desktop-file-utils`: recrest.desktop declares
+# `MimeType=x-scheme-handler/recrest`, and pacman only runs its
+# `update-desktop-database` hook when this package is installed. Without it the
+# `recrest://` scheme is never registered and deep links silently do nothing.
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme'
+         'dbus' 'desktop-file-utils')
+# `nodejs>=22` is a floor, not the upstream contract — see the stable PKGBUILD.
 makedepends=('rust' 'nodejs>=22' 'yarn' 'git' 'pkgconf')
-# Tokens are written to the DBus Secret Service. With no provider running the
-# save fails outright (keyring rolls the keyutils cache write back), so the app
-# is usable but cannot persist provider logins.
-optdepends=(
-  'gnome-keyring: Secret Service provider for persisting provider tokens'
-  'kwallet-secrets: Secret Service provider for persisting provider tokens (KDE)'
-  'keepassxc: Secret Service provider for persisting provider tokens'
-)
+# No Secret Service `optdepends`: with `linux-native`, keyring stores tokens in
+# the *kernel* keyring (linux-keyutils), which is session-scoped — they are gone
+# after a logout or reboot, and installing gnome-keyring / kwallet / keepassxc
+# changes nothing because that code path is not compiled in. Adding them would
+# promise a persistence fix that does not exist. Making them work is an upstream
+# change (a `secret-service` keyring feature), not a packaging one.
 provides=("${pkgname%-git}=$pkgver")
 conflicts=("${pkgname%-git}" "${pkgname%-git}-bin")
 # See the stable PKGBUILD — the Rust release profile handles LTO and stripping

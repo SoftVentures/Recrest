@@ -134,9 +134,12 @@ reputation system catches up — or once we can afford a signing cert.
   ```
 
 - **Arch Linux (AUR):** two packages, both built from source on your machine —
-  [`recrest`](https://aur.archlinux.org/packages/recrest) tracks the latest
-  tagged release, [`recrest-git`](https://aur.archlinux.org/packages/recrest-git)
-  tracks `main`.
+  `recrest` tracks the latest tagged release, `recrest-git` tracks `main`.
+
+  > Not published to the AUR yet. The PKGBUILDs live in this repo (see below);
+  > the commands underneath start working once the packages are pushed to
+  > `aur.archlinux.org`. Until then, build from `packaging/aur/recrest/`
+  > directly with `makepkg -si`.
 
   ```bash
   # with an AUR helper
