@@ -1,0 +1,88 @@
+# Maintainer: Manuel Haucke <manuel.haucke12@gmail.com>
+
+pkgname=recrest-git
+pkgver=0.11.0.r0.g7be7302
+pkgrel=1
+pkgdesc="Lightweight native developer dashboard for local git repos, pull requests, and CI checks (git)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/SoftVentures/Recrest"
+license=('MIT')
+# `dbus`: `tao` (Tauri's windowing layer) links libdbus-1 via libdbus-sys on
+# every Linux build. NOT the keyring crate — upstream builds `keyring` with
+# `features = ["apple-native", "windows-native", "linux-native"]`, so the Linux
+# backend is linux-keyutils and no Secret Service / zbus code is linked at all
+# (`Cargo.lock` carries no `secret-service`). Same reasoning in the stable
+# PKGBUILD; both packages need this.
+# `desktop-file-utils`: recrest.desktop declares
+# `MimeType=x-scheme-handler/recrest`, and pacman only runs its
+# `update-desktop-database` hook when this package is installed. Without it the
+# `recrest://` scheme is never registered and deep links silently do nothing.
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme'
+         'dbus' 'desktop-file-utils')
+# `nodejs>=22` is a floor, not the upstream contract — see the stable PKGBUILD.
+makedepends=('rust' 'nodejs>=22' 'yarn' 'git' 'pkgconf')
+# No Secret Service `optdepends`: with `linux-native`, keyring stores tokens in
+# the *kernel* keyring (linux-keyutils), which is session-scoped — they are gone
+# after a logout or reboot, and installing gnome-keyring / kwallet / keepassxc
+# changes nothing because that code path is not compiled in. Adding them would
+# promise a persistence fix that does not exist. Making them work is an upstream
+# change (a `secret-service` keyring feature), not a packaging one.
+provides=("${pkgname%-git}=$pkgver")
+conflicts=("${pkgname%-git}" "${pkgname%-git}-bin")
+# See the stable PKGBUILD — the Rust release profile handles LTO and stripping
+# itself, and makepkg's LTO flags only reach the vendored C sources.
+options=('!lto')
+source=("$pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+  # Upstream tags are `vX.Y.Z`; produce e.g. 0.11.0.r12.g7be7302.
+  git describe --long --tags --abbrev=7 \
+    | sed 's/^v//; s/\([^-]*-g\)/r\1/; s/-/./g'
+}
+
+prepare() {
+  cd "$pkgname"
+
+  # `--ignore-engines` is required: .yarnrc sets `engine-strict true` and the root
+  # package.json pins `engines.node` to the exact version upstream develops
+  # against, which will not match the `nodejs` package in [extra].
+  #
+  # `--ignore-scripts` skips the repo's postinstall hooks (`check-node.cjs`, which
+  # hard-fails on that same version mismatch, and `husky`, which would install git
+  # hooks into this throwaway clone). The one postinstall step that actually
+  # matters — building @recrest/shared — is run explicitly below, because
+  # app/tsconfig.app.json references shared/dist as a TS project.
+  yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
+  yarn workspace @recrest/shared build
+}
+
+build() {
+  cd "$pkgname"
+
+  # `--no-bundle` stops the Tauri CLI after linking the executable. We do not want
+  # its .deb/.rpm/.AppImage bundles (tauri.conf.json sets `targets: "all"`), and
+  # bundling would additionally demand a TAURI_SIGNING_PRIVATE_KEY because
+  # `createUpdaterArtifacts` is enabled upstream.
+  yarn workspace @recrest/app tauri build --no-bundle
+}
+
+package() {
+  cd "$pkgname"
+
+  # [[bin]] name in Cargo.toml is capitalised ("Recrest") for the macOS Dock label;
+  # on Linux the installed command is lowercase, which is what recrest.desktop's
+  # launcher wrapper execs by absolute path.
+  install -Dm755 "app/src-tauri/target/release/Recrest" "$pkgdir/usr/bin/recrest"
+  install -Dm755 "app/src-tauri/resources/recrest-launcher.sh" "$pkgdir/usr/bin/recrest-launcher"
+  install -Dm644 "app/src-tauri/resources/recrest.desktop" "$pkgdir/usr/share/applications/recrest.desktop"
+
+  local _size
+  for _size in 32 64 128 256 512; do
+    install -Dm644 "app/src-tauri/icons/linux/${_size}x${_size}.png" \
+      "$pkgdir/usr/share/icons/hicolor/${_size}x${_size}/apps/recrest.png"
+  done
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
