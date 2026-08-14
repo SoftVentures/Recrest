@@ -1,0 +1,126 @@
+# Keeps `develop` current with whatever shipped on `main`.
+#
+# Why this exists: release-please lands the version bump, CHANGELOG and
+# RELEASE.md on `main`, and hotfixes go straight to `main` too. None of that
+# flows back on its own, so `develop` drifts one release behind after every
+# ship. When the drift is left to accumulate the eventual back-merge is no
+# longer mechanical — the 0.11.0 back-merge had to resolve 137 conflict hunks
+# across 56 files, and git silently produced a duplicate `switch` arm and a
+# duplicate `fn` definition in files it merged WITHOUT conflict markers.
+# Running this on every release keeps each back-merge small enough to stay
+# reviewable.
+#
+# Trigger is `release: published`, not the release build finishing: the release
+# workflow leaves a DRAFT on purpose so a human can check `verify-release`
+# before shipping. Publishing that draft is the human's "this version is
+# really out" signal, which is exactly when the back-merge should happen.
+name: 🔁 Back-merge main → develop
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Two releases published in quick succession must not race each other into the
+# same branch — the second would push a merge computed against a stale develop.
+concurrency:
+  group: backmerge-develop
+  cancel-in-progress: false
+
+jobs:
+  backmerge:
+    name: Merge main into develop
+    runs-on: ubuntu-latest
+    env:
+      # Never interpolate `github.event.*` straight into a `run:` block; a tag
+      # name is attacker-chosen text as far as the shell is concerned.
+      TAG: ${{ github.event.release.tag_name || 'manual run' }}
+      GH_TOKEN: ${{ secrets.BACKMERGE_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+          fetch-depth: 0
+          # A push made with the default GITHUB_TOKEN does not trigger further
+          # workflow runs, so the fast-path push below would land on `develop`
+          # without CI ever looking at it. Set a `BACKMERGE_TOKEN` secret (PAT
+          # or GitHub App token with `contents: write` + `pull-requests: write`)
+          # to get CI on the merge result; without it the merge still happens,
+          # it just arrives unverified.
+          token: ${{ secrets.BACKMERGE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Skip when develop already contains main
+        id: check
+        run: |
+          if git merge-base --is-ancestor origin/main origin/develop; then
+            echo "already-merged=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::develop already contains every commit on main — nothing to back-merge."
+          else
+            echo "already-merged=false" >> "$GITHUB_OUTPUT"
+            echo "Commits on main that develop is missing:"
+            git log --oneline origin/develop..origin/main
+          fi
+
+      # `--no-ff` keeps the back-merge visible as one commit in develop's
+      # history instead of fast-forwarding and making the release commits look
+      # like they were developed there.
+      - name: Attempt the merge
+        id: merge
+        if: steps.check.outputs.already-merged == 'false'
+        run: |
+          if git merge origin/main --no-ff --no-edit \
+               -m "release: back-merge main into develop ($TAG)"; then
+            echo "conflicted=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "conflicted=true" >> "$GITHUB_OUTPUT"
+            git diff --name-only --diff-filter=U > /tmp/backmerge-conflicts.txt
+            echo "Conflicting files:"
+            cat /tmp/backmerge-conflicts.txt
+            git merge --abort || true
+          fi
+
+      - name: Push the back-merge
+        if: steps.check.outputs.already-merged == 'false' && steps.merge.outputs.conflicted == 'false'
+        run: |
+          git push origin develop
+          echo "::notice::Back-merged main into develop cleanly."
+
+      # A conflicted merge cannot be pushed, and resolving it unattended would
+      # mean a bot guessing which side of a release conflict wins. Open a PR
+      # from main instead and let a human resolve it — GitHub happily creates a
+      # conflicted PR, it just cannot auto-merge it.
+      - name: Open a pull request when the merge conflicts
+        if: steps.merge.outputs.conflicted == 'true'
+        run: |
+          # Built with printf into a file so the markdown fences below start at
+          # column 0 — indented fences render as literal text, not as code.
+          {
+            printf '`%s` was published, but `main` does not merge into `develop` cleanly, so this needs manual conflict resolution.\n\n' "$TAG"
+            printf 'Conflicting files:\n\n```\n'
+            cat /tmp/backmerge-conflicts.txt
+            printf '```\n\n'
+            printf 'Watch out for defects git introduces *without* conflict markers when both branches changed the same construct — a duplicated `switch` arm and a duplicated `fn` definition both slipped through the 0.11.0 back-merge that way. `cargo clippy` catches the duplicate `fn`; a duplicated `case` in a `switch` fails nothing, so check those by hand.\n'
+          } > /tmp/backmerge-body.md
+
+          existing="$(gh pr list --base develop --head main --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh pr comment "$existing" --body-file /tmp/backmerge-body.md
+            echo "::warning::Back-merge conflicts — commented on existing PR #$existing."
+            exit 0
+          fi
+
+          gh pr create \
+            --base develop \
+            --head main \
+            --title "release: back-merge main into develop ($TAG)" \
+            --body-file /tmp/backmerge-body.md
+          echo "::warning::Back-merge conflicts — opened a PR for manual resolution."
