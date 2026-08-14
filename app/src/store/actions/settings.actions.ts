@@ -106,10 +106,49 @@ export const loadSettings = createAsyncThunk<AppSettings>("settings/load", async
   invoke<AppSettings>(TauriCommand.GET_SETTINGS),
 );
 
-export const saveSettings = createAsyncThunk<AppSettings, Partial<AppSettings>>(
-  "settings/save",
-  async (patch) => invoke<AppSettings>(TauriCommand.UPDATE_SETTINGS, { patch }),
-);
+/** Meta stamped on every `saveSettings.fulfilled`. */
+export interface SaveSettingsMeta {
+  /** Dispatch order of this `update_settings` round-trip. */
+  seq: number;
+}
+
+/**
+ * Dispatch counter for `saveSettings`. Assigned synchronously in the payload
+ * creator, so it is dispatch order — not completion order.
+ *
+ * Module scope is safe here in a way a retained promise/snapshot was not: it is
+ * a number that only ever increases, so a later dispatch always outranks an
+ * earlier one no matter which store issued it, and nothing is kept alive.
+ */
+let saveSequence = 0;
+
+/** Test seam — resets the dispatch counter so one spec's in-flight saves cannot
+ *  make the next spec's first save look superseded. */
+export function resetSaveSettingsSequence(): void {
+  saveSequence = 0;
+}
+
+/**
+ * Persist a settings patch. Concurrent saves are routine — `IntensitySlider`
+ * dispatches one per drag step (`step={5}` over 0..100), and the pinned-repo
+ * writes fan out the same way — so responses can and do complete out of order.
+ *
+ * Ordering is enforced on the *consuming* side instead of by chaining the
+ * requests: every reducer that applies the returned `AppSettings` snapshot
+ * compares `action.meta.seq` against the newest generation it already applied
+ * and ignores a stale one (see `acceptSaveSnapshot`). That keeps this thunk a
+ * plain round-trip — `.unwrap()` callers get their own snapshot back, a
+ * superseded save never rejects, and a genuine backend failure still does.
+ */
+export const saveSettings = createAsyncThunk<
+  AppSettings,
+  Partial<AppSettings>,
+  { fulfilledMeta: SaveSettingsMeta }
+>("settings/save", async (patch, { fulfillWithValue }) => {
+  const seq = ++saveSequence;
+  const settings = await invoke<AppSettings>(TauriCommand.UPDATE_SETTINGS, { patch });
+  return fulfillWithValue(settings, { seq });
+});
 
 export const loadDetectedTerminals = createAsyncThunk<TerminalDetection[]>(
   "settings/detectTerminals",

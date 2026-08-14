@@ -21,6 +21,7 @@ export const COMPONENT_TEST_IDS = {
     buttonGroup: { root: "group", segA: "seg-a", segB: "seg-b" },
     card: { root: "card", body: "card-body" },
     tooltip: { trigger: "trigger" },
+    disabledReasonTooltip: { child: "disabled-reason-child" },
     searchInput: { root: "search", clear: "search-clear" },
     switchInput: { root: "switch" },
     loader: { root: "loader" },

@@ -131,10 +131,7 @@ fn disable_webview_occlusion_detection(window: &tauri::WebviewWindow) {
                 return;
             };
             // Recursively find the WKWebView in the view tree.
-            fn find_webview(
-                view: *mut AnyObject,
-                class: &AnyClass,
-            ) -> Option<*mut AnyObject> {
+            fn find_webview(view: *mut AnyObject, class: &AnyClass) -> Option<*mut AnyObject> {
                 if view.is_null() {
                     return None;
                 }
@@ -172,7 +169,6 @@ fn disable_webview_occlusion_detection(window: &tauri::WebviewWindow) {
         }
     });
 }
-
 
 #[cfg(target_os = "macos")]
 fn is_system_dark(app: &objc2_app_kit::NSApplication) -> bool {
@@ -515,10 +511,10 @@ pub fn run() {
         )
         .init();
 
-    // GUI-gestartete Apps erben auf macOS/Linux nicht den interaktiven $PATH
-    // aus dem User-Shell. Das ist der Hauptgrund, warum `open_in_ide` in
-    // Prod-Builds oft fehlschlägt obwohl `code`/`cursor` im Terminal laufen.
-    // fix-path-env repariert den PATH einmalig beim Start.
+    // GUI-launched apps on macOS/Linux don't inherit the interactive $PATH from
+    // the user's shell. That's the main reason `open_in_ide` often fails in
+    // production builds even though `code`/`cursor` work in a terminal.
+    // fix-path-env repairs the PATH once at startup.
     let _ = fix_path_env::fix();
 
     // macOS: set the process name BEFORE any AppKit/Tauri init — the Dock
@@ -579,7 +575,7 @@ pub fn run() {
             // logic in the setup hook below). Without this arg the
             // autostarted instance would pop the window forward, which is
             // exactly what users disabling-on-startup don't want.
-            Some(vec!["--start-minimized".into()]),
+            Some(vec!["--start-minimized"]),
         ))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -671,14 +667,20 @@ pub fn run() {
                 // Keep in lock-step with `tauri.conf.json` (1100×720, the
                 // documented desktop-only minimum).
                 let _ = window.set_min_size(Some(LogicalSize::new(1100.0, 720.0)));
-                // Belt-and-suspenders: explicitly hide the window here in
-                // case the `visible: false` config-overlay merge didn't
-                // apply (Tauri's `tauri.dev.conf.json` deep-merge for
-                // arrays-of-objects-by-label is not well-documented and
-                // we cannot trust it for boot-critical behaviour). With
-                // this explicit `hide()` the window stays off-screen from
-                // process start until JS's `getCurrentWebviewWindow().show()`
-                // fires, regardless of conf-merge semantics.
+                // macOS only: the window boots `visible: false`
+                // (tauri.macos.conf.json) so the WKWebView cold-boot sequence
+                // (transparent → shadow → backdrop-filter engaging) never
+                // reaches the user; JS `show()`s it after first paint. We force
+                // the hide here too because Tauri's by-label window-array merge
+                // is not reliable for boot-critical behaviour.
+                //
+                // Windows/Linux boot `visible: true` (as in 0.9.x). Do NOT hide
+                // them: force-hiding made WebView2 (and WebKitGTK) latch an
+                // early, unstyled frame on cold boot — the window surface kept
+                // presenting that stale frame even after the styled frame was
+                // composited (a reload fixed it). Leaving the window visible
+                // lets the webview re-present normally as content paints.
+                #[cfg(target_os = "macos")]
                 let _ = window.hide();
             }
 
@@ -706,7 +708,14 @@ pub fn run() {
             // scan, or a scan path removed by an older build before pruning
             // existed). Manual adds are kept. Persist only when something
             // actually changed.
-            if !config.prune_orphan_scanned_repos().is_empty() {
+            // `Unverified`: nothing has walked the disk yet at this point, and an
+            // autostart launch routinely beats the mount of an external or
+            // network drive. Repos on such a drive are surfaced as `missing` and
+            // pruned for real by the next scan.
+            if !config
+                .prune_orphan_scanned_repos(crate::config::store::MissingFolderEvidence::Unverified)
+                .is_empty()
+            {
                 let _ = config.save(&handle);
             }
 
@@ -859,6 +868,13 @@ pub fn run() {
                 ssh_passphrases: Arc::new(Mutex::new(HashMap::new())),
             };
             app.manage(state);
+
+            // Poll for repos whose folder disappeared. `notify` drops the watch
+            // when a directory is deleted and a *moved* repo yields no usable
+            // event on some platforms, so the watcher alone can never report a
+            // vanished repo. Must run after `app.manage` — it resolves
+            // `AppState` on every tick.
+            crate::git::reconcile::spawn_repo_reconciler(handle.clone());
 
             #[cfg(target_os = "macos")]
             {
@@ -1232,6 +1248,7 @@ pub fn run() {
         commands::oauth::begin_oauth,
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
+        commands::settings::get_settings_corruption,
         commands::settings::update_settings,
         commands::settings::factory_reset,
         commands::fonts::list_custom_fonts,
@@ -1335,6 +1352,7 @@ pub fn run() {
         commands::oauth::begin_oauth,
         commands::oauth::complete_oauth,
         commands::settings::get_settings,
+        commands::settings::get_settings_corruption,
         commands::settings::update_settings,
         commands::settings::factory_reset,
         commands::fonts::list_custom_fonts,

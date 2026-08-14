@@ -59,6 +59,9 @@ export function systemStub(
       return undefined;
     }
 
+    case "get_settings_corruption":
+      return null;
+
     case "get_settings": {
       // Mirror prod persistence: overlay localStorage on top of the seed so a
       // reload preserves theme/locale/accent etc. (the anti-flash inline

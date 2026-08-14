@@ -64,6 +64,7 @@ import {
   syncSystemTheme,
   uploadCustomFont,
 } from "@/store/actions/settings.actions";
+import { INITIAL_SAVE_SEQ, acceptSaveSnapshot } from "@/store/reducers/saveSettingsSeq";
 import type { SettingsState } from "@/store/types/settings.types";
 
 const POLLING_MIN_MIN = POLLING_INTERVAL_MIN_MS / 60_000;
@@ -180,6 +181,7 @@ const initialState: SettingsState = {
   customFonts: [],
   loading: false,
   error: null,
+  lastAppliedSaveSeq: INITIAL_SAVE_SEQ,
 };
 
 function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
@@ -442,7 +444,11 @@ export const settingsReducer = createReducer(initialState, (builder) => {
       state.loading = false;
       state.error = action.error.message ?? "load failed";
     })
+    // Concurrent `update_settings` round-trips complete out of order (one per
+    // slider step). Only the newest generation may be applied — an older
+    // snapshot landing last would drag the whole appearance block backwards.
     .addCase(saveSettings.fulfilled, (state, action) => {
+      if (!acceptSaveSnapshot(state, action.meta)) return;
       applyBackend(state, action.payload);
     })
     // Detection degrades silently to the stub maps on failure (no rejected

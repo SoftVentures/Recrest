@@ -1,13 +1,30 @@
 name: 📸 Visual Tester
 
-# Manual-only — runs the Playwright suite on Linux, Windows and macOS against
-# whatever ref the user picks, uploads screenshots / video / trace artifacts
-# per-OS so a reviewer can diff the real cross-platform rendering.
+# Manual-only — photographs every major view of the **desktop app** on Linux,
+# Windows and macOS against whatever ref the user picks, and uploads the images
+# per-OS so a reviewer can eyeball the real cross-platform rendering.
 #
-# Test failures do NOT block the workflow: snapshot baselines in
-# tests/src/e2e/landing/10-responsive.spec.ts are pinned to Chromium-on-Linux
-# (see app/CLAUDE.md), so font-rendering diffs on Windows / macOS are
-# expected. The point is the artifacts.
+# Scope is deliberately the app, not the landing page: the landing page already
+# has its own pixel-diff spec (`10-responsive.spec.ts`, run by `ci.yml::e2e`),
+# and its baselines are pinned to Chromium-on-Linux, so running it here only
+# produced Windows/macOS font-diff noise that buried the app screenshots in the
+# artifact.
+#
+# NOTE — nothing about Playwright gates a merge today. `ci.yml::e2e` is named
+# "Playwright E2E (optional)", carries `continue-on-error: true` and is NOT in
+# the `ci-pass` needs list, so no spec in `tests/` can turn a PR red. That is a
+# deliberate holding position, not an oversight: the job currently fails with
+# pre-existing failures across all seven Playwright projects and has been red on
+# `main` too, so making it required would block unrelated work on inherited
+# breakage. Making it gating again is tracked in
+# `docs/plans/09-bug-audit-remediation.md` ("Landed after this document").
+#
+# This workflow captures, it does not compare. `99-visual-tour.spec.ts` writes
+# a screenshot per view unconditionally, so every run yields a complete set on
+# all three systems regardless of pass/fail — there are no baselines to keep
+# current and nothing here can go red for cosmetic reasons. The pixel
+# comparison for the app lives in `14-visual.spec.ts`, which stays local-only
+# because its baselines are platform-specific and intentionally uncommitted.
 
 on:
   workflow_dispatch:
@@ -86,10 +103,13 @@ jobs:
         working-directory: tests
         run: yarn playwright install
 
-      - name: Run Playwright tests
-        # Assertion errors are non-blocking here — correctness gating lives
-        # in ci.yml::e2e. Scoped to desktop projects so the cross-OS render
-        # is comparable.
+      - name: Capture the app's views
+        # Non-blocking on purpose: this workflow photographs, it does not judge.
+        # Playwright correctness lives in `ci.yml::e2e` — which is advisory as
+        # well (`continue-on-error`, absent from `ci-pass`; see the header note),
+        # so neither job gates a merge. A view that fails to load still uploads
+        # its failure screenshot, which is exactly what a reviewer needs to see.
+        # What DOES turn this job red is the capture-count assertion below.
         continue-on-error: true
         working-directory: tests
         run: yarn test:e2e:visual
@@ -103,11 +123,19 @@ jobs:
       # filenames stay unique and self-describing. The trace.zip / video.webm /
       # error-context.md live on in the separate HTML-report artifact below
       # whenever a deeper look is needed.
-      - name: Flatten screenshots into a single folder
+      - name: Flatten screenshots and assert the tour captured every view
         if: always()
         shell: bash
         run: |
           set -euo pipefail
+
+          # Keep in step with `tests/src/e2e/app/99-visual-tour.spec.ts`: it
+          # declares 14 tests, one of which (`repos — flat view`) is a
+          # `test.skip`, so 13 captures are expected. Bump this when you add or
+          # remove a view — the spec is the source of truth.
+          EXPECTED_TOUR_SHOTS=13
+          TOUR_DIR=.screenshots/playwright/visual-tour
+
           mkdir -p screenshots-flat
           if [ -d .screenshots/playwright ]; then
             find .screenshots/playwright -type f -name "*.png" | while IFS= read -r f; do
@@ -116,8 +144,27 @@ jobs:
               cp "$f" "screenshots-flat/${dir}__${base}"
             done
           fi
-          echo "flattened $(find screenshots-flat -type f | wc -l) PNGs"
+          # `|| true` + `tr -d ' '`: `-e` is on under `shell: bash`, and macOS's
+          # `wc -l` pads its output with spaces inside a pipeline.
+          flattened="$(find screenshots-flat -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ' || true)"
+          echo "flattened ${flattened:-0} PNGs"
           ls -la screenshots-flat || true
+
+          # Count ONLY what the tour itself wrote. A guard over every flattened
+          # PNG is not equivalent: `playwright.config.ts` sets
+          # `screenshot: "only-on-failure"` with `retries: 2` in CI, so a tour
+          # that FAILS on every view — app won't boot, a testid vanished, a route
+          # 404s — writes `test-failed-<n>.png` per test per retry. The total
+          # count then looks healthy while the artifact holds nothing but red
+          # herrings. Counting `visual-tour/` covers both failure modes: the skip
+          # this workflow actually hit (the spec skipped itself in CI and the
+          # upload silently succeeded with nothing in it) and the fail case.
+          tour="$(find "$TOUR_DIR" -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ' || true)"
+          echo "visual-tour captures: ${tour:-0} (expected at least ${EXPECTED_TOUR_SHOTS})"
+          if [ "${tour:-0}" -lt "$EXPECTED_TOUR_SHOTS" ]; then
+            echo "::error::the visual tour captured ${tour:-0} of ${EXPECTED_TOUR_SHOTS} expected views — it skipped itself, or failed before screenshotting. See the playwright-report artifact."
+            exit 1
+          fi
 
       - name: Upload screenshots (${{ matrix.label }})
         if: always()

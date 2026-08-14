@@ -1,16 +1,87 @@
+use std::ffi::OsString;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
 use super::settings::{AppSettings, RepoRecord};
 
 const SETTINGS_FILE: &str = "settings.json";
+/// Suffix of the scratch file `save()` writes before renaming it over
+/// `settings.json`. Lives in the same directory so the rename stays on one
+/// volume (a cross-device rename is a copy, and copies are not atomic).
+const TMP_SUFFIX: &str = ".tmp";
+/// Prefix of the quarantine copy taken when an existing `settings.json`
+/// fails to parse. Full shape: `settings.json.corrupt-<unix-ts>`.
+const CORRUPT_SUFFIX: &str = ".corrupt-";
+/// How often `fs::rename` is retried before `save()` gives up. On Windows the
+/// destination can be transiently locked by an indexer or a virus scanner
+/// holding it without `FILE_SHARE_DELETE`; a couple of short retries turn that
+/// into a non-event instead of a lost save.
+const RENAME_ATTEMPTS: u32 = 4;
+const RENAME_RETRY_DELAY_MS: u64 = 20;
+/// Distinguishes successive scratch files written by this process; see
+/// `tmp_path_for`.
+static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Whether a missing folder may be treated as proof that a scanned repo is gone.
+///
+/// Only a scan that actually walked the root containing that repo can answer
+/// that, and it must have walked it *successfully*. At boot nothing has touched
+/// the disk, and a path that isn't there usually means "external or network
+/// drive not mounted yet", not "deleted". Pruning on that guess is destructive
+/// in a way a rescan cannot undo: `RepoRecord` carries user configuration
+/// (`group_id`, `custom_logo_path`, `ssh_key_path`, plus the id referenced by
+/// `pinned_repo_ids`), and re-discovery mints a fresh `Uuid`, so the record
+/// comes back stripped of all of it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MissingFolderEvidence {
+    /// A scan just completed. `walked_roots` are the roots it reached the
+    /// bottom of (`ScanOutcome::walked_roots`) — absence is proof only for
+    /// repos living under one of them. A scan whose root was unreachable
+    /// carries an empty list and therefore prunes nothing.
+    Authoritative { walked_roots: Vec<PathBuf> },
+    /// Nothing walked the disk. Keep records whose folder merely isn't visible;
+    /// the renderer still surfaces them via `RepoDto::missing`.
+    Unverified,
+}
+
+/// Report of a `settings.json` that existed but could not be parsed.
+///
+/// Handed out by `ConfigStore::corruption()`. Serializable so a command can
+/// forward it to the renderer verbatim — the user is the only one who can
+/// decide whether to hand-repair the quarantined file or accept the reset.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsCorruption {
+    /// Where the unparseable file was moved to, or `None` if even the rename
+    /// failed (in which case the original is still in place and untouched).
+    ///
+    /// A lossy `String`, not a `PathBuf`: `Serialize for PathBuf` *errors* on a
+    /// non-UTF-8 path instead of degrading, which would fail the whole
+    /// `get_settings_corruption` response at the worst possible moment — the app
+    /// is already reporting a broken config, and this string is the user's only
+    /// pointer to their recoverable data. Display-only, so lossy is enough.
+    pub quarantine_path: Option<String>,
+    /// Unix seconds at detection — matches the `<unix-ts>` in the file name.
+    pub detected_at: u64,
+    /// The serde error, verbatim (line/column included).
+    pub message: String,
+}
 
 pub struct ConfigStore {
     settings: AppSettings,
     path: PathBuf,
+    /// `Some` for the rest of the process lifetime when this store booted off
+    /// an unparseable `settings.json`. Never cleared by a later `save()` —
+    /// the point is that the session started from defaults, and that stays
+    /// true no matter what is written afterwards.
+    corruption: Option<SettingsCorruption>,
 }
 
 impl ConfigStore {
@@ -18,25 +89,19 @@ impl ConfigStore {
         let dir = config_dir(app)?;
         fs::create_dir_all(&dir)?;
         let path = dir.join(SETTINGS_FILE);
-        let mut settings: AppSettings = if path.exists() {
-            let raw = fs::read_to_string(&path)?;
-            serde_json::from_str(&raw).unwrap_or_default()
-        } else {
-            AppSettings::default()
-        };
+        let (mut settings, corruption) = read_settings(&path)?;
         // One-shot legacy migration: pre-translucency builds shipped a
         // `theme_id = "glassy"` value. Rewrite to `theme_id = "dark"` plus
         // `translucency.enabled = true` so the user's prior intent survives,
         // and persist the rewrite once so the migration never re-runs.
         if settings.appearance.migrate_legacy() {
-            if let Some(parent) = path.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
-            if let Ok(json) = serde_json::to_string_pretty(&settings) {
-                let _ = fs::write(&path, json);
-            }
+            let _ = write_settings_atomically(&path, &settings);
         }
-        Ok(Self { settings, path })
+        Ok(Self {
+            settings,
+            path,
+            corruption,
+        })
     }
 
     pub fn settings(&self) -> &AppSettings {
@@ -47,13 +112,22 @@ impl ConfigStore {
         &mut self.settings
     }
 
+    /// `Some` when this store came up on defaults because the on-disk
+    /// `settings.json` could not be parsed. Additive read-only accessor —
+    /// callers that don't care are unaffected.
+    pub fn corruption(&self) -> Option<&SettingsCorruption> {
+        self.corruption.as_ref()
+    }
+
+    /// Persist the in-memory settings.
+    ///
+    /// Write-to-temp + rename, never a truncate-in-place: `settings.json`
+    /// holds every `RepoRecord` (with its group, custom logo and SSH key),
+    /// every group, the pins and the scan paths, and a process death halfway
+    /// through an in-place rewrite left a truncated file that the next boot
+    /// silently replaced with factory defaults.
     pub fn save(&self, _app: &AppHandle) -> anyhow::Result<()> {
-        if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let json = serde_json::to_string_pretty(&self.settings)?;
-        fs::write(&self.path, json)?;
-        Ok(())
+        write_settings_atomically(&self.path, &self.settings)
     }
 
     /// Wipe persisted settings: replace the in-memory snapshot with the
@@ -80,13 +154,19 @@ impl ConfigStore {
     /// Tauri's `AppHandle`.
     #[cfg(test)]
     pub fn from_path_for_tests(path: PathBuf) -> anyhow::Result<Self> {
-        let settings = if path.exists() {
-            let raw = fs::read_to_string(&path)?;
-            serde_json::from_str(&raw).unwrap_or_default()
-        } else {
-            AppSettings::default()
-        };
-        Ok(Self { settings, path })
+        let (settings, corruption) = read_settings(&path)?;
+        Ok(Self {
+            settings,
+            path,
+            corruption,
+        })
+    }
+
+    /// Persist without an `AppHandle`. Test-only mirror of `save`, which only
+    /// ever used its handle to satisfy the call site.
+    #[cfg(test)]
+    pub fn save_for_tests(&self) -> anyhow::Result<()> {
+        write_settings_atomically(&self.path, &self.settings)
     }
 
     /// Upsert a repository record discovered during scanning.
@@ -129,27 +209,61 @@ impl ConfigStore {
         Ok(record)
     }
 
-    /// Drop auto-discovered repos that no longer sit under any configured scan
-    /// root — e.g. a scan path was removed, or an earlier too-broad scan pulled
-    /// in nested repos (`.vscode`/`.codex`/… internal git dirs). Manually-added
-    /// repos (`manual == true`) are kept wherever they live. No-op when there
-    /// are no scan paths, so a fresh/empty config never nukes everything.
+    /// Drop auto-discovered repos that are no longer reproducible by a scan:
+    /// either their folder is gone, or they no longer sit under any configured
+    /// scan root (a removed scan path, or junk from an earlier too-broad scan
+    /// that pulled in nested `.vscode`/`.codex`/… git dirs). Manually-added
+    /// repos (`manual == true`) are kept wherever they live and however broken
+    /// their path is — that's user configuration, not derived data.
+    ///
+    /// `evidence` decides whether a missing folder may be acted on at all; see
+    /// `MissingFolderEvidence`. The outside-every-root rule is unaffected by it.
     /// Returns the `(id, path)` of every pruned repo so callers can unwatch them.
-    pub fn prune_orphan_scanned_repos(&mut self) -> Vec<(String, PathBuf)> {
+    pub fn prune_orphan_scanned_repos(
+        &mut self,
+        evidence: MissingFolderEvidence,
+    ) -> Vec<(String, PathBuf)> {
         let roots: Vec<PathBuf> = self
             .settings
             .scan_paths
             .iter()
             .map(|p| crate::git::scanner::normalize_scan_root(Path::new(p)))
             .collect();
-        if roots.is_empty() {
-            return Vec::new();
-        }
+        let walked_roots: &[PathBuf] = match &evidence {
+            MissingFolderEvidence::Authoritative { walked_roots } => walked_roots,
+            MissingFolderEvidence::Unverified => &[],
+        };
         let orphans: Vec<(String, PathBuf)> = self
             .settings
             .repos
             .values()
-            .filter(|r| !r.manual && !roots.iter().any(|root| r.path.starts_with(root)))
+            .filter(|r| !r.manual)
+            .filter(|r| {
+                // A vanished folder survives the `starts_with` test below when
+                // the repo was deleted *inside* a still-configured scan root,
+                // which is how stale rows used to outlive even a full rescan.
+                // Gated on the repo sitting under a root the scan actually got
+                // through: for any other root the walk never observed the repo's
+                // neighbourhood, so its absence is a mount failure, not a delete.
+                //
+                // Presence-of-*repo*, not presence-of-folder, and the two really
+                // are different questions here. This branch asks "could the scan
+                // that just walked this root still have produced this record?" —
+                // and `scanner` only yields directories that carry a `.git`. A
+                // folder that survived but lost its `.git` is therefore no longer
+                // reproducible: keeping it leaves a row the scan can never
+                // re-confirm, already flagged by `RepoDto::missing` and by the
+                // reconciler, yet never pruned. `is_repo_present` is the single
+                // definition that keeps those three answering the same way.
+                if walked_roots.iter().any(|root| r.path.starts_with(root))
+                    && !crate::git::is_repo_present(&r.path)
+                {
+                    return true;
+                }
+                // Outside every scan root. Guarded on a non-empty root list so
+                // a fresh/empty config never nukes everything.
+                !roots.is_empty() && !roots.iter().any(|root| r.path.starts_with(root))
+            })
             .map(|r| (r.id.clone(), r.path.clone()))
             .collect();
         for (id, _) in &orphans {
@@ -158,6 +272,194 @@ impl ConfigStore {
         }
         orphans
     }
+}
+
+/// Load `settings.json`, quarantining it if it exists but doesn't parse.
+///
+/// Three outcomes, deliberately kept distinct:
+/// - **file missing** — first launch. Silent defaults, no quarantine, no log.
+/// - **file unreadable** — an IO error is propagated to the caller (boot
+///   fails loudly) rather than papered over; a permission problem is not
+///   something a rename would fix either.
+/// - **file present but malformed** — the data-loss case. `#[serde(default)]`
+///   on `AppSettings` only covers *missing fields*; a truncated or otherwise
+///   broken document fails outright, and the previous `unwrap_or_default()`
+///   turned that into a silent factory reset that the next `save()` made
+///   permanent. The bytes are moved aside so they stay recoverable.
+fn read_settings(path: &Path) -> anyhow::Result<(AppSettings, Option<SettingsCorruption>)> {
+    if !path.exists() {
+        return Ok((AppSettings::default(), None));
+    }
+    let raw = fs::read_to_string(path)?;
+    match serde_json::from_str::<AppSettings>(&raw) {
+        Ok(settings) => Ok((settings, None)),
+        Err(err) => Ok((AppSettings::default(), Some(quarantine(path, &err)))),
+    }
+}
+
+/// Move an unparseable `settings.json` to `settings.json.corrupt-<unix-ts>`
+/// and shout about it. Returns the report even when the rename itself fails —
+/// the session still started from defaults, which is what callers must know.
+fn quarantine(path: &Path, err: &serde_json::Error) -> SettingsCorruption {
+    let detected_at = unix_seconds();
+    let quarantine_path = match unique_corrupt_path(path, detected_at) {
+        Some(target) => match fs::rename(path, &target) {
+            Ok(()) => Some(target),
+            Err(rename_err) => {
+                tracing::error!(
+                    "[config] could not quarantine unparseable {}: {rename_err}",
+                    path.display()
+                );
+                None
+            }
+        },
+        None => None,
+    };
+    match &quarantine_path {
+        Some(target) => tracing::error!(
+            "[config] {} is corrupt ({err}) — starting from defaults. The previous file was kept at {}; \
+             repos, groups, pins and scan paths can be recovered from it.",
+            path.display(),
+            target.display()
+        ),
+        None => tracing::error!(
+            "[config] {} is corrupt ({err}) — starting from defaults, and the file could NOT be moved aside. \
+             Back it up manually before changing any setting; the next save overwrites it.",
+            path.display()
+        ),
+    }
+    SettingsCorruption {
+        quarantine_path: quarantine_path
+            .as_deref()
+            .map(|p| p.to_string_lossy().into_owned()),
+        detected_at,
+        message: err.to_string(),
+    }
+}
+
+/// `settings.json` → `settings.json.corrupt-<ts>`, with a `-1`, `-2`, … tail
+/// if that name is taken (two corrupt boots inside the same second, or a
+/// leftover from a previous incident).
+fn unique_corrupt_path(path: &Path, detected_at: u64) -> Option<PathBuf> {
+    let base = path.file_name()?.to_os_string();
+    for attempt in 0..100u32 {
+        let mut name = base.clone();
+        name.push(CORRUPT_SUFFIX);
+        name.push(detected_at.to_string());
+        if attempt > 0 {
+            name.push(format!("-{attempt}"));
+        }
+        let candidate = path.with_file_name(name);
+        if !candidate.exists() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+/// Serialize to `<file>.tmp`, flush + `sync_all` it, then rename over the
+/// target. The rename is the only step that touches `settings.json`, and it
+/// is atomic on both NTFS and POSIX: a reader either sees the whole old file
+/// or the whole new one, never a half-written one.
+///
+/// Windows note: `std::fs::rename` maps to `MoveFileExW` with
+/// `MOVEFILE_REPLACE_EXISTING`, so an existing destination *is* replaced —
+/// the "rename fails if the target exists" rule applies to the raw
+/// `MoveFileW`/`rename()` APIs, not to Rust's wrapper. It can still fail with
+/// a sharing violation while another process holds the destination open, so
+/// the error path is handled explicitly instead of assumed away.
+fn write_settings_atomically(path: &Path, settings: &AppSettings) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let json = serde_json::to_string_pretty(settings)?;
+    let tmp = tmp_path_for(path);
+
+    // Scoped so the handle is closed before the rename — Windows refuses to
+    // move a file that is still open in this process.
+    {
+        let mut file = fs::File::create(&tmp)?;
+        file.write_all(json.as_bytes())?;
+        file.flush()?;
+        // Without this the rename can land while the bytes are still in the
+        // page cache; a power cut would then leave an empty settings.json.
+        file.sync_all()?;
+    }
+
+    let mut last_err = None;
+    for attempt in 0..RENAME_ATTEMPTS {
+        match fs::rename(&tmp, path) {
+            Ok(()) => {
+                sync_parent_dir(path);
+                return Ok(());
+            }
+            Err(err) => {
+                last_err = Some(err);
+                if attempt + 1 < RENAME_ATTEMPTS {
+                    std::thread::sleep(std::time::Duration::from_millis(RENAME_RETRY_DELAY_MS));
+                }
+            }
+        }
+    }
+
+    // Leaving the scratch file behind would be mistaken for a partial write
+    // by the next reader, and the original settings.json is still intact.
+    let _ = fs::remove_file(&tmp);
+    let err = last_err.expect("RENAME_ATTEMPTS must be > 0");
+    tracing::error!(
+        "[config] could not replace {} with the freshly written settings: {err}",
+        path.display()
+    );
+    Err(anyhow::anyhow!(
+        "could not persist settings to {}: {err}",
+        path.display()
+    ))
+}
+
+/// `settings.json` → `settings.json.tmp.<pid>.<n>`.
+///
+/// The scratch name must be unique per writer, not merely per file. Inside one
+/// process the config `Mutex` serialises saves, but two processes can share an
+/// app-data dir — a dev build next to a release build, or two
+/// `RECREST_TEST_PROFILE` runs pointed at the same tmpdir — and a fixed name let
+/// them write the same scratch file concurrently, so one could rename the
+/// other's half-written bytes over `settings.json`. The pid separates processes,
+/// the counter separates writes within one (and keeps a pid recycled by the OS
+/// from colliding with a leftover file).
+fn tmp_path_for(path: &Path) -> PathBuf {
+    let mut name = path
+        .file_name()
+        .map(OsString::from)
+        .unwrap_or_else(|| OsString::from(SETTINGS_FILE));
+    name.push(TMP_SUFFIX);
+    name.push(format!(
+        ".{}.{}",
+        std::process::id(),
+        TMP_COUNTER.fetch_add(1, Ordering::Relaxed)
+    ));
+    path.with_file_name(name)
+}
+
+/// On POSIX the rename itself is only durable once the *directory* entry is
+/// flushed. Best-effort: opening a directory as a file is not portable, so
+/// Windows (where `MoveFileExW` writes through) simply skips this.
+#[cfg(unix)]
+fn sync_parent_dir(path: &Path) {
+    if let Some(parent) = path.parent() {
+        if let Ok(dir) = fs::File::open(parent) {
+            let _ = dir.sync_all();
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn sync_parent_dir(_path: &Path) {}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 fn config_dir(app: &AppHandle) -> anyhow::Result<PathBuf> {
@@ -201,6 +503,205 @@ mod tests {
         fs::create_dir_all(&dir).expect("create temp dir");
         dir.push("settings.json");
         dir
+    }
+
+    /// Siblings of `path` whose file name contains `needle`.
+    fn siblings_matching(path: &Path, needle: &str) -> Vec<PathBuf> {
+        let parent = path.parent().expect("parent");
+        let mut found: Vec<PathBuf> = fs::read_dir(parent)
+            .expect("read config dir")
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.contains(needle))
+            })
+            .collect();
+        found.sort();
+        found
+    }
+
+    /// Every `settings.json.corrupt-*` sibling of `path`.
+    fn corrupt_siblings(path: &Path) -> Vec<PathBuf> {
+        siblings_matching(path, CORRUPT_SUFFIX)
+    }
+
+    /// The write path must never truncate `settings.json` in place: a crash
+    /// mid-write used to leave a half-file that the next boot read as
+    /// "corrupt" and replaced with factory defaults.
+    #[test]
+    fn save_writes_through_a_temp_file_and_round_trips() {
+        let path = fresh_settings_path("atomic-save");
+        let parent = path.parent().expect("parent").to_path_buf();
+
+        let mut store = ConfigStore::from_path_for_tests(path.clone()).expect("fresh store");
+        {
+            let settings = store.settings_mut();
+            settings.theme = "dark".into();
+            settings.locale = "de".into();
+            settings.scan_paths = vec!["/tmp/customers".to_string()];
+            settings.pinned_repo_ids = vec!["pinned-one".into()];
+        }
+        store.save_for_tests().expect("save");
+
+        assert!(path.exists(), "settings.json must exist after save");
+        // The scratch name is unique per write, so this scans for leftovers
+        // instead of probing one fixed name (which would always be absent).
+        assert!(
+            siblings_matching(&path, TMP_SUFFIX).is_empty(),
+            "no scratch file may survive a successful rename"
+        );
+
+        // A second save over an existing file must also succeed — on Windows
+        // this is the case that would break if rename didn't replace.
+        store.settings_mut().theme = "light".into();
+        store.save_for_tests().expect("overwriting save");
+
+        let reloaded = ConfigStore::from_path_for_tests(path.clone()).expect("reload");
+        assert!(
+            reloaded.corruption().is_none(),
+            "a file we just wrote must parse"
+        );
+        assert_eq!(reloaded.settings().theme, "light");
+        assert_eq!(reloaded.settings().locale, "de");
+        assert_eq!(
+            reloaded.settings().scan_paths,
+            vec!["/tmp/customers".to_string()]
+        );
+        assert_eq!(
+            reloaded.settings().pinned_repo_ids,
+            vec!["pinned-one".to_string()]
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// Two writers sharing an app-data dir (dev + release build, or two
+    /// `RECREST_TEST_PROFILE` runs pointed at one tmpdir) must not share a
+    /// scratch path, or one can rename the other's half-written bytes over
+    /// `settings.json`.
+    #[test]
+    fn tmp_path_is_unique_per_write_and_carries_the_pid() {
+        let path = PathBuf::from("/cfg/settings.json");
+
+        let first = tmp_path_for(&path);
+        let second = tmp_path_for(&path);
+
+        assert_ne!(first, second, "two writes must not share a scratch path");
+        let name = first
+            .file_name()
+            .and_then(|n| n.to_str())
+            .expect("scratch file name");
+        assert!(
+            name.starts_with("settings.json.tmp"),
+            "unexpected scratch name: {name}"
+        );
+        assert!(
+            name.contains(&std::process::id().to_string()),
+            "the scratch name must carry the pid: {name}"
+        );
+        assert_eq!(
+            first.parent(),
+            path.parent(),
+            "the scratch file must stay on the same volume as the target"
+        );
+    }
+
+    /// The data-loss path: a `settings.json` that exists but doesn't parse
+    /// must be moved aside, never silently replaced by defaults. Everything
+    /// the user configured — repos with their groups/logos/keys, pins, scan
+    /// paths, provider settings — lives only in those bytes.
+    #[test]
+    fn corrupt_settings_file_is_quarantined_instead_of_factory_reset() {
+        let path = fresh_settings_path("corrupt");
+        let parent = path.parent().expect("parent").to_path_buf();
+
+        // Truncated mid-write, exactly what a process death used to leave.
+        let truncated = r#"{
+            "pollingIntervalMs": 99999,
+            "theme": "dark",
+            "locale": "de",
+            "scanPaths": ["/tmp/cust"#;
+        fs::write(&path, truncated).expect("seed truncated settings");
+
+        let store = ConfigStore::from_path_for_tests(path.clone()).expect("load corrupt store");
+
+        // Runtime falls back to defaults so the app still boots …
+        let defaults = AppSettings::default();
+        assert_eq!(store.settings().theme, defaults.theme);
+        assert_eq!(store.settings().locale, defaults.locale);
+
+        // … but the condition is visible, not swallowed.
+        let corruption = store.corruption().expect("corruption must be reported");
+        assert!(
+            !corruption.message.is_empty(),
+            "the serde error must be carried"
+        );
+
+        // The original bytes survive under a .corrupt-<ts> name, and the
+        // defaults were NOT written back over them.
+        // Carried as a display string (a non-UTF-8 path must not break the
+        // response), so the test re-hydrates it to touch the file.
+        let quarantined = PathBuf::from(
+            corruption
+                .quarantine_path
+                .as_ref()
+                .expect("quarantine path must be set"),
+        );
+        let quarantined = &quarantined;
+        assert!(quarantined.exists(), "quarantine file must exist on disk");
+        assert_eq!(
+            fs::read_to_string(quarantined).expect("read quarantine"),
+            truncated,
+            "the corrupt file must be preserved byte-for-byte"
+        );
+        assert_eq!(corrupt_siblings(&path), vec![quarantined.clone()]);
+        assert!(
+            !path.exists(),
+            "loading must not leave a defaults-filled settings.json behind"
+        );
+
+        // A later save writes defaults to settings.json — the quarantined
+        // copy must stay untouched, otherwise recovery is impossible.
+        store.save_for_tests().expect("save after recovery");
+        assert!(path.exists());
+        assert_eq!(
+            fs::read_to_string(quarantined).expect("read quarantine again"),
+            truncated
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// First launch: no file at all is the normal path — defaults, no
+    /// quarantine, nothing written until the first explicit save.
+    #[test]
+    fn missing_settings_file_loads_defaults_without_quarantine() {
+        let path = fresh_settings_path("first-launch");
+        let parent = path.parent().expect("parent").to_path_buf();
+        assert!(!path.exists());
+
+        let store = ConfigStore::from_path_for_tests(path.clone()).expect("load empty store");
+
+        let defaults = AppSettings::default();
+        assert!(
+            store.corruption().is_none(),
+            "a missing file is not corrupt"
+        );
+        assert_eq!(store.settings().theme, defaults.theme);
+        assert_eq!(
+            store.settings().polling_interval_ms,
+            defaults.polling_interval_ms
+        );
+        assert!(store.settings().repos.is_empty());
+        assert!(
+            corrupt_siblings(&path).is_empty(),
+            "a first launch must not create a quarantine file"
+        );
+        assert!(!path.exists(), "loading alone must not write settings.json");
+
+        let _ = fs::remove_dir_all(&parent);
     }
 
     #[test]
@@ -276,6 +777,320 @@ mod tests {
         // Migrated translucency uses the Rust-side default intensity (kept in
         // lock-step with `DEFAULT_TRANSLUCENCY_INTENSITY` on the renderer).
         assert!(store.settings().appearance.translucency.intensity > 0);
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    fn scanned_record(id: &str, path: &Path, manual: bool) -> RepoRecord {
+        RepoRecord {
+            id: id.to_string(),
+            name: path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("repo")
+                .to_string(),
+            path: path.to_path_buf(),
+            group_id: None,
+            remote_url: None,
+            provider_id: None,
+            ssh_key_path: None,
+            custom_logo_path: None,
+            manual,
+        }
+    }
+
+    /// Create a directory that `scanner` would recognise as a repository —
+    /// i.e. one carrying a `.git` entry, which is what `is_repo_present` and
+    /// the scan itself both key off.
+    fn create_repo_dir(path: &Path) {
+        fs::create_dir_all(path.join(".git")).expect("create repo dir with .git");
+    }
+
+    /// A scanned repo deleted *inside* a still-configured scan root keeps
+    /// matching the root's `starts_with` test, so before the missing-folder
+    /// check it survived even a full rescan.
+    #[test]
+    fn prune_drops_scanned_repo_whose_folder_vanished_inside_a_scan_root() {
+        let root = tempfile::tempdir().expect("tmpdir");
+        let alive = root.path().join("alive");
+        create_repo_dir(&alive);
+        let vanished = root.path().join("vanished"); // never created on disk
+        let manual_vanished = root.path().join("manual-vanished");
+
+        let settings_path = fresh_settings_path("prune-missing");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![root.path().to_string_lossy().to_string()];
+            settings
+                .repos
+                .insert("alive".into(), scanned_record("alive", &alive, false));
+            settings.repos.insert(
+                "vanished".into(),
+                scanned_record("vanished", &vanished, false),
+            );
+            settings.repos.insert(
+                "manual-vanished".into(),
+                scanned_record("manual-vanished", &manual_vanished, true),
+            );
+            settings.pinned_repo_ids = vec!["alive".into(), "vanished".into()];
+        }
+
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Authoritative {
+            walked_roots: vec![root.path().to_path_buf()],
+        });
+
+        assert_eq!(
+            pruned.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            vec!["vanished"]
+        );
+        let repos = &store.settings().repos;
+        assert!(repos.contains_key("alive"), "existing repo must survive");
+        assert!(
+            repos.contains_key("manual-vanished"),
+            "manual repo must survive a missing folder"
+        );
+        assert!(!repos.contains_key("vanished"));
+        assert_eq!(store.settings().pinned_repo_ids, vec!["alive".to_string()]);
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// A folder that survived but lost its `.git` is not reproducible by a scan
+    /// (`scanner` only yields dirs carrying one), so it must be pruned just like
+    /// a deleted folder. Before this it stayed forever: flagged as `missing` by
+    /// the DTO and by the reconciler, yet never dropped by any rescan.
+    #[test]
+    fn prune_drops_scanned_repo_whose_git_dir_vanished_but_folder_remains() {
+        let root = tempfile::tempdir().expect("tmpdir");
+        let alive = root.path().join("alive");
+        create_repo_dir(&alive);
+        let de_gitted = root.path().join("no-longer-a-repo");
+        fs::create_dir_all(&de_gitted).expect("create folder without .git");
+
+        let settings_path = fresh_settings_path("prune-no-git-dir");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![root.path().to_string_lossy().to_string()];
+            settings
+                .repos
+                .insert("alive".into(), scanned_record("alive", &alive, false));
+            settings.repos.insert(
+                "no-longer-a-repo".into(),
+                scanned_record("no-longer-a-repo", &de_gitted, false),
+            );
+        }
+
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Authoritative {
+            walked_roots: vec![root.path().to_path_buf()],
+        });
+
+        assert_eq!(
+            pruned.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            vec!["no-longer-a-repo"]
+        );
+        assert!(
+            store.settings().repos.contains_key("alive"),
+            "a real repo under the same root must survive"
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// The pre-existing rule — scanned repos outside every configured root are
+    /// pruned — must keep working alongside the missing-folder check.
+    #[test]
+    fn prune_drops_scanned_repo_outside_every_scan_root() {
+        let root = tempfile::tempdir().expect("tmpdir");
+        let inside = root.path().join("inside");
+        fs::create_dir_all(&inside).expect("create inside repo dir");
+        let elsewhere = tempfile::tempdir().expect("tmpdir2");
+        let outside = elsewhere.path().join("outside");
+        fs::create_dir_all(&outside).expect("create outside repo dir");
+
+        let settings_path = fresh_settings_path("prune-outside");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![root.path().to_string_lossy().to_string()];
+            settings
+                .repos
+                .insert("inside".into(), scanned_record("inside", &inside, false));
+            settings
+                .repos
+                .insert("outside".into(), scanned_record("outside", &outside, false));
+        }
+
+        // `Unverified` on purpose: the outside-every-root rule must not depend on
+        // whether a scan just ran.
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Unverified);
+
+        assert_eq!(
+            pruned.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            vec!["outside"]
+        );
+        assert!(store.settings().repos.contains_key("inside"));
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// With no scan roots configured there is nothing to walk, so an
+    /// `Authoritative` prune carries an empty `walked_roots` and may touch
+    /// nothing at all: neither the outside-every-root rule (guarded on a
+    /// non-empty root list) nor the missing-folder rule applies. The previous
+    /// version of this test asserted the opposite — that a vanished folder is
+    /// dropped even when no root was walked — which is exactly the data-loss
+    /// path the `walked_roots` model closes.
+    #[test]
+    fn prune_without_scan_paths_drops_nothing() {
+        let root = tempfile::tempdir().expect("tmpdir");
+        let alive = root.path().join("alive");
+        fs::create_dir_all(&alive).expect("create alive repo dir");
+        let vanished = root.path().join("vanished");
+
+        let settings_path = fresh_settings_path("prune-no-roots");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings
+                .repos
+                .insert("alive".into(), scanned_record("alive", &alive, false));
+            settings.repos.insert(
+                "vanished".into(),
+                scanned_record("vanished", &vanished, false),
+            );
+        }
+
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Authoritative {
+            walked_roots: Vec::new(),
+        });
+
+        assert!(
+            pruned.is_empty(),
+            "a scan that walked nothing proves nothing"
+        );
+        assert!(store.settings().repos.contains_key("alive"));
+        assert!(store.settings().repos.contains_key("vanished"));
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// The external-drive regression: the auto-rescan fires while `E:\repos` is
+    /// unplugged, `scan_many` returns no repos *and* no walked roots, and the
+    /// records — including their pins — must survive untouched.
+    #[test]
+    fn prune_keeps_repo_under_a_root_the_scan_could_not_walk() {
+        let holder = tempfile::tempdir().expect("tmpdir");
+        let unmounted_root = holder.path().join("external-drive");
+        let repo = unmounted_root.join("work"); // never created on disk
+
+        let settings_path = fresh_settings_path("prune-unwalked-root");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![unmounted_root.to_string_lossy().to_string()];
+            settings
+                .repos
+                .insert("work".into(), scanned_record("work", &repo, false));
+            settings.pinned_repo_ids = vec!["work".into()];
+        }
+
+        // A scan ran, but the root was unreachable — hence no walked roots.
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Authoritative {
+            walked_roots: Vec::new(),
+        });
+
+        assert!(pruned.is_empty(), "an unreachable root may not prune");
+        assert!(store.settings().repos.contains_key("work"));
+        assert_eq!(
+            store.settings().pinned_repo_ids,
+            vec!["work".to_string()],
+            "the pin must survive"
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// Two configured roots, one reachable and one not: only the reachable
+    /// one's subtree may lose records.
+    #[test]
+    fn prune_drops_only_below_the_walked_root() {
+        let walked = tempfile::tempdir().expect("tmpdir");
+        let walked_gone = walked.path().join("deleted-locally");
+        let holder = tempfile::tempdir().expect("tmpdir2");
+        let unwalked = holder.path().join("external-drive");
+        let unwalked_gone = unwalked.join("still-registered");
+
+        let settings_path = fresh_settings_path("prune-mixed-roots");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![
+                walked.path().to_string_lossy().to_string(),
+                unwalked.to_string_lossy().to_string(),
+            ];
+            settings
+                .repos
+                .insert("local".into(), scanned_record("local", &walked_gone, false));
+            settings.repos.insert(
+                "external".into(),
+                scanned_record("external", &unwalked_gone, false),
+            );
+        }
+
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Authoritative {
+            walked_roots: vec![walked.path().to_path_buf()],
+        });
+
+        assert_eq!(
+            pruned.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            vec!["local"]
+        );
+        assert!(
+            store.settings().repos.contains_key("external"),
+            "a repo under the unreachable root must survive"
+        );
+
+        let _ = fs::remove_dir_all(&parent);
+    }
+
+    /// Boot runs before anything has walked the disk, and an autostart launch
+    /// routinely beats the mount of an external drive. Pruning there would take
+    /// the repo's pin, group, custom logo and SSH key with it.
+    #[test]
+    fn prune_keeps_missing_folder_when_evidence_is_unverified() {
+        let root = tempfile::tempdir().expect("tmpdir");
+        let unmounted = root.path().join("on-an-unplugged-drive");
+
+        let settings_path = fresh_settings_path("prune-unverified");
+        let parent = settings_path.parent().expect("parent").to_path_buf();
+        let mut store = ConfigStore::from_path_for_tests(settings_path).expect("store");
+        {
+            let settings = store.settings_mut();
+            settings.scan_paths = vec![root.path().to_string_lossy().to_string()];
+            settings.repos.insert(
+                "unmounted".into(),
+                scanned_record("unmounted", &unmounted, false),
+            );
+            settings.pinned_repo_ids = vec!["unmounted".into()];
+        }
+
+        let pruned = store.prune_orphan_scanned_repos(MissingFolderEvidence::Unverified);
+
+        assert!(pruned.is_empty(), "nothing may be pruned without evidence");
+        assert!(store.settings().repos.contains_key("unmounted"));
+        assert_eq!(
+            store.settings().pinned_repo_ids,
+            vec!["unmounted".to_string()],
+            "the pin must survive"
+        );
 
         let _ = fs::remove_dir_all(&parent);
     }

@@ -339,7 +339,13 @@ function WorkingCopyPanel({ repoId, onCommitClick }: WorkingCopyPanelProps) {
           <StashList>
             {stash.map((s) => (
               <StashRow key={s.oid} data-testid={TEST_IDS.workingCopy.stashRow(s.index)}>
-                <StashIndex component="span">{t("stash_index", { index: s.index })}</StashIndex>
+                <StashIndex component="span" data-testid={TEST_IDS.workingCopy.stashIndex(s.index)}>
+                  {/* Not translatable and deliberately not a bundle key: this is git's own ref
+                      syntax, byte-identical in every locale and exactly what the user pastes
+                      into `git stash apply`. As a key it also had no way to express that the
+                      braces belong to the label rather than to the interpolated number. */}
+                  {`stash@{${s.index}}`}
+                </StashIndex>
                 <StashMessage component="span">{s.message}</StashMessage>
                 <GeneralButton
                   size="sm"

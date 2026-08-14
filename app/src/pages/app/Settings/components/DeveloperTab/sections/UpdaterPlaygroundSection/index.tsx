@@ -30,10 +30,14 @@ export function UpdaterPlaygroundSection() {
   const [endpointOverride, setEndpointOverride] = useState("");
 
   const forceCheck = async () => {
+    // The command binds a single `args` parameter, so the options have to be nested.
+    // Passing them flat silently dropped them and always ran a plain default check.
     await safeInvoke(TauriCommand.CHECK_FOR_UPDATE, {
-      autoInstall: false,
-      forceFallback,
-      endpointOverride: endpointOverride.trim() || null,
+      args: {
+        autoInstall: false,
+        forceFallback,
+        endpointOverride: endpointOverride.trim() || null,
+      },
     });
     toast.info(t("developer.updater.checking"));
   };

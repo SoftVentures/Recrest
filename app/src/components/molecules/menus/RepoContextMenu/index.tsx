@@ -56,6 +56,9 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
   const [pending, setPending] = useState(false);
   const brand = brandFromUrl(repo.remoteUrl);
   const openHost = useOpenHost(repo.remoteUrl);
+  // Everything that touches the working copy is doomed once the folder is
+  // gone. Opening the remote host still works — that lives on the server.
+  const missing = !!repo.missing;
 
   const ideLabel = defaultIde.name
     ? t("actions.open_in_named_ide", { ide: defaultIde.name })
@@ -166,12 +169,14 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
                 key: "open-ide",
                 label: ideLabel,
                 icon: <IdeIcon id={defaultIde.iconId} size={13} />,
+                disabled: missing,
                 onSelect: () => void openIde(),
               },
               {
                 key: "open-terminal",
                 label: t("context_menu.open_in_terminal"),
                 icon: <TerminalLucide size={13} />,
+                disabled: missing,
                 onSelect: () => void openTerminal(),
               },
               {
@@ -187,6 +192,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
                 key: "open-explorer",
                 label: t("context_menu.open_in_explorer"),
                 icon: <Folder size={13} />,
+                disabled: missing,
                 onSelect: () => void openExplorer(),
               },
             ],

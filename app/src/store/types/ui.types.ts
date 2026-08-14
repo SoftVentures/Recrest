@@ -1,3 +1,5 @@
+import type { SaveSeqTracked } from "@/store/reducers/saveSettingsSeq";
+
 export type ActiveView =
   | "dashboard"
   | "repos"
@@ -15,8 +17,20 @@ export interface UpdaterBannerState {
   downloadUrl: string | null;
 }
 
-export interface UiState {
+export interface UiState extends SaveSeqTracked {
+  /** Effective sidebar state — what the chrome renders. May be forced `true`
+   *  by a narrow viewport regardless of {@link UiState.sidebarCollapsedPref}. */
   sidebarCollapsed: boolean;
+  /** The user's own preference, as persisted in `windowState.sidebarCollapsed`.
+   *  Kept apart from the effective value so a viewport-forced collapse can be
+   *  released back to what the user actually chose. */
+  sidebarCollapsedPref: boolean;
+  /** True while `sidebarCollapsed` is a viewport-forced collapse rather than
+   *  the user's choice. Never persisted, and settings hydration must not
+   *  overwrite the effective value while it is set — otherwise a boot on a
+   *  compact window expands the sidebar right back and
+   *  `useResponsiveSidebar` has no viewport change left to react to. */
+  sidebarAutoCollapsed: boolean;
   searchOpen: boolean;
   activeView: ActiveView;
   importDialogOpen: boolean;

@@ -86,7 +86,12 @@ pub async fn check_latest(app: AppHandle, override_url: Option<String>) {
         return;
     }
     let body_text = json["body"].as_str().unwrap_or("").to_string();
-    let download_url = pick_platform_asset(&json, std::env::consts::OS);
+    // `pick_platform_asset` returns `None` rather than an asset built for a
+    // different CPU — see its doc comment. Falling back to the release page
+    // keeps the banner's button useful in that case (the user picks the right
+    // file themselves) instead of handing them an installer that cannot run.
+    let download_url = pick_platform_asset(&json, std::env::consts::OS, std::env::consts::ARCH)
+        .or_else(|| json["html_url"].as_str().map(|s| s.to_string()));
 
     let _ = app.emit(
         "updater://available",
@@ -124,23 +129,115 @@ pub(crate) fn is_newer(latest: &str, current: &str) -> bool {
     }
 }
 
-pub(crate) fn pick_platform_asset(json: &serde_json::Value, os: &str) -> Option<String> {
+/// `std::env::consts::OS` → the OS token used by the release asset contract.
+fn contract_os(os: &str) -> Option<&'static str> {
+    match os {
+        "windows" => Some("windows"),
+        "macos" => Some("mac"),
+        "linux" => Some("linux"),
+        _ => None,
+    }
+}
+
+/// `std::env::consts::ARCH` → the arch token used by the release asset
+/// contract. Anything the release matrix doesn't build (x86, arm, riscv…)
+/// maps to `None`, which makes `pick_platform_asset` bail out.
+fn contract_arch(arch: &str) -> Option<&'static str> {
+    match arch {
+        "x86_64" => Some("x64"),
+        "aarch64" => Some("arm64"),
+        _ => None,
+    }
+}
+
+/// Installer extensions for an OS, most preferred first.
+///
+/// Windows lists `exe` before `msi`: the contract asset is the NSIS `.exe`,
+/// while the `.msi` only survives on the release because `latest.json`
+/// references it as the updater payload.
+fn installer_extensions(os: &str) -> &'static [&'static str] {
+    match os {
+        "windows" => &["exe", "msi"],
+        "macos" => &["dmg"],
+        "linux" => &["appimage", "deb", "rpm"],
+        _ => &[],
+    }
+}
+
+/// Arch tokens that appear in **tauri-default** bundle names, used only by the
+/// legacy fallback below. Kept deliberately narrow so no token of one arch is a
+/// substring of another arch's name (`aarch64` does not contain `x64`, and
+/// `arm64` does not contain `amd64`).
+fn legacy_arch_tokens(arch: &str) -> &'static [&'static str] {
+    match arch {
+        "x86_64" => &["x64", "x86_64", "amd64"],
+        "aarch64" => &["arm64", "aarch64"],
+        _ => &[],
+    }
+}
+
+/// Resolve the manual-download URL for the running OS **and CPU**.
+///
+/// The naming contract comes from `.github/workflows/release-tauri.yml`, step
+/// "Publish contract-named installers", which renames every bundle to
+/// `recrest-<tag>-<os>-<arch>.<ext>`:
+///
+/// ```text
+///   recrest-v0.10.2-mac-arm64.dmg        recrest-v0.10.2-mac-x64.dmg
+///   recrest-v0.10.2-windows-x64.exe      recrest-v0.10.2-windows-arm64.exe
+///   recrest-v0.10.2-linux-x64.AppImage   …-linux-x64.deb   …-linux-x64.rpm
+/// ```
+///
+/// Those are matched first, by exact `-<os>-<arch>.<ext>` suffix. Only when a
+/// release predates the contract (or the rename step failed) do we fall back to
+/// the tauri-default names — and even then the candidate must carry a matching
+/// arch token.
+///
+/// **Returning `None` is preferred over returning a wrong-architecture asset.**
+/// This function used to take the first asset with a matching extension, so a
+/// Windows x64 user was handed `Recrest_0.10.2_arm64_en-US.msi` and an Intel Mac
+/// got the arm64 DMG. A wrong-arch installer is not a degraded download, it is a
+/// broken one: the arm64 MSI refuses to install on x64, and an arm64 `.app` on an
+/// Intel Mac cannot launch at all. The caller turns `None` into a link to the
+/// release page, which is always actionable.
+pub(crate) fn pick_platform_asset(
+    json: &serde_json::Value,
+    os: &str,
+    arch: &str,
+) -> Option<String> {
     let assets = json["assets"].as_array()?;
-    let wants: &[&str] = match os {
-        "windows" => &[".msi", ".exe"],
-        "macos" => &[".dmg"],
-        "linux" => &[".AppImage", ".deb", ".rpm"],
-        _ => return None,
-    };
-    for needle in wants {
-        for a in assets {
-            if let Some(name) = a["name"].as_str() {
-                if name.ends_with(needle) {
-                    return a["browser_download_url"].as_str().map(|s| s.to_string());
-                }
+    let os_token = contract_os(os)?;
+    let arch_token = contract_arch(arch)?;
+    let extensions = installer_extensions(os);
+
+    // Asset names are compared lowercased throughout so `.AppImage` and the
+    // `en-US` locale segment can't turn into casing bugs.
+    let candidates: Vec<(String, &serde_json::Value)> = assets
+        .iter()
+        .filter_map(|a| a["name"].as_str().map(|n| (n.to_ascii_lowercase(), a)))
+        .collect();
+
+    let url_of = |a: &serde_json::Value| a["browser_download_url"].as_str().map(|s| s.to_string());
+
+    for ext in extensions {
+        let suffix = format!("-{os_token}-{arch_token}.{ext}");
+        for (name, asset) in &candidates {
+            if name.ends_with(&suffix) {
+                return url_of(asset);
             }
         }
     }
+
+    let tokens = legacy_arch_tokens(arch);
+    for ext in extensions {
+        let suffix = format!(".{ext}");
+        for (name, asset) in &candidates {
+            if name.ends_with(&suffix) && tokens.iter().any(|t| name.contains(t)) {
+                return url_of(asset);
+            }
+        }
+    }
+
     None
 }
 
@@ -189,61 +286,184 @@ mod tests {
         assert!(!is_newer("", "0.6.0"));
     }
 
+    fn asset(name: &str) -> serde_json::Value {
+        json!({
+            "name": name,
+            "browser_download_url": format!("https://example.test/{name}"),
+        })
+    }
+
+    fn url(name: &str) -> String {
+        format!("https://example.test/{name}")
+    }
+
+    /// Mirrors the real asset list of a published release: the contract-named
+    /// installers from the "Publish contract-named installers" step plus the
+    /// tauri-named updater payloads that `prune` keeps because `latest.json`
+    /// references them.
+    ///
+    /// The arm64 MSI is listed *before* the x64 one on purpose — that ordering
+    /// is what made the old first-match-by-extension picker hand an arm64
+    /// installer to x64 Windows users.
     fn synthetic_release() -> serde_json::Value {
         json!({
-            "tag_name": "v0.7.0",
+            "tag_name": "v0.10.2",
             "body": "release notes",
+            "html_url": "https://example.test/releases/v0.10.2",
             "assets": [
-                { "name": "Recrest_0.7.0_x64_en-US.msi", "browser_download_url": "https://example.test/Recrest.msi" },
-                { "name": "Recrest_0.7.0_x64-setup.exe", "browser_download_url": "https://example.test/Recrest.exe" },
-                { "name": "Recrest_0.7.0_amd64.AppImage", "browser_download_url": "https://example.test/Recrest.AppImage" },
-                { "name": "Recrest_0.7.0_amd64.deb", "browser_download_url": "https://example.test/Recrest.deb" },
-                { "name": "Recrest_0.7.0_x64.dmg", "browser_download_url": "https://example.test/Recrest.dmg" }
+                asset("Recrest_0.10.2_arm64_en-US.msi"),
+                asset("Recrest_0.10.2_x64_en-US.msi"),
+                asset("Recrest_0.10.2_amd64.AppImage"),
+                asset("Recrest_0.10.2_amd64.deb"),
+                asset("Recrest-0.10.2-1.x86_64.rpm"),
+                asset("recrest-v0.10.2-mac-arm64.dmg"),
+                asset("recrest-v0.10.2-mac-x64.dmg"),
+                asset("recrest-v0.10.2-windows-x64.exe"),
+                asset("recrest-v0.10.2-windows-arm64.exe"),
+                asset("recrest-v0.10.2-linux-x64.AppImage"),
+                asset("recrest-v0.10.2-linux-x64.deb"),
+                asset("recrest-v0.10.2-linux-x64.rpm"),
+                asset("latest.json"),
+                asset("SHA256SUMS.txt")
             ]
         })
     }
 
     #[test]
-    fn pick_platform_asset_windows_prefers_msi() {
-        let got = pick_platform_asset(&synthetic_release(), "windows");
-        assert_eq!(got.as_deref(), Some("https://example.test/Recrest.msi"));
+    fn pick_platform_asset_windows_x64_picks_the_x64_installer() {
+        let got = pick_platform_asset(&synthetic_release(), "windows", "x86_64");
+        assert_eq!(got, Some(url("recrest-v0.10.2-windows-x64.exe")));
     }
 
     #[test]
-    fn pick_platform_asset_windows_falls_back_to_exe() {
-        let json = json!({
-            "assets": [
-                { "name": "Recrest_0.7.0_x64-setup.exe", "browser_download_url": "https://example.test/Recrest.exe" }
-            ]
-        });
-        let got = pick_platform_asset(&json, "windows");
-        assert_eq!(got.as_deref(), Some("https://example.test/Recrest.exe"));
+    fn pick_platform_asset_windows_arm64_picks_the_arm64_installer() {
+        let got = pick_platform_asset(&synthetic_release(), "windows", "aarch64");
+        assert_eq!(got, Some(url("recrest-v0.10.2-windows-arm64.exe")));
     }
 
     #[test]
-    fn pick_platform_asset_macos_picks_dmg() {
-        let got = pick_platform_asset(&synthetic_release(), "macos");
-        assert_eq!(got.as_deref(), Some("https://example.test/Recrest.dmg"));
+    fn pick_platform_asset_macos_arm64_picks_the_arm64_dmg() {
+        let got = pick_platform_asset(&synthetic_release(), "macos", "aarch64");
+        assert_eq!(got, Some(url("recrest-v0.10.2-mac-arm64.dmg")));
     }
 
     #[test]
-    fn pick_platform_asset_linux_prefers_appimage() {
-        let got = pick_platform_asset(&synthetic_release(), "linux");
-        assert_eq!(
-            got.as_deref(),
-            Some("https://example.test/Recrest.AppImage")
-        );
+    fn pick_platform_asset_macos_x64_picks_the_intel_dmg() {
+        let got = pick_platform_asset(&synthetic_release(), "macos", "x86_64");
+        assert_eq!(got, Some(url("recrest-v0.10.2-mac-x64.dmg")));
+    }
+
+    #[test]
+    fn pick_platform_asset_linux_x64_prefers_the_appimage() {
+        let got = pick_platform_asset(&synthetic_release(), "linux", "x86_64");
+        assert_eq!(got, Some(url("recrest-v0.10.2-linux-x64.AppImage")));
+    }
+
+    #[test]
+    fn pick_platform_asset_linux_arm64_returns_none() {
+        // The release matrix has no linux-arm64 leg, and the amd64 AppImage
+        // would not run on that machine.
+        assert!(pick_platform_asset(&synthetic_release(), "linux", "aarch64").is_none());
     }
 
     #[test]
     fn pick_platform_asset_unknown_os_returns_none() {
-        assert!(pick_platform_asset(&synthetic_release(), "freebsd").is_none());
+        assert!(pick_platform_asset(&synthetic_release(), "freebsd", "x86_64").is_none());
+    }
+
+    #[test]
+    fn pick_platform_asset_unknown_arch_returns_none() {
+        assert!(pick_platform_asset(&synthetic_release(), "windows", "x86").is_none());
+        assert!(pick_platform_asset(&synthetic_release(), "linux", "riscv64").is_none());
     }
 
     #[test]
     fn pick_platform_asset_missing_assets_returns_none() {
-        let json = json!({ "tag_name": "v0.7.0" });
-        assert!(pick_platform_asset(&json, "windows").is_none());
+        let json = json!({ "tag_name": "v0.10.2" });
+        assert!(pick_platform_asset(&json, "windows", "x86_64").is_none());
+    }
+
+    /// Releases published before the contract-rename step only carry
+    /// tauri-default names. The fallback still has to respect the arch token.
+    fn legacy_release() -> serde_json::Value {
+        json!({
+            "tag_name": "v0.7.0",
+            "assets": [
+                asset("Recrest_0.7.0_arm64_en-US.msi"),
+                asset("Recrest_0.7.0_x64_en-US.msi"),
+                asset("Recrest_0.7.0_x64-setup.exe"),
+                asset("Recrest_0.7.0_aarch64.dmg"),
+                asset("Recrest_0.7.0_x64.dmg"),
+                asset("Recrest_0.7.0_amd64.AppImage"),
+                asset("Recrest_0.7.0_amd64.deb")
+            ]
+        })
+    }
+
+    #[test]
+    fn pick_platform_asset_legacy_windows_x64_prefers_the_x64_exe() {
+        let got = pick_platform_asset(&legacy_release(), "windows", "x86_64");
+        assert_eq!(got, Some(url("Recrest_0.7.0_x64-setup.exe")));
+    }
+
+    #[test]
+    fn pick_platform_asset_legacy_windows_arm64_skips_the_x64_exe() {
+        // No arm64 `.exe` exists here, so the picker must fall through to the
+        // arm64 MSI rather than take the x64 setup that sorts first.
+        let got = pick_platform_asset(&legacy_release(), "windows", "aarch64");
+        assert_eq!(got, Some(url("Recrest_0.7.0_arm64_en-US.msi")));
+    }
+
+    #[test]
+    fn pick_platform_asset_legacy_macos_matches_the_running_arch() {
+        assert_eq!(
+            pick_platform_asset(&legacy_release(), "macos", "aarch64"),
+            Some(url("Recrest_0.7.0_aarch64.dmg"))
+        );
+        assert_eq!(
+            pick_platform_asset(&legacy_release(), "macos", "x86_64"),
+            Some(url("Recrest_0.7.0_x64.dmg"))
+        );
+    }
+
+    #[test]
+    fn pick_platform_asset_legacy_linux_x64_matches_amd64() {
+        let got = pick_platform_asset(&legacy_release(), "linux", "x86_64");
+        assert_eq!(got, Some(url("Recrest_0.7.0_amd64.AppImage")));
+    }
+
+    #[test]
+    fn pick_platform_asset_never_returns_a_wrong_arch_asset() {
+        // A release that only shipped x64 must produce nothing for arm64 —
+        // the caller then links the release page instead.
+        let x64_only = json!({
+            "assets": [
+                asset("recrest-v0.10.2-windows-x64.exe"),
+                asset("recrest-v0.10.2-mac-x64.dmg"),
+                asset("recrest-v0.10.2-linux-x64.AppImage"),
+                asset("Recrest_0.10.2_x64_en-US.msi")
+            ]
+        });
+        for os in ["windows", "macos", "linux"] {
+            assert!(
+                pick_platform_asset(&x64_only, os, "aarch64").is_none(),
+                "{os}: arm64 must not be offered an x64 asset"
+            );
+        }
+    }
+
+    #[test]
+    fn pick_platform_asset_ignores_non_installer_assets() {
+        let json = json!({
+            "assets": [
+                asset("latest.json"),
+                asset("SHA256SUMS.txt"),
+                asset("Recrest_x64.app.tar.gz"),
+                asset("recrest-v0.10.2-windows-x64.exe.sig")
+            ]
+        });
+        assert!(pick_platform_asset(&json, "windows", "x86_64").is_none());
+        assert!(pick_platform_asset(&json, "macos", "x86_64").is_none());
     }
 
     #[tokio::test]

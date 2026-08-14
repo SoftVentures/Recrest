@@ -136,11 +136,9 @@ fn normalise_name(input: &str) -> String {
             if c.is_ascii_alphanumeric() {
                 out.push(c);
                 prev_space = false;
-            } else if c.is_whitespace() {
-                if !prev_space {
-                    out.push(' ');
-                    prev_space = true;
-                }
+            } else if c.is_whitespace() && !prev_space {
+                out.push(' ');
+                prev_space = true;
             }
             // anything else (punctuation, residual non-ascii) is dropped
         }
@@ -299,6 +297,35 @@ mod tests {
         assert_ne!(
             a, b,
             "太郎 and 太朗 collapsed to the same signature key: {a} == {b}"
+        );
+    }
+
+    /// The CJK pathway keeps a single internal space as a segment delimiter,
+    /// so a run of whitespace must collapse to exactly one space (and never
+    /// leak a leading or trailing one). The `~hash` tiebreak is derived from
+    /// the raw input, so only the romanised half can be compared.
+    #[test]
+    fn cjk_consecutive_spaces_collapse_to_one() {
+        let romanised = |name: &str| {
+            let key = signature_key(name, Some("t@x"));
+            let (lhs, _) = key.split_once('|').expect("pipe-separated");
+            let (romanised, _) = lhs
+                .rsplit_once('~')
+                .expect("CJK key carries a ~hash suffix");
+            romanised.to_string()
+        };
+
+        let single = romanised("北条 太郎");
+        let padded = romanised("   北条 \t  太郎   ");
+
+        assert_eq!(
+            padded, single,
+            "whitespace run did not collapse to one space"
+        );
+        assert!(!padded.contains("  "), "double space survived: {padded}");
+        assert!(
+            !padded.starts_with(' ') && !padded.ends_with(' '),
+            "outer whitespace survived: {padded}"
         );
     }
 

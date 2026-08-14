@@ -1,10 +1,11 @@
 //! Layered read/write of git config files. The model follows git's own
-//! resolution chain — `~/.gitconfig` + every matching `[includeIf]` target
-//! + the repo-local `.git/config` — instead of flattening libgit2's view
-//! into a single map. This keeps source-of-truth visible: the UI shows
-//! which file set each key and lets the user pick where to write changes.
+//! resolution chain — `~/.gitconfig` plus every matching `[includeIf]`
+//! target plus the repo-local `.git/config` — instead of flattening
+//! libgit2's view into a single map. This keeps source-of-truth visible:
+//! the UI shows which file set each key and lets the user pick where to
+//! write changes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use git2::{Config, Repository};
@@ -174,7 +175,8 @@ pub fn list_layers_blocking(
         }
     };
 
-    push_layer_chain(&root, None, target.as_deref(), &mut out)?;
+    let mut visited = HashSet::new();
+    push_layer_chain(&root, None, target.as_deref(), &mut out, 0, &mut visited)?;
 
     if let LayerScope::Repo { repo_path } = &scope {
         let local = repo_path.join(".git").join("config");
@@ -190,12 +192,33 @@ pub fn list_layers_blocking(
     Ok(out)
 }
 
+/// Hard ceiling on `[include]` nesting, mirroring git's own limit. Without it
+/// a chain that never terminates recurses until the Rust stack overflows,
+/// which **aborts the whole process** (a stack overflow is not a catchable
+/// panic) — the app would die rather than surface a config error.
+const MAX_INCLUDE_DEPTH: usize = 10;
+
+/// Identity used to detect a file we already pulled into this chain. Falls
+/// back to the literal path when the file doesn't exist yet (a freshly-added
+/// `includeIf` whose target hasn't been created).
+fn layer_identity(p: &Path) -> PathBuf {
+    p.canonicalize().unwrap_or_else(|_| p.to_path_buf())
+}
+
 fn push_layer_chain(
     file: &Path,
     condition: Option<String>,
     target: Option<&Path>,
     out: &mut Vec<GitConfigLayer>,
+    depth: usize,
+    visited: &mut HashSet<PathBuf>,
 ) -> Result<(), CommandError> {
+    // A cyclic `[includeIf]` pair (a → b → a) is the dangerous case: libgit2
+    // skips non-matching conditions so its own depth guard never fires, while
+    // the global view below treats every condition as matched.
+    if !visited.insert(layer_identity(file)) {
+        return Ok(());
+    }
     let entries = read_layer_blocking(file)?;
     out.push(GitConfigLayer {
         path: file.to_path_buf(),
@@ -204,6 +227,9 @@ fn push_layer_chain(
         exists: file.exists(),
         entries,
     });
+    if depth >= MAX_INCLUDE_DEPTH {
+        return Ok(());
+    }
     let includes = parse_includes(file)?;
     for inc in includes {
         let matched = match &inc.condition {
@@ -215,8 +241,18 @@ fn push_layer_chain(
             Some(cond) => target.map(|p| gitdir_matches(cond, p)).unwrap_or(true),
         };
         if matched {
-            push_layer_chain(&inc.resolved_path, inc.condition.clone(), target, out)?;
+            push_layer_chain(
+                &inc.resolved_path,
+                inc.condition.clone(),
+                target,
+                out,
+                depth + 1,
+                visited,
+            )?;
         } else {
+            if !visited.insert(layer_identity(&inc.resolved_path)) {
+                continue;
+            }
             let entries = read_layer_blocking(&inc.resolved_path)?;
             out.push(GitConfigLayer {
                 exists: inc.resolved_path.exists(),
@@ -264,18 +300,33 @@ fn parse_includes(file: &Path) -> Result<Vec<ParsedInclude>, CommandError> {
                 if section.eq_ignore_ascii_case("include") && key == "path" {
                     out.push(ParsedInclude {
                         condition: None,
-                        resolved_path: expand_home(Path::new(value)).into_owned(),
+                        resolved_path: resolve_include_path(file, value),
                     });
                 } else if section.eq_ignore_ascii_case("includeIf") && key == "path" {
                     out.push(ParsedInclude {
                         condition: sub.clone(),
-                        resolved_path: expand_home(Path::new(value)).into_owned(),
+                        resolved_path: resolve_include_path(file, value),
                     });
                 }
             }
         }
     }
     Ok(out)
+}
+
+/// git resolves a relative `path =` against the directory of the file that
+/// declares the include. Keeping that contract matters now that each layer is
+/// attributed to its own file: an unresolvable target would make the included
+/// keys disappear from the view entirely.
+fn resolve_include_path(including_file: &Path, raw_value: &str) -> PathBuf {
+    let expanded = expand_home(Path::new(raw_value)).into_owned();
+    if expanded.is_absolute() {
+        return expanded;
+    }
+    match including_file.parent() {
+        Some(dir) if !dir.as_os_str().is_empty() => dir.join(expanded),
+        _ => expanded,
+    }
 }
 
 fn parse_section_header(raw: &str) -> (String, Option<String>) {
@@ -380,11 +431,30 @@ pub fn read_layer_blocking(path: &Path) -> Result<BTreeMap<String, String>, Comm
         .map_err(|e| CommandError::internal(format!("entries: {e}")))?;
     while let Some(entry) = entries.next() {
         let entry = entry.map_err(|e| CommandError::internal(format!("entry: {e}")))?;
+        // `Config::open` follows `[include]` and flattens the targets into the
+        // same view. Without this filter the parent layer claims keys it does
+        // not own — the Settings editor would offer to "edit" a `user.email`
+        // that lives in the included file, and the write would land in the
+        // wrong file. Included files are enumerated as their own layers by
+        // `push_layer_chain`, so nothing is lost, it just gets attributed to
+        // the file that actually declares it.
+        if entry.include_depth() > 0 {
+            continue;
+        }
         if let (Some(name), Some(value)) = (entry.name(), entry.value()) {
             out.insert(name.to_string(), value.to_string());
         }
     }
     Ok(out)
+}
+
+/// `include.path` / `includeIf.<condition>.path` are structural directives,
+/// not settings. They belong in the per-layer `entries` (the IncludeManager
+/// renders them) but must not surface as editable rows in the merged view:
+/// writing to them there creates a second, dead include entry.
+fn is_include_directive(key: &str) -> bool {
+    let lower = key.to_ascii_lowercase();
+    lower == "include.path" || (lower.starts_with("includeif.") && lower.ends_with(".path"))
 }
 
 pub fn get_with_origins_blocking(
@@ -398,6 +468,9 @@ pub fn get_with_origins_blocking(
             continue;
         }
         for (k, v) in &layer.entries {
+            if is_include_directive(k) {
+                continue;
+            }
             out.insert(
                 k.clone(),
                 GitConfigEntry {
@@ -438,6 +511,25 @@ pub async fn get_git_config_with_origins(
         .map_err(|e| CommandError::internal(format!("origins task: {e}")))?
 }
 
+/// Clearing a key it never declared is a no-op for a layer, not a failure.
+/// Every other outcome (locked config, read-only file, malformed content) has
+/// to reach the UI — reporting a discarded remove as success made the editor
+/// claim it had written a change it never made.
+fn map_remove_result(
+    file: &Path,
+    key: &str,
+    result: Result<(), git2::Error>,
+) -> Result<(), CommandError> {
+    match result {
+        Ok(()) => Ok(()),
+        Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(()),
+        Err(e) => Err(CommandError::internal(format!(
+            "remove {key} from {}: {e}",
+            file.display()
+        ))),
+    }
+}
+
 pub fn set_in_layer_blocking(file: &Path, key: &str, value: &str) -> Result<(), CommandError> {
     if !is_valid_config_key(key) {
         return Err(CommandError::bad_request(format!(
@@ -455,8 +547,7 @@ pub fn set_in_layer_blocking(file: &Path, key: &str, value: &str) -> Result<(), 
     let mut cfg = Config::open(file)
         .map_err(|e| CommandError::internal(format!("open {}: {e}", file.display())))?;
     if value.is_empty() {
-        let _ = cfg.remove(key);
-        return Ok(());
+        return map_remove_result(file, key, cfg.remove(key));
     }
     cfg.set_str(key, value)
         .map_err(|e| CommandError::bad_request(format!("set {key}: {e}")))?;
@@ -912,10 +1003,10 @@ mod tests {
             global_entries.get("user.name").map(String::as_str),
             Some("Global Name"),
         );
-        assert!(global_entries.get("user.email").is_none());
+        assert!(!global_entries.contains_key("user.email"));
 
         let work_entries = read_layer_blocking(&work).unwrap();
-        assert!(work_entries.get("user.name").is_none());
+        assert!(!work_entries.contains_key("user.name"));
         assert_eq!(
             work_entries.get("user.email").map(String::as_str),
             Some("work@example.invalid"),
@@ -976,7 +1067,7 @@ mod tests {
         );
         let global_entries = read_layer_blocking(&global).unwrap();
         assert!(
-            global_entries.get("user.email").is_none(),
+            !global_entries.contains_key("user.email"),
             "must not leak into the other layer",
         );
     }
@@ -1158,6 +1249,224 @@ mod tests {
         remove_include_blocking(&global, Some("gitdir:~/x/"), &work, false).unwrap();
         let after = std::fs::read_to_string(&global).unwrap();
         assert!(after.ends_with('\n'));
+    }
+
+    /// Two config files that include each other. libgit2 skips the `gitdir:`
+    /// conditions (there is no repo in play), so its own include-depth guard
+    /// never fires — the recursion guard has to be ours. Before the fix this
+    /// overflowed the stack, which aborts the test process outright.
+    #[test]
+    fn cyclic_includeif_pair_terminates_instead_of_overflowing_the_stack() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let a = tmp.path().join("gitconfig-a");
+        let b = tmp.path().join("gitconfig-b");
+        let never = tmp.path().join("never");
+        std::fs::write(
+            &a,
+            format!(
+                "[user]\n\tname = A\n[includeIf \"gitdir:{n}/\"]\n\tpath = {b}\n",
+                n = to_config_path(&never),
+                b = to_config_path(&b),
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            &b,
+            format!(
+                "[user]\n\temail = b@example.invalid\n[includeIf \"gitdir:{n}/\"]\n\tpath = {a}\n",
+                n = to_config_path(&never),
+                a = to_config_path(&a),
+            ),
+        )
+        .unwrap();
+
+        // Global view: `target = None`, so every condition counts as matched.
+        let layers = list_layers_blocking(
+            LayerScope::Global {
+                config_path: a.clone(),
+            },
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(layers.len(), 2, "each file may only be listed once");
+        assert_eq!(layers[0].path, a);
+        assert_eq!(layers[1].path, b);
+    }
+
+    #[test]
+    fn include_chain_deeper_than_the_limit_is_truncated() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let files: Vec<PathBuf> = (0..MAX_INCLUDE_DEPTH + 5)
+            .map(|i| tmp.path().join(format!("gitconfig-{i}")))
+            .collect();
+        for (i, f) in files.iter().enumerate() {
+            let body = match files.get(i + 1) {
+                Some(next) => format!(
+                    "[includeIf \"gitdir:{n}/\"]\n\tpath = {next}\n",
+                    n = to_config_path(&tmp.path().join("never")),
+                    next = to_config_path(next),
+                ),
+                None => "[user]\n\tname = Last\n".to_string(),
+            };
+            std::fs::write(f, body).unwrap();
+        }
+
+        let layers = list_layers_blocking(
+            LayerScope::Global {
+                config_path: files[0].clone(),
+            },
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            layers.len(),
+            MAX_INCLUDE_DEPTH + 1,
+            "chain must stop at the depth limit",
+        );
+    }
+
+    #[test]
+    fn included_keys_are_attributed_to_the_file_that_declares_them() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let global = tmp.path().join("gitconfig");
+        let included = tmp.path().join("gitconfig-included");
+        std::fs::write(&included, "[user]\n\temail = included@example.invalid\n").unwrap();
+        std::fs::write(
+            &global,
+            format!(
+                "[user]\n\tname = Global Name\n[include]\n\tpath = {inc}\n",
+                inc = to_config_path(&included),
+            ),
+        )
+        .unwrap();
+
+        let global_entries = read_layer_blocking(&global).unwrap();
+        assert_eq!(
+            global_entries.get("user.name").map(String::as_str),
+            Some("Global Name"),
+        );
+        assert!(
+            !global_entries.contains_key("user.email"),
+            "the parent layer must not claim keys owned by the included file",
+        );
+
+        let layers = list_layers_blocking(
+            LayerScope::Global {
+                config_path: global.clone(),
+            },
+            None,
+        )
+        .unwrap();
+        assert_eq!(layers.len(), 2);
+        assert_eq!(layers[1].path, included);
+        assert_eq!(
+            layers[1].entries.get("user.email").map(String::as_str),
+            Some("included@example.invalid"),
+            "included keys stay visible, just under their own layer",
+        );
+
+        let origins = get_with_origins_blocking(
+            LayerScope::Global {
+                config_path: global,
+            },
+            None,
+        )
+        .unwrap();
+        let email = origins.get("user.email").expect("email resolved");
+        assert_eq!(email.source_path, included);
+    }
+
+    #[test]
+    fn include_directives_are_not_offered_as_editable_rows() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let global = tmp.path().join("gitconfig");
+        let included = tmp.path().join("gitconfig-included");
+        std::fs::write(&included, "[user]\n\temail = included@example.invalid\n").unwrap();
+        std::fs::write(
+            &global,
+            format!(
+                "[include]\n\tpath = {inc}\n[includeIf \"gitdir:{n}/\"]\n\tpath = {inc}\n",
+                inc = to_config_path(&included),
+                n = to_config_path(&tmp.path().join("never")),
+            ),
+        )
+        .unwrap();
+
+        let origins = get_with_origins_blocking(
+            LayerScope::Global {
+                config_path: global,
+            },
+            None,
+        )
+        .unwrap();
+        assert!(
+            !origins.keys().any(|k| is_include_directive(k)),
+            "include directives must not appear as editable config rows: {:?}",
+            origins.keys().collect::<Vec<_>>(),
+        );
+        assert!(origins.contains_key("user.email"));
+    }
+
+    #[test]
+    fn relative_include_paths_resolve_against_the_including_file() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let global = tmp.path().join("gitconfig");
+        let included = tmp.path().join("gitconfig-included");
+        std::fs::write(&included, "[user]\n\temail = rel@example.invalid\n").unwrap();
+        std::fs::write(&global, "[include]\n\tpath = gitconfig-included\n").unwrap();
+
+        let layers = list_layers_blocking(
+            LayerScope::Global {
+                config_path: global,
+            },
+            None,
+        )
+        .unwrap();
+        assert_eq!(layers.len(), 2);
+        assert_eq!(layers[1].path, included);
+        assert!(layers[1].exists);
+    }
+
+    #[test]
+    fn clearing_a_key_that_was_never_set_is_not_an_error() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let f = tmp.path().join("gitconfig");
+        std::fs::write(&f, "[user]\n\tname = X\n").unwrap();
+        set_in_layer_blocking(&f, "user.email", "").expect("clearing an unset key is a no-op");
+    }
+
+    #[test]
+    fn clearing_a_key_reports_failures_instead_of_swallowing_them() {
+        let file = Path::new("/tmp/gitconfig");
+        assert!(
+            map_remove_result(
+                file,
+                "user.email",
+                Err(git2::Error::new(
+                    git2::ErrorCode::NotFound,
+                    git2::ErrorClass::Config,
+                    "no such entry",
+                )),
+            )
+            .is_ok(),
+            "clearing an unset key stays a no-op",
+        );
+        assert!(
+            map_remove_result(
+                file,
+                "user.email",
+                Err(git2::Error::new(
+                    git2::ErrorCode::Locked,
+                    git2::ErrorClass::Os,
+                    "config file is locked",
+                )),
+            )
+            .is_err(),
+            "a real remove failure must not be reported as success",
+        );
+        assert!(map_remove_result(file, "user.email", Ok(())).is_ok());
     }
 
     #[test]

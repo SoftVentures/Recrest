@@ -46,6 +46,7 @@ import {
   setWeekStart,
 } from "@/store/actions/settings.actions";
 import {
+  isTransientAction,
   setPinnedRepos,
   setSidebarCollapsed,
   togglePinnedRepo,
@@ -89,6 +90,14 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
   ) {
     return result;
   }
+  // Viewport-driven writes (see `setSidebarCollapsedAuto`) share the action
+  // type of the user-driven ones so every `.match()` consumer keeps working,
+  // but they are ephemeral layout state — persisting them would let a narrow
+  // window overwrite the user's stored preference. The predicate is exported
+  // next to `TRANSIENT_META` so both sides read the same symbol instead of
+  // each spelling the key out.
+  if (isTransientAction(action)) return result;
+
   const actionType = (action as { type: string }).type;
   const isPersistedUiAction =
     actionType === "ui/setSidebarCollapsed" ||

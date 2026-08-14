@@ -1,7 +1,12 @@
 import { createReducer } from "@reduxjs/toolkit";
 
 import { loadBranches } from "@/store/actions/branches.actions";
-import { deleteRepo, forgetReposUnderPath, removeRepo } from "@/store/actions/repos.actions";
+import {
+  deleteRepo,
+  forgetReposUnderPath,
+  removeRepo,
+  repoRemoved,
+} from "@/store/actions/repos.actions";
 import type { BranchesState } from "@/store/types/branches.types";
 
 const initialState: BranchesState = {
@@ -34,6 +39,15 @@ export const branchesReducer = createReducer(initialState, (builder) => {
       for (const id of action.payload ?? []) {
         delete state.byRepoId[id];
       }
+    })
+    // The `repo://removed` watcher event bypasses all three thunks above. Only a
+    // forgotten removal evicts: a kept record is still a repo the user can act
+    // on, and its cached branch list is what the detail pane renders while they
+    // decide whether to re-point or remove it.
+    .addCase(repoRemoved, (state, action) => {
+      if (!action.payload.forgotten) return;
+      delete state.byRepoId[action.payload.repoId];
+      state.loadingRepoIds = state.loadingRepoIds.filter((id) => id !== action.payload.repoId);
     });
 });
 

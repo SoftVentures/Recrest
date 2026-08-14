@@ -2,6 +2,41 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.10.2...recrest-v0.11.0) (2026-08-11)
+
+### Features
+
+- **landing:** Enhanced live demonstration & landing page overhaul ([a4c03c7](https://github.com/SoftVentures/Recrest/commit/a4c03c79ef362676094b29992d74a68d40d8db80))
+- **landing:** privacy, accessibility & imprint legal compliance ([848d855](https://github.com/SoftVentures/Recrest/commit/848d85501d8cf280a004cb2361ee162ef6bbb3b5))
+
+### Bug Fixes
+
+- **linux:** adapt discovery to freedesktop-desktop-entry 0.7.19 Iter::new ([fd37e35](https://github.com/SoftVentures/Recrest/commit/fd37e3553f7a45c6ad7b443d2e526beeb99f6dc0))
+- live repo refresh and openable Apple Silicon builds ([391f39c](https://github.com/SoftVentures/Recrest/commit/391f39ce143d7983a3be0905aa0681ae57a52a65))
+- **tauri:** exempt style-src from CSP nonce injection so packaged MUI/Emotion styles apply ([ba9a98a](https://github.com/SoftVentures/Recrest/commit/ba9a98a454f926ba3fe6670a17339d9952f1b1aa))
+- use workspace wildcards for @recrest/shared in tests and landingpage ([1c9e7a1](https://github.com/SoftVentures/Recrest/commit/1c9e7a1401cdf1d4f1046d269e2da9510f8d723a))
+
+### Maintenance
+
+- suppress Windows console flashes and brand the MSI installer (v0.9.1) ([bcb58c9](https://github.com/SoftVentures/Recrest/commit/bcb58c9e069c1e32b4f3ac73991d4ec486be8ae2))
+
+## [0.10.2] — 2026-06-26
+
+Patch release fixing the real cause of the unstyled-app regression that 0.10.0/0.10.1 misdiagnosed.
+
+### Fixed
+
+- **The packaged app rendered completely unstyled** (huge logo, oversized text, broken layout) — on every launch, not just cold boot. Root cause: at build time Tauri rewrites the Content-Security-Policy and injects a `nonce` into `style-src` to allow the inline `<style>` in `index.html`. Per the CSP spec, once a nonce is present in a directive, `'unsafe-inline'` is ignored — so every stylesheet MUI/Emotion injects at runtime (which carries no nonce) was blocked, leaving only the static reset stylesheet applied. The dev server doesn't go through Tauri's CSP rewrite, which is why it only showed in packaged builds. Fixed by excluding `style-src` from Tauri's CSP nonce/hash injection (`dangerousDisableAssetCspModification`), so the declared `'unsafe-inline'` stays effective and runtime styles apply again. `script-src` keeps its nonce.
+
+## [0.10.1] — 2026-06-26
+
+Patch release fixing a cold-boot rendering regression in the desktop app.
+
+### Fixed
+
+- **Windows / Linux: the app rendered completely unstyled on cold start** (huge logo, oversized text — as if no CSS applied). The window booted hidden and was revealed from JS after first paint — a macOS flash-suppression path added in 0.10.0 — but on Windows (WebView2) and Linux (WebKitGTK) the hidden→show transition latched an early, unstyled frame that never re-presented until a manual reload. The CSS was always loaded and correct; only the on-screen surface was stale. The window now boots visible on Windows/Linux (as it did through 0.9.x); macOS keeps the flash-suppression path unchanged.
+- **Linux installer build.** Adapted to the `freedesktop-desktop-entry` 0.7.19 `Iter::new` API change so the Linux bundle compiles again.
+
 ## [0.10.0] — 2026-06-25
 
 Minor release: dashboard polish, a more responsive Activity/Statistics surface, and a sweep of dependency + build-tooling modernisation.
@@ -215,6 +250,8 @@ First public beta.
 - Installers are unsigned — macOS Gatekeeper / Windows SmartScreen will warn on first launch.
 - `RepoWatcher` is not yet instantiated in `lib.rs::run()`, so status refreshes on explicit reload.
 
+[0.10.2]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.2
+[0.10.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.1
 [0.10.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.10.0
 [0.9.1]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.1
 [0.9.0]: https://github.com/SoftVentures/Recrest/releases/tag/v0.9.0

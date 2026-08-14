@@ -12,7 +12,8 @@ use tauri::State;
 
 use super::error::CommandError;
 use super::git_ops::resolve_repo_path;
-use crate::git::status::{self, RepoStatusDto};
+use super::repos::read_status_off_thread;
+use crate::git::status::RepoStatusDto;
 use crate::AppState;
 
 /// Stage the given repo-relative paths. Honors gitignore (silently skips
@@ -88,7 +89,7 @@ pub async fn git_stage(
     tokio::task::spawn_blocking(move || stage_paths_blocking(&p2, &paths))
         .await
         .map_err(|e| CommandError::internal(format!("stage task: {e}")))??;
-    Ok(status::read_status(&path)?)
+    read_status_off_thread(path).await
 }
 
 #[tauri::command]
@@ -102,7 +103,7 @@ pub async fn git_unstage(
     tokio::task::spawn_blocking(move || unstage_paths_blocking(&p2, &paths))
         .await
         .map_err(|e| CommandError::internal(format!("unstage task: {e}")))??;
-    Ok(status::read_status(&path)?)
+    read_status_off_thread(path).await
 }
 
 /// Outcome of a discard attempt. `discarded` holds paths that were actually
@@ -206,7 +207,7 @@ pub async fn git_discard(
     Ok(DiscardResult {
         discarded,
         requires_confirmation,
-        status: status::read_status(&path)?,
+        status: read_status_off_thread(path).await?,
     })
 }
 
@@ -281,7 +282,7 @@ pub async fn git_stash(
     tokio::task::spawn_blocking(move || stash_save_blocking(&p2, message.as_deref()))
         .await
         .map_err(|e| CommandError::internal(format!("stash task: {e}")))??;
-    Ok(status::read_status(&path)?)
+    read_status_off_thread(path).await
 }
 
 #[tauri::command]
@@ -306,7 +307,7 @@ pub async fn git_stash_pop(
     tokio::task::spawn_blocking(move || stash_pop_blocking(&p2, index))
         .await
         .map_err(|e| CommandError::internal(format!("stash pop task: {e}")))??;
-    Ok(status::read_status(&path)?)
+    read_status_off_thread(path).await
 }
 
 #[tauri::command]
@@ -320,7 +321,7 @@ pub async fn git_stash_drop(
     tokio::task::spawn_blocking(move || stash_drop_blocking(&p2, index))
         .await
         .map_err(|e| CommandError::internal(format!("stash drop task: {e}")))??;
-    Ok(status::read_status(&path)?)
+    read_status_off_thread(path).await
 }
 
 /// True when the repo has an executable `pre-commit` hook (honoring
@@ -421,6 +422,29 @@ pub async fn commit_via_git(
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
+    // Neither `current_dir` nor the `-c user.*` flags below survive an inherited
+    // git environment, so both guarantees this function makes are only real once
+    // those variables are cleared: GIT_DIR / GIT_INDEX_FILE / GIT_WORK_TREE
+    // override `current_dir` (committing into a *different* repository), and
+    // GIT_AUTHOR_* / GIT_COMMITTER_* take precedence over config, silently
+    // discarding the caller's `fallback` signature. Anything that runs Recrest
+    // from inside a git hook exports the whole set.
+    for var in [
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_AUTHOR_NAME",
+        "GIT_AUTHOR_EMAIL",
+        "GIT_AUTHOR_DATE",
+        "GIT_COMMITTER_NAME",
+        "GIT_COMMITTER_EMAIL",
+        "GIT_COMMITTER_DATE",
+    ] {
+        cmd.env_remove(var);
+    }
     if let Some((name, email)) = fallback {
         if !name.is_empty() && !email.is_empty() {
             cmd.arg("-c").arg(format!("user.name={name}"));
@@ -504,7 +528,7 @@ pub async fn git_commit(
         .map_err(|e| CommandError::internal(format!("commit task: {e}")))??;
     }
 
-    Ok(status::read_status(&path)?)
+    read_status_off_thread(path).await
 }
 
 #[cfg(test)]

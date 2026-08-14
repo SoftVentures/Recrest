@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 
 use super::api::{
     CheckRunSummaryDto, CommentDto, CommentPosition, FileDiffDto, OrganizationDto, PagesStatusDto,
@@ -7,6 +8,70 @@ use super::api::{
 };
 use crate::commands::error::CommandError;
 
+/// Live credential state for one provider connection.
+///
+/// `is_authenticated()` only answers "is a token string stored", which is why
+/// a revoked PAT kept the Accounts tab showing a connected account. This enum
+/// separates the three cases the UI actually has to distinguish.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProviderAuthState {
+    /// No credentials stored at all.
+    #[default]
+    Disconnected,
+    /// Stored credentials were just accepted by the provider.
+    Connected,
+    /// Stored credentials exist but the provider rejected them (401/403):
+    /// revoked, expired, or missing a required scope.
+    Invalid,
+    /// Stored credentials exist but the provider could not be reached, so
+    /// their validity is unknown. Deliberately distinct from `Invalid` — a
+    /// flaky network must not look like a revoked token.
+    Unreachable,
+}
+
+/// Result of one live credential check. `username` is only populated when the
+/// provider answered with an identity, i.e. `state == Connected`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderAuthStatus {
+    pub state: ProviderAuthState,
+    pub username: Option<String>,
+}
+
+impl ProviderAuthStatus {
+    pub fn disconnected() -> Self {
+        Self {
+            state: ProviderAuthState::Disconnected,
+            username: None,
+        }
+    }
+
+    pub fn connected(username: impl Into<String>) -> Self {
+        Self {
+            state: ProviderAuthState::Connected,
+            username: Some(username.into()),
+        }
+    }
+
+    fn of(state: ProviderAuthState) -> Self {
+        Self {
+            state,
+            username: None,
+        }
+    }
+
+    /// Whether the UI should treat the account as usable. `Unreachable`
+    /// counts as connected: the credentials are still stored and we have no
+    /// evidence against them, so going offline must not read as a disconnect.
+    pub fn is_usable(&self) -> bool {
+        matches!(
+            self.state,
+            ProviderAuthState::Connected | ProviderAuthState::Unreachable
+        )
+    }
+}
+
 /// Contract every git platform provider must implement. Designed so that it
 /// can be re-expressed as a WASM plugin interface later without API churn.
 #[async_trait]
@@ -14,10 +79,42 @@ pub trait GitProvider: Send + Sync {
     fn id(&self) -> &'static str;
     fn display_name(&self) -> &'static str;
 
+    /// Whether credentials are *stored*. Cheap, local, and deliberately not a
+    /// statement about whether they still work — use `auth_status()` for that.
     async fn is_authenticated(&self) -> Result<bool, CommandError>;
+
+    /// The account the stored credentials belong to.
+    ///
+    /// Contract (all three shipped providers honour it):
+    /// * `Ok(None)` — no credentials stored.
+    /// * `Err(CommandError::Unauthorized)` — stored, but rejected by the API.
+    /// * `Err(_)` — stored, but the check itself failed (network, 5xx, …).
     async fn username(&self) -> Result<Option<String>, CommandError>;
+
     async fn set_token(&self, token: &str, username: Option<&str>) -> Result<(), CommandError>;
     async fn clear_token(&self) -> Result<(), CommandError>;
+
+    /// Live credential check — one authenticated round-trip that answers both
+    /// "are these credentials still valid" and "who do they belong to".
+    ///
+    /// The default impl derives everything from the `username()` contract
+    /// above, so every provider gets the distinction for free and a custom
+    /// provider that only implements `username()` still behaves correctly.
+    async fn auth_status(&self) -> ProviderAuthStatus {
+        if !self.is_authenticated().await.unwrap_or(false) {
+            return ProviderAuthStatus::disconnected();
+        }
+        match self.username().await {
+            Ok(Some(username)) => ProviderAuthStatus::connected(username),
+            // 2xx without an identity means the endpoint isn't the provider
+            // we think it is — the credentials are unusable either way.
+            Ok(None) => ProviderAuthStatus::of(ProviderAuthState::Invalid),
+            Err(CommandError::Unauthorized(_)) => {
+                ProviderAuthStatus::of(ProviderAuthState::Invalid)
+            }
+            Err(_) => ProviderAuthStatus::of(ProviderAuthState::Unreachable),
+        }
+    }
 
     /// Override the API base URL for self-hosted instances (GitHub Enterprise,
     /// GitLab self-managed, Bitbucket Server). `None` clears the override and

@@ -157,6 +157,9 @@ pub struct FileBackend {
 }
 
 impl FileBackend {
+    // Only constructed by the debug-build token backend; release builds keep
+    // the OS keychain, so rustc sees this as dead there.
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
@@ -232,6 +235,7 @@ fn set_owner_only_perms(_path: &Path) -> keyring::Result<()> {
 // Path resolution for the file backend
 // ---------------------------------------------------------------------------
 
+#[cfg_attr(not(debug_assertions), allow(dead_code))]
 static FILE_BACKEND_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 #[cfg(debug_assertions)]
@@ -241,6 +245,7 @@ const DEV_TOKENS_FILE: &str = "dev-tokens.json";
 /// `AppHandle` is available. Idempotent — first call wins. Callers built
 /// with `#[cfg(not(debug_assertions))]` should still call this (it's
 /// harmless); it only takes effect in debug builds.
+#[cfg_attr(not(debug_assertions), allow(dead_code))]
 pub fn init_file_backend_path(path: PathBuf) {
     let _ = FILE_BACKEND_PATH.set(path);
 }

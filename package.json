@@ -1,6 +1,6 @@
 {
   "name": "recrest",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Recrest — A lightweight developer dashboard built with Tauri.",
   "license": "MIT",
@@ -32,6 +32,10 @@
     "test:e2e": "yarn workspace @recrest/tests test:e2e",
     "test:e2e:tauri": "bash tests/scripts/run-tauri-e2e.sh",
     "typecheck": "yarn workspace @recrest/shared typecheck && yarn workspace @recrest/app typecheck && yarn workspace @recrest/tests typecheck && yarn workspace @recrest/landingpage typecheck",
+    "guard:devstub": "node scripts/check-no-devstub.mjs",
+    "guard:devstub:check": "node scripts/check-no-devstub.mjs --no-build",
+    "rust:fmt": "cargo fmt --manifest-path app/src-tauri/Cargo.toml --all",
+    "rust:fmt:check": "cargo fmt --manifest-path app/src-tauri/Cargo.toml --all -- --check",
     "rust:check": "cargo check --manifest-path app/src-tauri/Cargo.toml",
     "rust:check:release": "cargo check --manifest-path app/src-tauri/Cargo.toml --release",
     "rust:test": "cargo test --manifest-path app/src-tauri/Cargo.toml",

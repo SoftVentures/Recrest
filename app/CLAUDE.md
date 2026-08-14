@@ -98,6 +98,17 @@ All three call the same script with `--prod` / `--dev` filters; the only-flagged
 
 **`tauri:dev`** passes `--config src-tauri/tauri.dev.conf.json`, a minimal overlay that swaps `bundle.icon` to point at `icons-dev/`. Only `tauri dev` picks it up; `tauri build` ignores the overlay and keeps the production icon. Do not duplicate other fields in the overlay — keep it strictly about the icon swap. The dev EXE-resource icon (Windows) is wired via `build.rs::WindowsAttributes::window_icon_path("icons-dev/windows/icon.ico")` so the taskbar shows the dev variant from process start.
 
+## macOS signing (ad-hoc, no Apple Developer account)
+
+`tauri.conf.json` sets `bundle.macOS.signingIdentity: "-"`. Recrest ships without an Apple Developer certificate by choice, but **"unsigned" is not a valid option on Apple Silicon**: Gatekeeper refuses to launch a quarantined arm64 app whose signature envelope is incomplete and reports _"Recrest is damaged and can't be opened"_ — and unlike the ordinary unidentified-developer prompt, right-click → **Open** does not bypass that. x64 is unaffected because Gatekeeper does not require a signature for x86_64 code, so the breakage is arm64-only and invisible on an Intel test machine.
+
+Through v0.10.2 the shipped bundle carried only the linker's ad-hoc signature on the Mach-O and had no `Contents/_CodeSignature/` directory at all, which is exactly that failure. The `-` pseudo-identity makes the bundler run a real `codesign`, which produces the resource envelope.
+
+- This is **not** Apple Developer signing and costs nothing. Users still see the unidentified-developer prompt on first launch; right-click → Open now works.
+- Do **not** add `APPLE_*` env vars to the workflows to "fix" signing — the bundler treats set-but-empty as configured and dies on `security import`. The config key is the whole mechanism.
+- Updater signing (minisign, `TAURI_SIGNING_PRIVATE_KEY`) is unrelated and stays as it is.
+- `release-tauri.yml` guards this twice: the mac build legs assert `Contents/_CodeSignature/CodeResources` exists plus `codesign --verify --strict` and a `lipo -archs` match, and the `verify-release` job re-checks the mounted DMG and the updater payload on the finished draft. The build matrix runs `continue-on-error: true`, so `verify-release` is the gate that must be green before publishing.
+
 ## Redux + i18n
 
 - Seven reducers in `src/store/reducers/` (`ui`, `settings`, `providers`, `repos`, `prs`, `remoteImport`, `activity`); thunks + action creators live under `src/store/actions/`, selectors under `src/store/selectors/`. Components dispatch — they don't call IPC directly.

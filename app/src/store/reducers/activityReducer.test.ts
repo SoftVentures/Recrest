@@ -9,6 +9,12 @@ import {
   fetchOldestCommitDate,
   setSelectedRange,
 } from "@/store/actions/activity.actions";
+import {
+  deleteRepo,
+  forgetReposUnderPath,
+  removeRepo,
+  repoRemoved,
+} from "@/store/actions/repos.actions";
 import { activityReducer, initialActivityState } from "@/store/reducers/activityReducer";
 import { selectCommitsInRange } from "@/store/selectors/activity.selectors";
 import type { ActivityState } from "@/store/types/activity.types";
@@ -313,6 +319,98 @@ describe("activityReducer", () => {
       }),
     );
     expect(state.activeRequestId).toBe("req-2");
+  });
+
+  it("purges the commits of a removed repo and keeps the others", () => {
+    let state: ActivityState = activityReducer(initialActivityState, pending("req-1"));
+    state = activityReducer(
+      state,
+      commitsChunkReceived(
+        chunk({ requestId: "req-1", repoId: "repo-1", commits: [commit({ sha: "a" })] }),
+      ),
+    );
+    state = activityReducer(
+      state,
+      commitsChunkReceived(
+        chunk({
+          requestId: "req-1",
+          repoId: "repo-2",
+          commits: [commit({ sha: "b", repoId: "repo-2" })],
+        }),
+      ),
+    );
+
+    const next = activityReducer(state, removeRepo.fulfilled("repo-1", "internal-id", "repo-1"));
+
+    expect(next.commitsByRepo["repo-1"]).toBeUndefined();
+    expect(next.commitsByRepo["repo-2"]?.commits.map((c) => c.sha)).toEqual(["b"]);
+  });
+
+  it("purges the commits of a deleted repo", () => {
+    let state: ActivityState = activityReducer(initialActivityState, pending("req-1"));
+    state = activityReducer(
+      state,
+      commitsChunkReceived(chunk({ requestId: "req-1", commits: [commit({ sha: "a" })] })),
+    );
+
+    const next = activityReducer(
+      state,
+      deleteRepo.fulfilled("repo-1", "internal-id", { repoId: "repo-1" }),
+    );
+
+    expect(next.commitsByRepo["repo-1"]).toBeUndefined();
+  });
+
+  it("purges every repo forgotten with a removed scan root", () => {
+    let state: ActivityState = activityReducer(initialActivityState, pending("req-1"));
+    for (const repoId of ["repo-1", "repo-2", "repo-3"]) {
+      state = activityReducer(
+        state,
+        commitsChunkReceived(
+          chunk({
+            requestId: "req-1",
+            repoId,
+            commits: [commit({ sha: `sha-${repoId}`, repoId })],
+          }),
+        ),
+      );
+    }
+
+    const next = activityReducer(
+      state,
+      forgetReposUnderPath.fulfilled(["repo-1", "repo-3"], "internal-id", {
+        removedPath: "/dev",
+        remainingPaths: [],
+      }),
+    );
+
+    expect(Object.keys(next.commitsByRepo)).toEqual(["repo-2"]);
+  });
+
+  it("purges the commits of a repo the watcher reports as forgotten", () => {
+    // `repo://removed` reaches no thunk, so the removed repo's commits kept
+    // feeding the dashboard KPIs and heatmap for the rest of the session.
+    let state: ActivityState = activityReducer(initialActivityState, pending("req-1"));
+    state = activityReducer(
+      state,
+      commitsChunkReceived(chunk({ requestId: "req-1", commits: [commit({ sha: "a" })] })),
+    );
+
+    const next = activityReducer(state, repoRemoved({ repoId: "repo-1", forgotten: true }));
+
+    expect(next.commitsByRepo["repo-1"]).toBeUndefined();
+  });
+
+  it("keeps the commits of a repo whose record was kept, only flagged missing", () => {
+    let state: ActivityState = activityReducer(initialActivityState, pending("req-1"));
+    state = activityReducer(
+      state,
+      commitsChunkReceived(chunk({ requestId: "req-1", commits: [commit({ sha: "a" })] })),
+    );
+
+    const next = activityReducer(state, repoRemoved({ repoId: "repo-1", forgotten: false }));
+
+    expect(next.commitsByRepo["repo-1"]?.commits.map((c) => c.sha)).toEqual(["a"]);
   });
 
   it("stores the oldest commit date when fetchOldestCommitDate is fulfilled", () => {

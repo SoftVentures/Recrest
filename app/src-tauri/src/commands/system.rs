@@ -132,6 +132,9 @@ pub async fn get_platform_info() -> Result<PlatformInfo, CommandError> {
 /// Routing the truth through the OS API here lets the renderer recover.
 /// `None` on Linux (webview matchMedia is reliable there) — the frontend
 /// keeps its existing matchMedia value in that case.
+// cfg-dispatch chain: each arm is a block *statement*, so the `return` is
+// required on every platform; clippy only sees the active one.
+#[allow(clippy::needless_return)]
 #[tauri::command]
 pub async fn get_system_dark_mode(
     #[allow(unused_variables)] app: tauri::AppHandle,
@@ -181,10 +184,7 @@ mod tests {
 
     #[test]
     fn dir_size_sums_files_recursively() {
-        let tmp = std::env::temp_dir().join(format!(
-            "recrest-dir-size-{}",
-            std::process::id()
-        ));
+        let tmp = std::env::temp_dir().join(format!("recrest-dir-size-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&tmp);
         std::fs::create_dir_all(tmp.join("nested")).unwrap();
         std::fs::write(tmp.join("a.txt"), b"abc").unwrap(); // 3 bytes
@@ -207,13 +207,7 @@ mod tests {
         assert_eq!(normalize_os_version("Unknown ()"), None);
         assert_eq!(normalize_os_version("Unknown (rolling)"), None);
         assert_eq!(normalize_os_version("unknown"), None);
-        assert_eq!(
-            normalize_os_version("14.5"),
-            Some("14.5".to_string())
-        );
-        assert_eq!(
-            normalize_os_version("  22.04  "),
-            Some("22.04".to_string())
-        );
+        assert_eq!(normalize_os_version("14.5"), Some("14.5".to_string()));
+        assert_eq!(normalize_os_version("  22.04  "), Some("22.04".to_string()));
     }
 }

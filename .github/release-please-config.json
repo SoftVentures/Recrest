@@ -8,6 +8,22 @@
     ".": {
       "package-name": "recrest",
       "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feature", "section": "Features" },
+        { "type": "feat", "section": "Features" },
+        { "type": "hotfix", "section": "Bug Fixes" },
+        { "type": "bugfix", "section": "Bug Fixes" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "perf", "section": "Performance Improvements" },
+        { "type": "patch", "section": "Maintenance" },
+        { "type": "revert", "section": "Reverts" },
+        { "type": "docs", "section": "Documentation", "hidden": true },
+        { "type": "test", "section": "Tests", "hidden": true },
+        { "type": "ci", "section": "Continuous Integration", "hidden": true },
+        { "type": "dependabot", "section": "Dependencies", "hidden": true },
+        { "type": "chore", "section": "Miscellaneous Chores", "hidden": true },
+        { "type": "release", "section": "Releases", "hidden": true }
+      ],
       "extra-files": [
         { "type": "json", "path": "app/package.json", "jsonpath": "$.version" },
         { "type": "json", "path": "shared/package.json", "jsonpath": "$.version" },
@@ -15,6 +31,8 @@
         { "type": "json", "path": "tests/package.json", "jsonpath": "$.version" },
         { "type": "json", "path": "app/src-tauri/tauri.conf.json", "jsonpath": "$.version" },
         { "type": "generic", "path": "shared/src/constants/app.ts" },
+        { "type": "generic", "path": "tests/src/helpers/constants.ts" },
+        { "type": "generic", "path": "RELEASE.md" },
         "app/src-tauri/Cargo.toml"
       ]
     }

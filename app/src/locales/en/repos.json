@@ -51,7 +51,14 @@
   "status": {
     "clean": "Clean",
     "dirty": "Uncommitted changes",
-    "conflicted": "Conflicts"
+    "conflicted": "Conflicts",
+    "missing": "Folder missing"
+  },
+  "missing": {
+    "title": "Folder no longer exists",
+    "description": "Recrest can't reach \"{{path}}\" any more. Restore the folder, or remove the repository from Recrest.",
+    "action_unavailable": "The folder for this repository no longer exists on disk.",
+    "remove": "Remove from Recrest"
   },
   "detail": {
     "branch": "Branch",
@@ -195,7 +202,6 @@
     "submit_error": "Commit failed",
     "missing_git_config": "Set user.name and user.email in Settings → Git config to commit."
   },
-  "stash_index": "stash@{{{index}}}",
   "add_modal": {
     "clone_url_placeholder": "https://github.com/owner/repo.git",
     "clone_dest_placeholder": "/Users/you/Code",

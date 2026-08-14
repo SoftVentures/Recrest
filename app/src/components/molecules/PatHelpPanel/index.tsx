@@ -78,8 +78,18 @@ export function PatHelpPanel({ provider, baseUrl = "" }: PatHelpPanelProps) {
       <Heading component="h4">{t("pat.required_scopes")}</Heading>
       <ScopeList component="ul">
         {scopes.map((scope) => (
-          <ScopeItem key={scope} component="li">
-            {t(`pat.scope_label.${provider}.${scope}`, { defaultValue: scope })}
+          <ScopeItem
+            key={scope}
+            component="li"
+            data-testid={TEST_IDS.onboarding.patHelpScope(scope)}
+          >
+            {/* Scope ids contain i18next's default namespace separator
+                (`read:user`, `account:read`), which would split the key into a
+                bogus namespace and silently fall through to `defaultValue`. */}
+            {t(`pat.scope_label.${provider}.${scope}`, {
+              nsSeparator: false,
+              defaultValue: scope,
+            })}
           </ScopeItem>
         ))}
       </ScopeList>

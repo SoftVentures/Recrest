@@ -1,6 +1,8 @@
 import type { Repository, RepositoryGroup, RepositoryId } from "@recrest/shared";
 
-export interface ReposState {
+import type { SaveSeqTracked } from "@/store/reducers/saveSettingsSeq";
+
+export interface ReposState extends SaveSeqTracked {
   items: Record<RepositoryId, Repository>;
   groups: Record<string, RepositoryGroup>;
   scanPaths: string[];

@@ -57,3 +57,12 @@ export const Empty = styled(Box)(({ theme }) => ({
 export const NotFoundRoot = styled(Box)(({ theme }) => ({
   padding: theme.spacing(4),
 })) as typeof Box;
+
+export const LoadingRoot = styled(Box)(({ theme }) => ({
+  flex: 1,
+  minHeight: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(4),
+})) as typeof Box;

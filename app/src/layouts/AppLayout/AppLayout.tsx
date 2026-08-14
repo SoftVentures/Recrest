@@ -23,9 +23,11 @@ import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { usePageSwipe } from "@/hooks/usePageSwipe";
 import { useWindowChrome } from "@/hooks/usePlatform";
 import { usePrPolling } from "@/hooks/usePrPolling";
+import { useRepoAutoRescan } from "@/hooks/useRepoAutoRescan";
 import { useResponsiveSidebar } from "@/hooks/useResponsiveSidebar";
 import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useThemeAttribute } from "@/hooks/useThemeAttribute";
+import { useUpdaterEvents } from "@/hooks/useUpdaterEvents";
 import { WINDOW_CHROME_HEIGHT_PX } from "@/lib/constants/platform.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
@@ -115,8 +117,12 @@ export function AppLayout() {
   useResponsiveSidebar();
   useScrollbarWidth();
   usePrPolling();
+  useRepoAutoRescan();
   usePageSwipe();
   useGlobalShortcuts();
+  // Only subscriber of `updater://available` — mounting it twice would resurrect
+  // a banner the user just dismissed on the next background check.
+  useUpdaterEvents();
   // Keying `PageTransition` on the current pathname makes React unmount the
   // previous route's tree and remount the next one — so the enter animation
   // re-fires on every navigation, not just on the initial app boot. Pages

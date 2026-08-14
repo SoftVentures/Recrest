@@ -4,7 +4,10 @@ use freedesktop_desktop_entry::{DesktopEntry, Iter};
 pub fn scan() -> Vec<DiscoveredApp> {
     let mut out = Vec::new();
     let locales: Vec<String> = Vec::new();
-    for entry in Iter::new(default_paths()) {
+    // `freedesktop-desktop-entry` 0.7.19 made `Iter::new` require an
+    // `Iterator<Item = PathBuf>`; `default_paths()` returns a `Vec`, so hand it
+    // an explicit iterator.
+    for entry in Iter::new(default_paths().into_iter()) {
         if let Ok(de) = DesktopEntry::from_path(&entry, Some(&locales)) {
             let file_id = entry
                 .file_name()

@@ -25,7 +25,9 @@ import BrandIcon from "@/assets/icons/BrandIcon";
 import IdeIcon from "@/assets/icons/IdeIcon";
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import Mascot from "@/components/atoms/brand/Mascot";
+import RepoMissingChip from "@/components/atoms/chips/RepoMissingChip";
 import ActionFeedbackIcon from "@/components/atoms/feedback/ActionFeedbackIcon";
+import DisabledReasonTooltip from "@/components/atoms/feedback/DisabledReasonTooltip";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import MrDetailDrawer from "@/components/molecules/drawers/MrDetailDrawer";
 import EmptyState from "@/components/molecules/feedback/EmptyState";
@@ -252,6 +254,13 @@ export default function RepoDetailPage() {
     );
   }
 
+  // Everything that touches the working copy is doomed once the folder is
+  // gone. Opening the remote host still works — that lives on the server.
+  const missing = !!repo.missing;
+  const missingReason = missing
+    ? t("missing.action_unavailable", { ns: I18nNamespace.REPOS })
+    : null;
+
   const totalCommits = activitySeries.reduce((a, b) => a + b, 0);
   const maxBucket = Math.max(1, ...activitySeries);
   const openMrs = prs.filter((p) => p.state === PrState.OPEN);
@@ -262,11 +271,11 @@ export default function RepoDetailPage() {
     <Card>
       <CardHead>
         <CardTitle>
-          {repo.status.dirty
+          {repo.status.dirty && !missing
             ? t("status.dirty", { ns: I18nNamespace.REPOS })
             : t("detail.changes_title", { ns: I18nNamespace.REPOS })}
         </CardTitle>
-        {repo.status.dirty && (
+        {repo.status.dirty && !missing && (
           <CardMeta>
             {t("detail.working_meta", {
               ns: I18nNamespace.REPOS,
@@ -277,7 +286,15 @@ export default function RepoDetailPage() {
           </CardMeta>
         )}
       </CardHead>
-      {repo.status.dirty ? (
+      {missing ? (
+        // Staging and committing would fail against a folder that is gone, so
+        // the panel (and with it the commit entry point) is withheld entirely.
+        <EmptyState
+          mascot="shrugging"
+          title={t("missing.title", { ns: I18nNamespace.REPOS })}
+          description={t("missing.description", { ns: I18nNamespace.REPOS, path: repo.path })}
+        />
+      ) : repo.status.dirty ? (
         <WorkingCopyScroll>
           <WorkingCopyPanel repoId={repo.id} onCommitClick={() => setCommitDialogOpen(true)} />
         </WorkingCopyScroll>
@@ -431,6 +448,7 @@ export default function RepoDetailPage() {
             </TitleRow>
             <PathText>{repo.path}</PathText>
             <MetaRow>
+              {missing && <RepoMissingChip data-testid={TEST_IDS.repoDetail.missingBadge} />}
               <Chip tone="branch">⎇ {repo.status.branch ?? "—"}</Chip>
               {repo.status.ahead > 0 && <Chip tone="ahead">↑{repo.status.ahead}</Chip>}
               {repo.status.behind > 0 && <Chip tone="behind">↓{repo.status.behind}</Chip>}
@@ -448,31 +466,36 @@ export default function RepoDetailPage() {
             </MetaRow>
           </HeaderBody>
           <HeaderActions>
-            <PrimaryBtn
-              type="button"
-              onClick={() => void runCmd(TauriCommand.OPEN_IN_IDE, ideLabel)}
-            >
-              <IdeIcon id={ide.iconId} size={14} color="currentColor" style={{ opacity: 1 }} />
-              <Box component="span">{ideLabel}</Box>
-            </PrimaryBtn>
-            <GeneralTooltip title={tAria("repo.open_terminal")}>
+            <DisabledReasonTooltip reason={missingReason}>
+              <PrimaryBtn
+                type="button"
+                disabled={missing}
+                onClick={() => void runCmd(TauriCommand.OPEN_IN_IDE, ideLabel)}
+              >
+                <IdeIcon id={ide.iconId} size={14} color="currentColor" style={{ opacity: 1 }} />
+                <Box component="span">{ideLabel}</Box>
+              </PrimaryBtn>
+            </DisabledReasonTooltip>
+            <DisabledReasonTooltip reason={missingReason} title={tAria("repo.open_terminal")}>
               <IconOnlyBtn
                 type="button"
                 aria-label={tAria("repo.open_terminal")}
+                disabled={missing}
                 onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
               >
                 <TerminalIcon size={14} />
               </IconOnlyBtn>
-            </GeneralTooltip>
-            <GeneralTooltip title={tAria("repo.open_folder")}>
+            </DisabledReasonTooltip>
+            <DisabledReasonTooltip reason={missingReason} title={tAria("repo.open_folder")}>
               <IconOnlyBtn
                 type="button"
                 aria-label={tAria("repo.open_folder")}
+                disabled={missing}
                 onClick={() => void revealPathInSystem(repo.path)}
               >
                 <Folder size={14} />
               </IconOnlyBtn>
-            </GeneralTooltip>
+            </DisabledReasonTooltip>
             <GeneralTooltip
               title={openHost.canOpen ? openHostLabel : tAria("repo.open_on_host_no_remote")}
             >
@@ -500,26 +523,42 @@ export default function RepoDetailPage() {
                 <KeyRound size={14} />
               </IconOnlyBtn>
             </GeneralTooltip>
-            <SecondaryBtn type="button" disabled={busy} onClick={() => void doPull()}>
-              <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={13} />} size={13} />
-              {t("detail.pull", { ns: I18nNamespace.REPOS })}
-            </SecondaryBtn>
-            <SecondaryBtn type="button" disabled={busy} onClick={() => void doPush()}>
-              <ActionFeedbackIcon state={push.state} fallback={<ArrowUp size={13} />} size={13} />
-              {t("detail.push", { ns: I18nNamespace.REPOS })}
-            </SecondaryBtn>
-            <SecondaryBtn type="button" disabled={busy} onClick={() => void doFetch()}>
-              <ActionFeedbackIcon
-                state={fetch.state}
-                fallback={<RefreshCw size={13} />}
-                size={13}
-              />
-              {t("detail.fetch", { ns: I18nNamespace.REPOS })}
-            </SecondaryBtn>
-            <SecondaryBtn type="button" onClick={() => setBranchDialogOpen(true)}>
-              <Plus size={13} />
-              {t("detail.branch", { ns: I18nNamespace.REPOS })}
-            </SecondaryBtn>
+            <DisabledReasonTooltip reason={missingReason}>
+              <SecondaryBtn type="button" disabled={busy || missing} onClick={() => void doPull()}>
+                <ActionFeedbackIcon
+                  state={pull.state}
+                  fallback={<ArrowDown size={13} />}
+                  size={13}
+                />
+                {t("detail.pull", { ns: I18nNamespace.REPOS })}
+              </SecondaryBtn>
+            </DisabledReasonTooltip>
+            <DisabledReasonTooltip reason={missingReason}>
+              <SecondaryBtn type="button" disabled={busy || missing} onClick={() => void doPush()}>
+                <ActionFeedbackIcon state={push.state} fallback={<ArrowUp size={13} />} size={13} />
+                {t("detail.push", { ns: I18nNamespace.REPOS })}
+              </SecondaryBtn>
+            </DisabledReasonTooltip>
+            <DisabledReasonTooltip reason={missingReason}>
+              <SecondaryBtn type="button" disabled={busy || missing} onClick={() => void doFetch()}>
+                <ActionFeedbackIcon
+                  state={fetch.state}
+                  fallback={<RefreshCw size={13} />}
+                  size={13}
+                />
+                {t("detail.fetch", { ns: I18nNamespace.REPOS })}
+              </SecondaryBtn>
+            </DisabledReasonTooltip>
+            <DisabledReasonTooltip reason={missingReason}>
+              <SecondaryBtn
+                type="button"
+                disabled={missing}
+                onClick={() => setBranchDialogOpen(true)}
+              >
+                <Plus size={13} />
+                {t("detail.branch", { ns: I18nNamespace.REPOS })}
+              </SecondaryBtn>
+            </DisabledReasonTooltip>
           </HeaderActions>
         </Header>
 

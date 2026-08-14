@@ -18,6 +18,7 @@ export const SEED_PROVIDERS: Partial<Record<ProviderId, ProviderConnection>> = {
     username: "demo-user",
     supportsOauth: true,
     baseUrl: PROVIDER_API_URLS.github,
+    authState: "connected",
   },
   gitlab: {
     providerId: "gitlab",
@@ -26,6 +27,7 @@ export const SEED_PROVIDERS: Partial<Record<ProviderId, ProviderConnection>> = {
     username: null,
     supportsOauth: true,
     baseUrl: "https://gitlab.acme-labs.internal/api/v4",
+    authState: "disconnected",
   },
   bitbucket: {
     providerId: "bitbucket",
@@ -34,5 +36,6 @@ export const SEED_PROVIDERS: Partial<Record<ProviderId, ProviderConnection>> = {
     username: null,
     supportsOauth: false,
     baseUrl: PROVIDER_API_URLS.bitbucket,
+    authState: "disconnected",
   },
 };

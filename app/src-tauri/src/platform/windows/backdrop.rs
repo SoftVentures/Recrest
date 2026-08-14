@@ -84,7 +84,9 @@ pub fn apply_acrylic_backdrop(window: &tauri::WebviewWindow, dark: bool) {
     // palette tint + opacity slider are carried by the CSS `::before` rgba
     // layer, mirroring the macOS model.
     match window_vibrancy::apply_acrylic(window, None) {
-        Ok(()) => tracing::info!("[windows] acrylic backdrop applied (dark={dark}, frame extended)"),
+        Ok(()) => {
+            tracing::info!("[windows] acrylic backdrop applied (dark={dark}, frame extended)")
+        }
         Err(e) => tracing::warn!("[windows] apply_acrylic failed: {e:?}"),
     }
 }

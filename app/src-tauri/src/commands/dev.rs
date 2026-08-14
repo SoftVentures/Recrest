@@ -1,6 +1,6 @@
-// Debug-build-only developer helpers. Registration in lib.rs is gated on
-// `#[cfg(debug_assertions)]` so release builds never expose these.
-#![cfg(debug_assertions)]
+// Debug-build-only developer helpers. The `mod dev;` declaration in
+// `commands/mod.rs` carries `#[cfg(debug_assertions)]`, and registration in
+// lib.rs is gated the same way, so release builds never expose these.
 
 use std::path::PathBuf;
 
