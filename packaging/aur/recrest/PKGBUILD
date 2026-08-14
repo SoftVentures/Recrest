@@ -1,0 +1,66 @@
+# Maintainer: Manuel Haucke <manuel.haucke12@gmail.com>
+
+pkgname=recrest
+pkgver=0.11.0
+pkgrel=1
+pkgdesc="Lightweight native developer dashboard for local git repos, pull requests, and CI checks"
+arch=('x86_64' 'aarch64')
+url="https://github.com/SoftVentures/Recrest"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme')
+makedepends=('rust' 'nodejs>=22' 'yarn' 'git' 'pkgconf')
+provides=("$pkgname=$pkgver")
+conflicts=("$pkgname-git" "$pkgname-bin")
+# The Rust release profile already sets `lto = true` and `strip = true`; makepkg's
+# own LTO flags only apply to the C sources compiled by cc-rs (vendored libgit2 /
+# openssl) and have caused link failures there, so opt out.
+options=('!lto')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('0cd8cc673ade95ea18f4932cb33ce41d2ca125bab89de2674458debafc7bffbc')
+
+_srcname="Recrest-$pkgver"
+
+prepare() {
+  cd "$_srcname"
+
+  # `--ignore-engines` is required: .yarnrc sets `engine-strict true` and the root
+  # package.json pins `engines.node` to the exact version upstream develops
+  # against, which will not match the `nodejs` package in [extra].
+  #
+  # `--ignore-scripts` skips the repo's postinstall hooks (`check-node.cjs`, which
+  # hard-fails on that same version mismatch, and `husky`, which needs a .git dir
+  # the release tarball does not ship). The one postinstall step that actually
+  # matters — building @recrest/shared — is run explicitly below, because
+  # app/tsconfig.app.json references shared/dist as a TS project.
+  yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
+  yarn workspace @recrest/shared build
+}
+
+build() {
+  cd "$_srcname"
+
+  # `--no-bundle` stops the Tauri CLI after linking the executable. We do not want
+  # its .deb/.rpm/.AppImage bundles (tauri.conf.json sets `targets: "all"`), and
+  # bundling would additionally demand a TAURI_SIGNING_PRIVATE_KEY because
+  # `createUpdaterArtifacts` is enabled upstream.
+  yarn workspace @recrest/app tauri build --no-bundle
+}
+
+package() {
+  cd "$_srcname"
+
+  # [[bin]] name in Cargo.toml is capitalised ("Recrest") for the macOS Dock label;
+  # on Linux the installed command is lowercase, which is what recrest.desktop's
+  # launcher wrapper execs by absolute path.
+  install -Dm755 "app/src-tauri/target/release/Recrest" "$pkgdir/usr/bin/recrest"
+  install -Dm755 "app/src-tauri/resources/recrest-launcher.sh" "$pkgdir/usr/bin/recrest-launcher"
+  install -Dm644 "app/src-tauri/resources/recrest.desktop" "$pkgdir/usr/share/applications/recrest.desktop"
+
+  local _size
+  for _size in 32 64 128 256 512; do
+    install -Dm644 "app/src-tauri/icons/linux/${_size}x${_size}.png" \
+      "$pkgdir/usr/share/icons/hicolor/${_size}x${_size}/apps/recrest.png"
+  done
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

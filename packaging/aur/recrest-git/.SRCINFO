@@ -1,0 +1,26 @@
+pkgbase = recrest-git
+	pkgdesc = Lightweight native developer dashboard for local git repos, pull requests, and CI checks (git)
+	pkgver = 0.11.0.r0.g7be7302
+	pkgrel = 1
+	url = https://github.com/SoftVentures/Recrest
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = rust
+	makedepends = nodejs>=22
+	makedepends = yarn
+	makedepends = git
+	makedepends = pkgconf
+	depends = webkit2gtk-4.1
+	depends = gtk3
+	depends = libayatana-appindicator
+	depends = librsvg
+	depends = hicolor-icon-theme
+	provides = recrest=0.11.0.r0.g7be7302
+	conflicts = recrest
+	conflicts = recrest-bin
+	options = !lto
+	source = recrest-git::git+https://github.com/SoftVentures/Recrest.git
+	sha256sums = SKIP
+
+pkgname = recrest-git

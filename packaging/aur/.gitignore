@@ -1,0 +1,7 @@
+# makepkg working output — never committed, and never pushed to the AUR remotes.
+src/
+pkg/
+*.pkg.tar.zst
+*.pkg.tar.zst.sig
+*.tar.gz
+recrest-git/recrest-git/

@@ -77,6 +77,7 @@ Pick the file for your platform:
 | Linux (most distros)                    | `Recrest_<version>_amd64.AppImage` |
 | Debian / Ubuntu                         | `Recrest_<version>_amd64.deb`      |
 | Fedora / RHEL                           | `Recrest_<version>-1.x86_64.rpm`   |
+| Arch Linux / derivatives                | AUR: `recrest` or `recrest-git`    |
 
 > **Heads up:** Recrest is **not code-signed yet.**
 > Apple Developer IDs cost USD 99/year and a Windows EV certificate starts at
@@ -131,6 +132,25 @@ reputation system catches up — or once we can afford a signing cert.
   ```bash
   sudo dnf install ./Recrest_*-1.x86_64.rpm
   ```
+
+- **Arch Linux (AUR):** two packages, both built from source on your machine —
+  [`recrest`](https://aur.archlinux.org/packages/recrest) tracks the latest
+  tagged release, [`recrest-git`](https://aur.archlinux.org/packages/recrest-git)
+  tracks `main`.
+
+  ```bash
+  # with an AUR helper
+  paru -S recrest        # or: recrest-git
+
+  # or by hand
+  git clone https://aur.archlinux.org/recrest.git
+  cd recrest && makepkg -si
+  ```
+
+  Because these compile the Rust backend in release profile, the first build
+  takes a while. The PKGBUILD sources live in
+  [`packaging/aur/`](./packaging/aur/) — send packaging fixes there, not to the
+  AUR clone.
 
 No signature prompts — Linux simply trusts the repo you installed from.
 
