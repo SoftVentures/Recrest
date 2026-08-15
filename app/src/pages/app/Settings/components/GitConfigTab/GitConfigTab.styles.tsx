@@ -14,11 +14,32 @@ export const CustomTable = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: pxToRem(6),
+  containerType: "inline-size",
 }) as typeof Box;
+
+/**
+ * Escape hatch for every `CustomRow` variant: below this width the row's column
+ * floors (key + value + two action columns) no longer fit, so the cells stack
+ * instead of pushing the settings panel into a sideways scroll. Each variant has
+ * to spread this **after** its own `gridTemplateColumns`, because a subclass's
+ * plain declaration outranks the base class's at-rule declaration.
+ *
+ * A container query, not a media query: the settings panel is narrower than the
+ * viewport, so a `@media` threshold would fire at the wrong moment. The
+ * threshold is in rem so it tracks `--ui-scale` — at a larger scale the cells
+ * need to stack at a *wider* container width, because their own floors grew.
+ */
+export const GIT_CONFIG_ROW_STACK = {
+  [`@container (max-width: ${pxToRem(560)})`]: {
+    gridTemplateColumns: "minmax(0, 1fr)",
+    rowGap: pxToRem(8),
+  },
+} as const;
 
 export const CustomRow = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: `minmax(${pxToRem(140)}, 1fr) minmax(${pxToRem(220)}, 2.2fr) auto auto`,
+  ...GIT_CONFIG_ROW_STACK,
   alignItems: "center",
   gap: pxToRem(12),
   padding: pxToRems(11, 14),

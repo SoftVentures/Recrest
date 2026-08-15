@@ -170,6 +170,7 @@ export function DesignSection() {
           <GeneralSwitchInput
             checked={translucencyEnabled}
             onCheckedChange={(v) => dispatch(setTranslucencyEnabled(v))}
+            aria-label={t("settings.fields.translucency")}
             data-testid={TEST_IDS.settings.general.translucencyToggle}
           />
         ) : (

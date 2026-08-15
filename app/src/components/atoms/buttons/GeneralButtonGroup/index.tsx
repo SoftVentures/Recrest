@@ -60,7 +60,15 @@ const StyledGroup = styled(ToggleButtonGroup, { shouldForwardProp: SHOULD_FORWAR
     borderRadius: shape === "square" ? 8 : 999,
     padding: 0,
     fontFamily: "inherit",
+    // `nowrap` is deliberate and stays: the group owns one continuous border
+    // plus 1px inter-segment dividers, so a wrapped segment would render a
+    // border fragment mid-row and stop reading as a single control. Instead the
+    // tile is capped at its parent and its segments may shrink (see
+    // `StyledToggle`'s `minWidth: 0`), clipping label text inside the rounded
+    // `overflow: hidden` frame rather than pushing the toolbar sideways.
     flexWrap: "nowrap",
+    maxWidth: "100%",
+    minWidth: 0,
     overflow: "hidden",
     transition: "border-color 150ms ease",
     "&:hover": {
@@ -93,7 +101,11 @@ const StyledToggle = styled(ToggleButton, { shouldForwardProp: SHOULD_FORWARD })
     fontWeight: 500,
     lineHeight: 1,
     cursor: "pointer",
+    // No `textOverflow: "ellipsis"` companion: the label is an anonymous flex
+    // item next to the icon, so `text-overflow` would not apply to it. The
+    // group's `overflow: hidden` does the clipping instead.
     whiteSpace: "nowrap",
+    minWidth: 0,
     textTransform: "none",
     transition: "color 150ms ease, background-color 150ms ease",
 

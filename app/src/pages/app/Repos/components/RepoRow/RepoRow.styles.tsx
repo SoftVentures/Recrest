@@ -8,6 +8,7 @@ import {
   staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const Row = styled(Box)(({ theme }) => ({
@@ -129,8 +130,11 @@ export const Diff = styled(Box)(({ theme }) => ({
   fontSize: fontPxToRem(11),
   fontVariantNumeric: "tabular-nums",
   fontWeight: 600,
-  "& .add": { color: theme.palette.success.main },
-  "& .rem": { color: theme.palette.error.main },
+  // `success.main`/`error.main` are mode-independent light-mode hues, so on the
+  // dark surfaces they landed at 3.18:1 / 2.57:1. `toneText` is the existing
+  // mode-aware rule for exactly these diff counters.
+  "& .add": { color: toneText(theme, StatusTone.SUCCESS) },
+  "& .rem": { color: toneText(theme, StatusTone.ERROR) },
 })) as typeof Box;
 
 export const FilesMeta = styled(Typography)(({ theme }) => ({

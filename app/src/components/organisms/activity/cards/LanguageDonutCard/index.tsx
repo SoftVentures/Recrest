@@ -126,12 +126,20 @@ const Tooltip = styled(Box)(({ theme }) => ({
   maxWidth: pxToRem(240),
 }));
 
+// The tooltip is capped at 240px, so an unusually long language label has to
+// truncate rather than spill past the frame.
 const TooltipHead = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: pxToRem(8),
   fontWeight: 600,
-  whiteSpace: "nowrap",
+  minWidth: 0,
+  "& > span:last-of-type": {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
 });
 
 const TooltipRepos = styled(Box)(({ theme }) => ({

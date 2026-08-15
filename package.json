@@ -34,6 +34,7 @@
     "typecheck": "yarn workspace @recrest/shared typecheck && yarn workspace @recrest/app typecheck && yarn workspace @recrest/tests typecheck && yarn workspace @recrest/landingpage typecheck",
     "guard:devstub": "node scripts/check-no-devstub.mjs",
     "guard:devstub:check": "node scripts/check-no-devstub.mjs --no-build",
+    "guard:downloads": "node scripts/check-download-links.mjs",
     "rust:fmt": "cargo fmt --manifest-path app/src-tauri/Cargo.toml --all",
     "rust:fmt:check": "cargo fmt --manifest-path app/src-tauri/Cargo.toml --all -- --check",
     "rust:check": "cargo check --manifest-path app/src-tauri/Cargo.toml",

@@ -36,11 +36,12 @@ const Root = styled(Box, {
   height: modalLength($modalHeight, "auto"),
   // A numeric `modalWidth` is a *design* pixel value and therefore rides
   // `--ui-scale`: AddRepoModal's 1200 renders 1800 real px at scale 1.5, which
-  // no longer fits a 1440-px window. Viewport units are the right ceiling
-  // precisely because they ignore the scale — they describe the window, not the
-  // design grid. `vw`/`vh`, not `%`: the Dialog paper is centred by flexbox and
-  // therefore has an indefinite height, against which a percentage `maxHeight`
-  // computes to `none` and is a silent no-op.
+  // no longer fits a 1440-px window. Without these ceilings such a modal is
+  // clipped on both edges, leaving its actions unreachable. Viewport units are
+  // the right ceiling precisely because they ignore the scale — they describe
+  // the window, not the design grid. `vw`/`vh`, not `%`: the Dialog paper is
+  // centred by flexbox and therefore has an indefinite height, against which a
+  // percentage `maxHeight` computes to `none` and is a silent no-op.
   maxWidth: "calc(100vw - 40px)",
   maxHeight: modalLength($modalMaxHeight, "calc(100vh - 40px)"),
   minHeight: 0,
@@ -92,9 +93,10 @@ const StyledContent = styled(DialogContent)({
   margin: 0,
   padding: 0,
   // Vertical scroller instead of a hard clip: once Root hits its viewport
-  // ceiling, tall bodies must stay reachable. Panels that manage their own
-  // scrolling keep `flex: 1; min-height: 0`, so this axis never overflows for
-  // them and `auto` stays invisible — no double scrollbars.
+  // ceiling, tall bodies (the SSH guide's prose, the onboarding steps' floor)
+  // must stay reachable. Panels that manage their own scrolling keep
+  // `flex: 1; min-height: 0`, so this axis never overflows for them and `auto`
+  // stays invisible — no double scrollbars.
   overflow: "hidden auto",
   flex: 1,
   minHeight: 0,

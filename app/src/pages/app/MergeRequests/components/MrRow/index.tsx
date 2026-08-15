@@ -46,7 +46,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { brandFromUrl } from "@/lib/utils/brandFromUrl";
 import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
-import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+import { StatusTone, toneChip, toneText } from "@/lib/utils/toneColor.utils";
 import { detailKey } from "@/store/actions/prs.actions";
 import { useAppSelector } from "@/store/hooks";
 import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
@@ -174,8 +174,11 @@ const Diff = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   gap: pxToRem(4),
   fontWeight: 500,
-  "& .add": { color: theme.palette.success.main },
-  "& .rem": { color: theme.palette.error.main },
+  // `success.main`/`error.main` are mode-independent light-mode hues, so on the
+  // dark surfaces they landed at 3.18:1 / 2.57:1. `toneText` is the existing
+  // mode-aware rule for exactly these diff counters.
+  "& .add": { color: toneText(theme, StatusTone.SUCCESS) },
+  "& .rem": { color: toneText(theme, StatusTone.ERROR) },
 })) as typeof Box;
 
 // Muted placeholder when the provider didn't supply additions/deletions for

@@ -232,6 +232,7 @@
       "simulated_body": "Simuliertes Event",
       "version_label": "Version",
       "can_auto_install": "canAutoInstall",
+      "package_managed": "Paketverwaltete Installation",
       "force_fallback": "Download-Fallback erzwingen",
       "force_fallback_sub": "Den Auto-Installer-Pfad als defekt behandeln — stattdessen den manuellen Download-Link zeigen.",
       "endpoint_override": "Endpoint-Override",

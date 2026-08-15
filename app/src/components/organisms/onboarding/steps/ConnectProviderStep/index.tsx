@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -165,6 +165,10 @@ function ConnectProviderStep({
   const connections = useAppSelector((s) => s.providers.connections);
 
   const [providerId, setProviderId] = useState<ProviderId>(initialProviderId ?? Provider.GITHUB);
+  // Mirrors `providerId` for async completions: a connect resolves ~400ms after
+  // the IPC call (minimum spinner time), by which point the user may already
+  // have switched tabs and typed credentials for another provider.
+  const activeProviderRef = useRef(initialProviderId ?? Provider.GITHUB);
   const [token, setToken] = useState("");
   const [username, setUsername] = useState("");
   const [baseUrlExpanded, setBaseUrlExpanded] = useState(false);
@@ -188,6 +192,7 @@ function ConnectProviderStep({
   // Reset the per-provider form when the user switches the active tab so a
   // GitHub token can't accidentally be submitted against GitLab.
   const selectProvider = (id: ProviderId) => {
+    activeProviderRef.current = id;
     setProviderId(id);
     setToken("");
     setUsername("");
@@ -221,22 +226,31 @@ function ConnectProviderStep({
   const onConnect = async () => {
     if (!token.trim()) return;
     if (requiresUsername && !username.trim()) return;
+    const submittedProviderId = providerId;
     setSubmitting(true);
     setError(null);
     try {
       await connectFeedback.run(async () => {
         await dispatch(
           setProviderToken({
-            providerId,
+            providerId: submittedProviderId,
             token: token.trim(),
             username: requiresUsername ? username.trim() : null,
           }),
         ).unwrap();
       });
-      setToken("");
-      setUsername("");
+      // Only touch the form if it still belongs to the provider we submitted —
+      // otherwise a late completion wipes the credentials the user has since
+      // typed for a different provider, and they have to type them again with
+      // no visible reason why the fields emptied themselves.
+      if (activeProviderRef.current === submittedProviderId) {
+        setToken("");
+        setUsername("");
+      }
     } catch (err) {
-      setError((err as { message?: string })?.message ?? t("connectProvider.failed"));
+      if (activeProviderRef.current === submittedProviderId) {
+        setError((err as { message?: string })?.message ?? t("connectProvider.failed"));
+      }
     } finally {
       setSubmitting(false);
     }

@@ -46,4 +46,25 @@ test.describe("app / updater banner variants", () => {
     await expect(page.getByTestId(TEST_IDS.updaterBanner.download)).toBeVisible();
     await expect(page.getByTestId(TEST_IDS.updaterBanner.install)).toHaveCount(0);
   });
+
+  test("a package-managed install gets a hint instead of any install action", async ({ page }) => {
+    await page.goto(AppRoute.SETTINGS);
+    await page.getByTestId(TEST_IDS.settings.tab("developer")).click();
+
+    const canAuto = page.getByTestId(TEST_IDS.settings.developer.updater.simCanAutoInstall);
+    await expect(canAuto).toBeVisible();
+    if (!(await canAuto.locator("input").isChecked())) {
+      await canAuto.click();
+    }
+    const packageManaged = page.getByTestId(TEST_IDS.settings.developer.updater.simPackageManaged);
+    await packageManaged.click();
+    await page.getByTestId(TEST_IDS.settings.developer.updater.emit).click();
+
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.root)).toBeVisible();
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.channelHint)).toBeVisible();
+    // `canAutoInstall` is on, yet the channel gate still wins.
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.install)).toHaveCount(0);
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.download)).toHaveCount(0);
+    await expect(page.getByTestId(TEST_IDS.updaterBanner.dismiss)).toBeVisible();
+  });
 });

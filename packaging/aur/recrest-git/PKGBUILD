@@ -71,9 +71,15 @@ build() {
 package() {
   cd "$pkgname"
 
-  # [[bin]] name in Cargo.toml is capitalised ("Recrest") for the macOS Dock label;
-  # on Linux the installed command is lowercase, which is what recrest.desktop's
-  # launcher wrapper execs by absolute path.
+  # [[bin]] name in Cargo.toml is capitalised ("Recrest") for the macOS Dock label,
+  # so that is the file cargo emits; on Linux the installed command is lowercase.
+  # recrest-launcher.sh does not hardcode either spelling — it probes
+  # `$APPDIR/usr/bin`, its own directory, `/usr/bin` and `/usr/local/bin` for both
+  # `Recrest` and `recrest` and execs the first hit — because the upstream
+  # .deb/.rpm/.AppImage install the capitalised name while we install the
+  # lowercase one. Renaming the binary here therefore stays purely our choice,
+  # and upstream's `mainBinaryName` is deliberately NOT set: it would rename
+  # `target/release/Recrest` for every `tauri build` and break the install below.
   install -Dm755 "app/src-tauri/target/release/Recrest" "$pkgdir/usr/bin/recrest"
   install -Dm755 "app/src-tauri/resources/recrest-launcher.sh" "$pkgdir/usr/bin/recrest-launcher"
   install -Dm644 "app/src-tauri/resources/recrest.desktop" "$pkgdir/usr/share/applications/recrest.desktop"

@@ -33,6 +33,7 @@ import {
   CustomRow,
   CustomRowActions,
   CustomTable,
+  GIT_CONFIG_ROW_STACK,
   InlineAddForm,
   InlineErrorText,
 } from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
@@ -45,6 +46,7 @@ type Direction = "insteadOf" | "pushInsteadOf";
 
 const UrlRow = styled(CustomRow)({
   gridTemplateColumns: `minmax(${pxToRem(170)}, 1.2fr) minmax(${pxToRem(180)}, 1.6fr) minmax(${pxToRem(110)}, auto) auto auto`,
+  ...GIT_CONFIG_ROW_STACK,
 }) as typeof CustomRow;
 
 const StaticLayerLabel = styled(Typography)(({ theme }) => ({

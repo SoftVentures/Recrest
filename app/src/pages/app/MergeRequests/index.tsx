@@ -35,7 +35,7 @@ import {
 } from "@/pages/app/MergeRequests/utils/mrFilters";
 import { detailKey, loadPrDetail, loadPrDiff } from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fontPxToRem, mediaDown, pxToRem, pxToRems } from "@/theme/scale";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Row {
   pr: PullRequest;
@@ -51,10 +51,14 @@ interface Group {
 
 // Flex row so the detail pane sits beside the list and pushes it left (a
 // "push" drawer, mirroring the Repositories page) instead of overlaying it.
+// `containerType` makes the pane's width ladder below query the *layout* width:
+// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
+// the unscaled viewport, so it fires at the wrong moment on scaled setups.
 const PageRoot = styled(Box)({
   display: "flex",
   height: "100%",
   minHeight: 0,
+  containerType: "inline-size",
 });
 
 const MainColumn = styled(Box)({
@@ -68,6 +72,12 @@ const MainColumn = styled(Box)({
 // Fixed-width side pane. `flexShrink: 0` keeps it from collapsing; the list
 // column shrinks to make room (the push behaviour). The MrDetailPanel inside
 // owns its own scroll + opaque background.
+//
+// The width ladder steps down twice so a narrow window hands space back to the
+// list instead of squeezing it: pure flex shrinking cannot help here (both
+// columns want width at the same time, so there is no slack to redistribute) —
+// only a smaller pane frees real estate. 280px is the floor at which the
+// panel's own header row still fits.
 const Pane = styled(Box)(({ theme }) => ({
   width: pxToRem(400),
   height: "100%",
@@ -75,8 +85,11 @@ const Pane = styled(Box)(({ theme }) => ({
   borderLeft: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
-  [mediaDown(1180, theme.uiScale)]: {
+  [`@container (max-width: ${pxToRem(1180)})`]: {
     width: pxToRem(340),
+  },
+  [`@container (max-width: ${pxToRem(1040)})`]: {
+    width: pxToRem(280),
   },
 })) as typeof Box;
 
@@ -97,6 +110,10 @@ const Toolbar = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   gap: pxToRem(12),
+  // The filter button drops below the search field rather than overflowing the
+  // page when the layout width (or the UI scale) squeezes them.
+  flexWrap: "wrap",
+  rowGap: pxToRem(8),
   padding: pxToRems(12, 24, 12, 24),
   paddingRight: `calc(${pxToRem(24)} + var(--recrest-scrollbar-width, 0px))`,
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,

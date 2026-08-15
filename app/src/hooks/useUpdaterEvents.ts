@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { UPDATER_AVAILABLE_EVENT } from "@/lib/constants/events.constants";
+import { isInstallChannel } from "@/lib/constants/updater.constants";
 import { isTauri, listen } from "@/lib/tauri";
 import { setUpdaterBanner } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
@@ -13,6 +14,7 @@ interface UpdaterAvailablePayload {
   currentVersion?: unknown;
   body?: unknown;
   canAutoInstall?: unknown;
+  installChannel?: unknown;
   downloadUrl?: unknown;
 }
 
@@ -54,6 +56,9 @@ export function useUpdaterEvents(): void {
             currentVersion: asStringOrNull(payload.currentVersion) ?? undefined,
             body: asStringOrNull(payload.body),
             canAutoInstall: payload.canAutoInstall === true,
+            installChannel: isInstallChannel(payload.installChannel)
+              ? payload.installChannel
+              : null,
             downloadUrl: asStringOrNull(payload.downloadUrl),
           }),
         );

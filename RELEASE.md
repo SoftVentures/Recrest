@@ -93,9 +93,11 @@ This is still not Apple Developer signing — you will see the unidentified-deve
 
 ## Install
 
-- **Windows** — run the `.msi`. SmartScreen will warn about an unknown publisher → **More info → Run anyway**.
-- **macOS** — open the `.dmg`, drag Recrest into Applications. On first launch, right-click the app → **Open** to get past Gatekeeper's unidentified-developer prompt.
-- **Linux** — `chmod +x Recrest_*.AppImage && ./Recrest_*.AppImage`, or install the `.deb` / `.rpm`.
+- **Windows** — run `recrest-v*-windows-x64.exe` (ARM64: `recrest-v*-windows-arm64.exe`, when present). SmartScreen will warn about an unknown publisher → **More info → Run anyway**.
+- **macOS** — open `recrest-v*-mac-arm64.dmg` (Apple Silicon) or `recrest-v*-mac-x64.dmg` (Intel), drag Recrest into Applications. On first launch, right-click the app → **Open** to get past Gatekeeper's unidentified-developer prompt.
+- **Linux** — `chmod +x recrest-v*-linux-x64.AppImage && ./recrest-v*-linux-x64.AppImage`, or install `recrest-v*-linux-x64.deb` / `recrest-v*-linux-x64.rpm`.
+
+The `Recrest_*` assets (plus `.sig` files and `latest.json`) are the auto-updater payloads, not hand-download files.
 
 Already on 0.10.x? The in-app updater picks this release up automatically on next launch (or via **Settings → Updates → Check for updates**). The signing key and endpoint are unchanged, so it verifies and installs without a manual reinstall.
 

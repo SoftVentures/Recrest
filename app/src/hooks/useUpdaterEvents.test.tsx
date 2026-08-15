@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useUpdaterEvents } from "@/hooks/useUpdaterEvents";
 import { UPDATER_AVAILABLE_EVENT } from "@/lib/constants/events.constants";
+import { INSTALL_CHANNEL } from "@/lib/constants/updater.constants";
 import type { RootState } from "@/store";
 import { makeTestStore } from "@/test/utils";
 
@@ -78,6 +79,7 @@ describe("useUpdaterEvents", () => {
       currentVersion: "1.3.2",
       body: "notes",
       canAutoInstall: false,
+      installChannel: INSTALL_CHANNEL.BUNDLE,
       downloadUrl: "https://example.test/recrest-v1.4.0-mac-arm64.dmg",
     });
 
@@ -86,8 +88,31 @@ describe("useUpdaterEvents", () => {
       currentVersion: "1.3.2",
       body: "notes",
       canAutoInstall: false,
+      installChannel: INSTALL_CHANNEL.BUNDLE,
       downloadUrl: "https://example.test/recrest-v1.4.0-mac-arm64.dmg",
     });
+  });
+
+  it("keeps a package-managed channel from the payload", async () => {
+    const { store } = await mountHook();
+
+    await emit({
+      version: "1.4.0",
+      canAutoInstall: false,
+      installChannel: INSTALL_CHANNEL.SYSTEM_PACKAGE,
+    });
+
+    expect(store.getState().ui.updaterBanner?.installChannel).toBe(INSTALL_CHANNEL.SYSTEM_PACKAGE);
+  });
+
+  it("drops an install channel it doesn't know", async () => {
+    const { store } = await mountHook();
+
+    // A future backend value must degrade to "no hint", never leak into the
+    // hint lookup as an undefined i18n key.
+    await emit({ version: "1.4.0", canAutoInstall: false, installChannel: "pacman" });
+
+    expect(store.getState().ui.updaterBanner?.installChannel).toBeNull();
   });
 
   it("normalises the nullable plugin-path fields", async () => {
@@ -106,6 +131,7 @@ describe("useUpdaterEvents", () => {
       currentVersion: "1.3.2",
       body: null,
       canAutoInstall: true,
+      installChannel: null,
       downloadUrl: null,
     });
   });

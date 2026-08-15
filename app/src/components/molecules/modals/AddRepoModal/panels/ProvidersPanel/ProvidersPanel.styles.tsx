@@ -9,7 +9,11 @@ import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const ProvidersGrid = styled(Box)({
   display: "grid",
-  gridTemplateColumns: `${pxToRem(280)} 1fr`,
+  // The aside gives up width down to 200px before the repo list starts
+  // shrinking, and `minmax(0, 1fr)` lets the list shrink past its own
+  // min-content instead of pushing the modal wider than the viewport.
+  gridTemplateColumns: `minmax(${pxToRem(200)}, ${pxToRem(280)}) minmax(0, 1fr)`,
+  minWidth: 0,
   height: "100%",
 }) as typeof Box;
 

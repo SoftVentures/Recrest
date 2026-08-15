@@ -29,6 +29,7 @@ import {
   CustomRow,
   CustomRowActions,
   CustomTable,
+  GIT_CONFIG_ROW_STACK,
   InlineAddForm,
   InlineErrorText,
 } from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
@@ -37,6 +38,7 @@ import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const CustomRowFour = styled(CustomRow)({
   gridTemplateColumns: `minmax(${pxToRem(140)}, 1fr) minmax(${pxToRem(220)}, 2.2fr) auto auto`,
+  ...GIT_CONFIG_ROW_STACK,
 }) as typeof CustomRow;
 
 const ErrorText = styled(Typography)(({ theme }) => ({

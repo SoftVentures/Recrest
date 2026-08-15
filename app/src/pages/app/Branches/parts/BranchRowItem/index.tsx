@@ -213,7 +213,10 @@ export default BranchRowItem;
 
 const Row = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: `${pxToRem(8)} minmax(0, 1fr) minmax(0, 1.2fr) ${pxToRem(280)}`,
+  // The action column concedes down to 220px — the width its widest
+  // combination (three short row buttons + the kebab) still needs — instead of
+  // pinning 280px and starving the name/meta columns on a narrow window.
+  gridTemplateColumns: `${pxToRem(8)} minmax(0, 1fr) minmax(0, 1.2fr) minmax(${pxToRem(220)}, ${pxToRem(280)})`,
   alignItems: "center",
   columnGap: pxToRem(12),
   padding: pxToRems(10, 16),

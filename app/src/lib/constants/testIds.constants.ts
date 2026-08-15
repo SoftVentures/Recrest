@@ -468,6 +468,7 @@ export const TEST_IDS = {
         endpointOverride: "dev-updater-endpoint-override",
         simVersion: "dev-updater-sim-version",
         simCanAutoInstall: "dev-updater-sim-can-auto-install",
+        simPackageManaged: "dev-updater-sim-package-managed",
         emit: "dev-updater-emit",
         resetLastSeen: "dev-updater-reset-last-seen",
       },
@@ -517,6 +518,7 @@ export const TEST_IDS = {
     download: "updater-banner-download",
     dismiss: "updater-banner-dismiss",
     progress: "updater-banner-progress",
+    channelHint: "updater-banner-channel-hint",
   },
 
   confirmDialog: {
@@ -682,7 +684,6 @@ export const TEST_IDS = {
     providerPick: <T extends string>(id: T) => `onboarding-provider-pick-${id}` as const,
     providerToken: "onboarding-provider-token",
     providerUsername: "onboarding-provider-username",
-    providerTokenHelp: "onboarding-provider-token-help",
     providerSelfHosted: "onboarding-provider-self-hosted",
     providerBaseUrl: "onboarding-provider-base-url",
     providerBaseUrlSave: "onboarding-provider-base-url-save",

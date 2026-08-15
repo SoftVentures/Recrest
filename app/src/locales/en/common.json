@@ -30,7 +30,10 @@
     "installing": "Installing…",
     "installing_percent": "Installing… {{percent}}%",
     "install_failed": "Update couldn't be installed. Download it manually from the release page.",
-    "download_failed": "The download page couldn't be opened."
+    "download_failed": "The download page couldn't be opened.",
+    "channel_hint_system_package": "Update available through your package manager.",
+    "channel_hint_flatpak": "Update available through Flatpak.",
+    "channel_hint_snap": "Update available through Snap."
   },
   "nav": {
     "dashboard": "Dashboard",
