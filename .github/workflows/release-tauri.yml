@@ -151,6 +151,34 @@ jobs:
           check_version "app/src-tauri/Cargo.toml" \
             "$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)"[[:space:]]*#[[:space:]]*x-release-please-version.*/\1/p' app/src-tauri/Cargo.toml | head -n1 || true)"
 
+          # AppStream. release-please does not know this file, so nothing bumps
+          # it automatically. GNOME Software, KDE Discover and the Flathub
+          # linter all read the newest <release> entry, so a metainfo left
+          # behind at the previous version advertises stale release notes to
+          # every Linux user — and on Flathub a missing entry for the shipped
+          # version is a lint failure. Only the first (newest) entry is
+          # asserted; the history below it is meant to stay as it is.
+          metainfo="app/src-tauri/resources/eu.softventures.recrest.metainfo.xml"
+          if [ ! -f "$metainfo" ]; then
+            echo "::error::$metainfo is missing — the deb/rpm/AppImage bundles reference it by path and would fail to build."
+            rc=1
+          else
+            check_version "$metainfo (newest <release>)" \
+              "$(sed -n 's/.*<release[[:space:]][^>]*version="\([^"]*\)".*/\1/p' "$metainfo" | head -n1 || true)"
+
+            # Screenshots stay pinned to a tag on purpose: AppStream needs a
+            # URL that keeps serving the exact image a given release was
+            # reviewed with, and Flathub rejects branch refs for that reason.
+            # An older tag is therefore still a *valid* URL, which is why this
+            # is a warning and not a gate — pinning every screenshot to every
+            # patch release would be pure churn. Bump them when the UI in the
+            # image no longer matches what ships (docs/RELEASE.md step 2).
+            shot_tag="$(sed -n 's#.*raw\.githubusercontent\.com/[^/]*/[^/]*/\(v[0-9][^/]*\)/.*#\1#p' "$metainfo" | head -n1 || true)"
+            if [ -n "$shot_tag" ] && [ "$shot_tag" != "$TAG" ]; then
+              echo "::warning file=${metainfo}::screenshots are pinned to ${shot_tag}, not ${TAG}. That URL still resolves, but the images show an older UI — refresh them if the app has changed visibly."
+            fi
+          fi
+
           exit $rc
 
   # Generates the NSIS / DMG branding bitmaps from the SVG sources once on

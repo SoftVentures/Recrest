@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures/landing.fixture.js";
-import { EXPECTED_APP_VERSION, RELEASES_LATEST_URL, REPO_URL } from "../../helpers/constants.js";
+import { DOWNLOAD_ROUTE_HASH, EXPECTED_APP_VERSION, REPO_URL } from "../../helpers/constants.js";
 import { LANDING_COPY } from "../../helpers/selectors.js";
 
 test.describe("landing / hero", () => {
-  // Pin the UA so the primary CTA stays on the fallback release URL across
-  // every landing project (desktop Chrome → Linux, mobile → Mac, etc.). The
-  // OS-specific asset-URL branches are exercised in 05-download-button.
+  // Pin the UA so nothing here depends on the runner's platform. OS detection
+  // no longer touches the hero CTA at all — it only highlights a card on the
+  // download page, which 05-download-button covers.
   test.use({ fakeUserAgent: "Mozilla/5.0 (PlayStation 5) AppleWebKit/605" });
 
   test("renders EN title, version + both primary CTAs", async ({ page }) => {
@@ -19,10 +19,11 @@ test.describe("landing / hero", () => {
     await expect(versionTokens.first()).toBeVisible();
     expect(await versionTokens.count()).toBeGreaterThanOrEqual(2);
 
-    // Download CTA (primary) inside the hero links to /releases/latest.
+    // Download CTA (primary) inside the hero opens the in-page download view.
     const downloadCta = page.locator(".hero-cta a.btn.btn-primary").first();
     await expect(downloadCta).toBeVisible();
-    await expect(downloadCta).toHaveAttribute("href", RELEASES_LATEST_URL);
+    await expect(downloadCta).toHaveText(LANDING_COPY.en.hero.downloadFallback);
+    await expect(downloadCta).toHaveAttribute("href", DOWNLOAD_ROUTE_HASH);
 
     // Star on GitHub CTA points at the repo root.
     const starCta = page.getByRole("link", { name: /Star on GitHub/i });

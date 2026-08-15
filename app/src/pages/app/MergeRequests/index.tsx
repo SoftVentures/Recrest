@@ -50,10 +50,14 @@ interface Group {
 
 // Flex row so the detail pane sits beside the list and pushes it left (a
 // "push" drawer, mirroring the Repositories page) instead of overlaying it.
+// `containerType` makes the pane's width ladder below query the *layout* width:
+// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
+// the unscaled viewport, so it fires at the wrong moment on scaled setups.
 const PageRoot = styled(Box)({
   display: "flex",
   height: "100%",
   minHeight: 0,
+  containerType: "inline-size",
 });
 
 const MainColumn = styled(Box)({
@@ -67,6 +71,12 @@ const MainColumn = styled(Box)({
 // Fixed-width side pane. `flexShrink: 0` keeps it from collapsing; the list
 // column shrinks to make room (the push behaviour). The MrDetailPanel inside
 // owns its own scroll + opaque background.
+//
+// The width ladder steps down twice so a narrow window hands space back to the
+// list instead of squeezing it: pure flex shrinking cannot help here (both
+// columns want width at the same time, so there is no slack to redistribute) —
+// only a smaller pane frees real estate. 280px is the floor at which the
+// panel's own header row still fits.
 const Pane = styled(Box)(({ theme }) => ({
   width: 400,
   height: "100%",
@@ -74,8 +84,11 @@ const Pane = styled(Box)(({ theme }) => ({
   borderLeft: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
-  "@media (max-width: 1180px)": {
+  "@container (max-width: 1180px)": {
     width: 340,
+  },
+  "@container (max-width: 1040px)": {
+    width: 280,
   },
 })) as typeof Box;
 
@@ -96,6 +109,10 @@ const Toolbar = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
+  // The filter button drops below the search field rather than overflowing the
+  // page when the layout width (or the UI scale) squeezes them.
+  flexWrap: "wrap",
+  rowGap: 8,
   padding: "12px 24px 12px 24px",
   paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,

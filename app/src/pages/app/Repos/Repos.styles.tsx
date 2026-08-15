@@ -8,10 +8,14 @@ import {
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
 
+// `containerType` lets DetailPane's width ladder query the *layout* width:
+// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
+// the unscaled viewport, so it fires at the wrong moment on scaled setups.
 export const PageRoot = styled(Box)({
   display: "flex",
   height: "100%",
   minHeight: 0,
+  containerType: "inline-size",
 }) as typeof Box;
 
 export const MainColumn = styled(Box)({
@@ -27,6 +31,10 @@ export const ToolbarRow = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
+  // The view toggle and the filter button drop onto a second line rather than
+  // overflowing the page when the layout width (or the UI scale) squeezes them.
+  flexWrap: "wrap",
+  rowGap: 8,
   // Right padding compensates for the page-scroll gutter so the toolbar's
   // right edge lines up with the table inside the scroll surface.
   padding: "12px 24px",

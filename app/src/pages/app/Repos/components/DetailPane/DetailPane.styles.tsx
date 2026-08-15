@@ -4,6 +4,12 @@ import { styled } from "@mui/material/styles";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
 
+// The width ladder steps down twice so a narrow window hands space back to the
+// repo table (whose 800px floor otherwise forces the deliberate horizontal
+// scroller in `ListScroll` much earlier than necessary). Flex shrinking is not
+// the lever here — both columns want width simultaneously, so there is no slack
+// to redistribute; only a narrower pane frees real estate. The steps are
+// container queries, not media queries, because `#root` is `zoom`ed.
 export const Pane = styled(Box)(({ theme }) => ({
   width: 360,
   flexShrink: 0,
@@ -12,8 +18,11 @@ export const Pane = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   overflow: "auto",
-  "@media (max-width: 1180px)": {
+  "@container (max-width: 1180px)": {
     width: 320,
+  },
+  "@container (max-width: 1040px)": {
+    width: 288,
   },
 })) as typeof Box;
 

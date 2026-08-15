@@ -47,6 +47,9 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setSelectedRepo } from "@/store/reducers/uiReducer";
 
+// `containerType` so the two grids below can step down on the *layout* width:
+// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
+// the unscaled viewport, so it fires at the wrong moment on scaled setups.
 const Root = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -57,21 +60,34 @@ const Root = styled(Box)(({ theme }) => ({
   minHeight: 0,
   overflowY: "auto",
   scrollbarGutter: "stable",
+  containerType: "inline-size",
 })) as typeof Box;
 
+// `minmax(0, 1fr)`, not a bare `1fr`: `1fr` is `minmax(auto, 1fr)`, so a KPI
+// with a long number or a long German label would push the track past its share
+// and overflow the page. Four tiles across stop being readable well before the
+// window does, so they fold to two rows first.
 const Kpis = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
   gap: 12,
   animation: `${pgZoom} ${PAGE_DUR_MD}ms ${PAGE_EASE} both`,
+  "@container (max-width: 900px)": {
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  },
   ...prefersReducedMotionGuard,
 }) as typeof Box;
 
+// Same `minmax(0, …)` reasoning; the sidebar column collapses under the main
+// column once 1/3 of the width can no longer hold a card.
 const Grid = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "2fr 1fr",
+  gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)",
   gridAutoRows: "min-content",
   gap: 12,
+  "@container (max-width: 860px)": {
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
   "& > *": {
     animation: `${pgRise} ${PAGE_DUR_MD}ms ${PAGE_EASE} both`,
     animationDelay: "220ms",

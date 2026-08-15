@@ -4,7 +4,9 @@
 //! fails at runtime (e.g. missing `latest.json`, signature mismatch, network
 //! hiccup). We just surface a notification — the user clicks through to the
 //! platform asset and installs manually. No signature verification on this
-//! path; that's why `canAutoInstall` is always `false`.
+//! path; that's why `canAutoInstall` is always `false`. The install channel
+//! still rides along so the banner can say *why* there is no install button
+//! on a package-managed install (see `update::channel`).
 
 use std::sync::OnceLock;
 
@@ -100,6 +102,7 @@ pub async fn check_latest(app: AppHandle, override_url: Option<String>) {
             "currentVersion": current,
             "body": body_text,
             "canAutoInstall": false,
+            "installChannel": super::channel::current_channel(),
             "downloadUrl": download_url,
         }),
     );

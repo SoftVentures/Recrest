@@ -13,6 +13,30 @@
 
     <!-- Fonts are self-hosted via @fontsource (see src/main.tsx); no external
          font CDN is contacted, so no visitor IP leaves our origin. -->
+
+    <!-- Anti-flash: stamp the resolved theme before any module loads. This
+         mirrors `useTheme`'s `readInitial()` (and duplicates its storage key —
+         the same sanctioned exception the app's index.html carries, because
+         this runs before any import). Without it the first React render always
+         sees `data-theme="light"`, and `HeroDemo` bakes that stale value into
+         the demo iframe's `?theme=` param, so a dark visitor's demo boots
+         light and only flips once the postMessage bridge catches up. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("recrest-landing-theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+          void e;
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

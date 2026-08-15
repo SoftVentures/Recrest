@@ -17,6 +17,7 @@ export * from "./constants/sort-keys.js";
 export * from "./constants/storage-keys.js";
 export * from "./constants/terminal.js";
 export * from "./constants/ui.js";
+export * from "./constants/updater.js";
 
 export * from "./types/activity.js";
 export * from "./types/ci.js";

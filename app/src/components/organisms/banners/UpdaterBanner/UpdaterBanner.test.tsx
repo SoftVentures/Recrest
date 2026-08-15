@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import UpdaterBanner from "@/components/organisms/banners/UpdaterBanner";
 import { UPDATER_PROGRESS_EVENT } from "@/lib/constants/events.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { INSTALL_CHANNEL } from "@/lib/constants/updater.constants";
 import type { UpdaterBannerState } from "@/store/types/ui.types";
 import { makeTestStore, renderWithProviders } from "@/test/utils";
 
@@ -41,6 +42,17 @@ const MANUAL_BANNER: UpdaterBannerState = {
   body: null,
   canAutoInstall: false,
   downloadUrl: "https://example.test/recrest-v1.4.0-windows-x64.exe",
+};
+
+/** What a Flatpak/Snap/distro install reports: the version notice is welcome,
+ *  the in-app install is not ours to run. */
+const PACKAGE_MANAGED_BANNER: UpdaterBannerState = {
+  version: "1.4.0",
+  currentVersion: "1.3.2",
+  body: null,
+  canAutoInstall: false,
+  installChannel: INSTALL_CHANNEL.SYSTEM_PACKAGE,
+  downloadUrl: "https://example.test/recrest-v1.4.0-linux-x64.deb",
 };
 
 function renderBanner(banner: UpdaterBannerState) {
@@ -143,6 +155,35 @@ describe("UpdaterBanner", () => {
     const { queryByTestId } = renderBanner({ ...MANUAL_BANNER, downloadUrl: null });
     expect(queryByTestId(TEST_IDS.updaterBanner.download)).toBeNull();
     expect(queryByTestId(TEST_IDS.updaterBanner.dismiss)).toBeTruthy();
+  });
+
+  it("replaces every install action with a channel hint on a package-managed install", () => {
+    const { getByTestId, queryByTestId } = renderBanner(PACKAGE_MANAGED_BANNER);
+
+    expect(getByTestId(TEST_IDS.updaterBanner.channelHint)).toBeTruthy();
+    expect(queryByTestId(TEST_IDS.updaterBanner.install)).toBeNull();
+    expect(queryByTestId(TEST_IDS.updaterBanner.download)).toBeNull();
+    // The version notice and the dismiss affordance stay — knowing about the
+    // update is the point.
+    expect(getByTestId(TEST_IDS.updaterBanner.root).textContent).toContain("1.4.0");
+    expect(getByTestId(TEST_IDS.updaterBanner.dismiss)).toBeTruthy();
+  });
+
+  it("never offers an install on a package-managed install, even if the backend said it could", () => {
+    // Belt and braces: a stale `canAutoInstall: true` must not win over the
+    // channel gate.
+    const { queryByTestId } = renderBanner({ ...PACKAGE_MANAGED_BANNER, canAutoInstall: true });
+    expect(queryByTestId(TEST_IDS.updaterBanner.install)).toBeNull();
+    expect(queryByTestId(TEST_IDS.updaterBanner.channelHint)).toBeTruthy();
+  });
+
+  it("keeps the install button on a self-updating channel", () => {
+    const { getByTestId, queryByTestId } = renderBanner({
+      ...AUTO_INSTALL_BANNER,
+      installChannel: INSTALL_CHANNEL.APP_IMAGE,
+    });
+    expect(getByTestId(TEST_IDS.updaterBanner.install)).toBeTruthy();
+    expect(queryByTestId(TEST_IDS.updaterBanner.channelHint)).toBeNull();
   });
 
   it("clears the banner when dismiss is clicked", () => {

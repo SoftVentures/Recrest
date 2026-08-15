@@ -142,6 +142,36 @@ jobs:
       - name: cargo test
         run: cargo test --manifest-path app/src-tauri/Cargo.toml
 
+      # Everything above runs in the dev profile, so `#[cfg(not(debug_assertions))]`
+      # blocks are never type-checked by it — crash reporting, the updater plugin
+      # registration and the update scheduler all live behind that gate. A sentry
+      # 0.48 -> 0.49 bump made `ClientOptions` `#[non_exhaustive]` and broke the
+      # struct expression at `lib.rs:739` (E0639); fmt, clippy and test all stayed
+      # green and the break would only have surfaced in the release matrix, where
+      # `continue-on-error: true` turns it into a silently missing installer —
+      # exactly the failure mode this workflow exists to prevent.
+      #
+      # `check` rather than `build` or `clippy`: it is the cheapest form that still
+      # compiles the gated code. It needs its own profile artifacts, so it is a
+      # second cold compile of the dependency tree on a cache miss — acceptable
+      # because it is the only thing standing between a release-only compile error
+      # and a broken release.
+      #
+      # Linux only, for the same cost reason as the matrix itself (see the header).
+      # Unconditionally this would add a *second* separately-fingerprinted cold
+      # build of ~700 crates to every leg on each push to `main`/`develop`, on top
+      # of the debug build already in the same job and inside the same
+      # `timeout-minutes: 60` — at the 10×/2× minute multipliers macOS and Windows
+      # carry. The error class it catches is platform-independent: what is gated is
+      # `#[cfg(not(debug_assertions))]`, not `#[cfg(target_os)]`, and the sentry
+      # E0639 that motivated the step would have been caught by the Linux leg
+      # alone. A release-profile break that is *also* platform-specific is the one
+      # gap this leaves, and it still surfaces before publishing via the release
+      # matrix's own `verify-release` gate.
+      - name: cargo check --release
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path app/src-tauri/Cargo.toml --release
+
   # Aggregate check so Branch Protection can reference one stable name instead
   # of the expanded matrix leg names (which change with the event type — see
   # the matrix expression above). Mirrors `ci-pass` in ci.yml.

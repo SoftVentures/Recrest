@@ -124,6 +124,10 @@ const RepoPath = styled(Typography)(({ theme }) => ({
   textOverflow: "ellipsis",
 })) as typeof Typography;
 
+// Every other item in `RowHeader` is `flexShrink: 0`, so a long ref (a
+// dependabot or feature/JIRA-1234-… branch) used to push the diff counts and
+// the action buttons out of the card's `overflow: hidden`. The chip now shrinks
+// and truncates instead; `maxWidth` keeps it from eating the repo name first.
 const BranchChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -135,7 +139,16 @@ const BranchChip = styled(Box)(({ theme }) => ({
   color: theme.palette.text.primary,
   fontSize: 11,
   fontWeight: 500,
-  flexShrink: 0,
+  flex: "0 1 auto",
+  minWidth: 0,
+  maxWidth: 240,
+  overflow: "hidden",
+  "& > span": {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
 })) as typeof Box;
 
 const DiffMeta = styled(Box)({
@@ -157,6 +170,9 @@ const Removed = styled(Box)(({ theme }) => ({
   fontWeight: 600,
 })) as typeof Box;
 
+// No ellipsis companion to `nowrap` on purpose: this is a two-token count
+// ("12 files" / "12 Dateien") where "12 fi…" would be worse than the whole
+// label. The row's slack comes from `NameCol` and the truncating `BranchChip`.
 const FilesMeta = styled(Typography)(({ theme }) => ({
   fontSize: 11,
   color: theme.palette.text.information,

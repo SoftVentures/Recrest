@@ -299,6 +299,14 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
           SEED.repos[i] = { ...SEED.repos[i], logoPath: "stub://logo/" + SEED.repos[i].id, logoIsCustom: true };
         return SEED.repos[i] || null;
       }
+      case "set_repo_logo_svg": {
+        // The avatar designer posts SVG markup; the backend writes it and hands
+        // back the refreshed RepoDto, so mirror set_repo_logo's shape.
+        const i = SEED.repos.findIndex((r) => r.id === (args && args.repoId));
+        if (i >= 0)
+          SEED.repos[i] = { ...SEED.repos[i], logoPath: "stub://logo/" + SEED.repos[i].id + ".svg", logoIsCustom: true };
+        return SEED.repos[i] || null;
+      }
       case "clear_repo_logo": {
         const i = SEED.repos.findIndex((r) => r.id === (args && args.repoId));
         if (i >= 0) SEED.repos[i] = { ...SEED.repos[i], logoPath: null, logoIsCustom: false };
@@ -420,6 +428,34 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       case "detect_terminals":
       case "detect_shells":
         return [];
+      // Bundle/registry discovery. \`get_platform_info\` above reports Windows,
+      // so return the Windows-shaped LaunchSpec ("executable") to stay
+      // internally consistent. The vscode entry also keeps the seeded
+      // \`settings.ide\` value inside the picker's option list.
+      case "list_ides":
+        return [
+          {
+            kind: "ide",
+            id: "vscode",
+            displayName: "Visual Studio Code",
+            iconPath: null,
+            launchCommand: { kind: "executable", binary: "Code.exe", args: [] },
+          },
+        ];
+      case "list_terminals":
+        return [
+          {
+            kind: "terminal",
+            id: "windows-terminal",
+            displayName: "Windows Terminal",
+            iconPath: null,
+            launchCommand: { kind: "executable", binary: "wt.exe", args: [] },
+          },
+        ];
+      // The real command spawns a process; there is none to spawn here, so the
+      // happy path (resolve with no payload) is the closest honest behaviour.
+      case "test_custom_terminal":
+        return undefined;
       case "load_logo_bytes":
         return null;
       case "open_in_ide":
@@ -535,6 +571,23 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
       }
       case "clear_provider_token":
         return undefined;
+      case "ping_provider": {
+        // No network here, so mirror the one branch the Rust command can decide
+        // without one (empty base URL) and treat everything else as a healthy
+        // provider endpoint.
+        const baseUrl = String((args && args.baseUrl) || "").trim();
+        if (!baseUrl)
+          return { reachable: false, looksLikeProvider: false, version: null, error: "empty base url" };
+        return { reachable: true, looksLikeProvider: true, version: null, error: null };
+      }
+      case "verify_credentials": {
+        // \`VerifiedAccount { login }\`. An empty token is the only failure the
+        // stub can judge offline; it throws the serialized ProviderVerifyError
+        // shape so the renderer's catch branch sees what Tauri would deliver.
+        const id = (args && args.provider) || "github";
+        if (!String((args && args.token) || "").trim()) throw { kind: "unauthorized" };
+        return { login: (args && args.username) || id + "-user" };
+      }
       case "fetch_pull_requests":
         return (SEED.prs && SEED.prs[args?.repoId]) || [];
       case "get_pr_detail": {
@@ -609,6 +662,13 @@ export function buildTauriStub(seed: Required<AppSeed>): string {
         return null;
       case "check_git":
         return { installed: true, version: "2.44.0" };
+      // Translucency is a compositor-level effect (macOS vibrancy / Windows
+      // Acrylic). \`get_platform_info\` reports Windows here, so report it
+      // supported and no-op the apply — there is no OS window to blur.
+      case "supports_translucency":
+        return true;
+      case "set_translucency":
+        return undefined;
       case "get_system_facts":
         return {
           os: "test",

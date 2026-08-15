@@ -77,20 +77,29 @@ when bumping.
 Then push to the AUR remotes (`ssh://aur@aur.archlinux.org/<pkgname>.git`), which
 only accept `PKGBUILD` + `.SRCINFO` + any local files, not this README.
 
-## Known caveat: the in-app updater
+## The in-app updater on a pacman install
 
 `tauri.conf.json` enables `tauri-plugin-updater`, and `src/update/github.rs` adds
 a GitHub-Releases fallback check, so a pacman-installed Recrest still surfaces
-"an update is available" notices pointing at upstream artifacts.
+"an update is available" notice pointing at upstream artifacts. That notice is
+intentional — knowing a new version exists is useful even when pacman owns the
+upgrade.
 
-It is worse than a cosmetic notice: `src/update/mod.rs` emits
-`updater://available` with `"canAutoInstall": true` unconditionally, so the
-banner offers an **Install** action. Taking it calls `update.download_and_install`,
-which on a Linux install that is not an AppImage fails — and the failure is only
-logged (`tracing::warn!("updater: download_and_install failed")`). To the user
-the button does nothing at all, with no error surfaced.
+What used to be a real problem was the **Install** action next to it:
+`src/update/mod.rs` emitted `"canAutoInstall": true` unconditionally, so the
+banner offered an in-place install that `update.download_and_install` cannot
+perform on a package-managed prefix. (The explicit button did report that
+failure — `commands/update.rs` propagates the error, the banner turns it into a
+toast; only the _automatic_ `auto_install` path swallowed it in a
+`tracing::warn!`.)
 
-Neither PKGBUILD patches that out — it is upstream behaviour, and disabling it
-would mean editing the config at package time. The real fix belongs upstream:
-gate `canAutoInstall` on the install being an AppImage, and report the failure to
-the frontend instead of swallowing it. AUR users should update via pacman.
+`src/update/channel.rs` now classifies the installation before anything is
+offered. A binary resolving into `/usr/bin`, `/opt`, `/nix/store` … without the
+AppImage runtime's `APPIMAGE`/`APPDIR` is reported as `systemPackage`, which
+means: `canAutoInstall` is `false`, the auto-install path does not download
+anything, `install_update` rejects the call, and the banner replaces both the
+Install and the Download button with "Update available through your package
+manager". Only AppImage (plus macOS/Windows bundles) stays self-updating.
+
+So neither PKGBUILD has to patch anything out, and AUR users get the notice
+without a button that fights pacman.

@@ -14,3 +14,4 @@ export * from "@/lib/constants/statusChips.constants";
 export * from "@/lib/constants/storage.constants";
 export * from "@/lib/constants/testIds.constants";
 export * from "@/lib/constants/theme.constants";
+export * from "@/lib/constants/updater.constants";

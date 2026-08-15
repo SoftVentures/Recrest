@@ -1,7 +1,10 @@
+import type { Page } from "@playwright/test";
+
 import { AppRoute } from "@recrest/shared";
 
-import { scanA11y } from "../../fixtures/a11y.fixture.js";
+import { type AxeScanResult, scanA11y } from "../../fixtures/a11y.fixture.js";
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { SEED_SETTINGS, SEED_SETTINGS_DARK } from "../../helpers/seed/index.js";
 
 interface RouteSpec {
   path: string;
@@ -43,25 +46,55 @@ const ROUTES: readonly RouteSpec[] = [
   { path: AppRoute.MERGE_REQUESTS, label: "merge-requests" },
 ];
 
-test.describe("app / a11y", () => {
+async function scanRoute(page: Page, route: RouteSpec): Promise<AxeScanResult> {
+  // `PageTransition` fades the whole route in over a 320ms CSS *transition*.
+  // Overriding `transition-duration` after `goto` cannot retarget a
+  // transition that already started, so axe used to sample the page at an
+  // arbitrary opacity (~0.4–0.95) and flatten every foreground colour
+  // against the background — inventing colour-contrast violations that
+  // don't exist in the resting state. Reduced motion makes the component
+  // render its final state immediately, so the scan sees real colours.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(route.path);
+  // Belt-and-braces for the CSS keyframe reveals (those *do* honour a
+  // late duration override) so nothing else is mid-flight at scan time.
+  await page.addStyleTag({
+    content:
+      "*, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0ms !important; transition-duration: 0.001ms !important; }",
+  });
+  return scanA11y(page, undefined, route.disabledRules ?? []);
+}
+
+function registerRouteScans(mode: "light" | "dark"): void {
   for (const r of ROUTES) {
-    test(`axe-core: no critical/serious violations on ${r.label}`, async ({ page }) => {
-      await page.goto(r.path);
-      // Kill entrance animations/transitions before scanning. Mid-fade opacity
-      // on the staggered-reveal animations transiently lowers text contrast,
-      // which flakes the color-contrast rule against an otherwise-passing page.
-      await page.addStyleTag({
-        content:
-          "*, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0ms !important; transition-duration: 0.001ms !important; }",
-      });
-      const result = await scanA11y(page, undefined, r.disabledRules ?? []);
+    test(`axe-core: no critical/serious violations on ${r.label} (${mode})`, async ({ page }) => {
+      const result = await scanRoute(page, r);
+      // The seeded theme is applied by `useThemeEffect` after boot; assert it
+      // landed before trusting the scan, otherwise a silent fallback to light
+      // would make the dark run a duplicate of the light one.
+      await expect(page.locator("html")).toHaveAttribute("data-theme", mode, { timeout: 5_000 });
       if (result.blocking > 0) {
         console.log(
-          `[a11y ${r.label}] blocking=${result.blocking}`,
+          `[a11y ${mode} ${r.label}] blocking=${result.blocking}`,
           JSON.stringify(result.violations, null, 2),
         );
       }
-      expect(result.blocking, `critical+serious on ${r.label}`).toBe(0);
+      expect(result.blocking, `critical+serious on ${r.label} (${mode})`).toBe(0);
     });
   }
+}
+
+test.describe("app / a11y", () => {
+  // Both modes get the same sweep: the palettes are independent token sets, so
+  // a contrast fix in one says nothing about the other. Running light only is
+  // what let DARK_THEME_COLORS.INK_4 drift below AA unnoticed.
+  test.describe("light", () => {
+    test.use({ seed: { settings: SEED_SETTINGS } });
+    registerRouteScans("light");
+  });
+
+  test.describe("dark", () => {
+    test.use({ seed: { settings: SEED_SETTINGS_DARK } });
+    registerRouteScans("dark");
+  });
 });

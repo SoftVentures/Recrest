@@ -47,6 +47,22 @@ pub async fn install_update(app: AppHandle) -> Result<(), CommandError> {
     use tauri::Emitter;
     use tauri_plugin_updater::UpdaterExt;
 
+    // Defense in depth: the banner already hides the button on a
+    // package-managed install, but the command stays reachable (dev tools, the
+    // Developer tab). Failing here surfaces a toast instead of silently
+    // fighting dpkg/pacman over the same files.
+    let install_channel = crate::update::channel::current_channel();
+    if !install_channel.can_self_install() {
+        let hint = if install_channel.is_package_managed() {
+            "update through your package manager"
+        } else {
+            "download the new version manually"
+        };
+        return Err(CommandError::bad_request(format!(
+            "in-app install is disabled for this installation ({install_channel:?}); {hint}"
+        )));
+    }
+
     let updater = app
         .updater()
         .map_err(|e| CommandError::internal(format!("updater init: {e}")))?;

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 SoftVentures -->
+<component type="desktop-application">
+  <id>eu.softventures.recrest</id>
+
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Recrest</name>
+  <summary>Developer dashboard for local repos, pull requests and CI</summary>
+
+  <developer id="eu.softventures">
+    <name translate="no">SoftVentures</name>
+  </developer>
+
+  <description>
+    <p>
+      Recrest surfaces every git repository on your machine, its working-tree status, the open pull
+      requests that belong to it, and the CI checks that gate them — in one native desktop window
+      instead of a browser, a terminal and three Electron apps.
+    </p>
+    <p>
+      Repositories are read directly from disk, so the local view keeps working offline. Nothing is
+      sent anywhere unless you open a remote pull request: there is no telemetry, no cloud sync and
+      no Recrest server. Access tokens are stored in the operating system keyring, never on disk in
+      plain text.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Filesystem scan for local repositories with live branch, ahead/behind and dirty state</li>
+      <li>Pull and merge requests from GitHub, GitLab and Bitbucket, with diffs and inline comments</li>
+      <li>CI and pipeline runs, workflow triggers, and deployment status per repository</li>
+      <li>Activity insights: commit history, author leaderboards, streaks, time-to-merge and a language breakdown, all computed locally</li>
+      <li>Command palette and keyboard-first navigation</li>
+      <li>Light, dark and system themes; English and German user interface</li>
+      <li>Built to WCAG 2.1 AA</li>
+    </ul>
+    <p>
+      Authentication uses personal access tokens (GitHub, GitLab) or app passwords (Bitbucket).
+      OAuth is not available yet.
+    </p>
+  </description>
+
+  <!-- The Tauri bundler derives this name from productName and it is not
+       configurable: tauri-bundler freedesktop/mod.rs:106 (tauri-cli-v2.10.1)
+       formats "{product_name}.desktop", so deb/rpm/AppImage install
+       /usr/share/applications/Recrest.desktop. -->
+  <launchable type="desktop-id">Recrest.desktop</launchable>
+
+  <url type="homepage">https://softventures.github.io/Recrest/</url>
+  <url type="bugtracker">https://github.com/SoftVentures/Recrest/issues</url>
+  <url type="vcs-browser">https://github.com/SoftVentures/Recrest</url>
+  <url type="help">https://github.com/SoftVentures/Recrest#readme</url>
+
+  <categories>
+    <category>Development</category>
+    <category>RevisionControl</category>
+  </categories>
+
+  <keywords>
+    <keyword>git</keyword>
+    <keyword>GitHub</keyword>
+    <keyword>GitLab</keyword>
+    <keyword>Bitbucket</keyword>
+    <keyword>merge request</keyword>
+    <keyword>repository</keyword>
+  </keywords>
+
+  <screenshots>
+    <screenshot type="default">
+      <image type="source" width="1720" height="1120">https://raw.githubusercontent.com/SoftVentures/Recrest/v0.11.0/docs/images/app-preview.png</image>
+      <caption>Repository list with the repository detail pane open</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source" width="1720" height="1120">https://raw.githubusercontent.com/SoftVentures/Recrest/v0.11.0/docs/images/activity-dark.png</image>
+      <caption>Activity dashboard with commit, author and CI analytics</caption>
+    </screenshot>
+  </screenshots>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+
+  <requires>
+    <display_length compare="ge">1100</display_length>
+  </requires>
+
+  <releases>
+    <release version="0.11.0" date="2026-08-12">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.11.0</url>
+      <description>
+        <ul>
+          <li>Landing page overhaul with an interactive, seeded live demo of the app</li>
+          <li>Privacy, accessibility and imprint pages</li>
+          <li>Fixed live repository refresh and Apple Silicon builds that could not be opened</li>
+          <li>Fixed the Linux bundle build against freedesktop-desktop-entry 0.7.19</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.10.2" date="2026-06-26">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.10.2</url>
+      <description>
+        <ul>
+          <li>Fixed the packaged app rendering completely unstyled, caused by the build-time Content-Security-Policy nonce disabling the inline-style allowance that the UI toolkit relies on</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.10.1" date="2026-06-26">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.10.1</url>
+      <description>
+        <ul>
+          <li>Fixed a cold-boot regression on Windows and Linux where the first frame stayed unstyled until a manual reload</li>
+          <li>Fixed the Linux installer build against the freedesktop-desktop-entry 0.7.19 API change</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.10.0" date="2026-06-25">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.10.0</url>
+      <description>
+        <ul>
+          <li>Added a "Pull all" dashboard quick action</li>
+          <li>Restyled the activity chart and made the language-mix card scale with its container</li>
+          <li>Enforced the 1100x720 minimum window size at runtime on Windows</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1" />
+</component>

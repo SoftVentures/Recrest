@@ -30,7 +30,10 @@
     "installing": "Wird installiert…",
     "installing_percent": "Wird installiert… {{percent}} %",
     "install_failed": "Update konnte nicht installiert werden. Bitte manuell von der Release-Seite herunterladen.",
-    "download_failed": "Die Download-Seite konnte nicht geöffnet werden."
+    "download_failed": "Die Download-Seite konnte nicht geöffnet werden.",
+    "channel_hint_system_package": "Update über deinen Paketmanager verfügbar.",
+    "channel_hint_flatpak": "Update über Flatpak verfügbar.",
+    "channel_hint_snap": "Update über Snap verfügbar."
   },
   "nav": {
     "dashboard": "Dashboard",

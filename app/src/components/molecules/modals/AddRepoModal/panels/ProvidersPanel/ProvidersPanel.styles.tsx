@@ -8,7 +8,11 @@ import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
 
 export const ProvidersGrid = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "280px 1fr",
+  // The aside gives up width down to 200px before the repo list starts
+  // shrinking, and `minmax(0, 1fr)` lets the list shrink past its own
+  // min-content instead of pushing the modal wider than the viewport.
+  gridTemplateColumns: "minmax(200px, 280px) minmax(0, 1fr)",
+  minWidth: 0,
   height: "100%",
 }) as typeof Box;
 

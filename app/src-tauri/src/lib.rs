@@ -7,6 +7,7 @@ mod identity;
 mod platform;
 mod providers;
 mod update;
+mod window_geometry;
 
 #[cfg(test)]
 mod test_support;
@@ -17,7 +18,7 @@ use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, LogicalSize, Manager,
+    AppHandle, Manager,
 };
 // Click-routing types are only used on Windows + Linux, where the tray's
 // left-click brings the window forward. macOS follows the menu-bar
@@ -580,18 +581,14 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
-        // Remember the window's size, position (→ which monitor), maximized
-        // and fullscreen state across restarts and re-apply on launch. We omit
-        // VISIBLE/DECORATIONS from the persisted flags so the "close to tray"
-        // feature can't make the app start up hidden.
+        // Remember the window's size, maximized and fullscreen state across
+        // restarts and re-apply on launch. We omit VISIBLE/DECORATIONS from the
+        // persisted flags so the "close to tray" feature can't make the app
+        // start up hidden; POSITION is dropped on Linux only — see
+        // `window_geometry::persisted_state_flags` for why.
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_state_flags(
-                    tauri_plugin_window_state::StateFlags::SIZE
-                        | tauri_plugin_window_state::StateFlags::POSITION
-                        | tauri_plugin_window_state::StateFlags::MAXIMIZED
-                        | tauri_plugin_window_state::StateFlags::FULLSCREEN,
-                )
+                .with_state_flags(window_geometry::persisted_state_flags())
                 .build(),
         )
         .setup(|app| {
@@ -646,27 +643,34 @@ pub fn run() {
                 let _ = window.set_title("");
                 #[cfg(not(target_os = "macos"))]
                 let _ = window.set_title(identity::current_tray_tooltip());
-                // Belt-and-suspenders: the `tauri.dev.conf.json` overlay's
-                // `windows[]` entry omits `decorations: false`, and Tauri's
-                // by-label array merge for window config is unreliable (the
-                // same reason `visible: false` needs the explicit hide below).
-                // In the dev build that lets `decorations` fall back to its
-                // `true` default, so the NATIVE Windows/Linux title bar paints
-                // on top of our custom titlebar — two stacked title bars. Force
-                // it off at runtime for the non-macOS chrome. macOS keeps
-                // decorations on deliberately (Overlay traffic-lights, set
-                // separately below).
+                // Belt-and-suspenders for the non-macOS chrome: the native title
+                // bar must stay off so it can't paint on top of our custom one.
+                // `tauri.conf.json` already says `decorations: false`, so tao's
+                // `if decorations != current` guard makes this a no-op today; it
+                // exists to survive a config drift. Doing the same on macOS would
+                // NOT be safe — see the `set_title_bar_style` call site for why.
                 #[cfg(not(target_os = "macos"))]
                 let _ = window.set_decorations(false);
-                // Belt-and-suspenders: enforce the minimum window size at
-                // runtime. The `tauri.dev.conf.json` overlay replaces (not
-                // deep-merges) the `windows[]` entry by label, so the dev build
-                // drops `minWidth`/`minHeight` and the window becomes freely
-                // resizable below the desktop-only floor. Setting it here keeps
-                // dev and prod identical regardless of conf-merge semantics.
-                // Keep in lock-step with `tauri.conf.json` (1100×720, the
-                // documented desktop-only minimum).
-                let _ = window.set_min_size(Some(LogicalSize::new(1100.0, 720.0)));
+                // Enforce the minimum window size at runtime, clamped against
+                // the monitor's work area. This can't live in `tauri.conf.json`
+                // alone: a static minimum can exceed the usable desktop
+                // (1920×1080 at GDK_SCALE=2 is 960×540 logical, below the
+                // 1100×720 floor), which makes the window impossible to fit on
+                // screen.
+                window_geometry::apply_min_size(&window);
+                // …then sanity-check the geometry the window actually has.
+                //
+                // Ordering matters and is subtle: Tauri creates the windows
+                // declared in `tauri.conf.json` *inside* its own `setup()`
+                // (`tauri-2.11.5/src/app.rs`), immediately before invoking this
+                // hook. Window creation calls `run_on_main_thread` to fire the
+                // plugins' `on_window_ready` hooks, and `run_on_main_thread`
+                // executes inline when it is already on the main thread
+                // (`tauri-runtime-wry-2.11.4/src/lib.rs::send_user_message`).
+                // `tauri-plugin-window-state`'s `restore_state` has therefore
+                // already run by the time we get here, so whatever we do now is
+                // the last word on the window's size.
+                window_geometry::clamp_size(&window);
                 // macOS only: the window boots `visible: false`
                 // (tauri.macos.conf.json) so the WKWebView cold-boot sequence
                 // (transparent → shadow → backdrop-filter engaging) never
@@ -726,12 +730,16 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             if config.settings().crash_reporting {
                 if let Some(dsn) = option_env!("SENTRY_DSN").and_then(|s| s.parse().ok()) {
-                    let guard = sentry::init(sentry::ClientOptions {
-                        dsn: Some(dsn),
-                        release: Some(env!("CARGO_PKG_VERSION").into()),
-                        environment: Some("production".into()),
-                        ..Default::default()
-                    });
+                    // `ClientOptions` is `#[non_exhaustive]` as of sentry 0.49, so a struct
+                    // expression is rejected (E0639) even with `..Default::default()`. Field
+                    // assignment on a `mut` default is the only remaining form. This code is
+                    // `cfg(not(debug_assertions))`, so only a release build ever compiles it —
+                    // which is why the 0.48 -> 0.49 bump passed CI and broke `cargo build --release`.
+                    let mut options = sentry::ClientOptions::default();
+                    options.dsn = Some(dsn);
+                    options.release = Some(env!("CARGO_PKG_VERSION").into());
+                    options.environment = Some("production".into());
+                    let guard = sentry::init(options);
                     std::mem::forget(guard);
                 }
             }
@@ -885,7 +893,22 @@ pub fn run() {
                 // the cached lowercase binary name by this point.)
 
                 if let Some(window) = handle.get_webview_window("main") {
-                    let _ = window.set_decorations(true);
+                    // Do NOT call `set_decorations(true)` here, however harmless it
+                    // looks. `tao::set_decorations` rebuilds the style mask from
+                    // scratch as `Titled | Closable | Miniaturizable | Resizable`
+                    // — `FullSizeContentView` is not in that set — and applies it
+                    // through `set_style_mask_async`, i.e. on a later main-queue
+                    // turn. It therefore lands *after* the `set_title_bar_style`
+                    // below and silently strips the very bit that pulls the webview
+                    // under the title bar, leaving the traffic lights in a bar of
+                    // their own above our custom titlebar (measured: mask 0xf,
+                    // `titlebarAppearsTransparent` still true).
+                    //
+                    // The call is never useful either: tao guards it with
+                    // `if decorations != current`, so with `decorations: true` in
+                    // `tauri.macos.conf.json` it is a no-op, and in any config where
+                    // it would fire it produces exactly the breakage above. Window
+                    // decorations on macOS are owned by the config, full stop.
                     let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
                     // Force the WebView's native backing layer to fully
                     // transparent so that during Stage-Manager / Cmd-Tab
@@ -1122,23 +1145,6 @@ pub fn run() {
             // macOS dock-icon updates instead.
 
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Persist window geometry before a possible hide-to-tray below.
-                // `tauri-plugin-window-state` otherwise only saves on a real
-                // close, so saving explicitly here means the last on-screen
-                // size/position/maximized/fullscreen survives a later force-quit
-                // while the app sits in the tray. VISIBLE is deliberately
-                // excluded so we never persist the hidden state and restore the
-                // window invisible on next launch.
-                {
-                    use tauri_plugin_window_state::{AppHandleExt, StateFlags};
-                    let _ = window.app_handle().save_window_state(
-                        StateFlags::SIZE
-                            | StateFlags::POSITION
-                            | StateFlags::MAXIMIZED
-                            | StateFlags::FULLSCREEN,
-                    );
-                }
-
                 let app_handle = window.app_handle();
                 let close_to_tray = match app_handle.try_state::<AppState>() {
                     Some(state) => match state.config.try_lock() {
@@ -1149,6 +1155,24 @@ pub fn run() {
                 };
 
                 if close_to_tray {
+                    // Flush the geometry to disk *only* on the hide-to-tray path.
+                    // `tauri-plugin-window-state` writes the file on `RunEvent::Exit`,
+                    // which a later force-quit of the tray-resident process never
+                    // reaches — so without this the last on-screen geometry would be
+                    // lost. On the real-close path this flush is redundant (the
+                    // plugin's own Exit handler runs) and every extra write is one
+                    // more chance to cement a bad restored size, so we skip it there.
+                    // Drift can still land on disk here; `window_geometry::clamp_size`
+                    // in the setup hook is what stops it from becoming permanent —
+                    // and because it goes through `set_size`, the plugin's own
+                    // `Resized` listener picks the corrected value up for the next save.
+                    // VISIBLE stays excluded so we never persist the hidden state and
+                    // restore the window invisible on the next launch.
+                    {
+                        use tauri_plugin_window_state::AppHandleExt;
+                        let _ =
+                            app_handle.save_window_state(window_geometry::persisted_state_flags());
+                    }
                     api.prevent_close();
                     let _ = window.hide();
                 }
