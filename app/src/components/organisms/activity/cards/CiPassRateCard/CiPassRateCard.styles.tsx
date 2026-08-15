@@ -40,7 +40,7 @@ export const Breakdown = styled(Box)({
 
 export const RepoRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(60px, 100px) 32px 36px",
+  gridTemplateColumns: `minmax(0, 1fr) minmax(${pxToRem(60)}, ${pxToRem(100)}) ${pxToRem(32)} ${pxToRem(36)}`,
   alignItems: "center",
   gap: pxToRem(8),
   fontSize: fontPxToRem(11),

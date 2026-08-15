@@ -12,7 +12,7 @@ import { ResponsiveHeatMap } from "@nivo/heatmap";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
@@ -39,6 +39,7 @@ function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 4, right: 6, bottom: 26, left: 40 });
   const { show, hide, portal } = useChartTooltip();
   const { weekStart } = useLocalePrefs();
   const locale = useResolvedLocale();
@@ -84,7 +85,7 @@ function HeatmapCard({ matrix, loading }: Props) {
         <ResponsiveHeatMap
           data={data}
           theme={nivoTheme}
-          margin={{ top: 4, right: 6, bottom: 26, left: 40 }}
+          margin={chartMargin}
           xInnerPadding={0.18}
           yInnerPadding={0.18}
           colors={{

@@ -29,7 +29,7 @@ export const FeedItem = styled(Box, { shouldForwardProp: (p) => p !== "clickable
   clickable?: boolean;
 }>(({ theme, clickable }) => ({
   display: "grid",
-  gridTemplateColumns: "22px 24px minmax(0, 1fr) auto",
+  gridTemplateColumns: `${pxToRem(22)} ${pxToRem(24)} minmax(0, 1fr) auto`,
   alignItems: "center",
   gap: pxToRem(10),
   padding: pxToRems(8, 12),

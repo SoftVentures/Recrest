@@ -9,7 +9,7 @@ import { ResponsiveBar } from "@nivo/bar";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { fade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
@@ -63,6 +63,7 @@ function AuthorClockCard({ hours, loading }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 4, right: 4, bottom: 26, left: 4 });
   const { show, move, hide, portal } = useChartTooltip();
   // Single-metric chart → follow the user's primary color, not a fixed accent.
   const accent = theme.palette.primary.main;
@@ -104,7 +105,7 @@ function AuthorClockCard({ hours, loading }: Props) {
             indexBy="hour"
             theme={nivoTheme}
             colors={(bar) => fade(accent, 0.25 + 0.75 * (Number(bar.data.count) / peak))}
-            margin={{ top: 4, right: 4, bottom: 26, left: 4 }}
+            margin={chartMargin}
             padding={0.25}
             borderRadius={2}
             enableLabel={false}

@@ -30,7 +30,7 @@ const List = styled(Box)({
 
 const Row = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "36px 1fr 28px",
+  gridTemplateColumns: `${pxToRem(36)} 1fr ${pxToRem(28)}`,
   alignItems: "center",
   gap: pxToRem(8),
   fontSize: fontPxToRem(11),

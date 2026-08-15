@@ -10,7 +10,7 @@ import { ResponsivePie } from "@nivo/pie";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { LangContributor, LanguageSlice } from "@/lib/activityAggregates";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
@@ -30,7 +30,7 @@ const Wrap = styled(Box)({
   // the legend always keeps room for its percentage column; the legend fills
   // the rest. `minmax(0, 1fr)` lets the legend track shrink instead of pushing
   // the donut wider and clipping the percentages on a narrow card.
-  gridTemplateColumns: "minmax(88px, 38%) minmax(0, 1fr)",
+  gridTemplateColumns: `minmax(${pxToRem(88)}, 38%) minmax(0, 1fr)`,
   alignItems: "center",
   gap: pxToRem(16),
   flex: "1 1 auto",
@@ -89,7 +89,7 @@ const LegendList = styled(Box)({
 
 const LegendItem = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "10px 1fr auto",
+  gridTemplateColumns: `${pxToRem(10)} 1fr auto`,
   gap: pxToRem(8),
   alignItems: "center",
   fontSize: fontPxToRem(11),
@@ -198,6 +198,7 @@ function mergeContributors(slices: readonly LanguageSlice[]): LangContributor[] 
 function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 8, right: 8, bottom: 8, left: 8 });
   const { show, hide, portal } = useChartTooltip();
   // Anything under 3% is noise in the donut — fold it into a single "Other"
   // slice. The accumulated share keeps the wheel summing to 100%.
@@ -253,7 +254,7 @@ function LanguageDonutCard({ mix, loading }: Props) {
             // defaults to role="img" with no accessible name → axe svg-img-alt.
             role="presentation"
             colors={{ datum: "data.color" }}
-            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            margin={chartMargin}
             innerRadius={0.7}
             padAngle={1.5}
             cornerRadius={3}

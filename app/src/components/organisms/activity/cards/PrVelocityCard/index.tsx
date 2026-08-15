@@ -13,7 +13,7 @@ import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartToolt
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { VelocityDay } from "@/lib/activityAggregates";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { DIFF_ADDED, hueDistance, shade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useResolvedLocale } from "@/lib/utils/datetime.utils";
@@ -69,6 +69,7 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
   const locale = useResolvedLocale();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 8, right: 8, bottom: 24, left: 28 });
   const { show, move, hide, portal } = useChartTooltip();
   const openedColor = theme.palette.primary.main;
   // DIFF_ADDED is the curated vivid green — the `success.main` token reads
@@ -141,7 +142,7 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
             { match: { id: openedLabel }, id: OPENED_GRADIENT },
             { match: { id: mergedLabel }, id: MERGED_GRADIENT },
           ]}
-          margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
+          margin={chartMargin}
           padding={0.3}
           innerPadding={2}
           borderRadius={2}

@@ -28,7 +28,7 @@ const Grid = styled(Box)({
   display: "grid",
   // Auto-fit so the 4 KPI cells collapse to 2 (or 1) on narrow viewports
   // instead of crushing labels like "OPEN MERGE REQUESTS" past readable width.
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gridTemplateColumns: `repeat(auto-fit, minmax(${pxToRem(180)}, 1fr))`,
   gap: pxToRem(12),
 }) as typeof Box;
 

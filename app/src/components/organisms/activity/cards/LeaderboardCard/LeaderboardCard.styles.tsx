@@ -16,7 +16,7 @@ export const List = styled(Box)({
 
 export const Row = styled(Box)({
   display: "grid",
-  gridTemplateColumns: "22px 22px 1fr",
+  gridTemplateColumns: `${pxToRem(22)} ${pxToRem(22)} 1fr`,
   gap: pxToRem(10),
   alignItems: "center",
 }) as typeof Box;

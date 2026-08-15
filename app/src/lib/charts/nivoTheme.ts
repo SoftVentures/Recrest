@@ -24,7 +24,13 @@ export function buildNivoTheme(mui: MuiTheme): NivoTheme {
   // renderers build the font shorthand as `${fontSize}px` (see
   // `@nivo/text::setCanvasFont`), which turns a rem string into garbage. So the
   // design px are multiplied by the active interface scale here instead.
-  const px = (designPx: number) => designPx * mui.uiScale;
+  // `Theme["uiScale"]` is non-optional but `ThemeOptions["uiScale"]` is not, so
+  // a `createTheme()` that omits it — every chart test, and any component test
+  // rendering a chart outside `ThemeWrapper` — yields `undefined` at runtime
+  // while the type still claims `number`. Without this fallback every size below
+  // is `NaN` and the canvas renderer's `${fontSize}px` emits the literal
+  // `"NaNpx"`, which silently drops all chart text.
+  const px = (designPx: number) => designPx * (mui.uiScale ?? 1);
   const tick = { fill: mui.palette.text.secondary, fontSize: px(11) };
   return {
     text: {
@@ -57,4 +63,41 @@ export function buildNivoTheme(mui: MuiTheme): NivoTheme {
 export function useNivoTheme(): NivoTheme {
   const mui = useTheme();
   return useMemo(() => buildNivoTheme(mui), [mui]);
+}
+
+/** Nivo's `margin` — the gutter the axis labels are drawn into. */
+export interface ChartMargin {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/**
+ * Scale a chart margin by the active interface scale.
+ *
+ * The gutter is canvas/SVG geometry, so — exactly like the font sizes in
+ * `buildNivoTheme` — it cannot inherit the rem scaling. Leaving it at the design
+ * px while the tick text grows with `--ui-scale` means the labels outgrow the
+ * space reserved for them and clip: at scale 1.5 an 11px label renders at 16.5px
+ * inside a gutter measured for 11px.
+ */
+export function scaleChartMargin(margin: ChartMargin, uiScale: number | undefined): ChartMargin {
+  const scale = uiScale ?? 1;
+  return {
+    top: margin.top * scale,
+    right: margin.right * scale,
+    bottom: margin.bottom * scale,
+    left: margin.left * scale,
+  };
+}
+
+/** Hook variant of {@link scaleChartMargin} for chart components. */
+export function useChartMargin(margin: ChartMargin): ChartMargin {
+  const { uiScale } = useTheme();
+  const { top, right, bottom, left } = margin;
+  return useMemo(
+    () => scaleChartMargin({ top, right, bottom, left }, uiScale),
+    [top, right, bottom, left, uiScale],
+  );
 }
