@@ -22,6 +22,20 @@ describe("buildNivoTheme", () => {
     const dark = buildNivoTheme(createTheme({ palette: { mode: "dark" } }));
     expect(light.tooltip?.container?.background).not.toBe(dark.tooltip?.container?.background);
   });
+
+  it("emits usable font sizes for a theme built without uiScale", () => {
+    // `ThemeOptions["uiScale"]` is optional, so this theme has no `uiScale` at
+    // runtime. A missing fallback made every size `NaN`, which the canvas
+    // renderer stringifies to `"NaNpx"` and drops all chart text.
+    const nivo = buildNivoTheme(createTheme());
+    expect(nivo.text?.fontSize).toBe(11);
+    expect(nivo.axis?.ticks?.text?.fontSize).toBe(11);
+  });
+
+  it("scales font sizes with the active interface scale", () => {
+    const nivo = buildNivoTheme(createTheme({ uiScale: 1.5 }));
+    expect(nivo.text?.fontSize).toBe(16.5);
+  });
 });
 
 describe("useNivoTheme", () => {

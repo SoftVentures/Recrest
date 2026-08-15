@@ -49,6 +49,7 @@ import { deriveDiffStats } from "@/lib/utils/diffStats.utils";
 import { StatusTone, toneChip, toneText } from "@/lib/utils/toneColor.utils";
 import { detailKey } from "@/store/actions/prs.actions";
 import { useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface MrRowProps {
   pr: PullRequest;
@@ -84,8 +85,8 @@ const STATE_ICON = {
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "12px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(12, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   cursor: "pointer",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },
@@ -114,7 +115,7 @@ const TextCol = styled(Box)({
 }) as typeof Box;
 
 const Title = styled(Box)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -127,9 +128,9 @@ const MetaRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexWrap: "wrap",
-  gap: 8,
-  marginTop: 6,
-  fontSize: 11.5,
+  gap: pxToRem(8),
+  marginTop: pxToRem(6),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
 })) as typeof Box;
@@ -140,22 +141,22 @@ const MetaRow = styled(Box)(({ theme }) => ({
 const RepoChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  padding: "1px 7px 1px 6px",
+  gap: pxToRem(4),
+  padding: pxToRems(1, 7, 1, 6),
   borderRadius: 8,
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   color: theme.palette.text.primary,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
-  lineHeight: "16px",
+  lineHeight: 16 / 11,
 })) as typeof Box;
 
 const Sep = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
   // The original uses a hair-thin middot — we keep a slightly smaller
   // glyph so the row reads as a single sentence rather than dotted chips.
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
 })) as typeof Typography;
 
 const Number = styled(Typography)(({ theme }) => ({
@@ -165,13 +166,13 @@ const Number = styled(Typography)(({ theme }) => ({
 const AuthorWrap = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
+  gap: pxToRem(5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 const Diff = styled(Box)(({ theme }) => ({
   display: "inline-flex",
-  gap: 4,
+  gap: pxToRem(4),
   fontWeight: 500,
   // `success.main`/`error.main` are mode-independent light-mode hues, so on the
   // dark surfaces they landed at 3.18:1 / 2.57:1. `toneText` is the existing
@@ -192,9 +193,9 @@ const DiffUnknown = styled(Typography)(({ theme }) => ({
 const CiPill = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   flexShrink: 0,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.primary,
   fontWeight: 500,
 })) as typeof Typography;
@@ -203,8 +204,8 @@ const CiPill = styled(Typography)(({ theme }) => ({
 const CiDot = styled("span", { shouldForwardProp: (p) => p !== "state" })<{
   state: CiTone | null;
 }>(({ theme, state }) => ({
-  width: 7,
-  height: 7,
+  width: pxToRem(7),
+  height: pxToRem(7),
   borderRadius: "50%",
   background:
     state === "passing"
@@ -218,7 +219,7 @@ const CiDot = styled("span", { shouldForwardProp: (p) => p !== "state" })<{
 
 const CiEmpty = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   flexShrink: 0,
 })) as typeof Typography;
 
@@ -228,13 +229,13 @@ const StateBadge = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
 }>(({ theme, tone }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   flexShrink: 0,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
-  padding: "2px 8px",
+  padding: pxToRems(2, 8),
   borderRadius: 100,
   // Draft isn't a backend state — it's an open MR flagged WIP, so it reads as a
   // muted neutral badge rather than borrowing a status hue.
@@ -348,14 +349,14 @@ export function MrRow({
       }}
     >
       <PrIconCol component="span" variant="caption">
-        <GitMerge size={14} />
+        <GitMerge size={pxToRem(14)} />
       </PrIconCol>
       <TextCol>
         <Title>{pr.title}</Title>
         <MetaRow>
           {repoName && (
             <RepoChip component="span">
-              <GitBranch size={10} aria-hidden />
+              <GitBranch size={pxToRem(10)} aria-hidden />
               {repoName}
             </RepoChip>
           )}
@@ -390,7 +391,7 @@ export function MrRow({
       </TextCol>
       {rightMeta === "state" ? (
         <StateBadge tone={stateTone} data-testid={TEST_IDS.mr.stateBadge} data-mr-state={pr.state}>
-          <StateIcon size={11} aria-hidden />
+          <StateIcon size={pxToRem(11)} aria-hidden />
           {stateLabel}
         </StateBadge>
       ) : state ? (
@@ -413,7 +414,7 @@ export function MrRow({
               {
                 key: "open-detail",
                 label: tPrs("detail.open_full"),
-                icon: <Maximize2 size={13} />,
+                icon: <Maximize2 size={pxToRem(13)} />,
                 variant: "primary",
                 disabled: !repoId,
                 onSelect: openDetail,
@@ -425,14 +426,14 @@ export function MrRow({
               {
                 key: "merge",
                 label: t("context_menu.merge"),
-                icon: <GitMerge size={13} />,
+                icon: <GitMerge size={pxToRem(13)} />,
                 disabled: !repoId || pr.draft,
                 onSelect: openMerge,
               },
               {
                 key: "checkout",
                 label: t("context_menu.checkout_branch"),
-                icon: <Code size={13} />,
+                icon: <Code size={pxToRem(13)} />,
                 disabled: !repoId,
                 onSelect: () => void onCheckout(),
               },
@@ -441,7 +442,7 @@ export function MrRow({
                 label: brand
                   ? t("context_menu.open_on_provider", { provider: PROVIDER_NAMES[brand] })
                   : t("context_menu.open_on_host"),
-                icon: <ExternalLink size={13} />,
+                icon: <ExternalLink size={pxToRem(13)} />,
                 onSelect: () => void openExternal(pr.url),
               },
             ],
@@ -451,19 +452,19 @@ export function MrRow({
               {
                 key: "copy-url",
                 label: t("context_menu.copy_url"),
-                icon: <Copy size={13} />,
+                icon: <Copy size={pxToRem(13)} />,
                 onSelect: () => void onCopyUrl(),
               },
               {
                 key: "copy-title",
                 label: t("context_menu.copy_title"),
-                icon: <Type size={13} />,
+                icon: <Type size={pxToRem(13)} />,
                 onSelect: () => void onCopyTitle(),
               },
               {
                 key: "copy-branch",
                 label: t("context_menu.copy_branch"),
-                icon: <GitBranch size={13} />,
+                icon: <GitBranch size={pxToRem(13)} />,
                 onSelect: () => void onCopyBranch(),
               },
             ],

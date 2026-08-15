@@ -30,6 +30,7 @@ import {
 } from "@/lib/constants/avatarDesign.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   open: boolean;
@@ -127,7 +128,7 @@ export default function AvatarDesignerModal({
               radius={20}
               gradient={avatarBackgroundCss(background.stops)}
               letter={letter}
-              glyph={<PreviewIcon size={48} strokeWidth={2} aria-hidden />}
+              glyph={<PreviewIcon size={pxToRem(48)} strokeWidth={2} aria-hidden />}
             />
             <PreviewLabel>{t("avatar.designer.preview_label")}</PreviewLabel>
           </PreviewCol>
@@ -175,7 +176,7 @@ export default function AvatarDesignerModal({
                         aria-label={entry.id}
                         data-testid={TEST_IDS.repoDetail.avatarDesignerIcon(entry.id)}
                       >
-                        {createElement(entry.Icon, { size: 18, "aria-hidden": true })}
+                        {createElement(entry.Icon, { size: pxToRem(18), "aria-hidden": true })}
                       </IconTile>
                     ))}
                   </IconGrid>

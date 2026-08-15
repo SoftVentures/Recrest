@@ -1,17 +1,19 @@
 import { MenuItem, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const FilterItem = styled(MenuItem)({
   position: "relative",
-  fontSize: 13,
-  minHeight: 30,
-  paddingTop: 6,
-  paddingBottom: 6,
-  paddingLeft: 32,
-  paddingRight: 8,
-  gap: 8,
+  fontSize: fontPxToRem(13),
+  minHeight: pxToRem(30),
+  paddingTop: pxToRem(6),
+  paddingBottom: pxToRem(6),
+  paddingLeft: pxToRem(32),
+  paddingRight: pxToRem(8),
+  gap: pxToRem(8),
   borderRadius: 8,
-  margin: "0 4px",
+  margin: pxToRems(0, 4),
   "& .MuiListItemIcon-root": {
     minWidth: 0,
     color: "inherit",
@@ -19,16 +21,16 @@ export const FilterItem = styled(MenuItem)({
     alignItems: "center",
   },
   "& .MuiListItemText-primary": {
-    fontSize: 13,
+    fontSize: fontPxToRem(13),
   },
 });
 
 export const LeadingSlot = styled(Typography)(({ theme }) => ({
   position: "absolute",
-  left: 8,
+  left: pxToRem(8),
   top: "50%",
-  width: 14,
-  height: 14,
+  width: pxToRem(14),
+  height: pxToRem(14),
   transform: "translateY(-50%)",
   display: "inline-flex",
   alignItems: "center",
@@ -38,8 +40,8 @@ export const LeadingSlot = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const RadioDot = styled(Typography)(({ theme }) => ({
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: "50%",
   backgroundColor: theme.palette.text.primary,
 })) as typeof Typography;

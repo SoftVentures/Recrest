@@ -35,6 +35,7 @@ import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   repoId: string;
@@ -148,7 +149,7 @@ export default function CiCard({ repoId }: Props) {
               onClick={() => setFormOpen(true)}
               data-testid={TEST_IDS.ci.runBtn}
             >
-              <Play size={12} />
+              <Play size={pxToRem(12)} />
               <Box component="span">{t("ci.run")}</Box>
             </GeneralButton>
           )}
@@ -209,13 +210,13 @@ export default function CiCard({ repoId }: Props) {
                         e.stopPropagation();
                         void onCancelRun(run);
                       }}
-                      icon={<Square size={12} />}
+                      icon={<Square size={pxToRem(12)} />}
                       data-testid={TEST_IDS.ci.cancelRun}
                     />
                   )}
                   {openRun && (
                     <OpenHint data-row-open>
-                      <ExternalLink size={13} />
+                      <ExternalLink size={pxToRem(13)} />
                     </OpenHint>
                   )}
                 </RunRow>

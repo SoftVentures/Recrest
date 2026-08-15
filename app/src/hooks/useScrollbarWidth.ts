@@ -13,6 +13,12 @@ const SCROLLBAR_WIDTH_VAR = "--recrest-scrollbar-width";
  *
  * On platforms with overlay scrollbars (macOS default) the measurement
  * returns 0 and the variable simply contributes nothing.
+ *
+ * The probe lives on `document.body` while the consumer sits inside `#root`.
+ * That used to be a unit mismatch — `#root` carried a CSS `zoom`, so the
+ * measured px meant something different on either side. With rem scaling both
+ * are in the same coordinate space again, and the value stays in px because a
+ * native scrollbar does not scale with `--ui-scale`.
  */
 export function useScrollbarWidth(): void {
   useEffect(() => {

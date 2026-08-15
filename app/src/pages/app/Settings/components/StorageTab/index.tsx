@@ -13,6 +13,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setCrashReporting } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export function StorageSection() {
   const { t } = useTranslation();
@@ -36,7 +37,7 @@ export function StorageSection() {
                 size={IconButtonSize.XS}
                 variant={IconButtonVariant.GHOST}
                 aria-label={t("settings.more_info", { ns: I18nNamespace.ARIA })}
-                icon={<Info size={11} />}
+                icon={<Info size={pxToRem(11)} />}
               />
             </GeneralTooltip>
           </>

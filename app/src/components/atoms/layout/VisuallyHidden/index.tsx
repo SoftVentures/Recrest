@@ -13,6 +13,8 @@ const VisuallyHidden = styled("span")({
   width: 1,
   height: 1,
   padding: 0,
+  // The whole clip-rect recipe is device pixels on purpose — it is a
+  // rendering trick, not a measured dimension.
   margin: -1,
   overflow: "hidden",
   clip: "rect(0 0 0 0)",

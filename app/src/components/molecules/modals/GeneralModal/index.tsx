@@ -6,6 +6,14 @@ import { alpha, styled } from "@mui/material/styles";
 import ModalTitle from "@/components/molecules/modals/GeneralModal/ModalTitle";
 import { openExternal } from "@/lib/tauri";
 import { frostedPanel } from "@/lib/utils/translucency.utils";
+import { pxToRem, pxToRems } from "@/theme/scale";
+
+/** Numeric modal dimensions are design pixels and have to ride the interface
+ *  scale; string values (`"auto"`, `"100%"`, …) pass through untouched. */
+function modalLength(value: number | string | undefined, fallback: string): string {
+  if (typeof value === "number") return pxToRem(value);
+  return value ?? fallback;
+}
 
 interface RootBoxProps {
   $modalWidth?: number | string;
@@ -20,21 +28,22 @@ const Root = styled(Box, {
   display: "flex",
   flexDirection: "column",
   margin: 0,
-  padding: 20,
+  padding: pxToRem(20),
   // `modalWidth`/`modalHeight` are the *outer* box including this padding, so a
-  // caller asking for 1200 gets a 1200px paper — not 1240.
+  // caller asking for 1200 gets a 1200-design-px paper — not 1240.
   boxSizing: "border-box",
-  width: $modalWidth ?? 560,
-  height: $modalHeight ?? "auto",
-  // Modals are portalled to `document.body`, so `#root`'s `zoom: var(--ui-scale)`
-  // never applies to them and a fixed `modalWidth` is measured against the real
-  // viewport. Without these ceilings a wide modal (AddRepoModal asks for 1200)
-  // is clipped on both edges on any smaller window, leaving its actions
-  // unreachable. `vw`/`vh` — not `%` — because the Dialog paper is centred by
-  // flexbox and therefore has an indefinite height, against which a percentage
-  // `maxHeight` computes to `none`.
+  width: modalLength($modalWidth, pxToRem(560)),
+  height: modalLength($modalHeight, "auto"),
+  // A numeric `modalWidth` is a *design* pixel value and therefore rides
+  // `--ui-scale`: AddRepoModal's 1200 renders 1800 real px at scale 1.5, which
+  // no longer fits a 1440-px window. Without these ceilings such a modal is
+  // clipped on both edges, leaving its actions unreachable. Viewport units are
+  // the right ceiling precisely because they ignore the scale — they describe
+  // the window, not the design grid. `vw`/`vh`, not `%`: the Dialog paper is
+  // centred by flexbox and therefore has an indefinite height, against which a
+  // percentage `maxHeight` computes to `none` and is a silent no-op.
   maxWidth: "calc(100vw - 40px)",
-  maxHeight: $modalMaxHeight ?? "calc(100vh - 40px)",
+  maxHeight: modalLength($modalMaxHeight, "calc(100vh - 40px)"),
   minHeight: 0,
 }));
 
@@ -68,12 +77,12 @@ const StyledDialog = styled(Dialog, {
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
-      // MUI's default `maxWidth="md"` would shrink the paper to ~900px while the
+      // MUI's default `maxWidth="md"` would shrink the paper to ~768px while the
       // inner Root keeps its requested `modalWidth` (e.g. 1200) — the overflow
       // clips action buttons on the right edge. The paper therefore follows the
       // inner content, but never past the viewport minus a 16px gutter per side
       // (MUI's own `calc(100% - 64px)` height ceiling is loosened to match, so
-      // Root's `calc(100vh - 40px)` is the single effective height limit).
+      // Root's `calc(100vh - 40px)` stays the single effective height limit).
       maxWidth: "calc(100% - 32px) !important",
       maxHeight: "calc(100% - 32px)",
     },
@@ -84,8 +93,8 @@ const StyledContent = styled(DialogContent)({
   margin: 0,
   padding: 0,
   // Vertical scroller instead of a hard clip: once Root hits its viewport
-  // ceiling, tall bodies (the SSH guide's prose, the onboarding steps' 340px
-  // floor) must stay reachable. Panels that manage their own scrolling keep
+  // ceiling, tall bodies (the SSH guide's prose, the onboarding steps' floor)
+  // must stay reachable. Panels that manage their own scrolling keep
   // `flex: 1; min-height: 0`, so this axis never overflows for them and `auto`
   // stays invisible — no double scrollbars.
   overflow: "hidden auto",
@@ -104,18 +113,20 @@ const StyledActions = styled(DialogActions)({
   flexDirection: "row",
   justifyContent: "flex-end",
   alignItems: "center",
-  gap: 8,
-  padding: "16px 0 0 0",
+  gap: pxToRem(8),
+  padding: pxToRems(16, 0, 0, 0),
   width: "100%",
 });
 
 export interface GeneralModalProps {
   open: boolean;
-  /** Overall paper width — default 560px, always capped at the viewport. Use `"100%"` for fluid layouts. */
+  /** Overall paper width in design px — default 560, always capped at the
+   *  viewport. Use `"100%"` for fluid layouts. */
   modalWidth?: number | string;
-  /** Overall paper height — default `auto`. */
+  /** Overall paper height in design px — default `auto`. */
   modalHeight?: number | string;
-  /** Overall paper max-height — default `calc(100vh - 40px)`. Percentages are a no-op (indefinite parent height). */
+  /** Overall paper max-height — default `calc(100vh - 40px)`. Percentages are a
+   *  no-op (indefinite parent height). */
   modalMaxHeight?: number | string;
   /** Title node rendered inside the canonical title bar (text or JSX). */
   customTitle?: ReactNode;

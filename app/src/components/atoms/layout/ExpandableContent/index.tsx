@@ -5,6 +5,8 @@ import { styled } from "@mui/material/styles";
 
 import { ChevronDown, ChevronUp } from "lucide-react";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 interface ExpandableContentProps {
   children: ReactNode;
   /** Height (px) at which the content gets fade-clipped when collapsed.
@@ -56,7 +58,7 @@ function ExpandableContent({
       {overflows && (
         <ToggleRow>
           <Toggle type="button" onClick={() => setExpanded((v) => !v)} data-testid={toggleTestId}>
-            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            {expanded ? <ChevronUp size={pxToRem(13)} /> : <ChevronDown size={pxToRem(13)} />}
             <Typography component="span" variant="caption">
               {expanded ? showLessLabel : showMoreLabel}
             </Typography>
@@ -88,7 +90,7 @@ const Fade = styled(Box)(({ theme }) => ({
   position: "absolute",
   insetInline: 0,
   bottom: 0,
-  height: 64,
+  height: pxToRem(64),
   pointerEvents: "none",
   background: `linear-gradient(to bottom, transparent, ${theme.palette.background.paper} 90%)`,
 })) as typeof Box;
@@ -96,22 +98,22 @@ const Fade = styled(Box)(({ theme }) => ({
 const ToggleRow = styled(Box)({
   display: "flex",
   justifyContent: "center",
-  marginTop: 6,
+  marginTop: pxToRem(6),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required: ghost toggle with keyboard focus that lives inside Description body
 const Toggle = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   background: "transparent",
   border: "none",
   cursor: "pointer",
-  padding: "4px 8px",
+  padding: pxToRems(4, 8),
   borderRadius: 6,
   color: theme.palette.text.information,
   fontFamily: "inherit",
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   fontWeight: 600,
   "&:hover": {
     color: theme.palette.text.primary,

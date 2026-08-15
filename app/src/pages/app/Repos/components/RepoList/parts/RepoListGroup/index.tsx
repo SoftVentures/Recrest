@@ -7,13 +7,14 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { RepoListRows } from "@/pages/app/Repos/components/RepoList/parts/RepoListRows";
 import { GroupCount, type GroupProps } from "@/pages/app/Repos/components/RepoList/parts/_shared";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const GroupHead = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "10px 16px",
+  gap: pxToRem(6),
+  padding: pxToRems(10, 16),
   background: "transparent",
   border: 0,
   cursor: "pointer",
@@ -21,7 +22,7 @@ const GroupHead = styled("button")(({ theme }) => ({
   width: "100%",
   textAlign: "left",
   borderBottom: `1px solid ${theme.palette.divider}`,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -36,7 +37,7 @@ export function RepoListGroup({ name, repos, selectedRepoId, onSelect, viewMode 
   return (
     <Box>
       <GroupHead type="button" onClick={() => setOpen((o) => !o)}>
-        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        {open ? <ChevronDown size={pxToRem(11)} /> : <ChevronRight size={pxToRem(11)} />}
         {name}
         <GroupCount component="span" variant="caption">
           {repos.length}

@@ -20,6 +20,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { pickImageFile } from "@/lib/utils/pickFolder.utils";
 import { clearRepoLogo, setRepoLogo, setRepoLogoSvg } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   repo: Repository;
@@ -150,13 +151,13 @@ export default function EditableRepoAvatar({
               {
                 key: "avatar-upload",
                 label: t("avatar.menu_upload"),
-                icon: <Upload size={15} aria-hidden />,
+                icon: <Upload size={pxToRem(15)} aria-hidden />,
                 onSelect: () => void doUpload(),
               },
               {
                 key: "avatar-design",
                 label: t("avatar.menu_design"),
-                icon: <Palette size={15} aria-hidden />,
+                icon: <Palette size={pxToRem(15)} aria-hidden />,
                 onSelect: () => setDesignerOpen(true),
               },
             ],
@@ -192,10 +193,10 @@ const EditBtn = styled("button", {
   shouldForwardProp: (p) => p !== "chip",
 })<{ chip: number }>(({ theme, chip }) => ({
   position: "absolute",
-  right: -2,
-  bottom: -2,
-  width: chip,
-  height: chip,
+  right: pxToRem(-2),
+  bottom: pxToRem(-2),
+  width: pxToRem(chip),
+  height: pxToRem(chip),
   borderRadius: "50%",
   border: `1px solid ${theme.palette.divider}`,
   background: theme.palette.background.paper,
@@ -223,10 +224,10 @@ const ResetBtn = styled("button", {
   shouldForwardProp: (p) => p !== "chip",
 })<{ chip: number }>(({ theme, chip }) => ({
   position: "absolute",
-  right: -2,
-  top: -2,
-  width: chip,
-  height: chip,
+  right: pxToRem(-2),
+  top: pxToRem(-2),
+  width: pxToRem(chip),
+  height: pxToRem(chip),
   borderRadius: "50%",
   border: `1px solid ${theme.palette.divider}`,
   background: theme.palette.background.paper,

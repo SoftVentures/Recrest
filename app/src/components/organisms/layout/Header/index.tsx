@@ -38,6 +38,7 @@ import { loadRepos } from "@/store/actions/repos.actions";
 import { bumpRefreshNonce, setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectSelectedRange } from "@/store/selectors/activity.selectors";
+import { pxToRem } from "@/theme/scale";
 
 interface HeaderContext {
   title: string;
@@ -206,7 +207,7 @@ function Header() {
           aria-label={searchLabel}
           onClick={() => dispatch(setSearchOpen(true))}
         >
-          <Search size={13} />
+          <Search size={pxToRem(13)} />
           <SearchPlaceholder component="span" variant="caption">
             {searchPlaceholder}
           </SearchPlaceholder>
@@ -232,11 +233,11 @@ function Header() {
               {showResult ? (
                 <ActionFeedbackIcon
                   state={refresh.state}
-                  fallback={<RefreshCw size={16} aria-hidden />}
+                  fallback={<RefreshCw size={pxToRem(16)} aria-hidden />}
                   size={16}
                 />
               ) : (
-                <RefreshCw size={16} aria-hidden />
+                <RefreshCw size={pxToRem(16)} aria-hidden />
               )}
             </RefreshButton>
           </Box>
@@ -247,7 +248,7 @@ function Header() {
           aria-label={addRepoLabel}
           onClick={onAddRepo}
         >
-          <BookPlus size={14} aria-hidden />
+          <BookPlus size={pxToRem(14)} aria-hidden />
           <AddRepoLabel component="span">{addRepoLabel}</AddRepoLabel>
         </AddRepoButton>
       </RightSection>

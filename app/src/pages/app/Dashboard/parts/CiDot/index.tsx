@@ -2,6 +2,7 @@ import { Typography } from "@mui/material";
 import { keyframes, styled } from "@mui/material/styles";
 
 import type { CiTone } from "@/lib/constants/ciStates.constants";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 /** Dashboard / Activity CI-dot variant — collapses "idle" + null into the dash case. */
 export type CiState = CiTone | null;
@@ -32,8 +33,8 @@ export default CiDot;
 const CiPill = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  fontSize: 11,
+  gap: pxToRem(5),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.primary,
   fontWeight: 500,
   flexShrink: 0,
@@ -49,8 +50,8 @@ const ciPulse = keyframes`
 const CiDotBase = styled("span", {
   shouldForwardProp: (p) => p !== "state",
 })<CiDotInnerProps>(({ theme, state }) => ({
-  width: 6,
-  height: 6,
+  width: pxToRem(6),
+  height: pxToRem(6),
   borderRadius: "50%",
   background:
     state === "passing"
@@ -74,5 +75,5 @@ const CiDotBase = styled("span", {
 
 const CiEmpty = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
 })) as typeof Typography;

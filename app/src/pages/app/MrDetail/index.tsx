@@ -36,6 +36,7 @@ import {
   setPrs,
 } from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 // Stable empty-array reference so the `prs` selector returns the same value on
 // every render while a repo has no cached PRs — an inline `[]` literal makes
@@ -292,7 +293,7 @@ export default function MrDetailPage() {
     <Root data-testid={TEST_IDS.mr.detailPage}>
       <BackBar>
         <BackButton type="button" onClick={goBack} data-testid={TEST_IDS.mr.backToList}>
-          <ArrowLeft size={13} />
+          <ArrowLeft size={pxToRem(13)} />
           <Box component="span">{tPrs("detail.back")}</Box>
         </BackButton>
       </BackBar>

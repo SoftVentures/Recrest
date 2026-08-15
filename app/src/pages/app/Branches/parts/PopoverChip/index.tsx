@@ -5,6 +5,7 @@ import { ListItemIcon, ListItemText } from "@mui/material";
 import { Check } from "lucide-react";
 
 import { CountSpan, FilterItem, LeadingSlot } from "@/pages/app/Branches/parts/_shared";
+import { pxToRem } from "@/theme/scale";
 
 export interface PopoverChipProps {
   label: string;
@@ -23,7 +24,7 @@ export function PopoverChip({ label, count, active, onSelect, icon }: PopoverChi
       }}
     >
       <LeadingSlot component="span" variant="caption">
-        {active && <Check size={14} />}
+        {active && <Check size={pxToRem(14)} />}
       </LeadingSlot>
       {icon && <ListItemIcon>{icon}</ListItemIcon>}
       <ListItemText primary={label} />

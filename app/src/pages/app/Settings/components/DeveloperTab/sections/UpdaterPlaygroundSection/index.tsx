@@ -21,6 +21,7 @@ import {
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setUpdaterBanner } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export function UpdaterPlaygroundSection() {
   const { t } = useTranslation(I18nNamespace.SETTINGS);
@@ -100,7 +101,7 @@ export function UpdaterPlaygroundSection() {
           placeholder={t("developer.updater.endpoint_override_input_placeholder")}
           value={endpointOverride}
           onChange={(e) => setEndpointOverride(e.target.value)}
-          style={{ minWidth: 260 }}
+          style={{ minWidth: pxToRem(260) }}
           data-testid={TEST_IDS.settings.developer.updater.endpointOverride}
         />
       </SettingsRow>
@@ -114,7 +115,7 @@ export function UpdaterPlaygroundSection() {
               // audit:ignore-fact — dev-only simulated remote version placeholder
               "99.99.99"
             }
-            style={{ width: 120 }}
+            style={{ width: pxToRem(120) }}
             data-testid={TEST_IDS.settings.developer.updater.simVersion}
           />
           <InlineLabel component="span" variant="caption">

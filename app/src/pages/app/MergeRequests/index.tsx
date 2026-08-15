@@ -35,6 +35,7 @@ import {
 } from "@/pages/app/MergeRequests/utils/mrFilters";
 import { detailKey, loadPrDetail, loadPrDiff } from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Row {
   pr: PullRequest;
@@ -51,8 +52,10 @@ interface Group {
 // Flex row so the detail pane sits beside the list and pushes it left (a
 // "push" drawer, mirroring the Repositories page) instead of overlaying it.
 // `containerType` makes the pane's width ladder below query the *layout* width:
-// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
-// the unscaled viewport, so it fires at the wrong moment on scaled setups.
+// the pane sits beside the sidebar, so the viewport a `@media` threshold reports
+// is not the width that decides its layout. The thresholds are in rem so they
+// track `--ui-scale` — at a larger scale a step has to fire at a *wider*
+// container width, because the content's own floor grew with it.
 const PageRoot = styled(Box)({
   display: "flex",
   height: "100%",
@@ -78,17 +81,17 @@ const MainColumn = styled(Box)({
 // only a smaller pane frees real estate. 280px is the floor at which the
 // panel's own header row still fits.
 const Pane = styled(Box)(({ theme }) => ({
-  width: 400,
+  width: pxToRem(400),
   height: "100%",
   flexShrink: 0,
   borderLeft: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
-  "@container (max-width: 1180px)": {
-    width: 340,
+  [`@container (max-width: ${pxToRem(1180)})`]: {
+    width: pxToRem(340),
   },
-  "@container (max-width: 1040px)": {
-    width: 280,
+  [`@container (max-width: ${pxToRem(1040)})`]: {
+    width: pxToRem(280),
   },
 })) as typeof Box;
 
@@ -108,13 +111,13 @@ const Toolbar = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: pxToRem(12),
   // The filter button drops below the search field rather than overflowing the
   // page when the layout width (or the UI scale) squeezes them.
   flexWrap: "wrap",
-  rowGap: 8,
-  padding: "12px 24px 12px 24px",
-  paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
+  rowGap: pxToRem(8),
+  padding: pxToRems(12, 24, 12, 24),
+  paddingRight: `calc(${pxToRem(24)} + var(--recrest-scrollbar-width, 0px))`,
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 });
@@ -123,14 +126,14 @@ const Toolbar = styled(Box)({
 const FilterBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 30,
-  padding: "0 10px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(30),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
   color: theme.palette.text.primary,
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -148,11 +151,11 @@ const FilterBadge = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 16,
-  height: 16,
-  padding: "0 5px",
+  minWidth: pxToRem(16),
+  minHeight: pxToRem(16),
+  padding: pxToRems(0, 5),
   borderRadius: 8,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   fontVariantNumeric: "tabular-nums",
   background: theme.palette.primary.main,
@@ -172,7 +175,7 @@ const Scroll = styled(Box)({
   minHeight: 0,
   overflow: "auto",
   scrollbarGutter: "stable",
-  paddingBottom: 24,
+  paddingBottom: pxToRem(24),
 });
 
 export default function MergeRequestsPage() {
@@ -343,14 +346,14 @@ export default function MergeRequestsPage() {
             aria-expanded={popoverOpen}
             data-testid={TEST_IDS.mr.filterBtn}
           >
-            <Filter size={13} />
+            <Filter size={pxToRem(13)} />
             {t("mrs.filters")}
             {activeCount > 0 && (
               <FilterBadge component="span" data-testid={TEST_IDS.mr.filterBadge}>
                 {activeCount}
               </FilterBadge>
             )}
-            <ChevronDown size={13} />
+            <ChevronDown size={pxToRem(13)} />
           </FilterBtn>
         </Toolbar>
 

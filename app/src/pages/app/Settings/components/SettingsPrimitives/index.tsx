@@ -3,12 +3,14 @@ import { type ReactNode } from "react";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 const Section = styled(Box)({
-  marginBottom: 22,
+  marginBottom: pxToRem(22),
 }) as typeof Box;
 
 const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   margin: 0,
   textTransform: "uppercase",
@@ -17,13 +19,13 @@ const SectionTitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const SectionSubtitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  margin: "2px 0 10px",
+  margin: pxToRems(2, 0, 10),
 })) as typeof Typography;
 
 const SectionHeading = styled(Box)({
-  marginBottom: 10,
+  marginBottom: pxToRem(10),
 }) as typeof Box;
 
 // The original mocks render every settings field as its own bordered tile
@@ -34,14 +36,14 @@ const SectionHeading = styled(Box)({
 const Card = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 16,
-  padding: "14px 16px",
+  gap: pxToRem(16),
+  padding: pxToRems(14, 16),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
@@ -53,18 +55,18 @@ const RowLeft = styled(Box)({
 }) as typeof Box;
 
 const RowLabel = styled(Box)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   color: theme.palette.text.primary,
   fontWeight: 500,
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 })) as typeof Box;
 
 const RowSub = styled(Box)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
-  marginTop: 2,
+  marginTop: pxToRem(2),
 })) as typeof Box;
 
 const RowRight = styled(Box)({
@@ -92,7 +94,7 @@ export function SettingsSection({ title, subtitle, children, testId }: SettingsS
           <SectionSubtitle component="p">{subtitle}</SectionSubtitle>
         </SectionHeading>
       ) : (
-        <SectionTitle component="h3" style={{ marginBottom: 10 }}>
+        <SectionTitle component="h3" style={{ marginBottom: pxToRem(10) }}>
           {title}
         </SectionTitle>
       )}

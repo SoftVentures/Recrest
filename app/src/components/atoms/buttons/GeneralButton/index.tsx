@@ -13,6 +13,7 @@ import GeneralCircularLoader, {
 } from "@/components/atoms/loaders/GeneralCircularLoader";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
+import { pxToRem } from "@/theme/scale";
 
 export type GeneralButtonVariant =
   | "default"
@@ -149,9 +150,9 @@ const GeneralButton = forwardRef<HTMLButtonElement, GeneralButtonProps>(function
       <GeneralCircularLoader size={CircularLoaderSize.SM} color="inherit" aria-hidden="true" />
     );
   } else if (feedbackState === "success") {
-    effectiveStartIcon = <SuccessIcon size={16} aria-hidden="true" />;
+    effectiveStartIcon = <SuccessIcon size={pxToRem(16)} aria-hidden="true" />;
   } else if (feedbackState === "error") {
-    effectiveStartIcon = <FailureIcon size={16} aria-hidden="true" />;
+    effectiveStartIcon = <FailureIcon size={pxToRem(16)} aria-hidden="true" />;
   }
   let liveText = "";
   if (isLoading) liveText = t("feedback.loading");

@@ -9,6 +9,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface ChangedFilesListProps {
   files: ChangedFile[];
@@ -28,15 +29,15 @@ const Root = styled(Box, {
   overflowY: maxHeight === "auto" ? "visible" : "auto",
   fontFamily: MONO_STACK,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 }));
 
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
-  padding: "4px 0",
+  gap: pxToRem(8),
+  padding: pxToRems(4, 0),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-child": { border: 0 },
 })) as typeof Box;
@@ -72,11 +73,11 @@ const KindBadge = styled("span", {
     palette.modified ?? { color: infoColor, bg: theme.palette.surface.interface.backElevation };
   return {
     fontFamily: "inherit",
-    fontSize: 10,
+    fontSize: fontPxToRem(10),
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.05em",
-    padding: "1px 6px",
+    padding: pxToRems(1, 6),
     borderRadius: 8,
     color: tone.color,
     backgroundColor: tone.bg,
@@ -87,7 +88,7 @@ const KindBadge = styled("span", {
 const Truncated = styled(Box)(({ theme }) => ({
   textAlign: "center",
   paddingTop: theme.spacing(1),
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Box;
 

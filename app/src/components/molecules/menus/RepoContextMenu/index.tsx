@@ -32,6 +32,7 @@ import { errorMessage } from "@/lib/utils/error.utils";
 import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   repo: EnrichedRepo;
@@ -157,7 +158,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
               {
                 key: "open-detail",
                 label: t("actions.open_detail_page"),
-                icon: <Maximize2 size={13} />,
+                icon: <Maximize2 size={pxToRem(13)} />,
                 variant: "primary",
                 onSelect: openDetail,
               },
@@ -175,7 +176,7 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
               {
                 key: "open-terminal",
                 label: t("context_menu.open_in_terminal"),
-                icon: <TerminalLucide size={13} />,
+                icon: <TerminalLucide size={pxToRem(13)} />,
                 disabled: missing,
                 onSelect: () => void openTerminal(),
               },
@@ -184,14 +185,14 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
                 label: brand
                   ? t("context_menu.open_on_provider", { provider: PROVIDER_NAMES[brand] })
                   : t("context_menu.open_on_host"),
-                icon: <ExternalLink size={13} />,
+                icon: <ExternalLink size={pxToRem(13)} />,
                 disabled: !openHost.canOpen,
                 onSelect: openHost.open,
               },
               {
                 key: "open-explorer",
                 label: t("context_menu.open_in_explorer"),
-                icon: <Folder size={13} />,
+                icon: <Folder size={pxToRem(13)} />,
                 disabled: missing,
                 onSelect: () => void openExplorer(),
               },
@@ -202,13 +203,13 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
               {
                 key: "pin",
                 label: repo.pinned ? t("context_menu.unpin") : t("context_menu.pin"),
-                icon: repo.pinned ? <PinOff size={13} /> : <Pin size={13} />,
+                icon: repo.pinned ? <PinOff size={pxToRem(13)} /> : <Pin size={pxToRem(13)} />,
                 onSelect: onTogglePin,
               },
               {
                 key: "copy-path",
                 label: t("context_menu.copy_path"),
-                icon: <Copy size={13} />,
+                icon: <Copy size={pxToRem(13)} />,
                 onSelect: () => void onCopyPath(),
               },
             ],
@@ -218,14 +219,14 @@ export default function RepoContextMenu({ repo, position, onClose }: Props) {
               {
                 key: "forget",
                 label: t("context_menu.forget"),
-                icon: <X size={13} />,
+                icon: <X size={pxToRem(13)} />,
                 variant: "danger",
                 onSelect: () => setConfirmKind("forget"),
               },
               {
                 key: "delete",
                 label: t("context_menu.delete_disk"),
-                icon: <Trash2 size={13} />,
+                icon: <Trash2 size={pxToRem(13)} />,
                 variant: "danger",
                 onSelect: () => setConfirmKind("delete"),
               },

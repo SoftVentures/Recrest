@@ -17,6 +17,7 @@ import {
   RecordingChip,
   RowActions,
 } from "@/pages/app/Settings/components/ShortcutsTab/ShortcutsTab.styles";
+import { pxToRem } from "@/theme/scale";
 
 export interface ShortcutRowProps {
   def: ShortcutDef;
@@ -70,7 +71,7 @@ export default function ShortcutRow({
             aria-label={t("settings.shortcuts.reset")}
             data-testid={TEST_IDS.settings.shortcuts.reset(def.id)}
             onClick={onReset}
-            icon={<RotateCcw size={13} aria-hidden />}
+            icon={<RotateCcw size={pxToRem(13)} aria-hidden />}
           />
         )}
         <GeneralIconButton
@@ -79,7 +80,13 @@ export default function ShortcutRow({
           aria-label={t("settings.shortcuts.edit")}
           data-testid={TEST_IDS.settings.shortcuts.edit(def.id)}
           onClick={onEdit}
-          icon={isRecording ? <X size={13} aria-hidden /> : <Edit3 size={13} aria-hidden />}
+          icon={
+            isRecording ? (
+              <X size={pxToRem(13)} aria-hidden />
+            ) : (
+              <Edit3 size={pxToRem(13)} aria-hidden />
+            )
+          }
         />
       </RowActions>
     </SettingsRow>

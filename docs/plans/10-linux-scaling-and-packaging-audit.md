@@ -17,23 +17,24 @@ Sortiert nach Schaden, nicht nach Bereich.
 ## Status nach diesem Change Set
 
 Der Audit war ursprünglich als reine Bestandsaufnahme geschrieben („nichts hiervon ist gefixt").
-Das gilt nicht mehr: der **Paketierungsteil ist implementiert**, der **Skalierungsteil nur zur
-Hälfte**. Der Stand pro Punkt:
+Das gilt nicht mehr: **Paketierungs- und Skalierungsteil sind beide implementiert** — der
+Paketierungsteil direkt auf `develop`, der Skalierungsteil über den Branch
+`feature/rem-scaling-migration` (PR #118, `zoom` → `rem`). Der Stand pro Punkt:
 
 | Punkt      | Thema                                                             | Status                                                                           |
 | ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | 1          | Launcher execs den falschen Binärnamen, Launcher nicht ausführbar | ✅ gefixt — Launcher probt beide Schreibweisen, Quelldatei auf `755`             |
 | 2          | Zwei Menüeinträge, einer tot                                      | ✅ gefixt — `deb`/`rpm` nutzen `desktopTemplate` statt des `files`-Tricks        |
 | 3          | `deb.depends` unvollständig + Duplikate                           | ✅ gefixt                                                                        |
-| **4**      | **`zoom` verkleinert die Layout-Box**                             | ❌ **nicht hier** — Branch `feature/rem-scaling-migration`                       |
-| **5**      | **„Schriftgröße" ist kein Schriftgrößen-Regler**                  | ❌ **nicht hier** — dito                                                         |
+| **4**      | **`zoom` verkleinert die Layout-Box**                             | ✅ gefixt — `html { font-size: calc(16px * var(--ui-scale)) }`, `theme/scale.ts` |
+| **5**      | **„Schriftgröße" ist kein Schriftgrößen-Regler**                  | ✅ gefixt — `uiScale` und `fontSize` sind jetzt orthogonal (zwei Regler)         |
 | 6          | WebKitGTKs `xft-dpi`-Page-Zoom                                    | ⚠️ offen (upstream); nur der Doku-Drift im Launcher ist korrigiert               |
 | 7          | Fenstergröße nie gegen den Monitor geklemmt                       | ✅ gefixt — `app/src-tauri/src/window_geometry.rs`                               |
 | 8          | `window-state` restauriert physische Pixel                        | ✅ gefixt — `clamp_size` + `persisted_state_flags` (dito)                        |
-| **9**      | **MUI-Overlays liegen außerhalb des Zooms**                       | ❌ **nicht hier** — dito                                                         |
+| **9**      | **MUI-Overlays liegen außerhalb des Zooms**                       | ✅ gefixt — `rem` am `<html>` erreicht auch body-portalierte Overlays            |
 | 10         | `AddRepoModal` 1200 px ohne `maxWidth`                            | ✅ gefixt — `GeneralModal` deckelt auf `vw`/`vh`                                 |
-| **11**     | **Nichts skaliert nach oben**                                     | ❌ **nicht hier** — dito                                                         |
-| **12**     | **`uiScale` ist toter Code im Renderer**                          | ❌ **nicht hier** — dito                                                         |
+| **11**     | **Nichts skaliert nach oben**                                     | ⚠️ teilweise — manueller `uiScale`-Regler statt automatischer Breitenregel       |
+| **12**     | **`uiScale` ist toter Code im Renderer**                          | ✅ gefixt — `uiScale` ist jetzt der einzige Skalierungspfad, mit UI-Regler       |
 | 13         | `bundle.linux.rpm` fehlt                                          | ✅ gefixt (mit Korrektur, siehe unten)                                           |
 | 14         | Updater auf keinem Distro-Kanal gegated                           | ✅ gefixt — `app/src-tauri/src/update/channel.rs`                                |
 | 15         | Keine AppStream-Metadaten                                         | ✅ gefixt — `resources/eu.softventures.recrest.metainfo.xml`, im Release gegated |
@@ -41,11 +42,17 @@ Hälfte**. Der Stand pro Punkt:
 | P2-Liste   | Chrome-Offset, Drag-Region, nicht schrumpfbare Panes, `nowrap`    | ❌ offen                                                                         |
 | Doku-Drift | README, `docs/RELEASE.md`, Checkliste, Launcher-Kommentar         | ✅ gefixt                                                                        |
 
-**Ausdrücklich nicht enthalten: 4, 5, 9, 11, 12.** Das ist genau der `zoom`→`rem`-Umbau — also die
-Ursache der _beiden ursprünglichen Nutzerberichte_, mit denen dieser Audit begann. Dieser Change Set
-macht das Linux-Paket startfähig und den Updater distro-sicher; er behebt **nicht**, dass der
-Schriftgrößen-Regler die ganze UI zoomt und die App auf großen Bildschirmen zu klein bleibt. Das
-liegt im separaten Branch `feature/rem-scaling-migration`.
+**4, 5, 9, 12 sind der `zoom`→`rem`-Umbau** — also die Ursache der _beiden ursprünglichen
+Nutzerberichte_, mit denen dieser Audit begann. Der erste Change Set (direkt auf `develop`) machte
+das Linux-Paket startfähig und den Updater distro-sicher; PR #118 nimmt dem Schriftgrößen-Regler das
+Zoomen der ganzen UI und stellt einen eigenen Regler für die Oberflächengröße daneben.
+
+**Offen bei 11:** „nach oben skalieren" ist im Umbau nur als _manueller_ Regler gelöst (0,8–1,5).
+Eine automatische Regel für breite Displays gibt es nicht — ein 2560er Monitor rendert weiterhin das
+1280er Layout, bis der Nutzer den Regler anfasst. `BASE_BREAKPOINT_PX.xxl` und `mediaUp` existieren
+dafür bereits in `theme/scale.ts`, haben aber **keinen Konsumenten**. Entweder eine erste
+`min-width`-Regel anschließen (Kandidat: das `Kpis`-Grid im Dashboard) oder beide entfernen und die
+Vertagung hier festhalten — dead breakpoints lesen sich sonst wie unfertige Arbeit.
 
 Zwei Punkte bleiben unverifizierbar, solange kein Linux-Host im Spiel ist: die Auswirkung von
 `deb.desktopTemplate` auf das **AppImage** (derselbe Bundler-Pfad, aber anderes Ausgabelayout) und
@@ -434,8 +441,12 @@ trotzdem als `[x]` erledigt.
   142 px, weil die Karte breiter wird und der 25-%-Fehler mit der Breite skaliert.
   **Nicht gefixt, absichtlich:** der Defekt entsteht ausschließlich durch `zoom` und verschwindet
   mit dem rem-Umbau (Punkt 4) von selbst. Eine Krücke hier wäre eine Reparatur an einem
-  Mechanismus, den der Branch `feature/rem-scaling-migration` gerade abschafft. **Nach dem Merge
-  des Branches gegenprüfen** — falls er dann noch auftritt, ist es ein eigenständiger nivo-Bug.
+  Mechanismus, den der Branch `feature/rem-scaling-migration` gerade abschafft.
+  **Gegengeprüft im Branch (15.08.2026): erledigt.** Im schlimmsten Fall des Audits (`fontSize: xl`
+  - `uiScale 1.25`, 1440×900) misst die Heatmap-Karte `scrollWidth === clientWidth` (647/647) bei
+    einem 615-px-SVG in einem 649-px-Host — kein Überlauf mehr, auch nicht bei 1100 px Fensterbreite
+    und `uiScale 1.5`. Es war also tatsächlich der `zoom`-Messfehler und kein eigenständiger
+    nivo-Bug.
 - **Wayland-CSD.** tao installiert auf Wayland bedingungslos eine GTK-`HeaderBar`
   (`window.rs:90-92`), _bevor_ `:182` `set_decorated(false)` läuft. GTK3 bleibt damit dauerhaft in
   Client-Side-Decorations, `gtk_window_resize()` bemisst inkl. CSD-Chrome. Die Webview-Fläche ist

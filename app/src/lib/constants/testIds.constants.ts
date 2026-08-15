@@ -363,6 +363,7 @@ export const TEST_IDS = {
       codeFontOption: <T extends string>(id: T) => `settings-code-font-option-${id}` as const,
       codeLigaturesSwitch: "settings-code-ligatures-switch",
       fontSizeSelect: "settings-font-size-select",
+      uiScaleSlider: "settings-ui-scale-slider",
       customFontUpload: "settings-custom-font-upload",
       customFontDelete: <T extends string>(id: T) => `settings-custom-font-delete-${id}` as const,
       customFontChip: <T extends string>(id: T) => `settings-custom-font-chip-${id}` as const,

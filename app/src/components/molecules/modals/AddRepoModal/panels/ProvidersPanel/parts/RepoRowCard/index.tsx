@@ -28,6 +28,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import { pxToRem } from "@/theme/scale";
 
 const FlushCheckbox = styled(Checkbox)({ padding: 0 });
 
@@ -78,7 +79,7 @@ export function RepoRowCard({
           {repo.isArchived && <MetaBadge tone="neutral">{t("add_modal.badge_archived")}</MetaBadge>}
           {alreadyLocal && (
             <MetaBadge tone="success">
-              <Check size={9} /> {t("add_modal.on_system")}
+              <Check size={pxToRem(9)} /> {t("add_modal.on_system")}
             </MetaBadge>
           )}
         </RepoTitleRow>
@@ -104,7 +105,7 @@ export function RepoRowCard({
       )}
       {progress === "cloning" && (
         <StatusInline component="span" variant="caption">
-          <Spin size={11} />
+          <Spin size={pxToRem(11)} />
           {t("add_modal.status_cloning")}
         </StatusInline>
       )}
@@ -114,7 +115,7 @@ export function RepoRowCard({
           variant="caption"
           style={{ color: theme.palette.success.main }}
         >
-          <Check size={11} /> {t("add_modal.status_done")}
+          <Check size={pxToRem(11)} /> {t("add_modal.status_done")}
         </StatusInline>
       )}
       {progress === "error" && (
@@ -123,7 +124,7 @@ export function RepoRowCard({
           variant="caption"
           style={{ color: theme.palette.error.main }}
         >
-          <X size={11} /> {t("add_modal.status_failed")}
+          <X size={pxToRem(11)} /> {t("add_modal.status_failed")}
         </StatusInline>
       )}
     </RepoRow>

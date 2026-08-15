@@ -13,6 +13,7 @@ import { SETTINGS_TAB_QUERY_PARAM, SettingsTab } from "@/lib/constants/settings.
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { setImportDialogOpen, setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export interface AppMenuProps {
   anchorEl: HTMLElement | null;
@@ -41,7 +42,7 @@ export function AppMenu({ anchorEl, open, onClose }: AppMenuProps) {
         onClick={runMenu(() => dispatch(setImportDialogOpen(true)))}
       >
         <ListItemIcon>
-          <FolderPlus size={15} aria-hidden />
+          <FolderPlus size={pxToRem(15)} aria-hidden />
         </ListItemIcon>
         {t("actions.add_repo")}
       </MenuItem>
@@ -50,7 +51,7 @@ export function AppMenu({ anchorEl, open, onClose }: AppMenuProps) {
         onClick={runMenu(() => dispatch(setSearchOpen(true)))}
       >
         <ListItemIcon>
-          <Search size={15} aria-hidden />
+          <Search size={pxToRem(15)} aria-hidden />
         </ListItemIcon>
         {t("actions.search")}
       </MenuItem>
@@ -59,7 +60,7 @@ export function AppMenu({ anchorEl, open, onClose }: AppMenuProps) {
         onClick={runMenu(() => navigate(AppRoute.SETTINGS))}
       >
         <ListItemIcon>
-          <Settings size={15} aria-hidden />
+          <Settings size={pxToRem(15)} aria-hidden />
         </ListItemIcon>
         {t("nav.settings")}
       </MenuItem>
@@ -70,7 +71,7 @@ export function AppMenu({ anchorEl, open, onClose }: AppMenuProps) {
         )}
       >
         <ListItemIcon>
-          <Info size={15} aria-hidden />
+          <Info size={pxToRem(15)} aria-hidden />
         </ListItemIcon>
         {t("nav.about")}
       </MenuItem>

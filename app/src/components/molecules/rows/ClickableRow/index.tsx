@@ -2,12 +2,14 @@ import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from "react";
 
 import { styled } from "@mui/material/styles";
 
+import { pxToRem, pxToRems } from "@/theme/scale";
+
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility / focusable / keyboard support
 const Root = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "6px 8px",
+  gap: pxToRem(10),
+  padding: pxToRems(6, 8),
   borderRadius: 8,
   cursor: "pointer",
   background: "transparent",

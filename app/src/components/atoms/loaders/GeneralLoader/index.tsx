@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { keyframes, styled } from "@mui/material/styles";
 
 import Logo from "@/components/atoms/brand/Logo";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 /**
  * Full-pane "we're booting up" loader — the Recrest logo gently pulses while
@@ -34,10 +35,10 @@ const Root = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  gap: 16,
+  gap: pxToRem(16),
   width: "100%",
   height: "100%",
-  minHeight: 240,
+  minHeight: pxToRem(240),
 });
 
 interface MarkProps {
@@ -47,8 +48,8 @@ interface MarkProps {
 const Mark = styled(Box, {
   shouldForwardProp: (p) => p !== "$size",
 })<MarkProps>(({ $size }) => ({
-  width: LOADER_LOGO_PX[$size],
-  height: LOADER_LOGO_PX[$size],
+  width: pxToRem(LOADER_LOGO_PX[$size]),
+  height: pxToRem(LOADER_LOGO_PX[$size]),
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -61,7 +62,7 @@ const Mark = styled(Box, {
 }));
 
 const Label = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   letterSpacing: "0.04em",
   textTransform: "uppercase",

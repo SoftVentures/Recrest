@@ -1,12 +1,14 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Body = styled(Box)(({ theme }) => ({
-  width: 320,
+  width: pxToRem(320),
   display: "flex",
   flexDirection: "column",
-  padding: 12,
-  gap: 10,
+  padding: pxToRem(12),
+  gap: pxToRem(10),
   backgroundColor: theme.palette.background.paper,
 })) as typeof Box;
 
@@ -14,11 +16,11 @@ export const HeaderRow = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 export const HeaderTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 700,
   color: theme.palette.text.primary,
 })) as typeof Typography;
@@ -29,10 +31,10 @@ export const ResetBtn = styled("button")(({ theme }) => ({
   background: "transparent",
   color: theme.palette.text.information,
   fontFamily: "inherit",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
   cursor: "pointer",
-  padding: "2px 4px",
+  padding: pxToRems(2, 4),
   borderRadius: 4,
   "&:hover": { color: theme.palette.text.primary },
   "&:focus-visible": {
@@ -48,8 +50,8 @@ export const ResetBtn = styled("button")(({ theme }) => ({
 export const Section = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-  paddingTop: 6,
+  gap: pxToRem(4),
+  paddingTop: pxToRem(6),
   borderTop: `1px solid ${theme.palette.divider}`,
   "&:first-of-type": {
     borderTop: "none",
@@ -58,18 +60,18 @@ export const Section = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
   color: theme.palette.text.informationLight,
-  marginBottom: 2,
+  marginBottom: pxToRem(2),
 })) as typeof Typography;
 
 export const OptionList = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  maxHeight: 168,
+  maxHeight: pxToRem(168),
   overflowY: "auto",
 }) as typeof Box;
 
@@ -79,15 +81,15 @@ export const Option = styled("button", {
 })<{ selected: boolean }>(({ theme, selected }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "5px 6px",
+  gap: pxToRem(8),
+  padding: pxToRems(5, 6),
   borderRadius: 6,
   border: "none",
   background: "transparent",
   color: theme.palette.text.primary,
   cursor: "pointer",
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   textAlign: "left",
   "&:hover": {
     background: theme.palette.surface.interface.active,
@@ -106,8 +108,8 @@ export const Option = styled("button", {
 export const CheckBox = styled("span", {
   shouldForwardProp: (p) => p !== "checked",
 })<{ checked: boolean }>(({ theme, checked }) => ({
-  width: 14,
-  height: 14,
+  width: pxToRem(14),
+  height: pxToRem(14),
   borderRadius: 4,
   border: `1px solid ${checked ? theme.palette.primary.main : theme.palette.divider}`,
   background: checked ? theme.palette.primary.main : theme.palette.background.default,
@@ -126,32 +128,32 @@ export const OptionLabel = styled(Box)({
   whiteSpace: "nowrap",
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 export const OptionMeta = styled(Typography)(({ theme }) => ({
   flexShrink: 0,
   color: theme.palette.text.informationLight,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
 
 export const EmptyHint = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
-  padding: "4px 6px",
+  padding: pxToRems(4, 6),
 })) as typeof Typography;
 
 export const ActiveBadge = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 16,
-  height: 16,
-  padding: "0 5px",
+  minWidth: pxToRem(16),
+  minHeight: pxToRem(16),
+  padding: pxToRems(0, 5),
   borderRadius: 8,
-  marginLeft: 2,
-  fontSize: 10,
+  marginLeft: pxToRem(2),
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   fontVariantNumeric: "tabular-nums",
   background: theme.palette.primary.main,

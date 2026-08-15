@@ -8,6 +8,7 @@ import { keyframes, styled } from "@mui/material/styles";
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
 import type { BucketUnit } from "@/lib/activity/rangeBuckets";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface ActivityChartProps {
   agg: number[];
@@ -108,10 +109,10 @@ const Card = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "14px 16px",
+  padding: pxToRems(14, 16),
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: pxToRem(10),
 })) as typeof Box;
 
 const CardActivity = styled(Card)({
@@ -122,11 +123,11 @@ const CardHead = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 const CardTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
   margin: 0,
@@ -134,7 +135,7 @@ const CardTitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const CardMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -143,10 +144,10 @@ const Chart = styled(Box, {
 })<{ columns: number }>(({ columns }) => ({
   display: "grid",
   gridTemplateColumns: `repeat(${columns}, 1fr)`,
-  gap: 6,
-  height: 200,
+  gap: pxToRem(6),
+  height: pxToRem(200),
   alignItems: "end",
-  padding: "4px 0 0",
+  padding: pxToRems(4, 0, 0),
 }));
 
 const BarColumn = styled(Box)({
@@ -168,7 +169,7 @@ const Bar = styled(Box, {
   return {
     width: "100%",
     // Floor so a bucket with a few commits still reads as a real bar, not "0".
-    minHeight: heightPct > 0 ? 7 : 0,
+    minHeight: heightPct > 0 ? pxToRem(7) : 0,
     // Height reflects the actual value and stays put on hover — hovering only
     // brightens the gradient + adds a glow, it never inflates the bar.
     height: `${heightPct}%`,
@@ -196,15 +197,15 @@ const Bar = styled(Box, {
 const ChartAxis = styled(Box)(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   color: theme.palette.text.information,
-  padding: "0 4px",
+  padding: pxToRems(0, 4),
 })) as typeof Box;
 
 const TooltipBody = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
 }) as typeof Box;
 
 const TooltipMain = styled(Box)({
@@ -212,6 +213,6 @@ const TooltipMain = styled(Box)({
 }) as typeof Box;
 
 const TooltipSub = styled(Box)({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   opacity: 0.7,
 }) as typeof Box;

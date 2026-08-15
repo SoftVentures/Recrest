@@ -16,6 +16,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri, openExternal } from "@/lib/tauri";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   repoId: string;
@@ -85,7 +86,7 @@ export default function DeploymentsCard({ repoId }: Props) {
     <GeneralCard padding="14px 16px">
       <Root data-testid={TEST_IDS.deployments.block}>
         <Head>
-          <Globe size={14} />
+          <Globe size={pxToRem(14)} />
           <HeadTitle>{t("deployments.title")}</HeadTitle>
           <StatusBadge tone={tone} data-testid={TEST_IDS.deployments.status}>
             {t(STATUS_KEY[tone])}
@@ -109,13 +110,13 @@ export default function DeploymentsCard({ repoId }: Props) {
             }}
           >
             <UrlIcon>
-              <Globe size={16} />
+              <Globe size={pxToRem(16)} />
             </UrlIcon>
             <UrlMain>
               <UrlHost>{headline}</UrlHost>
               <UrlFull>{pages.url}</UrlFull>
             </UrlMain>
-            <ExternalLink size={14} />
+            <ExternalLink size={pxToRem(14)} />
           </UrlCard>
         ) : null}
 
@@ -132,17 +133,17 @@ export default function DeploymentsCard({ repoId }: Props) {
 const Root = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: pxToRem(10),
 }) as typeof Box;
 
 const Head = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const HeadTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
   flex: 1,
@@ -154,11 +155,11 @@ const StatusBadge = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
 }>(({ theme, tone }) => ({
   display: "inline-flex",
   alignItems: "center",
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
-  padding: "2px 7px",
+  padding: pxToRems(2, 7),
   borderRadius: 100,
   // `disabled` isn't a health state — render it muted-neutral rather than
   // borrowing a status hue.
@@ -173,8 +174,8 @@ const StatusBadge = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
 const UrlCard = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "10px 12px",
+  gap: pxToRem(10),
+  padding: pxToRems(10, 12),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
@@ -196,8 +197,8 @@ const UrlIcon = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 32,
-  height: 32,
+  width: pxToRem(32),
+  height: pxToRem(32),
   borderRadius: 8,
   flexShrink: 0,
   color: theme.palette.primary.main,
@@ -210,7 +211,7 @@ const UrlMain = styled(Box)({
 }) as typeof Box;
 
 const UrlHost = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -219,7 +220,7 @@ const UrlHost = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const UrlFull = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -227,6 +228,6 @@ const UrlFull = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const Note = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;

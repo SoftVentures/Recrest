@@ -13,19 +13,20 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 18,
-  padding: "8px 0",
+  gap: pxToRem(18),
+  padding: pxToRems(8, 0),
 }) as typeof Box;
 
 const Intro = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
-  gap: 10,
-  padding: "12px 14px",
+  gap: pxToRem(10),
+  padding: pxToRems(12, 14),
   borderRadius: 8,
   background: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
@@ -33,12 +34,12 @@ const Intro = styled(Box)(({ theme }) => ({
 
 const IntroIcon = styled(Box)(({ theme }) => ({
   flex: "0 0 auto",
-  marginTop: 2,
+  marginTop: pxToRem(2),
   color: theme.palette.text.information,
 })) as typeof Box;
 
 const IntroText = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   lineHeight: 1.45,
   color: theme.palette.text.information,
 })) as typeof Typography;
@@ -46,17 +47,17 @@ const IntroText = styled(Typography)(({ theme }) => ({
 const Field = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 const FieldLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 500,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 const FieldHelp = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   lineHeight: 1.35,
 })) as typeof Typography;
@@ -64,12 +65,12 @@ const FieldHelp = styled(Typography)(({ theme }) => ({
 const DirectoryRow = styled(Box)({
   display: "flex",
   alignItems: "stretch",
-  gap: 8,
+  gap: pxToRem(8),
   "& > .MuiFormControl-root": { flex: "1 1 auto", minWidth: 0 },
 }) as typeof Box;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.error.main,
 })) as typeof Typography;
 
@@ -181,7 +182,7 @@ export default function AddGitConfigIncludeModal({
         <Body>
           <Intro>
             <IntroIcon>
-              <Info size={14} aria-hidden />
+              <Info size={pxToRem(14)} aria-hidden />
             </IntroIcon>
             <IntroText>{t("settings.git.add_identity_modal_intro")}</IntroText>
           </Intro>
@@ -205,7 +206,7 @@ export default function AddGitConfigIncludeModal({
                 variant="outline"
                 onClick={() => void onBrowse()}
                 disabled={!isTauri()}
-                startIcon={<FolderOpen size={14} />}
+                startIcon={<FolderOpen size={pxToRem(14)} />}
                 data-testid={TEST_IDS.gitConfigSettings.addIncludeModal.directoryPicker}
               >
                 {t("settings.git.add_identity_directory_browse")}

@@ -63,6 +63,7 @@ import { invoke, revealPathInSystem } from "@/lib/tauri";
 import { resolveShortcuts } from "@/lib/utils/shortcuts.utils";
 import { setSearchOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 /** A normalized, navigable palette row — either a quick-switch result (Global
  *  tab) or a file content hit (Content tab) — so cursor/Enter handling is
@@ -306,7 +307,7 @@ function OverallSearch() {
               <RepoAvatar repo={entry.repo} size={22} radius={5} />
             ) : (
               <RowIcon component="span" className="row-icon">
-                {Icon ? <Icon size={13} /> : null}
+                {Icon ? <Icon size={pxToRem(13)} /> : null}
               </RowIcon>
             )}
             <RowLabel component="span" variant="caption">
@@ -337,7 +338,7 @@ function OverallSearch() {
     >
       <Panel data-testid={TEST_IDS.searchOverlay.panel} onClick={(e) => e.stopPropagation()}>
         <Head>
-          <SearchIcon size={14} />
+          <SearchIcon size={pxToRem(14)} />
           <Input
             ref={inputRef}
             value={query}
@@ -363,7 +364,7 @@ function OverallSearch() {
                 setCursor(0);
                 inputRef.current?.focus();
               }}
-              icon={<ClearIcon size={13} aria-hidden />}
+              icon={<ClearIcon size={pxToRem(13)} aria-hidden />}
             />
           )}
           <Kbds>

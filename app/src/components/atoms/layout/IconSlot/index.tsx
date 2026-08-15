@@ -1,5 +1,7 @@
 import { Box, styled } from "@mui/material";
 
+import { pxToRem } from "@/theme/scale";
+
 export interface IconSlotProps {
   size?: number;
   tone?: "default" | "information";
@@ -12,8 +14,8 @@ const IconSlot = styled(Box, {
   alignItems: "center",
   justifyContent: "center",
   flex: "0 0 auto",
-  width: size,
-  height: size,
+  width: pxToRem(size),
+  height: pxToRem(size),
   ...(tone === "information" ? { color: theme.palette.text.information } : {}),
 }));
 

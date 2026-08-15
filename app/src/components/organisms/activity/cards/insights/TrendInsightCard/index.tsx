@@ -8,6 +8,7 @@ import { styled } from "@mui/material/styles";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { Trend } from "@/lib/insights";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 interface Props {
   trend: Trend;
@@ -20,14 +21,14 @@ type Direction = Trend["direction"];
 const Value = styled(Box, { shouldForwardProp: (p) => p !== "direction" })<{
   direction: Direction;
 }>(({ theme, direction }) => ({
-  fontSize: 30,
+  fontSize: fontPxToRem(30),
   fontWeight: 700,
   letterSpacing: "-0.5px",
   lineHeight: 1.1,
   fontVariantNumeric: "tabular-nums",
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 8,
+  gap: pxToRem(8),
   color:
     direction === "up"
       ? theme.palette.success.main
@@ -37,13 +38,13 @@ const Value = styled(Box, { shouldForwardProp: (p) => p !== "direction" })<{
 }));
 
 const Arrow = styled(Box)({
-  fontSize: 22,
+  fontSize: fontPxToRem(22),
   lineHeight: 1,
 }) as typeof Box;
 
 const Caption = styled(Box)(({ theme }) => ({
-  marginTop: 4,
-  fontSize: 11.5,
+  marginTop: pxToRem(4),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 }));
 

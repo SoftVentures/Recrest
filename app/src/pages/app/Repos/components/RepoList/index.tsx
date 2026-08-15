@@ -14,6 +14,7 @@ import { RepoListGroup } from "@/pages/app/Repos/components/RepoList/parts/RepoL
 import { RepoListHead } from "@/pages/app/Repos/components/RepoList/parts/RepoListHead";
 import { RepoListRows } from "@/pages/app/Repos/components/RepoList/parts/RepoListRows";
 import type { RepoListViewMode } from "@/pages/app/Repos/components/RepoList/parts/_shared";
+import { pxToRem, pxToRems } from "@/theme/scale";
 
 export type { RepoListViewMode };
 
@@ -39,14 +40,14 @@ const TableShell = styled(Box)(({ theme }) => ({
   // padding). Below this the grid would squish unreadably; instead the table
   // keeps its width and the surrounding `ListScroll` (overflow:auto) scrolls
   // horizontally — e.g. when the detail pane is open or the window is narrow.
-  minWidth: 800,
+  minWidth: pxToRem(800),
   [`& > *:last-child [data-testid='${TEST_IDS.repos.row}']:last-of-type`]: {
     borderBottom: 0,
   },
 })) as typeof Box;
 
 const CardListPadding = styled(Box)({
-  padding: "0 24px",
+  padding: pxToRems(0, 24),
 }) as typeof Box;
 
 const CardGroupStack = styled(Box)({

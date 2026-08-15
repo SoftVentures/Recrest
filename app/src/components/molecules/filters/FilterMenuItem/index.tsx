@@ -10,6 +10,7 @@ import {
   FilterItem,
   LeadingSlot,
 } from "@/components/molecules/filters/FilterMenuItem/FilterMenuItem.styles";
+import { pxToRem } from "@/theme/scale";
 
 export interface FilterMenuItemProps {
   /** Display label for the row */
@@ -52,7 +53,7 @@ export default function FilterMenuItem({
       aria-pressed={ariaPressed}
     >
       <LeadingSlot component="span" variant="caption">
-        {active && <Check size={14} />}
+        {active && <Check size={pxToRem(14)} />}
       </LeadingSlot>
       {avatar ? <AvatarSlot>{avatar}</AvatarSlot> : icon && <ListItemIcon>{icon}</ListItemIcon>}
       <ListItemText primary={label} />

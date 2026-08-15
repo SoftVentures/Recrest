@@ -14,6 +14,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   open: boolean;
@@ -95,7 +96,7 @@ export default function TargetBranchPopover({
         </HeaderRow>
         <Label component="label">{t("detail.target_picker_label")}</Label>
         <SearchBox>
-          <Search size={12} aria-hidden />
+          <Search size={pxToRem(12)} aria-hidden />
           <SearchInput
             ref={inputRef}
             value={filter}
@@ -122,9 +123,9 @@ export default function TargetBranchPopover({
                   onClick={() => setSelected(name)}
                   data-testid={TEST_IDS.mr.targetOption(name)}
                 >
-                  <GitBranch size={11} aria-hidden />
+                  <GitBranch size={pxToRem(11)} aria-hidden />
                   <OptionName component="span">{name}</OptionName>
-                  {active && <Check size={11} aria-hidden />}
+                  {active && <Check size={pxToRem(11)} aria-hidden />}
                 </OptionRow>
               );
             })
@@ -149,28 +150,28 @@ export default function TargetBranchPopover({
 }
 
 const Body = styled(Box)(({ theme }) => ({
-  width: 320,
+  width: pxToRem(320),
   display: "flex",
   flexDirection: "column",
-  gap: 8,
-  padding: 12,
+  gap: pxToRem(8),
+  padding: pxToRem(12),
   backgroundColor: theme.palette.background.paper,
 })) as typeof Box;
 
 const HeaderRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 const HeaderTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 700,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 const Label = styled(Typography)(({ theme }) => ({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   letterSpacing: "0.04em",
   textTransform: "uppercase",
@@ -180,9 +181,9 @@ const Label = styled(Typography)(({ theme }) => ({
 const SearchBox = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "0 10px",
-  height: 30,
+  gap: pxToRem(6),
+  padding: pxToRems(0, 10),
+  height: pxToRem(30),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
@@ -196,14 +197,14 @@ const SearchInput = styled("input")(({ theme }) => ({
   outline: "none",
   background: "transparent",
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
 }));
 
 const Options = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  maxHeight: 200,
+  maxHeight: pxToRem(200),
   overflowY: "auto",
 }) as typeof Box;
 
@@ -213,15 +214,15 @@ const OptionRow = styled("button", {
 })<{ selected: boolean }>(({ theme, selected }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "6px 8px",
+  gap: pxToRem(6),
+  padding: pxToRems(6, 8),
   borderRadius: 6,
   border: "none",
   background: selected ? theme.palette.surface.interface.active : "transparent",
   color: selected ? theme.palette.text.primary : theme.palette.text.information,
   cursor: "pointer",
   fontFamily: MONO_STACK,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   textAlign: "left",
   "&:hover": {
     background: theme.palette.surface.interface.active,
@@ -245,14 +246,14 @@ const OptionName = styled(Typography)({
 }) as typeof Typography;
 
 const Empty = styled(Typography)(({ theme }) => ({
-  padding: "8px 4px",
+  padding: pxToRems(8, 4),
   color: theme.palette.text.information,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 })) as typeof Typography;
 
 const Actions = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
-  gap: 6,
-  marginTop: 4,
+  gap: pxToRem(6),
+  marginTop: pxToRem(4),
 }) as typeof Box;

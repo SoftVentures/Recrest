@@ -10,6 +10,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface LinkPromptModalProps {
   open: boolean;
@@ -24,14 +25,14 @@ export interface LinkPromptModalProps {
 // eslint-disable-next-line no-restricted-syntax -- native <input> for URL entry (autofocus + IME + Enter-to-submit)
 const UrlInput = styled("input")(({ theme }) => ({
   width: "100%",
-  height: 36,
-  padding: "0 12px",
+  minHeight: pxToRem(36),
+  padding: pxToRems(0, 12),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   background: opaqueSurfaceBg(theme),
   color: theme.palette.text.primary,
   fontFamily: MONO_STACK,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   outline: "none",
   boxSizing: "border-box",
   "&:focus": { borderColor: theme.palette.border.hover },

@@ -41,6 +41,7 @@ import {
   setTimeZone,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
+  setUiScale,
   setUnderlineLinks,
   setUpdateMode,
   setWeekStart,
@@ -202,6 +203,11 @@ export const settingsBackendSync: Middleware = (store) => (next) => (action) => 
     dispatch(saveSettings({ appearance: appearancePatch(state, { codeLigatures: a.payload }) }));
   } else if (setFontSize.match(a)) {
     dispatch(saveSettings({ appearance: appearancePatch(state, { fontSize: a.payload }) }));
+  } else if (setUiScale.match(a)) {
+    // Top-level field on AppSettings, so no `appearancePatch` merge needed.
+    // Read it back off state so the persisted value is the clamped one the
+    // reducer settled on, not the raw slider/hotkey input.
+    dispatch(saveSettings({ uiScale: state.settings.uiScale }));
   } else if (setDyslexiaFont.match(a)) {
     dispatch(
       saveSettings({
@@ -318,6 +324,7 @@ type StoreState = {
     codeFont: string;
     codeLigatures: AppSettings["appearance"]["codeLigatures"];
     fontSize: string;
+    uiScale: number;
     dyslexiaFont: boolean;
     highContrast: boolean;
     reducedMotion: boolean;

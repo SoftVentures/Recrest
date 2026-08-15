@@ -55,6 +55,7 @@ import {
 } from "@/pages/app/Branches/parts/_shared";
 import { loadRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Root = styled(Box)({
   height: "100%",
@@ -68,17 +69,17 @@ const Page = styled(Box)({
   minHeight: 0,
   overflow: "auto",
   scrollbarGutter: "stable",
-  padding: "18px 24px 80px",
+  padding: pxToRems(18, 24, 80),
   display: "flex",
   flexDirection: "column",
-  gap: 20,
+  gap: pxToRem(20),
 }) as typeof Box;
 
 const Toolbar = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "4px 0",
+  gap: pxToRem(12),
+  padding: pxToRems(4, 0),
   flexWrap: "wrap",
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
@@ -89,15 +90,15 @@ const ToolbarBtn = styled(Button, {
 })<{ active?: boolean }>(({ theme, active }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   minWidth: 0,
-  height: 32,
-  padding: "0 12px",
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 12),
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   textTransform: "none",
   cursor: "pointer",
@@ -125,26 +126,26 @@ const FilterBadge = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 16,
-  height: 16,
-  padding: "0 5px",
+  minWidth: pxToRem(16),
+  minHeight: pxToRem(16),
+  padding: pxToRems(0, 5),
   borderRadius: 100,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.background.paper,
-  marginLeft: 2,
+  marginLeft: pxToRem(2),
 })) as typeof Typography;
 
 const Groups = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: pxToRem(14),
 }) as typeof Box;
 
 const FilterMenu = styled(Menu)(({ theme }) => ({
   "& .MuiPaper-root": {
-    width: 240,
+    width: pxToRem(240),
     marginTop: theme.spacing(0.5),
   },
 }));
@@ -290,7 +291,7 @@ export default function BranchesPage() {
           >
             <ActionFeedbackIcon
               state={fetchAllState}
-              fallback={<RefreshCw size={12} />}
+              fallback={<RefreshCw size={pxToRem(12)} />}
               size={12}
             />
             {t("branches.actions.fetch_all")}
@@ -301,14 +302,14 @@ export default function BranchesPage() {
             onClick={(e) => setFilterAnchor(e.currentTarget)}
             active={activeFilterCount > 0}
           >
-            <Filter size={14} aria-hidden />
+            <Filter size={pxToRem(14)} aria-hidden />
             {t("branches.filter.button")}
             {activeFilterCount > 0 && (
               <FilterBadge component="span" variant="caption">
                 {activeFilterCount}
               </FilterBadge>
             )}
-            <ChevronDown size={14} aria-hidden />
+            <ChevronDown size={pxToRem(14)} aria-hidden />
           </ToolbarBtn>
           <FilterMenu
             anchorEl={filterAnchor}
@@ -319,28 +320,28 @@ export default function BranchesPage() {
           >
             <SectionLabel>{t("branches.filter.tracking_label")}</SectionLabel>
             <PopoverChip
-              icon={<ListChecks size={14} />}
+              icon={<ListChecks size={pxToRem(14)} />}
               label={t("branches.filter.all")}
               count={totals.all}
               active={tracking === null}
               onSelect={() => setTracking(null)}
             />
             <PopoverChip
-              icon={<ArrowUpFromLine size={14} />}
+              icon={<ArrowUpFromLine size={pxToRem(14)} />}
               label={t("branches.filter.ahead")}
               count={totals.ahead}
               active={tracking === TrackingFlag.AHEAD}
               onSelect={() => setTracking(TrackingFlag.AHEAD)}
             />
             <PopoverChip
-              icon={<ArrowDownFromLine size={14} />}
+              icon={<ArrowDownFromLine size={pxToRem(14)} />}
               label={t("branches.filter.behind")}
               count={totals.behind}
               active={tracking === TrackingFlag.BEHIND}
               onSelect={() => setTracking(TrackingFlag.BEHIND)}
             />
             <PopoverChip
-              icon={<CheckCircle2 size={14} />}
+              icon={<CheckCircle2 size={pxToRem(14)} />}
               label={t("branches.filter.clean")}
               count={totals.clean}
               active={tracking === TrackingFlag.CLEAN}
@@ -349,21 +350,21 @@ export default function BranchesPage() {
             <MenuSeparator />
             <SectionLabel>{t("branches.filter.location_label")}</SectionLabel>
             <PopoverChip
-              icon={<ListChecks size={14} />}
+              icon={<ListChecks size={pxToRem(14)} />}
               label={t("branches.filter.all")}
               count={totals.all}
               active={location === null}
               onSelect={() => setLocation(null)}
             />
             <PopoverChip
-              icon={<Laptop size={14} />}
+              icon={<Laptop size={pxToRem(14)} />}
               label={t("branches.filter.local")}
               count={totals.local}
               active={location === LocationFlag.LOCAL}
               onSelect={() => setLocation(LocationFlag.LOCAL)}
             />
             <PopoverChip
-              icon={<Cloud size={14} />}
+              icon={<Cloud size={pxToRem(14)} />}
               label={t("branches.filter.remote")}
               count={totals.remote}
               active={location === LocationFlag.REMOTE}

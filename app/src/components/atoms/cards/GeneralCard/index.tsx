@@ -6,6 +6,7 @@ import { styled } from "@mui/material/styles";
 import GeneralSkeletonLoader, {
   SkeletonShape,
 } from "@/components/atoms/loaders/GeneralSkeletonLoader";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export type GeneralCardSkeleton = "bars" | "donut" | "rows" | "line" | "heatmap" | "radial";
 
@@ -42,7 +43,7 @@ const Root = styled(Box, {
   padding,
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: pxToRem(10),
   minWidth: 0,
   height: flushHeight ? undefined : "100%",
 }));
@@ -51,7 +52,7 @@ const Head = styled(Box)({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 10,
+  gap: pxToRem(10),
 });
 
 const HeadLeft = styled(Box)({
@@ -60,15 +61,15 @@ const HeadLeft = styled(Box)({
 
 const Title = styled(Typography)(({ theme }) => ({
   margin: 0,
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.1px",
 })) as typeof Typography;
 
 const Sub = styled(Box)(({ theme }) => ({
-  marginTop: 2,
-  fontSize: 11.5,
+  marginTop: pxToRem(2),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
 }));
@@ -76,8 +77,8 @@ const Sub = styled(Box)(({ theme }) => ({
 const BarsSkel = styled(Box)({
   display: "flex",
   alignItems: "flex-end",
-  gap: 4,
-  height: 180,
+  gap: pxToRem(4),
+  height: pxToRem(180),
 });
 
 const BarsSkelCol = styled(GeneralSkeletonLoader, {
@@ -92,30 +93,30 @@ const BarsSkelCol = styled(GeneralSkeletonLoader, {
 const RowsSkel = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
-  padding: "6px 0",
+  gap: pxToRem(6),
+  padding: pxToRems(6, 0),
 });
 
 const DonutSkel = styled(Box)({
   display: "grid",
   gridTemplateColumns: "auto 1fr",
   alignItems: "center",
-  gap: 16,
-  padding: "8px 0",
+  gap: pxToRem(16),
+  padding: pxToRems(8, 0),
 });
 
 const DonutSkelLegend = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 });
 
 const HeatmapSkel = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(24, 1fr)",
   gridTemplateRows: "repeat(7, 1fr)",
-  gap: 3,
-  padding: "8px 0",
+  gap: pxToRem(3),
+  padding: pxToRems(8, 0),
 });
 
 const LegendSkel = styled(GeneralSkeletonLoader)({

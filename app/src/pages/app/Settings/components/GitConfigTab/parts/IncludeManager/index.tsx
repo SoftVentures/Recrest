@@ -30,12 +30,13 @@ import {
   setGitConfigInLayer,
 } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { fontPxToRem, mediaDown, pxToRem, pxToRems } from "@/theme/scale";
 
 const Empty = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   fontStyle: "italic",
-  padding: "10px 14px",
+  padding: pxToRems(10, 14),
   border: `1px dashed ${theme.palette.divider}`,
   borderRadius: 8,
 })) as typeof Typography;
@@ -49,8 +50,8 @@ const Row = styled(Box, {
 })<RowProps>(({ theme, $inactive }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
-  padding: "12px 14px",
+  gap: pxToRem(10),
+  padding: pxToRems(12, 14),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   background: theme.palette.surface.interface.base,
@@ -60,7 +61,7 @@ const Row = styled(Box, {
 const RowHeader = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   justifyContent: "space-between",
   minWidth: 0,
   flexWrap: "wrap",
@@ -69,20 +70,20 @@ const RowHeader = styled(Box)({
 const RowHeaderLeft = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  flex: "1 1 280px",
+  gap: pxToRem(8),
+  flex: `1 1 ${pxToRem(280)}`,
   minWidth: 0,
 }) as typeof Box;
 
 const ConditionChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  padding: "2px 8px",
+  gap: pxToRem(4),
+  padding: pxToRems(2, 8),
   borderRadius: 999,
   background: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
@@ -98,7 +99,7 @@ interface PathProps {
 const PathText = styled(Typography, {
   shouldForwardProp: (p) => p !== "$clickable",
 })<PathProps>(({ theme, $clickable }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
   fontFamily: MONO_STACK,
   cursor: $clickable ? "pointer" : "default",
@@ -117,29 +118,29 @@ const PathText = styled(Typography, {
     : undefined,
 }));
 
-const QuickRow = styled(Box)({
+const QuickRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(180px, 1fr) minmax(220px, 1.4fr)",
-  gap: 10,
-  "@media (max-width: 900px)": {
+  gridTemplateColumns: `minmax(${pxToRem(180)}, 1fr) minmax(${pxToRem(220)}, 1.4fr)`,
+  gap: pxToRem(10),
+  [mediaDown(900, theme.uiScale)]: {
     gridTemplateColumns: "1fr",
   },
-}) as typeof Box;
+})) as typeof Box;
 
 const RowActions = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   flex: "0 0 auto",
 }) as typeof Box;
 
 const InactivePill = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  padding: "2px 8px",
+  padding: pxToRems(2, 8),
   borderRadius: 999,
   border: `1px solid ${theme.palette.divider}`,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -156,19 +157,19 @@ const MissingIcon = styled(Box)(({ theme }) => ({
 const ConfirmBody = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
-  padding: "8px 0",
+  gap: pxToRem(12),
+  padding: pxToRems(8, 0),
 }) as typeof Box;
 
 const ConfirmDescription = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 const Footer = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
-  paddingTop: 4,
+  paddingTop: pxToRem(4),
 }) as typeof Box;
 
 export interface IncludeManagerProps {
@@ -344,7 +345,7 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
                 {!layer.exists && (
                   <GeneralTooltip title={t("settings.git.include_missing_file")} placement="top">
                     <MissingIcon>
-                      <AlertTriangle size={14} color="currentColor" />
+                      <AlertTriangle size={pxToRem(14)} color="currentColor" />
                     </MissingIcon>
                   </GeneralTooltip>
                 )}
@@ -415,7 +416,7 @@ export default function IncludeManager({ layers, rootConfigFile, onRefresh }: In
           size="sm"
           variant="outline"
           onClick={() => setAddOpen(true)}
-          startIcon={<Plus size={14} />}
+          startIcon={<Plus size={pxToRem(14)} />}
           disabled={!rootConfigFile}
           data-testid={TEST_IDS.gitConfigSettings.includeManager.addButton}
         >

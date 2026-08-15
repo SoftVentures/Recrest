@@ -2,18 +2,19 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const MONO = MONO_STACK;
 
 export const Head = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  marginBottom: 10,
+  gap: pxToRem(8),
+  marginBottom: pxToRem(10),
 }) as typeof Box;
 
 export const Title = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
   flex: 1,
@@ -22,7 +23,7 @@ export const Title = styled(Typography)(({ theme }) => ({
 export const RunList = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 export const RunRow = styled(Box, { shouldForwardProp: (p) => p !== "clickable" })<{
@@ -30,8 +31,8 @@ export const RunRow = styled(Box, { shouldForwardProp: (p) => p !== "clickable" 
 }>(({ theme, clickable }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "8px 10px",
+  gap: pxToRem(10),
+  padding: pxToRems(8, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
@@ -66,8 +67,8 @@ export const OpenHint = styled(Box)(({ theme }) => ({
 export const StatusDot = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
   tone: "passing" | "failing" | "running" | "idle";
 }>(({ theme, tone }) => ({
-  width: 9,
-  height: 9,
+  width: pxToRem(9),
+  height: pxToRem(9),
   borderRadius: "50%",
   flexShrink: 0,
   backgroundColor:
@@ -88,30 +89,30 @@ export const RunMain = styled(Box)({
 }) as typeof Box;
 
 export const RunTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 export const RunMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
 })) as typeof Typography;
 
 export const Empty = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "6px 2px",
+  padding: pxToRems(6, 2),
 })) as typeof Typography;
 
 export const FormWrap = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
-  padding: 12,
-  marginBottom: 10,
+  gap: pxToRem(10),
+  padding: pxToRem(12),
+  marginBottom: pxToRem(10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -120,11 +121,11 @@ export const FormWrap = styled(Box)(({ theme }) => ({
 export const Field = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 export const Label = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   color: theme.palette.text.information,
 })) as typeof Typography;
@@ -132,19 +133,19 @@ export const Label = styled(Typography)(({ theme }) => ({
 export const Req = styled(Typography)(({ theme }) => ({
   display: "inline",
   color: theme.palette.error.main,
-  marginLeft: 4,
-  fontSize: 10,
+  marginLeft: pxToRem(4),
+  fontSize: fontPxToRem(10),
 })) as typeof Typography;
 
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / IME
 export const TextField = styled("input")(({ theme }) => ({
-  height: 32,
-  padding: "0 10px",
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontFamily: "inherit",
   outline: "none",
   "&:focus": { borderColor: theme.palette.border.hover },
@@ -152,13 +153,13 @@ export const TextField = styled("input")(({ theme }) => ({
 
 // eslint-disable-next-line no-restricted-syntax -- native <select> required for the choice-type workflow inputs
 export const SelectField = styled("select")(({ theme }) => ({
-  height: 32,
-  padding: "0 8px",
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 8),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontFamily: "inherit",
   outline: "none",
 }));
@@ -166,11 +167,11 @@ export const SelectField = styled("select")(({ theme }) => ({
 export const CheckRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const FormActions = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;

@@ -6,6 +6,7 @@ import { styled } from "@mui/material/styles";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 import type { WeekPair } from "@/lib/activityStats";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   commits: WeekPair;
@@ -16,15 +17,15 @@ const Root = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "12px 14px 10px",
+  padding: pxToRems(12, 14, 10),
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   height: "100%",
 }));
 
 const Label = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -32,7 +33,7 @@ const Label = styled(Box)(({ theme }) => ({
 }));
 
 const Value = styled(Box)(({ theme }) => ({
-  fontSize: 26,
+  fontSize: fontPxToRem(26),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.4px",
@@ -44,22 +45,22 @@ const Foot = styled(Box)({
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "space-between",
-  gap: 10,
-  marginTop: 6,
+  gap: pxToRem(10),
+  marginTop: pxToRem(6),
 });
 
 const Spark = styled(Box)({
   display: "flex",
   alignItems: "flex-end",
-  gap: 3,
-  height: 24,
+  gap: pxToRem(3),
+  height: pxToRem(24),
   flex: 1,
 });
 
 const SparkBar = styled(Box, { shouldForwardProp: (p) => p !== "h" })<{ h: number }>(
   ({ theme, h }) => ({
     flex: 1,
-    minHeight: 2,
+    minHeight: pxToRem(2),
     height: `${h}%`,
     borderRadius: 8,
     backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 55%, transparent)`,
@@ -69,10 +70,10 @@ const SparkBar = styled(Box, { shouldForwardProp: (p) => p !== "h" })<{ h: numbe
 const Delta = styled(Box, { shouldForwardProp: (p) => p !== "tone" })<{
   tone: "up" | "down" | "flat";
 }>(({ theme, tone }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   fontVariantNumeric: "tabular-nums",
   color:
     tone === "up"
@@ -106,8 +107,8 @@ function CommitsHero({ commits, sparkline }: Props) {
           ))}
         </Spark>
         <Delta tone={dir}>
-          {dir === "up" && <ArrowUp size={11} aria-hidden />}
-          {dir === "down" && <ArrowDown size={11} aria-hidden />}
+          {dir === "up" && <ArrowUp size={pxToRem(11)} aria-hidden />}
+          {dir === "down" && <ArrowDown size={pxToRem(11)} aria-hidden />}
           <Box component="span">{deltaLabel}</Box>
         </Delta>
       </Foot>

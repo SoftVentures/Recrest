@@ -6,6 +6,7 @@ import { styled } from "@mui/material/styles";
 import { PrState } from "@recrest/shared";
 
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRems } from "@/theme/scale";
 
 export interface MrChipProps {
   /** Underlying PR state. Ignored for colouring when `draft` is `true`. */
@@ -25,9 +26,9 @@ const Root = styled(Typography, { shouldForwardProp: FORWARD })<{ tone: Tone }>(
   ({ theme, tone }) => ({
     display: "inline-flex",
     alignItems: "center",
-    padding: "1px 6px",
+    padding: pxToRems(1, 6),
     borderRadius: 8,
-    fontSize: 10,
+    fontSize: fontPxToRem(10),
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.05em",

@@ -9,6 +9,7 @@ import VisuallyHidden from "@/components/atoms/layout/VisuallyHidden";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface RepoMissingChipProps {
   className?: string;
@@ -20,11 +21,11 @@ export interface RepoMissingChipProps {
 const Root = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   maxWidth: "100%",
-  padding: "2px 7px",
+  padding: pxToRems(2, 7),
   borderRadius: 8,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -46,7 +47,7 @@ function RepoMissingChip({
 
   return (
     <Root variant="caption" className={className} data-testid={testId}>
-      <FolderX size={11} aria-hidden="true" />
+      <FolderX size={pxToRem(11)} aria-hidden="true" />
       {t("status.missing")}
       <VisuallyHidden>{tAria("repo.missing")}</VisuallyHidden>
     </Root>

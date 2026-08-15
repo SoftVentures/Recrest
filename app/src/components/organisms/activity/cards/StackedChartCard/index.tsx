@@ -13,7 +13,7 @@ import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartToolt
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { StackedDay } from "@/lib/activityStats";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { shade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 
@@ -30,6 +30,7 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 8, right: 8, bottom: 28, left: 28 });
   const { show, move, hide, portal } = useChartTooltip();
 
   const size = bucketSizeForWindow(windowDays);
@@ -113,7 +114,7 @@ function StackedChartCard({ stacked, total, windowDays, loading }: Props) {
           colors={(bar) => colorByRepo.get(String(bar.id)) ?? theme.palette.primary.main}
           defs={gradientDefs}
           fill={gradientFill}
-          margin={{ top: 8, right: 8, bottom: 28, left: 28 }}
+          margin={chartMargin}
           padding={0.35}
           borderRadius={2}
           enableLabel={false}

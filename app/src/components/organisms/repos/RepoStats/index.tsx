@@ -8,6 +8,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { pxToRem } from "@/theme/scale";
 
 export interface RepoStatsProps {
   repo: EnrichedRepo;
@@ -27,14 +28,14 @@ const Grid = styled(Box)({
   display: "grid",
   // Auto-fit so the 4 KPI cells collapse to 2 (or 1) on narrow viewports
   // instead of crushing labels like "OPEN MERGE REQUESTS" past readable width.
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: 12,
+  gridTemplateColumns: `repeat(auto-fit, minmax(${pxToRem(180)}, 1fr))`,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 const Diff = styled(Box)({
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 const Added = styled(Box)(({ theme }) => ({

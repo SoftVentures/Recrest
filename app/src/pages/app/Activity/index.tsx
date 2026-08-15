@@ -85,6 +85,7 @@ import {
 import { setSelectedRange } from "@/store/actions/activity.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectSelectedRange } from "@/store/selectors/activity.selectors";
+import { fontPxToRem, mediaDown, pxToRem, pxToRems } from "@/theme/scale";
 
 /* ──────────────────────────────────────────────────────────────────────────
  * ActivityPage — port of src-old `pages/ActivityPage.tsx`.
@@ -109,17 +110,17 @@ const Root = styled(Box)({
 }) as typeof Box;
 
 const Page = styled(Box)({
-  padding: "18px 24px 80px",
+  padding: pxToRems(18, 24, 80),
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: pxToRem(16),
 }) as typeof Box;
 
 const PageHead = styled(Box)({
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "space-between",
-  gap: 14,
+  gap: pxToRem(14),
   flexWrap: "wrap",
   // Page head drops in first.
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
@@ -128,30 +129,30 @@ const PageHead = styled(Box)({
 
 const PageTitle = styled(Typography)(({ theme }) => ({
   margin: 0,
-  fontSize: 18,
+  fontSize: fontPxToRem(18),
   fontWeight: 700,
   letterSpacing: "-0.2px",
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 const PageSub = styled(Typography)(({ theme }) => ({
-  marginTop: 2,
-  fontSize: 12,
+  marginTop: pxToRem(2),
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 const FilterRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 const FilterSelect = styled(Select)(({ theme }) => ({
   // Match the ActivitySourceToggle's GeneralButtonGroup (density "sm" = 32px) so
   // the header controls line up on one baseline.
-  height: 32,
-  width: 200,
-  fontSize: 12,
+  minHeight: pxToRem(32),
+  width: pxToRem(200),
+  fontSize: fontPxToRem(12),
   backgroundColor: theme.palette.surface.interface.backElevation,
   borderRadius: 8,
   "& .MuiOutlinedInput-notchedOutline": {
@@ -161,10 +162,10 @@ const FilterSelect = styled(Select)(({ theme }) => ({
     borderColor: theme.palette.border.hover,
   },
   "& .MuiSelect-select": {
-    padding: "4px 10px",
+    padding: pxToRems(4, 10),
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: pxToRem(8),
     minHeight: "0 !important",
   },
 }));
@@ -172,23 +173,23 @@ const FilterSelect = styled(Select)(({ theme }) => ({
 const SelectOption = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 12,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(12),
 }) as typeof Box;
 
 const SelectDot = styled(Typography)(({ theme }) => ({
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: "50%",
   backgroundColor: theme.palette.text.informationLight,
   flexShrink: 0,
 })) as typeof Typography;
 
-const Hero = styled(Box)({
+const Hero = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(4, 1fr)",
-  gap: 10,
-  "@media (max-width: 1100px)": {
+  gap: pxToRem(10),
+  [mediaDown(1100, theme.uiScale)]: {
     gridTemplateColumns: "repeat(2, 1fr)",
   },
   // KPI tiles zoom in 50ms apart after the head.
@@ -200,16 +201,16 @@ const Hero = styled(Box)({
   "& > *:nth-of-type(3)": { animationDelay: "160ms" },
   "& > *:nth-of-type(4)": { animationDelay: "210ms" },
   ...prefersReducedMotionGuard,
-}) as typeof Box;
+})) as typeof Box;
 
-const Grid = styled(Box)({
+const Grid = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(12, 1fr)",
-  gap: 14,
-  "@media (max-width: 1400px)": {
+  gap: pxToRem(14),
+  [mediaDown(1400, theme.uiScale)]: {
     gridTemplateColumns: "repeat(8, 1fr)",
   },
-  "@media (max-width: 900px)": {
+  [mediaDown(900, theme.uiScale)]: {
     gridTemplateColumns: "1fr",
   },
   // Bento cards rise in after the hero row has settled (~280ms base).
@@ -225,16 +226,16 @@ const Grid = styled(Box)({
   "& > *:nth-of-type(7)": { animationDelay: "640ms" },
   "& > *:nth-of-type(n + 8)": { animationDelay: "700ms" },
   ...prefersReducedMotionGuard,
-}) as typeof Box;
+})) as typeof Box;
 
 const Span = styled(Box, { shouldForwardProp: (p) => p !== "cols" })<{ cols: number }>(
-  ({ cols }) => ({
+  ({ theme, cols }) => ({
     gridColumn: cols >= 12 ? "1 / -1" : `span ${cols}`,
     minWidth: 0,
-    "@media (max-width: 1400px)": {
+    [mediaDown(1400, theme.uiScale)]: {
       gridColumn: cols >= 12 ? "1 / -1" : "span 4",
     },
-    "@media (max-width: 900px)": {
+    [mediaDown(900, theme.uiScale)]: {
       gridColumn: "1 / -1",
     },
   }),
@@ -243,15 +244,15 @@ const Span = styled(Box, { shouldForwardProp: (p) => p !== "cols" })<{ cols: num
 const SpanStack = styled(Span)({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: pxToRem(14),
 });
 
 const HeadTitleCol = styled(Box)({ minWidth: 0 });
 
 const TruncationBanner = styled(Box)(({ theme }) => ({
-  padding: "8px 12px",
+  padding: pxToRems(8, 12),
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.warning.main,
   backgroundColor: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,

@@ -32,21 +32,22 @@ import {
   setGitConfigInLayer,
 } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const Root = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: pxToRem(14),
 }) as typeof Box;
 
 const Section = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   color: theme.palette.text.information,
   textTransform: "uppercase",
@@ -56,16 +57,16 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
 const ChainList = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: 8,
+  padding: pxToRem(8),
 })) as typeof Box;
 
 const ChainRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   flexWrap: "wrap",
 }) as typeof Box;
 
@@ -75,12 +76,12 @@ const Footer = styled(Box)({
 }) as typeof Box;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.error.main,
 })) as typeof Typography;
 
 const EmptyText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   fontStyle: "italic",
 })) as typeof Typography;
@@ -88,7 +89,7 @@ const EmptyText = styled(Typography)(({ theme }) => ({
 const LoadingRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 function basename(path: string): string {
@@ -210,7 +211,7 @@ export default function RepoGitConfigCard({ repoId }: RepoGitConfigCardProps) {
                 data-testid={TEST_IDS.repoDetail.gitConfig.chainRow(basename(layer.path))}
               >
                 <SourceBadge>
-                  <FileText size={11} aria-hidden />
+                  <FileText size={pxToRem(11)} aria-hidden />
                   {basename(layer.path)}
                 </SourceBadge>
                 {layer.condition && <SourceCondition>{layer.condition}</SourceCondition>}

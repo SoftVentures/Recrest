@@ -7,16 +7,17 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { RepoListRows } from "@/pages/app/Repos/components/RepoList/parts/RepoListRows";
 import { GroupCount, type GroupProps } from "@/pages/app/Repos/components/RepoList/parts/_shared";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const CardGroupShell = styled(Box, {
   shouldForwardProp: (p) => p !== "open",
 })<{ open: boolean }>(({ open }) => ({
   display: "flex",
   flexDirection: "column",
-  padding: "0 16px",
-  paddingBottom: open ? "10px" : 0,
+  padding: pxToRems(0, 16),
+  paddingBottom: open ? pxToRem(10) : 0,
   "& > [data-card-group-grid]": {
-    marginTop: 6,
+    marginTop: pxToRem(6),
   },
 }));
 
@@ -24,15 +25,15 @@ const CardGroupShell = styled(Box, {
 const CardGroupHead = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   background: "transparent",
   border: 0,
   cursor: "pointer",
   fontFamily: "inherit",
   width: "100%",
   textAlign: "left",
-  padding: "2px 4px",
-  fontSize: 11,
+  padding: pxToRems(2, 4),
+  fontSize: fontPxToRem(11),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -47,7 +48,7 @@ export function RepoListCardGroup({ name, repos, selectedRepoId, onSelect, viewM
   return (
     <CardGroupShell open={open}>
       <CardGroupHead type="button" onClick={() => setOpen((o) => !o)}>
-        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        {open ? <ChevronDown size={pxToRem(11)} /> : <ChevronRight size={pxToRem(11)} />}
         {name}
         <GroupCount component="span" variant="caption">
           {repos.length}

@@ -1,6 +1,8 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 export interface GeneralSparklineProps {
   data: readonly number[];
   width?: number;
@@ -45,7 +47,10 @@ function GeneralSparkline({
 }: GeneralSparklineProps) {
   const peak = Math.max(1, ...data);
   return (
-    <Bars style={{ width, height, gap: `${gap}px` }} data-testid={testId}>
+    <Bars
+      style={{ width: pxToRem(width), height: pxToRem(height), gap: pxToRem(gap) }}
+      data-testid={testId}
+    >
       {data.map((v, i) => {
         const isZero = v === 0;
         return (
@@ -55,7 +60,7 @@ function GeneralSparkline({
             zero={zeroColor}
             isZero={isZero}
             style={{
-              height: isZero ? minBarHeight : `${Math.max(8, (v / peak) * 100)}%`,
+              height: isZero ? pxToRem(minBarHeight) : `${Math.max(8, (v / peak) * 100)}%`,
             }}
           />
         );

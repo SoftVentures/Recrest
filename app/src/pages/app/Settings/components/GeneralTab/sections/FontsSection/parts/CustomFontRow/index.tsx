@@ -24,6 +24,7 @@ import {
   uploadCustomFont,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const Content = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -37,7 +38,7 @@ const Chips = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
   justifyContent: "flex-end",
   gap: theme.spacing(0.75),
-  maxWidth: 280,
+  maxWidth: pxToRem(280),
 }));
 
 const Chip = styled(Box)(({ theme }) => ({
@@ -48,7 +49,7 @@ const Chip = styled(Box)(({ theme }) => ({
   borderRadius: 999,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   maxWidth: "100%",
 })) as typeof Box;
 
@@ -102,7 +103,7 @@ export function CustomFontRow() {
           onClick={() => void onUpload()}
           feedbackState={upload.state}
           disabled={!isTauri()}
-          startIcon={<Upload size={14} />}
+          startIcon={<Upload size={pxToRem(14)} />}
           data-testid={TEST_IDS.settings.general.customFontUpload}
         >
           {t("settings.fields.custom_fonts_upload")}
@@ -118,7 +119,7 @@ export function CustomFontRow() {
                   {font.family}
                 </ChipLabel>
                 <GeneralIconButton
-                  icon={<Trash2 size={12} />}
+                  icon={<Trash2 size={pxToRem(12)} />}
                   size={IconButtonSize.XS}
                   variant="ghost"
                   tone="danger"

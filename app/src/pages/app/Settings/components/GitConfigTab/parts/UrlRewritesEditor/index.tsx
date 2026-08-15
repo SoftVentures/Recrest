@@ -40,16 +40,17 @@ import {
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setGitConfigInLayer } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 type Direction = "insteadOf" | "pushInsteadOf";
 
 const UrlRow = styled(CustomRow)({
-  gridTemplateColumns: "minmax(170px, 1.2fr) minmax(180px, 1.6fr) minmax(110px, auto) auto auto",
+  gridTemplateColumns: `minmax(${pxToRem(170)}, 1.2fr) minmax(${pxToRem(180)}, 1.6fr) minmax(${pxToRem(110)}, auto) auto auto`,
   ...GIT_CONFIG_ROW_STACK,
 }) as typeof CustomRow;
 
 const StaticLayerLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   textAlign: "center",
@@ -60,13 +61,13 @@ const DirectionChip = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "0 12px",
-  height: 38,
-  minWidth: 120,
+  padding: pxToRems(0, 12),
+  minHeight: pxToRem(38),
+  minWidth: pxToRem(120),
   borderRadius: 8,
   background: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
@@ -171,7 +172,7 @@ function UrlRowItem({
       </DirectionChip>
       <RowMetaCell component="div">
         <LayerChip title={entry.sourcePath}>
-          <FileText size={12} aria-hidden />
+          <FileText size={pxToRem(12)} aria-hidden />
           <LayerChipText>{basename(entry.sourcePath)}</LayerChipText>
         </LayerChip>
       </RowMetaCell>
@@ -378,7 +379,7 @@ export default function UrlRewritesEditor({
             <AddFormActions>
               <GeneralButton
                 variant="default"
-                startIcon={<Plus size={14} />}
+                startIcon={<Plus size={pxToRem(14)} />}
                 onClick={() => void submitAdd()}
                 loading={submitting}
                 disabled={!draft.from.trim() || !draft.to.trim() || !draft.filePath}

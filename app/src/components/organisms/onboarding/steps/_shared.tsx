@@ -1,11 +1,13 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const StepRoot = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(2),
-  minHeight: 340,
+  minHeight: pxToRem(340),
 }));
 
 export const StepHead = styled(Box)(({ theme }) => ({
@@ -15,7 +17,7 @@ export const StepHead = styled(Box)(({ theme }) => ({
 }));
 
 export const StepTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 20,
+  fontSize: fontPxToRem(20),
   fontWeight: 700,
   letterSpacing: "-0.01em",
   lineHeight: 1.2,
@@ -24,7 +26,7 @@ export const StepTitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const StepBody = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   lineHeight: 1.5,
   color: theme.palette.text.information,
   margin: 0,
@@ -64,7 +66,7 @@ export const Tile = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(2),
-  padding: "12px 14px",
+  padding: pxToRems(12, 14),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
@@ -75,17 +77,17 @@ export const TileLeft = styled(Box)({
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
 }) as typeof Box;
 
 export const TileLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   color: theme.palette.text.primary,
   fontWeight: 500,
 })) as typeof Typography;
 
 export const TileSub = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 

@@ -10,6 +10,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import GeneralModal from "@/components/molecules/modals/GeneralModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 // Keep every action on a single line: with three buttons the labels would
 // otherwise shrink and wrap to two lines. `flexShrink: 0` holds their width
@@ -57,7 +58,7 @@ function ConnectProviderPromptModal({
           </ActionButton>
           <ActionButton
             variant="outline"
-            startIcon={<ExternalLink size={15} />}
+            startIcon={<ExternalLink size={pxToRem(15)} />}
             onClick={onProceed}
             data-testid={TEST_IDS.connectPrompt.proceed}
           >
@@ -65,7 +66,7 @@ function ConnectProviderPromptModal({
           </ActionButton>
           <ActionButton
             variant="default"
-            startIcon={<LogIn size={15} />}
+            startIcon={<LogIn size={pxToRem(15)} />}
             onClick={onConnect}
             data-testid={TEST_IDS.connectPrompt.connect}
           >

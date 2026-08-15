@@ -37,6 +37,7 @@ import {
   setThemeId,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export interface BasicsStepProps {
   onBack: () => void;
@@ -67,9 +68,9 @@ const LOCALES: LocaleEntry[] = [
 ];
 
 const LocaleFlag = styled(ReactCountryFlag)({
-  marginRight: 8,
-  width: 16,
-  height: 12,
+  marginRight: pxToRem(8),
+  width: pxToRem(16),
+  height: pxToRem(12),
   borderRadius: 2,
   flexShrink: 0,
   display: "inline-block",
@@ -133,7 +134,7 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
                   const Icon = THEME_ICONS[c];
                   return (
                     <>
-                      <Icon size={13} />
+                      <Icon size={pxToRem(13)} />
                       {themeLabel(c, t)}
                     </>
                   );
@@ -143,7 +144,7 @@ function BasicsStep({ onBack, onNext }: BasicsStepProps) {
                   const Icon = THEME_ICONS[c];
                   return (
                     <MenuItem key={c} value={c}>
-                      <Icon size={13} style={{ marginRight: 8 }} />
+                      <Icon size={pxToRem(13)} style={{ marginRight: pxToRem(8) }} />
                       {themeLabel(c, t)}
                     </MenuItem>
                   );

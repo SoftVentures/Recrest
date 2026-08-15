@@ -29,7 +29,7 @@ import {
   computeCiRepoBreakdown,
 } from "@/lib/activityAggregates";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useResolvedLocale } from "@/lib/utils/datetime.utils";
 
@@ -55,6 +55,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
   const locale = useResolvedLocale();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 8, right: 8, bottom: 24, left: 44 });
   const { show, hide, portal } = useChartTooltip();
   const lineColor = theme.palette.primary.main;
 
@@ -131,7 +132,7 @@ function CiPassRateCard({ rows, summaries, windowDays = 14, loading }: Props) {
           data={data}
           theme={nivoTheme}
           colors={[lineColor]}
-          margin={{ top: 8, right: 8, bottom: 24, left: 44 }}
+          margin={chartMargin}
           xScale={{ type: "point" }}
           yScale={{ type: "linear", min: yMin, max: 1 }}
           curve="monotoneX"

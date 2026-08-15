@@ -5,6 +5,8 @@ import { styled } from "@mui/material/styles";
 
 import { PrState, type PullRequest } from "@recrest/shared";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 interface Props {
   prsByRepo: Record<string, readonly PullRequest[]>;
 }
@@ -13,15 +15,15 @@ const Root = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "12px 14px 10px",
+  padding: pxToRems(12, 14, 10),
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   height: "100%",
 }));
 
 const Label = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -29,7 +31,7 @@ const Label = styled(Box)(({ theme }) => ({
 }));
 
 const Value = styled(Box)(({ theme }) => ({
-  fontSize: 26,
+  fontSize: fontPxToRem(26),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.4px",
@@ -38,10 +40,10 @@ const Value = styled(Box)(({ theme }) => ({
 }));
 
 const Sub = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
-  marginTop: 4,
+  marginTop: pxToRem(4),
 }));
 
 function OpenPrsHero({ prsByRepo }: Props) {

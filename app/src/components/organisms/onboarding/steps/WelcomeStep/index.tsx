@@ -14,6 +14,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 export interface WelcomeStepProps {
   onNext: () => void;
@@ -24,22 +25,22 @@ const Hero = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   textAlign: "center",
-  gap: 16,
-  paddingTop: 24,
-  paddingBottom: 16,
+  gap: pxToRem(16),
+  paddingTop: pxToRem(24),
+  paddingBottom: pxToRem(16),
   flex: 1,
   justifyContent: "center",
 }) as typeof Box;
 
 const LogoSlot = styled(Logo)({
-  width: 72,
-  height: 72,
+  width: pxToRem(72),
+  height: pxToRem(72),
 });
 
 const Tagline = styled(Box)(({ theme }) => ({
-  fontSize: 14,
+  fontSize: fontPxToRem(14),
   color: theme.palette.text.secondary,
-  maxWidth: 420,
+  maxWidth: pxToRem(420),
   lineHeight: 1.5,
 })) as typeof Box;
 

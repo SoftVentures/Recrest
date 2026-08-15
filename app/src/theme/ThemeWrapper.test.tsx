@@ -30,21 +30,63 @@ describe("ThemeWrapper", () => {
     expect(document.body.style.fontFamily).not.toBe("");
   });
 
-  it("writes the matching ui-scale custom property for each interface size", () => {
-    const cases: ReadonlyArray<[FontSizeId, string]> = [
-      ["sm", "0.94"],
-      ["md", "1"],
-      ["lg", "1.12"],
-      ["xl", "1.25"],
+  it("writes --ui-scale from settings.uiScale, clamped to the supported range", () => {
+    const cases: ReadonlyArray<[number, string]> = [
+      [0.8, "0.8"],
+      [1, "1"],
+      [1.25, "1.25"],
+      [1.5, "1.5"],
+      // Out of range in both directions — clamped, never written raw.
+      [0.1, "0.8"],
+      [4, "1.5"],
     ];
-    for (const [fontSize, scale] of cases) {
+    for (const [uiScale, expected] of cases) {
+      const { unmount } = renderWithProviders(
+        <ThemeWrapper>
+          <Box />
+        </ThemeWrapper>,
+        { store: makeTestStore({ settings: { uiScale } }) },
+      );
+      expect(document.documentElement.style.getPropertyValue("--ui-scale")).toBe(expected);
+      unmount();
+    }
+  });
+
+  it("keeps font size text-only — it moves the body size, not --ui-scale", () => {
+    const cases: ReadonlyArray<[FontSizeId, string]> = [
+      ["sm", "0.75rem"],
+      ["md", "0.8125rem"],
+      ["lg", "0.9375rem"],
+      ["xl", "1.0625rem"],
+    ];
+    for (const [fontSize, expected] of cases) {
       const { unmount } = renderWithProviders(
         <ThemeWrapper>
           <Box />
         </ThemeWrapper>,
         { store: makeTestStore({ settings: { fontSize } }) },
       );
-      expect(document.documentElement.style.getPropertyValue("--ui-scale")).toBe(scale);
+      expect(document.body.style.fontSize).toBe(expected);
+      expect(document.documentElement.style.getPropertyValue("--ui-scale")).toBe("1");
+      unmount();
+    }
+  });
+
+  it("writes --text-scale so `fontPxToRem` values follow the font-size setting", () => {
+    const cases: ReadonlyArray<[FontSizeId, string]> = [
+      ["sm", String(12 / 13)],
+      ["md", "1"],
+      ["lg", String(15 / 13)],
+      ["xl", String(17 / 13)],
+    ];
+    for (const [fontSize, expected] of cases) {
+      const { unmount } = renderWithProviders(
+        <ThemeWrapper>
+          <Box />
+        </ThemeWrapper>,
+        { store: makeTestStore({ settings: { fontSize } }) },
+      );
+      expect(document.documentElement.style.getPropertyValue("--text-scale")).toBe(expected);
       unmount();
     }
   });

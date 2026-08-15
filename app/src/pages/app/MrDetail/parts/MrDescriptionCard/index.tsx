@@ -15,6 +15,7 @@ import {
   Editor,
   EditorActions,
 } from "@/pages/app/MrDetail/parts/MrDescriptionCard/MrDescriptionCard.styles";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   effectiveDescription: string;
@@ -50,7 +51,7 @@ export default function MrDescriptionCard({
             size={IconButtonSize.SM}
             aria-label={tPrs("detail.edit_description")}
             onClick={onBeginEdit}
-            icon={<Pencil size={12} />}
+            icon={<Pencil size={pxToRem(12)} />}
             data-testid={TEST_IDS.mr.editDescription}
           />
         )

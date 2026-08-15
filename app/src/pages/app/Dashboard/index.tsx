@@ -46,15 +46,18 @@ import {
 } from "@/pages/app/Dashboard/parts/skeletons";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setSelectedRepo } from "@/store/reducers/uiReducer";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // `containerType` so the two grids below can step down on the *layout* width:
-// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
-// the unscaled viewport, so it fires at the wrong moment on scaled setups.
+// the grids sit beside the sidebar, so the viewport a `@media` threshold reports
+// is not the width that decides their layout. The thresholds are in rem so they
+// track `--ui-scale` — at a larger scale a step has to fire at a *wider*
+// container width, because the cards' own floors grew with it.
 const Root = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
-  padding: "16px 24px",
+  gap: pxToRem(12),
+  padding: pxToRems(16, 24),
   backgroundColor: theme.palette.background.default,
   flex: 1,
   minHeight: 0,
@@ -70,9 +73,9 @@ const Root = styled(Box)(({ theme }) => ({
 const Kpis = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: 12,
+  gap: pxToRem(12),
   animation: `${pgZoom} ${PAGE_DUR_MD}ms ${PAGE_EASE} both`,
-  "@container (max-width: 900px)": {
+  [`@container (max-width: ${pxToRem(900)})`]: {
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
   },
   ...prefersReducedMotionGuard,
@@ -84,8 +87,8 @@ const Grid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)",
   gridAutoRows: "min-content",
-  gap: 12,
-  "@container (max-width: 860px)": {
+  gap: pxToRem(12),
+  [`@container (max-width: ${pxToRem(860)})`]: {
     gridTemplateColumns: "minmax(0, 1fr)",
   },
   "& > *": {
@@ -103,7 +106,7 @@ const Grid = styled(Box)({
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const CtaLink = styled("button")(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.primary.main,
   cursor: "pointer",
   background: "transparent",
@@ -116,7 +119,7 @@ const CtaLink = styled("button")(({ theme }) => ({
 const AttnList = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
 }) as typeof Box;
 
 const RowBody = styled(Box)({
@@ -125,7 +128,7 @@ const RowBody = styled(Box)({
 }) as typeof Box;
 
 const RowPrimary = styled(Box)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 500,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -135,10 +138,10 @@ const RowPrimary = styled(Box)(({ theme }) => ({
 
 const RowSecondary = styled(Box)(({ theme }) => ({
   display: "flex",
-  gap: 6,
-  fontSize: 10.5,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
-  marginTop: 2,
+  marginTop: pxToRem(2),
   fontVariantNumeric: "tabular-nums",
 })) as typeof Box;
 
@@ -149,7 +152,7 @@ const Sep = styled(Typography)(({ theme }) => ({
 const FullSpanCard = styled(GeneralCard)({ gridColumn: "1 / -1" });
 
 const AttentionMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -366,7 +369,7 @@ function DashboardPage() {
               {openPRs.slice(0, 4).map((p) => (
                 <ClickableRow key={p.id} onClick={() => navigate(AppRoute.MERGE_REQUESTS)}>
                   <MrIcon
-                    size={14}
+                    size={pxToRem(14)}
                     color={p.draft ? undefined : "#22c55e"}
                     style={{ flexShrink: 0 }}
                   />

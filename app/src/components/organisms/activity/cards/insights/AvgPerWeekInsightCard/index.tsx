@@ -7,6 +7,7 @@ import { styled } from "@mui/material/styles";
 
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem } from "@/theme/scale";
 
 interface Props {
   avg: number;
@@ -14,7 +15,7 @@ interface Props {
 }
 
 const Value = styled(Box)(({ theme }) => ({
-  fontSize: 30,
+  fontSize: fontPxToRem(30),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.5px",

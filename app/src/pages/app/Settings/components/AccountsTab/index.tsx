@@ -6,24 +6,25 @@ import { styled } from "@mui/material/styles";
 import { PROVIDER_IDS } from "@/lib/constants/providers.constants";
 import { DefaultSshKey } from "@/pages/app/Settings/components/AccountsTab/parts/DefaultSshKey";
 import { ProviderRow } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Section = styled(Box)({
-  marginBottom: 22,
+  marginBottom: pxToRem(22),
 }) as typeof Box;
 
 const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
-  margin: "0 0 6px",
+  margin: pxToRems(0, 0, 6),
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   fontWeight: 600,
 })) as typeof Typography;
 
 const SectionDesc = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  margin: "0 0 10px 2px",
+  margin: pxToRems(0, 0, 10, 2),
 })) as typeof Typography;
 
 export function AccountsSection() {

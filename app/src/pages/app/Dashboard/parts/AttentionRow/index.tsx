@@ -7,6 +7,7 @@ import { RepoStatusChip } from "@recrest/shared";
 
 import RepoAvatar from "@/components/atoms/avatars/RepoAvatar";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 /** AttentionRow's `kind` is a narrowed subset of {@link RepoStatusChip}. */
 export type AttentionKind = typeof RepoStatusChip.DIRTY | typeof RepoStatusChip.BEHIND;
@@ -52,8 +53,8 @@ export default AttentionRow;
 const AttnRow = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "8px 10px",
+  gap: pxToRem(10),
+  padding: pxToRems(8, 10),
   borderRadius: 8,
   cursor: "pointer",
   background: "transparent",
@@ -73,15 +74,15 @@ const AttnBody = styled(Box)({
 }) as typeof Box;
 
 const AttnName = styled(Box)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   color: theme.palette.text.primary,
 })) as typeof Box;
 
 const AttnSub = styled(Box)(({ theme }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
-  marginTop: 2,
+  marginTop: pxToRem(2),
   fontVariantNumeric: "tabular-nums",
 })) as typeof Box;
 
@@ -103,11 +104,11 @@ const AttnTag = styled("span", {
         ? { bg: "rgba(123, 167, 255, 0.18)", fg: "#7ba7ff" }
         : { bg: "#e8f0ff", fg: "#1e52d4" };
   return {
-    fontSize: 10,
+    fontSize: fontPxToRem(10),
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.04em",
-    padding: "2px 8px",
+    padding: pxToRems(2, 8),
     borderRadius: 100,
     backgroundColor: palette.bg,
     color: palette.fg,

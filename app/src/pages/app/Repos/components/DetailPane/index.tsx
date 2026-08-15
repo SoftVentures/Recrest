@@ -91,6 +91,7 @@ import {
   SectionTitle,
 } from "@/pages/app/Repos/components/DetailPane/DetailPane.styles";
 import { useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 // Stable empty-array reference so the `prs` selector keeps the same value when
 // a repo has no cached PRs — an inline `[]` makes react-redux warn about an
@@ -174,7 +175,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
               size={IconButtonSize.SM}
               aria-label={tAria("repo.close_detail_pane")}
               onClick={onClose}
-              icon={<X size={14} />}
+              icon={<X size={pxToRem(14)} />}
             />
           )}
         </HeaderTopRow>
@@ -197,7 +198,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             tooltip={missingReason ?? t("detail_pane.open_in_terminal")}
             disabled={missing}
             onClick={() => void run(TauriCommand.OPEN_TERMINAL, t("detail_pane.open_in_terminal"))}
-            icon={<TerminalLucide size={13} />}
+            icon={<TerminalLucide size={pxToRem(13)} />}
           />
           <GeneralIconButton
             size={IconButtonSize.MD}
@@ -208,7 +209,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             onClick={() =>
               void run(TauriCommand.OPEN_IN_EXPLORER, t("detail_pane.open_in_explorer"))
             }
-            icon={<Folder size={13} />}
+            icon={<Folder size={pxToRem(13)} />}
           />
           {repo.remoteUrl && (
             <GeneralIconButton
@@ -221,7 +222,9 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                   : t("detail_pane.open_on_host")
               }
               onClick={openHost.open}
-              icon={brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
+              icon={
+                brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={pxToRem(13)} />
+              }
             />
           )}
         </IconRow>
@@ -230,7 +233,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
       <BranchCard>
         <BranchTop>
           <BranchChip>
-            <GitBranch size={12} />
+            <GitBranch size={pxToRem(12)} />
             <BranchText component="span">{repo.status.branch ?? "—"}</BranchText>
           </BranchChip>
           <AheadBehind
@@ -254,7 +257,11 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
                 )
               }
             >
-              <ActionFeedbackIcon state={pull.state} fallback={<ArrowDown size={11} />} size={11} />{" "}
+              <ActionFeedbackIcon
+                state={pull.state}
+                fallback={<ArrowDown size={pxToRem(11)} />}
+                size={11}
+              />{" "}
               {t("detail_pane.pull")}
             </GhostBtn>
           </DisabledReasonTooltip>
@@ -273,7 +280,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
             >
               <ActionFeedbackIcon
                 state={fetch.state}
-                fallback={<RefreshCw size={11} />}
+                fallback={<RefreshCw size={pxToRem(11)} />}
                 size={11}
               />{" "}
               {t("detail_pane.fetch")}
@@ -281,7 +288,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
           </DisabledReasonTooltip>
           <DisabledReasonTooltip reason={missingReason} stretch>
             <GhostBtn type="button" disabled={missing} onClick={() => setCreateOpen(true)}>
-              <Plus size={11} /> {t("detail_pane.branch")}
+              <Plus size={pxToRem(11)} /> {t("detail_pane.branch")}
             </GhostBtn>
           </DisabledReasonTooltip>
         </BranchQuick>
@@ -346,7 +353,7 @@ export function DetailPane({ repo, onClose }: DetailPaneProps) {
 
       <Footer>
         <FullView type="button" onClick={() => navigate(routeToRepo(repo.id))}>
-          <Maximize2 size={13} /> {t("detail_pane.open_full_view")}
+          <Maximize2 size={pxToRem(13)} /> {t("detail_pane.open_full_view")}
         </FullView>
       </Footer>
       {openHost.modal}

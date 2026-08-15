@@ -1,6 +1,8 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Root = styled(Box)({
   height: "100%",
   minHeight: 0,
@@ -13,23 +15,23 @@ export const Root = styled(Box)({
 export const BackBar = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "12px 24px 0",
+  gap: pxToRem(6),
+  padding: pxToRems(12, 24, 0),
   color: theme.palette.text.information,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required: ghost back-link with keyboard focus, no real <a>
 export const BackButton = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   background: "transparent",
   border: 0,
-  padding: 4,
+  padding: pxToRem(4),
   color: "inherit",
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   cursor: "pointer",
   borderRadius: 8,
   "&:hover": { color: theme.palette.text.primary },
@@ -50,7 +52,7 @@ export const Content = styled(Box)(({ theme }) => ({
 // reviewers, diff, timeline). Kept here so parts don't need to depend on
 // each other's style files.
 export const Empty = styled(Box)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
 })) as typeof Box;
 

@@ -1,6 +1,8 @@
 import { Drawer, type DrawerProps as MuiDrawerProps } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 export type GeneralDrawerSize = "sm" | "md" | "lg" | "xl";
 
 export interface GeneralDrawerProps extends MuiDrawerProps {
@@ -8,10 +10,14 @@ export interface GeneralDrawerProps extends MuiDrawerProps {
 }
 
 /**
- * Per-size paper widths. Tuned to match the Recrest baseline mocks, where
- * the MR-detail pane reads as a sidebar (~360 px) rather than a half-screen
- * overlay. `lg` and `xl` cover the rare cases that genuinely need the extra
- * room (e.g. a future full-page diff drawer).
+ * Per-size paper widths in **design px**. Tuned to match the Recrest baseline
+ * mocks, where the MR-detail pane reads as a sidebar (~360 px) rather than a
+ * half-screen overlay. `lg` and `xl` cover the rare cases that genuinely need
+ * the extra room (e.g. a future full-page diff drawer).
+ *
+ * Converted to rem at use, so the pane widens with `--ui-scale` the way its
+ * contents do — a fixed 360 px pane holding rem-scaled padding and type would
+ * squeeze its own content at any scale above 1.
  */
 const SIZE_PX: Record<GeneralDrawerSize, number> = {
   sm: 320,
@@ -34,7 +40,7 @@ function GeneralDrawer({
   hideBackdrop = true,
   ...rest
 }: GeneralDrawerProps) {
-  const width = SIZE_PX[size];
+  const width = pxToRem(SIZE_PX[size]);
   const paperSlotProps = slotProps?.paper ?? {};
   return (
     <Drawer
@@ -52,7 +58,7 @@ function GeneralDrawer({
         root: {
           ...(slotProps?.root ?? {}),
           sx: {
-            top: "var(--recrest-app-chrome-bottom, 64px)",
+            top: "var(--recrest-app-chrome-bottom, 4rem)",
             // The MuiModal root still paints a full-viewport presentation
             // div behind the paper; lock its events to "none" so it
             // doesn't swallow header / sidebar clicks. Per-paper
@@ -69,8 +75,8 @@ function GeneralDrawer({
                 sx: {
                   width,
                   maxWidth: "100vw",
-                  top: "var(--recrest-app-chrome-bottom, 64px)",
-                  height: "calc(100% - var(--recrest-app-chrome-bottom, 64px))",
+                  top: "var(--recrest-app-chrome-bottom, 4rem)",
+                  height: "calc(100% - var(--recrest-app-chrome-bottom, 4rem))",
                   pointerEvents: "auto",
                   borderLeft: (theme: Theme) => `1px solid ${theme.palette.divider}`,
                   borderRight: 0,

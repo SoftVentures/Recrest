@@ -15,6 +15,7 @@ import GeneralCircularLoader, {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
+import { pxToRem } from "@/theme/scale";
 
 /**
  * Size of the icon-button hitbox. The icon itself sits in the middle — pass
@@ -123,8 +124,8 @@ const Root = styled("button", {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: hit,
-    height: hit,
+    width: pxToRem(hit),
+    height: pxToRem(hit),
     padding: 0,
     cursor: "pointer",
     fontFamily: "inherit",
@@ -250,9 +251,9 @@ const GeneralIconButton = forwardRef<HTMLButtonElement, GeneralIconButtonProps>(
         />
       );
     } else if (feedbackState === "success") {
-      displayedIcon = <SuccessGlyph size={iconPx} aria-hidden="true" />;
+      displayedIcon = <SuccessGlyph size={pxToRem(iconPx)} aria-hidden="true" />;
     } else if (feedbackState === "error") {
-      displayedIcon = <FailureGlyph size={iconPx} aria-hidden="true" />;
+      displayedIcon = <FailureGlyph size={pxToRem(iconPx)} aria-hidden="true" />;
     }
     const isLoading = feedbackState === "loading";
     const effectiveDisabled = disabled || isLoading;

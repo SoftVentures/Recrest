@@ -5,35 +5,36 @@ import { RefreshCw } from "lucide-react";
 
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const ProvidersGrid = styled(Box)({
   display: "grid",
   // The aside gives up width down to 200px before the repo list starts
   // shrinking, and `minmax(0, 1fr)` lets the list shrink past its own
   // min-content instead of pushing the modal wider than the viewport.
-  gridTemplateColumns: "minmax(200px, 280px) minmax(0, 1fr)",
+  gridTemplateColumns: `minmax(${pxToRem(200)}, ${pxToRem(280)}) minmax(0, 1fr)`,
   minWidth: 0,
   height: "100%",
 }) as typeof Box;
 
 export const ProvidersAside = styled(Box)(({ theme }) => ({
   borderRight: `1px solid ${theme.palette.divider}`,
-  padding: 10,
+  padding: pxToRem(10),
   overflowY: "auto",
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
 })) as typeof Box;
 
 export const ProviderGroup = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
 }) as typeof Box;
 
 export const AsideHeading = styled(Typography)(({ theme }) => ({
-  padding: "6px 10px",
-  fontSize: 10,
+  padding: pxToRems(6, 10),
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -52,10 +53,13 @@ export const AsideItem = styled("button", {
     position: "relative",
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: pxToRem(8),
     width: "100%",
     textAlign: "left",
-    padding: depth === 0 ? "7px 10px" : `5px 10px 5px ${leftPad}px`,
+    padding:
+      depth === 0
+        ? pxToRems(7, 10)
+        : `${pxToRem(5)} ${pxToRem(10)} ${pxToRem(5)} ${pxToRem(leftPad)}`,
     borderRadius: 8,
     border: 0,
     background: active
@@ -63,7 +67,7 @@ export const AsideItem = styled("button", {
       : "transparent",
     color: active ? toneText(theme, StatusTone.PRIMARY) : theme.palette.text.primary,
     fontFamily: "inherit",
-    fontSize: 12.5,
+    fontSize: fontPxToRem(12.5),
     fontWeight: active ? 600 : 500,
     cursor: "pointer",
     "&:hover": {
@@ -75,7 +79,7 @@ export const AsideItem = styled("button", {
       "&::before": {
         content: '""',
         position: "absolute",
-        left: 10 + indentBase / 2,
+        left: pxToRem(10 + indentBase / 2),
         top: 0,
         bottom: 0,
         width: 1,
@@ -86,8 +90,8 @@ export const AsideItem = styled("button", {
 });
 
 export const AsideIcon = styled(Box)({
-  width: 18,
-  height: 18,
+  width: pxToRem(18),
+  height: pxToRem(18),
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -104,20 +108,20 @@ export const ProvidersMain = styled(Box)({
 export const SearchBar = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "10px 16px",
+  gap: pxToRem(10),
+  padding: pxToRems(10, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
 })) as typeof Box;
 
 export const SelectedPill = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  padding: "3px 9px",
+  gap: pxToRem(4),
+  padding: pxToRems(3, 9),
   borderRadius: 100,
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.primary.contrastText,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   fontWeight: 700,
 })) as typeof Typography;
 
@@ -133,9 +137,9 @@ export const SectionHeaderBar = styled(Box)(({ theme }) => ({
   zIndex: 1,
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "8px 16px",
-  fontSize: 10,
+  gap: pxToRem(8),
+  padding: pxToRems(8, 16),
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -154,8 +158,8 @@ export const RepoRow = styled("label", {
   position: "relative",
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "10px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(10, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   cursor: disabled ? "not-allowed" : "pointer",
   opacity: disabled ? 0.55 : 1,
@@ -193,14 +197,14 @@ export const RepoBody = styled(Box)({
 export const RepoTitleRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   minWidth: 0,
 }) as typeof Box;
 
 export const RepoTitle = styled(Typography)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -209,9 +213,9 @@ export const RepoTitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const RepoDesc = styled(Box)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
-  marginTop: 2,
+  marginTop: pxToRem(2),
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -220,9 +224,9 @@ export const RepoDesc = styled(Box)(({ theme }) => ({
 export const RepoMeta = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  marginTop: 4,
-  fontSize: 10.5,
+  gap: pxToRem(8),
+  marginTop: pxToRem(4),
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.informationLight,
 })) as typeof Box;
 
@@ -231,16 +235,16 @@ export const RepoUpdatedColumn = styled(Box)(({ theme }) => ({
   flexDirection: "column",
   alignItems: "flex-end",
   justifyContent: "center",
-  gap: 2,
+  gap: pxToRem(2),
   flexShrink: 0,
-  minWidth: 88,
-  paddingLeft: 12,
+  minWidth: pxToRem(88),
+  paddingLeft: pxToRem(12),
   color: theme.palette.text.information,
   textAlign: "right",
 })) as typeof Box;
 
 export const RepoUpdatedRelative = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   fontWeight: 600,
   color: theme.palette.text.primary,
   lineHeight: 1.2,
@@ -248,7 +252,7 @@ export const RepoUpdatedRelative = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const RepoUpdatedAbsolute = styled(Typography)(({ theme }) => ({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   color: theme.palette.text.informationLight,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -258,12 +262,12 @@ export const RepoUpdatedAbsolute = styled(Typography)(({ theme }) => ({
 export const LangChip = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 export const LangDot = styled(Typography)(({ theme }) => ({
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: "50%",
   backgroundColor: theme.palette.primary.main,
 })) as typeof Typography;
@@ -274,10 +278,10 @@ export const MetaBadge = styled("span", {
 })<{ tone: "neutral" | "success" }>(({ theme, tone }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 3,
-  padding: "1px 6px",
+  gap: pxToRem(3),
+  padding: pxToRems(1, 6),
   borderRadius: 8,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 600,
   backgroundColor:
     tone === "success"
@@ -291,10 +295,10 @@ export const EmptyState = styled(Box)(({ theme }) => ({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  gap: 8,
-  padding: "60px 20px",
+  gap: pxToRem(8),
+  padding: pxToRems(60, 20),
   textAlign: "center",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Box;
 
@@ -303,8 +307,8 @@ export const ConnectFirst = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  gap: 14,
-  padding: 60,
+  gap: pxToRem(14),
+  padding: pxToRem(60),
   textAlign: "center",
   height: "100%",
 }) as typeof Box;
@@ -313,8 +317,8 @@ export const ConnectIcon = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 56,
-  height: 56,
+  width: pxToRem(56),
+  height: pxToRem(56),
   borderRadius: "50%",
   backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 18%, transparent)`,
   color: theme.palette.primary.main,
@@ -323,20 +327,20 @@ export const ConnectIcon = styled(Box)(({ theme }) => ({
 export const ConnectBrands = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: pxToRem(14),
 }) as typeof Box;
 
 export const ConnectText = styled(Typography)(({ theme }) => ({
-  maxWidth: 360,
-  fontSize: 13,
+  maxWidth: pxToRem(360),
+  fontSize: fontPxToRem(13),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const StatusInline = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  fontSize: 11,
+  gap: pxToRem(4),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -354,11 +358,11 @@ export const Badge = styled("span", {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 16,
-  height: 16,
-  padding: "0 5px",
+  minWidth: pxToRem(16),
+  minHeight: pxToRem(16),
+  padding: pxToRems(0, 5),
   borderRadius: 100,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   backgroundColor: active
     ? theme.palette.primary.main

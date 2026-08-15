@@ -6,12 +6,13 @@ import { styled } from "@mui/material/styles";
 import { ExternalLink } from "lucide-react";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "12px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(12, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
 })) as typeof Box;
@@ -24,15 +25,15 @@ const Left = styled(Box)({
 const Title = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  fontSize: 13,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
 })) as typeof Box;
 
 const Url = styled(Box)(({ theme }) => ({
-  marginTop: 2,
-  fontSize: 11,
+  marginTop: pxToRem(2),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
@@ -44,14 +45,14 @@ const Url = styled(Box)(({ theme }) => ({
 const OpenBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 28,
-  padding: "0 10px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(28),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
   color: theme.palette.text.primary,
   borderRadius: 8,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -62,7 +63,7 @@ const OpenBtn = styled("button")(({ theme }) => ({
 }));
 
 interface LinkItemProps {
-  icon: ComponentType<{ size?: number }>;
+  icon: ComponentType<{ size?: number | string }>;
   title: ReactNode;
   url: ReactNode;
   onOpen: () => void;
@@ -74,13 +75,13 @@ function LinkItem({ icon: Icon, title, url, onOpen, openLabel = "Open" }: LinkIt
     <Row>
       <Left>
         <Title>
-          <Icon size={13} />
+          <Icon size={pxToRem(13)} />
           {title}
         </Title>
         <Url>{url}</Url>
       </Left>
       <OpenBtn type="button" onClick={onOpen}>
-        <ExternalLink size={11} />
+        <ExternalLink size={pxToRem(11)} />
         {openLabel}
       </OpenBtn>
     </Row>

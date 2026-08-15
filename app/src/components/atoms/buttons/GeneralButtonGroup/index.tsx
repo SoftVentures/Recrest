@@ -3,6 +3,8 @@ import { Children, cloneElement, isValidElement } from "react";
 import { ToggleButton, ToggleButtonGroup, type ToggleButtonGroupProps } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export type GeneralButtonGroupShape = "pill" | "square";
 export type GeneralButtonGroupSize = "md" | "sm" | "xs";
 
@@ -23,9 +25,9 @@ const HEIGHT_BY_DENSITY: Record<GeneralButtonGroupSize, number> = {
 };
 
 const PADDING_BY_DENSITY: Record<GeneralButtonGroupSize, string> = {
-  md: "0 14px",
-  sm: "0 12px",
-  xs: "0 10px",
+  md: pxToRems(0, 14),
+  sm: pxToRems(0, 12),
+  xs: pxToRems(0, 10),
 };
 
 interface StyledProps {
@@ -52,7 +54,7 @@ const StyledGroup = styled(ToggleButtonGroup, { shouldForwardProp: SHOULD_FORWAR
     display: "inline-flex",
     alignItems: "stretch",
     gap: 0,
-    height: HEIGHT_BY_DENSITY[density],
+    height: pxToRem(HEIGHT_BY_DENSITY[density]),
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: shape === "square" ? 8 : 999,
@@ -75,7 +77,7 @@ const StyledGroup = styled(ToggleButtonGroup, { shouldForwardProp: SHOULD_FORWAR
     "&.MuiToggleButtonGroup-vertical": {
       flexDirection: "column",
       height: "auto",
-      width: HEIGHT_BY_DENSITY[density],
+      width: pxToRem(HEIGHT_BY_DENSITY[density]),
     },
   }),
 );
@@ -85,7 +87,7 @@ const StyledToggle = styled(ToggleButton, { shouldForwardProp: SHOULD_FORWARD })
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: pxToRem(6),
     height: "100%",
     padding: PADDING_BY_DENSITY[density],
     // No outer borders — those belong to the group. Only a 1px left
@@ -95,7 +97,7 @@ const StyledToggle = styled(ToggleButton, { shouldForwardProp: SHOULD_FORWARD })
     backgroundColor: "transparent",
     color: theme.palette.text.secondary,
     fontFamily: "inherit",
-    fontSize: 12,
+    fontSize: fontPxToRem(12),
     fontWeight: 500,
     lineHeight: 1,
     cursor: "pointer",

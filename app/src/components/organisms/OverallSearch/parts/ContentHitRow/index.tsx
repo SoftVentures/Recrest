@@ -10,6 +10,7 @@ import {
   ContentTop,
   SnippetMark,
 } from "@/components/organisms/OverallSearch/OverallSearch.styles";
+import { pxToRem } from "@/theme/scale";
 
 export interface ContentHitRowProps {
   path: string;
@@ -62,7 +63,7 @@ export default function ContentHitRow({
       data-testid={testId}
     >
       <ContentTop>
-        <FileIcon size={13} aria-hidden />
+        <FileIcon size={pxToRem(13)} aria-hidden />
         <ContentPath component="span" variant="caption">
           {path}
         </ContentPath>

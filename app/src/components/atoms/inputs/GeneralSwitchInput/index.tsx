@@ -3,6 +3,8 @@ import { forwardRef } from "react";
 import { type SwitchProps as MuiSwitchProps, Switch } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 export interface GeneralSwitchInputProps extends Omit<MuiSwitchProps, "onChange"> {
   onCheckedChange?: (checked: boolean) => void;
   onChange?: MuiSwitchProps["onChange"];
@@ -16,16 +18,18 @@ export interface GeneralSwitchInputProps extends Omit<MuiSwitchProps, "onChange"
  * Pre-MUI src-old used the same monochrome treatment — restoring that here.
  */
 const StyledSwitch = styled(Switch)(({ theme }) => ({
-  width: 42,
-  height: 26,
+  width: pxToRem(42),
+  height: pxToRem(26),
   padding: 0,
 
   "& .MuiSwitch-switchBase": {
     padding: 0,
-    margin: 2,
+    margin: pxToRem(2),
     transitionDuration: "260ms",
     "&.Mui-checked": {
-      transform: "translateX(16px)",
+      // Thumb travel is measured against the (now rem-sized) track, so it has
+      // to scale with it — unlike the cosmetic ±1 px nudges elsewhere.
+      transform: `translateX(${pxToRem(16)})`,
       color: theme.palette.mode === "dark" ? "#0f1115" : "#ffffff",
       "& + .MuiSwitch-track": {
         backgroundColor: theme.palette.mode === "dark" ? "#ffffff" : "#0f1115",
@@ -49,12 +53,12 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
   },
   "& .MuiSwitch-thumb": {
     boxSizing: "border-box",
-    width: 22,
-    height: 22,
+    width: pxToRem(22),
+    height: pxToRem(22),
     boxShadow: "0 3px 1px rgba(0,0,0,0.06), 0 3px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.04)",
   },
   "& .MuiSwitch-track": {
-    borderRadius: 26 / 2,
+    borderRadius: pxToRem(26 / 2),
     backgroundColor: theme.palette.mode === "dark" ? "#39393D" : "#E9E9EA",
     opacity: 1,
     transition: theme.transitions.create(["background-color"], { duration: 260 }),

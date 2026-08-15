@@ -3,8 +3,9 @@ import { styled } from "@mui/material/styles";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneChip, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
-export function GithubGlyph({ size = 16 }: { size?: number }) {
+export function GithubGlyph({ size = pxToRem(16) }: { size?: number | string }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">
       <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.27-1.68-1.27-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.95.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.47.11-3.06 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.89-.39s1.97.13 2.89.39c2.21-1.49 3.18-1.18 3.18-1.18.62 1.59.23 2.77.11 3.06.73.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
@@ -12,7 +13,7 @@ export function GithubGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
-export function GitlabGlyph({ size = 16 }: { size?: number }) {
+export function GitlabGlyph({ size = pxToRem(16) }: { size?: number | string }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
       <path
@@ -30,7 +31,7 @@ export function GitlabGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
-export function BitbucketGlyph({ size = 16 }: { size?: number }) {
+export function BitbucketGlyph({ size = pxToRem(16) }: { size?: number | string }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
       <path
@@ -45,19 +46,19 @@ export const Card = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "14px 16px",
-  marginBottom: 10,
+  padding: pxToRems(14, 16),
+  marginBottom: pxToRem(10),
 })) as typeof Box;
 
 export const TopRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
 }) as typeof Box;
 
 export const BrandName = styled(Typography)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
 })) as typeof Typography;
@@ -87,11 +88,11 @@ export const StatusPill = styled("span", { shouldForwardProp: (p) => p !== "tone
   return {
     display: "inline-flex",
     alignItems: "center",
-    fontSize: 9.5,
+    fontSize: fontPxToRem(9.5),
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.04em",
-    padding: "2px 7px",
+    padding: pxToRems(2, 7),
     borderRadius: 100,
     ...(mapped
       ? toneChip(theme, mapped[0], mapped[1])
@@ -107,21 +108,21 @@ export const Spacer = styled(Box)({ flex: 1 }) as typeof Box;
 export const ActionGroup = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 export const Username = styled(Box)(({ theme }) => ({
-  marginTop: 6,
-  fontSize: 11.5,
+  marginTop: pxToRem(6),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Box;
 
 export const ApiRow = styled(Box)(({ theme }) => ({
-  marginTop: 10,
+  marginTop: pxToRem(10),
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 11.5,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   flexWrap: "wrap",
 })) as typeof Box;
@@ -130,8 +131,8 @@ export const ApiLabel = styled(Typography)({ fontWeight: 500 }) as typeof Typogr
 
 export const ApiCode = styled(Box)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 11.5,
-  padding: "3px 8px",
+  fontSize: fontPxToRem(11.5),
+  padding: pxToRems(3, 8),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -141,15 +142,15 @@ export const ApiCode = styled(Box)(({ theme }) => ({
 export const ApiChange = styled(Box)(({ theme }) => ({
   color: toneText(theme, StatusTone.PRIMARY),
   cursor: "pointer",
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   textDecoration: "underline",
   textUnderlineOffset: 2,
   "&:hover": { textDecoration: "none" },
 })) as typeof Box;
 
 export const Form = styled(Box)(({ theme }) => ({
-  marginTop: 12,
-  paddingTop: 12,
+  marginTop: pxToRem(12),
+  paddingTop: pxToRem(12),
   borderTop: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
@@ -158,7 +159,7 @@ export const Form = styled(Box)(({ theme }) => ({
 
 export const FormHint = styled(Typography)(({ theme }) => ({
   margin: 0,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -190,12 +191,12 @@ export const SaveRow = styled(Box)(({ theme }) => ({
 
 export const ErrorText = styled(Typography)(({ theme }) => ({
   margin: 0,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: toneText(theme, StatusTone.ERROR),
 })) as typeof Typography;
 
 export const SuccessText = styled(Typography)(({ theme }) => ({
   margin: 0,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Typography;

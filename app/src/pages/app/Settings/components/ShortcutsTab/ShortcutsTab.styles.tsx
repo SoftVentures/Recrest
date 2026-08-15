@@ -1,15 +1,17 @@
 import { Box, Typography } from "@mui/material";
 import { keyframes, styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Keys = styled(Box)({
   display: "inline-flex",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 export const RowActions = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const pulse = keyframes`
@@ -22,13 +24,13 @@ const pulse = keyframes`
 export const RecordingChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  height: 22,
-  padding: "0 10px",
+  minHeight: pxToRem(22),
+  padding: pxToRems(0, 10),
   borderRadius: 8,
   border: `1px dashed ${theme.palette.primary.main}`,
   color: theme.palette.primary.main,
   backgroundColor: `color-mix(in srgb, ${theme.palette.primary.main} 12%, transparent)`,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   whiteSpace: "nowrap",
   animation: `${pulse} 1.4s ease-in-out infinite`,
@@ -36,13 +38,13 @@ export const RecordingChip = styled(Box)(({ theme }) => ({
 
 export const FeedbackText = styled(Typography)(({ theme }) => ({
   display: "block",
-  marginTop: 6,
-  fontSize: 11.5,
+  marginTop: pxToRem(6),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.error.main,
 })) as typeof Typography;
 
 export const ResetAllBar = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
-  marginTop: 4,
+  marginTop: pxToRem(4),
 }) as typeof Box;

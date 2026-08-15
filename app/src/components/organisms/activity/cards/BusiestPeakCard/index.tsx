@@ -8,6 +8,7 @@ import type { ActivityStats } from "@/lib/activityStats";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useResolvedLocale } from "@/lib/utils/datetime.utils";
 import { weekdayLabel } from "@/lib/utils/locale.utils";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 interface Props {
   stats: ActivityStats;
@@ -16,18 +17,18 @@ interface Props {
 const MiniGrid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: 16,
+  gap: pxToRem(16),
 });
 
 const Mini = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   minWidth: 0,
 });
 
 const MiniLabel = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   color: theme.palette.text.information,
   textTransform: "uppercase",
@@ -35,7 +36,7 @@ const MiniLabel = styled(Box)(({ theme }) => ({
 }));
 
 const MiniValue = styled(Box)(({ theme }) => ({
-  fontSize: 16,
+  fontSize: fontPxToRem(16),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.2px",
@@ -43,7 +44,7 @@ const MiniValue = styled(Box)(({ theme }) => ({
 }));
 
 const MiniSub = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 }));
 

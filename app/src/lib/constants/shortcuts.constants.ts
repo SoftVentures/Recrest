@@ -23,6 +23,9 @@ export const SHORTCUT_ID = {
   NAV_SETTINGS: "nav-settings",
   SEARCH: "search",
   TOGGLE_SIDEBAR: "toggle-sidebar",
+  ZOOM_IN: "zoom-in",
+  ZOOM_OUT: "zoom-out",
+  ZOOM_RESET: "zoom-reset",
 } as const;
 export type ShortcutId = (typeof SHORTCUT_ID)[keyof typeof SHORTCUT_ID];
 
@@ -32,6 +35,20 @@ export interface ShortcutCombo {
   alt?: boolean;
   /** Lowercase `KeyboardEvent.key` to match (e.g. "k", "1", ","). */
   key: string;
+  /**
+   * Additional `KeyboardEvent.key` values that trigger the same action.
+   * Only the zoom bindings need this: "+" sits on an unshifted key on
+   * German layouts but is `Shift`+`=` on US ones, so a single `key` can
+   * never cover both. Display and conflict detection deliberately ignore
+   * `altKeys` — the primary `key` is the canonical binding.
+   */
+  altKeys?: string[];
+  /**
+   * Match regardless of the Shift state. Set for the zoom bindings for the
+   * same layout reason as {@link altKeys}: on a US layout the user has to
+   * hold Shift to produce "+" at all.
+   */
+  ignoreShift?: boolean;
 }
 
 export interface ShortcutDef {
@@ -104,6 +121,24 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     id: SHORTCUT_ID.TOGGLE_SIDEBAR,
     combo: { mod: true, key: "b" },
     labelKey: "settings.shortcuts.toggle_sidebar",
+    group: SHORTCUT_GROUP.ACTIONS,
+  },
+  {
+    id: SHORTCUT_ID.ZOOM_IN,
+    combo: { mod: true, key: "+", altKeys: ["="], ignoreShift: true },
+    labelKey: "settings.shortcuts.zoom_in",
+    group: SHORTCUT_GROUP.ACTIONS,
+  },
+  {
+    id: SHORTCUT_ID.ZOOM_OUT,
+    combo: { mod: true, key: "-", altKeys: ["_"], ignoreShift: true },
+    labelKey: "settings.shortcuts.zoom_out",
+    group: SHORTCUT_GROUP.ACTIONS,
+  },
+  {
+    id: SHORTCUT_ID.ZOOM_RESET,
+    combo: { mod: true, key: "0" },
+    labelKey: "settings.shortcuts.zoom_reset",
     group: SHORTCUT_GROUP.ACTIONS,
   },
 ];

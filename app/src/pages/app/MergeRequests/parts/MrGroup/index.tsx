@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MrRow } from "@/pages/app/MergeRequests/components/MrRow";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   repoId: string;
@@ -35,7 +36,7 @@ export default function MrGroup({
         aria-expanded={!collapsed}
         data-testid={TEST_IDS.mr.groupHead(repoId)}
       >
-        {collapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+        {collapsed ? <ChevronRight size={pxToRem(11)} /> : <ChevronDown size={pxToRem(11)} />}
         <Box component="span">{repoName}</Box>
         <GroupCount component="span" variant="caption">
           {prs.length}
@@ -63,8 +64,8 @@ export default function MrGroup({
 const GroupHead = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "10px 16px",
+  gap: pxToRem(6),
+  padding: pxToRems(10, 16),
   background: "transparent",
   border: 0,
   cursor: "pointer",
@@ -72,7 +73,7 @@ const GroupHead = styled("button")(({ theme }) => ({
   width: "100%",
   textAlign: "left",
   borderBottom: `1px solid ${theme.palette.divider}`,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -87,10 +88,10 @@ const GroupHead = styled("button")(({ theme }) => ({
 }));
 
 const GroupCount = styled(Typography)(({ theme }) => ({
-  padding: "0 6px",
+  padding: pxToRems(0, 6),
   borderRadius: 100,
   backgroundColor: theme.palette.surface.interface.backElevation,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   color: theme.palette.text.information,
-  marginLeft: 4,
+  marginLeft: pxToRem(4),
 })) as typeof Typography;
