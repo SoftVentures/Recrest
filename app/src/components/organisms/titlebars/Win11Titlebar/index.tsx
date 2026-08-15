@@ -28,6 +28,10 @@ const Bar = styled(Box)(({ theme }) => ({
   // the desktop, not the application.
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif',
+  // Window-chrome geometry stays in PX on purpose — it must line up with the
+  // OS-drawn decoration next to it (traffic lights / caption buttons / native
+  // shell), which does not follow the app's `--ui-scale`. Do NOT convert the
+  // heights, widths or insets in this file to rem.
   height: 32,
   flex: "0 0 32px",
   // No left inset — the app-menu button sits flush in the top-left corner.
@@ -131,6 +135,10 @@ function Win11Titlebar({ isMaximized }: Win11TitlebarProps) {
     // (Windows' default is often 125–150%) the two diverge, the hit-test never
     // matches the maximize button, and the Snap-Layouts flyout never opens.
     // Multiply by devicePixelRatio so the reported rects are physical pixels.
+    // CSS px and layout px are the same thing again now that `#root` no longer
+    // carries a `zoom`: under zoom, getBoundingClientRect returned *visual* px,
+    // so at interface scale 1.25 the region handed to Win32 was 25 % too large
+    // and the Snap-Layouts hit test drifted off the real button.
     const rectOf = (el: HTMLElement) => {
       const r = el.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;

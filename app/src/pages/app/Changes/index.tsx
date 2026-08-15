@@ -33,6 +33,7 @@ import { invoke, isTauri } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const PageRoot = styled(Box)({
   display: "flex",
@@ -44,9 +45,9 @@ const PageRoot = styled(Box)({
 const ToolbarRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "12px 24px",
-  paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
+  gap: pxToRem(12),
+  padding: pxToRems(12, 24),
+  paddingRight: `calc(${pxToRem(24)} + var(--recrest-scrollbar-width, 0px))`,
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 }) as typeof Box;
@@ -56,7 +57,7 @@ const Scroll = styled(Box)({
   minHeight: 0,
   overflow: "auto",
   scrollbarGutter: "stable",
-  paddingBottom: 24,
+  paddingBottom: pxToRem(24),
 }) as typeof Box;
 
 const Card = styled(Box)(({ theme }) => ({
@@ -80,9 +81,9 @@ const RepoBlock = styled(Box)(({ theme }) => ({
 const RowHeader = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: pxToRem(12),
   width: "100%",
-  padding: "12px 16px",
+  padding: pxToRems(12, 16),
   cursor: "pointer",
   transition: "background-color 120ms ease",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },
@@ -95,19 +96,19 @@ const RowHeader = styled(Box)(({ theme }) => ({
 const Chevron = styled(Box)({
   display: "inline-flex",
   flexShrink: 0,
-  width: 16,
+  width: pxToRem(16),
 }) as typeof Box;
 
 const NameCol = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   flex: 1,
   minWidth: 0,
 }) as typeof Box;
 
 const RepoName = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -117,7 +118,7 @@ const RepoName = styled(Typography)(({ theme }) => ({
 
 const RepoPath = styled(Typography)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -127,13 +128,13 @@ const RepoPath = styled(Typography)(({ theme }) => ({
 const BranchChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  padding: "2px 8px",
+  gap: pxToRem(4),
+  padding: pxToRems(2, 8),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
   flexShrink: 0,
 })) as typeof Box;
@@ -141,9 +142,9 @@ const BranchChip = styled(Box)(({ theme }) => ({
 const DiffMeta = styled(Box)({
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 6,
+  gap: pxToRem(6),
   fontVariantNumeric: "tabular-nums",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   flexShrink: 0,
 }) as typeof Box;
 
@@ -158,7 +159,7 @@ const Removed = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const FilesMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   whiteSpace: "nowrap",
   flexShrink: 0,
@@ -167,7 +168,7 @@ const FilesMeta = styled(Typography)(({ theme }) => ({
 const Actions = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   flexShrink: 0,
 }) as typeof Box;
 
@@ -235,7 +236,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
         aria-label={expanded ? t("changes.collapse_aria") : t("changes.expand_aria")}
       >
         <Chevron component="span" aria-hidden>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {expanded ? <ChevronDown size={pxToRem(14)} /> : <ChevronRight size={pxToRem(14)} />}
         </Chevron>
         <RepoAvatar repo={repo} size={28} radius={6} />
         <NameCol>
@@ -244,7 +245,7 @@ function ChangesRow({ repo, expanded, onToggle }: ChangesRowProps) {
         </NameCol>
         {repo.status.branch && (
           <BranchChip>
-            <GitBranch size={11} />
+            <GitBranch size={pxToRem(11)} />
             <Box component="span">{repo.status.branch}</Box>
           </BranchChip>
         )}

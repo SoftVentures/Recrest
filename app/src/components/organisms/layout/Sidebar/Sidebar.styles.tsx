@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import Logo from "@/components/atoms/brand/Logo";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface CollapsibleProps {
   collapsed: boolean;
@@ -69,15 +70,15 @@ export const BrandLink = styled(NavLink)(({ theme }) => ({
 
 export const BrandMark = styled(Logo, { shouldForwardProp: SHOULD_FORWARD })<CollapsibleProps>(
   ({ collapsed }) => ({
-    width: collapsed ? 32 : 40,
-    height: collapsed ? 32 : 40,
+    width: collapsed ? pxToRem(32) : pxToRem(40),
+    height: collapsed ? pxToRem(32) : pxToRem(40),
     flexShrink: 0,
   }),
 );
 
 export const BrandName = styled(Typography)(({ theme }) => ({
   fontFamily: '"Space Grotesk", system-ui',
-  fontSize: 17,
+  fontSize: fontPxToRem(17),
   fontWeight: 700,
   color: theme.palette.text.primary,
   textTransform: "uppercase",
@@ -90,7 +91,7 @@ export const Nav = styled("nav", { shouldForwardProp: SHOULD_FORWARD })<Collapsi
   ({ collapsed }) => ({
     display: "flex",
     flexDirection: "column",
-    gap: 4,
+    gap: pxToRem(4),
     flex: "1 1 auto",
     minHeight: 0,
     overflowY: "auto",
@@ -122,18 +123,18 @@ export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemPr
   return {
     display: "flex",
     alignItems: "center",
-    gap: 11,
-    height: 38,
-    padding: collapsed ? 0 : "0 11px",
+    gap: pxToRem(11),
+    minHeight: pxToRem(38),
+    padding: collapsed ? 0 : pxToRems(0, 11),
     justifyContent: collapsed ? "center" : "flex-start",
     borderRadius: 8,
     textDecoration: "none",
     color: theme.palette.text.primary,
     backgroundColor: active ? activeBg : "transparent",
-    fontSize: 14,
+    fontSize: fontPxToRem(14),
     fontWeight: active ? 600 : 500,
     fontFamily: "inherit",
-    width: collapsed ? 38 : "100%",
+    width: collapsed ? pxToRem(38) : "100%",
     border: `1px solid ${borderColor}`,
     position: "relative",
     transition: "background 120ms, color 120ms, border-color 120ms",
@@ -146,24 +147,24 @@ export const NavItem = styled(Box, { shouldForwardProp: SHOULD_FORWARD })<ItemPr
 
 export const NavLabel = styled(Box)({
   flex: 1,
-  fontSize: 14,
+  fontSize: fontPxToRem(14),
 }) as typeof Box;
 
 export const NavCount = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.secondary,
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
 
 export const NavDotCount = styled(Typography)(({ theme }) => ({
   position: "absolute",
-  top: 1,
-  right: 1,
-  minWidth: 14,
-  height: 14,
-  padding: "0 3px",
+  top: pxToRem(1),
+  right: pxToRem(1),
+  minWidth: pxToRem(14),
+  minHeight: pxToRem(14),
+  padding: pxToRems(0, 3),
   borderRadius: 8,
-  fontSize: 9,
+  fontSize: fontPxToRem(9),
   fontWeight: 700,
   backgroundColor: theme.palette.primary.main,
   color: "#fff",

@@ -6,6 +6,7 @@ import type { CheckRunSummary, PrEvent, RecentCommit } from "@recrest/shared";
 import { FeedEventKind } from "@/lib/constants/feedEventKinds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export type FeedEvent =
   | {
@@ -30,8 +31,8 @@ export const FeedItem = styled(Box, { shouldForwardProp: (p) => p !== "clickable
   display: "grid",
   gridTemplateColumns: "22px 24px minmax(0, 1fr) auto",
   alignItems: "center",
-  gap: 10,
-  padding: "8px 12px",
+  gap: pxToRem(10),
+  padding: pxToRems(8, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
   cursor: clickable ? "pointer" : "default",
   "&:last-of-type": { borderBottom: 0 },
@@ -51,8 +52,8 @@ export const FeedIcon = styled("span", { shouldForwardProp: (p) => p !== "tone" 
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 22,
-  height: 22,
+  width: pxToRem(22),
+  height: pxToRem(22),
   borderRadius: "50%",
   flexShrink: 0,
   color:
@@ -82,7 +83,7 @@ export const FeedIcon = styled("span", { shouldForwardProp: (p) => p !== "tone" 
 }));
 
 export const FeedMsg = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
   fontWeight: 500,
   whiteSpace: "nowrap",
@@ -94,8 +95,8 @@ export const FeedMsg = styled(Typography)(({ theme }) => ({
 export const FeedMeta = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  fontSize: 11,
+  gap: pxToRem(5),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   flexShrink: 0,
   whiteSpace: "nowrap",

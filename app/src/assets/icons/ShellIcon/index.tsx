@@ -9,6 +9,7 @@ import CmdLogo from "@/assets/icons/shells/cmd.svg?react";
 import PowershellCoreLogo from "@/assets/icons/shells/powershell-core.svg?react";
 import WindowsPowershellLogo from "@/assets/icons/shells/windows-powershell.svg?react";
 import WslLogo from "@/assets/icons/shells/wsl.svg?react";
+import { pxToRem } from "@/theme/scale";
 
 /**
  * Brand marks for every shell Recrest knows about. Same shape as
@@ -54,8 +55,8 @@ function ShellIcon({ id, size = 16, color = "brand", title, style }: ShellIconPr
   if (VendorLogo) {
     return (
       <VendorLogo
-        width={size}
-        height={size}
+        width={pxToRem(size)}
+        height={pxToRem(size)}
         role="img"
         aria-label={title ?? id}
         style={{
@@ -72,8 +73,8 @@ function ShellIcon({ id, size = 16, color = "brand", title, style }: ShellIconPr
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
+        width={pxToRem(size)}
+        height={pxToRem(size)}
         viewBox="0 0 24 24"
         role="img"
         aria-label={title ?? si.title}
@@ -84,7 +85,7 @@ function ShellIcon({ id, size = 16, color = "brand", title, style }: ShellIconPr
     );
   }
 
-  return <LucideTerminal size={size} aria-label={title ?? id} style={baseStyle} />;
+  return <LucideTerminal size={pxToRem(size)} aria-label={title ?? id} style={baseStyle} />;
 }
 
 export default ShellIcon;

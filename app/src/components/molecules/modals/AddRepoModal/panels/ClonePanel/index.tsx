@@ -25,6 +25,7 @@ import { errorMessage } from "@/lib/utils/error.utils";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { gitCloneUrl, loadRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export function ClonePanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -107,7 +108,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
               disabled={!isTauri()}
               data-testid={TEST_IDS.addRepoDialog.destBrowse}
             >
-              <FolderOpen size={13} />
+              <FolderOpen size={pxToRem(13)} />
               {t("actions.browse")}
             </BrowseBtn>
           </PathFieldRow>
@@ -130,7 +131,7 @@ export function ClonePanel({ onClose }: { onClose: () => void }) {
           {t("actions.cancel")}
         </SecondaryBtn>
         <PrimaryBtn type="submit" disabled={!canSubmit} data-testid={TEST_IDS.addRepoDialog.clone}>
-          <ArrowDown size={13} />
+          <ArrowDown size={pxToRem(13)} />
           {busy ? t("actions.cloning") : t("actions.clone")}
         </PrimaryBtn>
       </Footer>

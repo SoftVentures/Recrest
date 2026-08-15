@@ -19,6 +19,7 @@ import ContributorsSection from "@/pages/app/Settings/components/AboutTab/parts/
 import LinkItem from "@/pages/app/Settings/components/AboutTab/parts/LinkItem";
 import { GithubGlyph } from "@/pages/app/Settings/components/AccountsTab/parts/ProviderRow/ProviderRow.styles";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const GITHUB_URL = "https://github.com/SoftVentures/Recrest";
 const ISSUES_URL = "https://github.com/SoftVentures/Recrest/issues";
@@ -27,27 +28,27 @@ const LICENSES_URL = "https://github.com/SoftVentures/Recrest/blob/main/LICENSE"
 const FactRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "11px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(11, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
 })) as typeof Box;
 
 const FactKey = styled(Box)(({ theme }) => ({
   flex: 1,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.primary,
   fontWeight: 500,
 })) as typeof Box;
 
 const FactVal = styled(Box, { shouldForwardProp: (p) => p !== "mono" })<{ mono?: boolean }>(
   ({ theme, mono }) => ({
-    fontSize: 12,
+    fontSize: fontPxToRem(12),
     color: theme.palette.text.information,
     fontFamily: mono ? MONO_STACK : "inherit",
     display: "inline-flex",
     alignItems: "center",
-    gap: 6,
+    gap: pxToRem(6),
   }),
 );
 
@@ -146,7 +147,7 @@ export function AboutSection() {
       key: t("settings.about.license"),
       value: (
         <>
-          <Scale size={11} />
+          <Scale size={pxToRem(11)} />
           <Box component="span">MIT</Box>
         </>
       ),

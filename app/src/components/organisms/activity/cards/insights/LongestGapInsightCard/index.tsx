@@ -9,6 +9,7 @@ import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { LongestGap } from "@/lib/insights";
 import { useDateTimeFormat } from "@/lib/utils/datetime.utils";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 interface Props {
   gap: LongestGap | null;
@@ -16,7 +17,7 @@ interface Props {
 }
 
 const Value = styled(Box)(({ theme }) => ({
-  fontSize: 30,
+  fontSize: fontPxToRem(30),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.5px",
@@ -25,8 +26,8 @@ const Value = styled(Box)(({ theme }) => ({
 }));
 
 const Caption = styled(Box)(({ theme }) => ({
-  marginTop: 4,
-  fontSize: 11.5,
+  marginTop: pxToRem(4),
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
 }));

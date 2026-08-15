@@ -3,17 +3,18 @@ import { styled } from "@mui/material/styles";
 
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
 import { opaqueSurfaceBg } from "@/lib/utils/translucency.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const MONO = MONO_STACK;
 
 export const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: pxToRem(16),
 }) as typeof Box;
 
 export const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -23,8 +24,8 @@ export const SectionLabel = styled(Typography)(({ theme }) => ({
 export const StrategyList = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
-  marginTop: 8,
+  gap: pxToRem(8),
+  marginTop: pxToRem(8),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <label> required so clicking anywhere on the card toggles the wrapped MUI <Radio>
@@ -33,9 +34,9 @@ export const StrategyOption = styled("label", {
 })<{ selected: boolean; disabled?: boolean }>(({ theme, selected, disabled }) => ({
   display: "grid",
   gridTemplateColumns: "auto 1fr",
-  gap: 10,
+  gap: pxToRem(10),
   alignItems: "flex-start",
-  padding: "10px 12px",
+  padding: pxToRems(10, 12),
   borderRadius: 8,
   border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
   backgroundColor: selected
@@ -50,26 +51,26 @@ export const StrategyOption = styled("label", {
 }));
 
 export const StrategyDisabledHint = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
-  marginTop: 4,
+  marginTop: pxToRem(4),
   fontStyle: "italic",
 })) as typeof Typography;
 
 export const StrategyText = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
 }) as typeof Box;
 
 export const StrategyName = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 export const StrategyDesc = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   lineHeight: 1.45,
 })) as typeof Typography;
@@ -77,21 +78,21 @@ export const StrategyDesc = styled(Typography)(({ theme }) => ({
 export const Field = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <input> required for accessibility / autofocus
 export const TitleInput = styled("input")(({ theme }) => ({
   width: "100%",
-  height: 36,
-  padding: "0 12px",
+  minHeight: pxToRem(36),
+  padding: pxToRems(0, 12),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: opaqueSurfaceBg(theme),
   color: theme.palette.text.primary,
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   outline: "none",
   "&:focus": { borderColor: theme.palette.border.hover },
 }));
@@ -104,39 +105,39 @@ export const TitleInput = styled("input")(({ theme }) => ({
 // exceeds it.
 export const DescriptionWrap = styled(Box)({
   "& .ProseMirror": {
-    minHeight: 96,
-    maxHeight: 180,
+    minHeight: pxToRem(96),
+    maxHeight: pxToRem(180),
     overflowY: "auto",
   },
 }) as typeof Box;
 
 export const DeleteBranchLabel = styled(Box)(({ theme }) => ({
   display: "block",
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 500,
   color: theme.palette.text.primary,
 })) as typeof Box;
 
 export const DeleteBranchHint = styled(Box)(({ theme }) => ({
   display: "block",
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
-  marginTop: 2,
+  marginTop: pxToRem(2),
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> matching the RepoDetail PrimaryBtn visual (filled neutral)
 export const PrimaryBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 32,
-  padding: "0 14px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 14),
   borderRadius: 8,
   border: `1px solid ${theme.palette.text.primary}`,
   background: theme.palette.text.primary,
   color: theme.palette.background.paper,
   fontFamily: "inherit",
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   cursor: "pointer",
   "&:hover": { opacity: 0.92 },
@@ -151,15 +152,15 @@ export const PrimaryBtn = styled("button")(({ theme }) => ({
 export const SecondaryBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 32,
-  padding: "0 12px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 12),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   background: theme.palette.background.paper,
   color: theme.palette.text.primary,
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   cursor: "pointer",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },

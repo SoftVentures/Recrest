@@ -3,14 +3,15 @@ import { styled } from "@mui/material/styles";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const Root = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: pxToRem(12),
   fontFamily: MONO_STACK,
-  fontSize: 12,
-  paddingRight: 4,
+  fontSize: fontPxToRem(12),
+  paddingRight: pxToRem(4),
 }) as typeof Box;
 
 export const SectionBox = styled(Box)(({ theme }) => ({
@@ -23,15 +24,15 @@ export const SectionHead = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
-  padding: "8px 12px",
+  gap: pxToRem(8),
+  padding: pxToRems(8, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.backElevation,
   fontFamily: "inherit",
 })) as typeof Box;
 
 export const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
@@ -39,25 +40,25 @@ export const SectionTitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const SectionCount = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
   flex: 1,
-  marginLeft: 4,
+  marginLeft: pxToRem(4),
 })) as typeof Typography;
 
 export const SectionActions = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   flexShrink: 0,
 }) as typeof Box;
 
 export const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "6px 12px",
+  gap: pxToRem(8),
+  padding: pxToRems(6, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-child": { borderBottom: 0 },
   // Hover-reveal pattern: actions stay invisible until row is hovered or has
@@ -75,7 +76,7 @@ export const RowPath = styled(Box)({
   minWidth: 0,
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -84,7 +85,7 @@ export const RowPath = styled(Box)({
 export const RowActions = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   flexShrink: 0,
 }) as typeof Box;
 
@@ -94,11 +95,11 @@ export const RowActions = styled(Box)({
 export const AlsoUnstagedTag = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 3,
-  padding: "1px 5px",
+  gap: pxToRem(3),
+  padding: pxToRems(1, 5),
   borderRadius: 6,
   fontFamily: "inherit",
-  fontSize: 9.5,
+  fontSize: fontPxToRem(9.5),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
@@ -131,11 +132,11 @@ export const KindBadge = styled("span", {
     palette.modified ?? { color: infoColor, bg: theme.palette.surface.interface.backElevation };
   return {
     fontFamily: "inherit",
-    fontSize: 10,
+    fontSize: fontPxToRem(10),
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.05em",
-    padding: "1px 6px",
+    padding: pxToRems(1, 6),
     borderRadius: 8,
     color: tone.color,
     backgroundColor: tone.bg,
@@ -147,26 +148,26 @@ export const Toolbar = styled(Box)({
   display: "flex",
   alignItems: "center",
   flexWrap: "wrap",
-  gap: 6,
+  gap: pxToRem(6),
   justifyContent: "space-between",
 }) as typeof Box;
 
 export const ToolbarLeft = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   flexWrap: "wrap",
 }) as typeof Box;
 
 export const ToolbarRight = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 export const EmptyState = styled(Box)(({ theme }) => ({
-  padding: 12,
-  fontSize: 12,
+  padding: pxToRem(12),
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   fontStyle: "italic",
 })) as typeof Box;
@@ -179,8 +180,8 @@ export const StashList = styled(Box)({
 export const StashRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "6px 12px",
+  gap: pxToRem(8),
+  padding: pxToRems(6, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-child": { borderBottom: 0 },
 })) as typeof Box;
@@ -191,12 +192,12 @@ export const StashMessage = styled(Box)({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 }) as typeof Box;
 
 export const StashIndex = styled(Box)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   color: theme.palette.text.information,
   flexShrink: 0,
 })) as typeof Box;

@@ -28,6 +28,7 @@ import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { setScanPaths } from "@/store/actions/repos.actions";
 import { saveSettings } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface PickFolderStepProps {
   onBack: () => void;
@@ -47,7 +48,7 @@ const Input = styled(TextField)({
 const PathList = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  maxHeight: 200,
+  maxHeight: pxToRem(200),
   overflowY: "auto",
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
@@ -59,9 +60,9 @@ const PathRow = styled(Box)(({ theme }) => ({
   alignItems: "center",
   justifyContent: "space-between",
   gap: theme.spacing(1),
-  padding: "8px 12px",
+  padding: pxToRems(8, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   "&:last-child": { borderBottom: 0 },
   "&:hover": { background: theme.palette.surface.interface.active },
 }));
@@ -81,7 +82,7 @@ const Empty = styled(Typography)(({ theme }) => ({
   border: `1px dashed ${theme.palette.divider}`,
   padding: `${theme.spacing(3)} ${theme.spacing(2)}`,
   textAlign: "center",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -163,7 +164,7 @@ function PickFolderStep({ onBack, onNext }: PickFolderStepProps) {
             onClick={() => void browse()}
             loading={busy}
             disabled={!isTauri()}
-            startIcon={<FolderOpen size={14} />}
+            startIcon={<FolderOpen size={pxToRem(14)} />}
             data-testid={TEST_IDS.onboarding.pickFolderBrowse}
           >
             {t("pickFolder.browse")}
@@ -178,7 +179,7 @@ function PickFolderStep({ onBack, onNext }: PickFolderStepProps) {
               <PathRow key={p}>
                 <PathText component="span">{p}</PathText>
                 <GeneralIconButton
-                  icon={<Trash2 size={12} />}
+                  icon={<Trash2 size={pxToRem(12)} />}
                   size={IconButtonSize.XS}
                   variant="ghost"
                   aria-label={`Remove ${p}`}

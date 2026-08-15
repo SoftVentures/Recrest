@@ -7,6 +7,7 @@ import JetbrainsLogo from "@/assets/icons/ides/jetbrains.svg?react";
 import VSCodeLogo from "@/assets/icons/ides/visual-studio-code.svg?react";
 import WebstormLogo from "@/assets/icons/ides/webstorm.svg?react";
 import { IDE_UI, type IdeId, type IdeLogoSlug } from "@/lib/constants/ides.constants";
+import { pxToRem } from "@/theme/scale";
 
 /**
  * Official IDE logos inlined as React SVG components (via vite-plugin-svgr).
@@ -40,8 +41,8 @@ function IdeIcon({ id, size = 16, color = "brand", title, style }: IdeIconProps)
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
+        width={pxToRem(size)}
+        height={pxToRem(size)}
         viewBox="0 0 24 24"
         role="img"
         aria-label={title ?? siCursor.title}
@@ -72,8 +73,8 @@ function IdeIcon({ id, size = 16, color = "brand", title, style }: IdeIconProps)
 
   return (
     <LogoComponent
-      width={size}
-      height={size}
+      width={pxToRem(size)}
+      height={pxToRem(size)}
       role="img"
       aria-label={title ?? id}
       style={iconStyle}

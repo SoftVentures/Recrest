@@ -19,6 +19,7 @@ import {
   setNotificationsNewPr,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const NotificationKind = {
   NEW_PR: "new_pr",
@@ -51,21 +52,21 @@ async function sendTestNotification(kind: NotificationKind): Promise<void> {
 const InlineRow = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const TestBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  height: 28,
-  padding: "0 10px",
+  gap: pxToRem(5),
+  minHeight: pxToRem(28),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
   color: theme.palette.text.primary,
   borderRadius: 8,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -106,7 +107,8 @@ export function NotificationsSection() {
           aria-label={t("settings.send_test_notification", { ns: I18nNamespace.ARIA })}
           onClick={() => void sendTestNotification(kind)}
         >
-          <Send size={11} /> {t("notifications_test_button", { ns: I18nNamespace.SETTINGS })}
+          <Send size={pxToRem(11)} />{" "}
+          {t("notifications_test_button", { ns: I18nNamespace.SETTINGS })}
         </TestBtn>
       )}
       <GeneralSwitchInput
@@ -131,7 +133,8 @@ export function NotificationsSection() {
               aria-label={t("settings.send_test_notification", { ns: I18nNamespace.ARIA })}
               onClick={() => void sendTestNotification(NotificationKind.GENERIC)}
             >
-              <Send size={11} /> {t("notifications_test_button", { ns: I18nNamespace.SETTINGS })}
+              <Send size={pxToRem(11)} />{" "}
+              {t("notifications_test_button", { ns: I18nNamespace.SETTINGS })}
             </TestBtn>
           )}
           <GeneralSwitchInput

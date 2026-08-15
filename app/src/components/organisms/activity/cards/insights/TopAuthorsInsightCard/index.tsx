@@ -9,6 +9,7 @@ import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { TopAuthor } from "@/lib/insights";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 interface Props {
   authors: TopAuthor[];
@@ -19,20 +20,20 @@ interface Props {
 const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 });
 
 const Row = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   minWidth: 0,
 });
 
 const Name = styled(Box)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   overflow: "hidden",
@@ -41,14 +42,14 @@ const Name = styled(Box)(({ theme }) => ({
 }));
 
 const Count = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 700,
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
 }));
 
 const Empty = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 }));
 

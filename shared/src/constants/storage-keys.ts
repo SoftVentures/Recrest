@@ -35,6 +35,15 @@ export const StorageKey = {
   /** Integer 0..100, the user's last blur-slider value. Same rationale as
    *  `TRANSLUCENCY_INTENSITY`. */
   TRANSLUCENCY_BLUR: `${STORAGE_PREFIX}translucency-blur`,
+  /** "true" once the one-shot `fontSize` → `uiScale` migration has run.
+   *  Before the rem-scaling rework `fontSize` drove a CSS `zoom` on `#root`
+   *  (sm 0.94 / md 1 / lg 1.12 / xl 1.25); it now only moves text while the
+   *  interface scale lives in `uiScale`, so an upgraded user's UI would
+   *  silently shrink without this. The marker cannot live on the backend:
+   *  `ui_scale` is `#[serde(default = "default_ui_scale")] f32`, so "absent
+   *  from settings.json" and "explicitly 1.0" arrive at the renderer
+   *  indistinguishable. */
+  UI_SCALE_MIGRATED: `${STORAGE_PREFIX}ui-scale-migrated`,
   /** dev:web only: serialized AppSettings overlay so reloads persist user
    *  changes against the seed. Real Tauri uses `settings.json` on disk. */
   DEV_SETTINGS: `${STORAGE_PREFIX}dev-settings`,

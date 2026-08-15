@@ -12,13 +12,14 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const TableHead = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(220px, 1.6fr) minmax(130px, 0.9fr) 110px 120px minmax(140px, auto)",
+  gridTemplateColumns: `minmax(${pxToRem(220)}, 1.6fr) minmax(${pxToRem(130)}, 0.9fr) ${pxToRem(110)} ${pxToRem(120)} minmax(${pxToRem(140)}, auto)`,
   alignItems: "center",
-  gap: 12,
-  padding: "10px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(10, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   position: "sticky",
   top: 0,
@@ -28,7 +29,7 @@ const TableHead = styled(Box)(({ theme }) => ({
 
 const HeadCell = styled(Typography)(({ theme }) => ({
   margin: 0,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   fontWeight: 600,
   lineHeight: 1,
   textTransform: "uppercase",
@@ -39,7 +40,7 @@ const HeadCell = styled(Typography)(({ theme }) => ({
 const SortCell = styled(HeadCell)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   cursor: "pointer",
   userSelect: "none",
   width: "fit-content",
@@ -102,8 +103,8 @@ export function RepoListHead({ sort = "default", onSort }: RepoListHeadProps) {
         }}
       >
         {label}
-        {dir === "asc" && <ChevronUp size={12} />}
-        {dir === "desc" && <ChevronDown size={12} />}
+        {dir === "asc" && <ChevronUp size={pxToRem(12)} />}
+        {dir === "desc" && <ChevronDown size={pxToRem(12)} />}
       </SortCell>
     );
   };

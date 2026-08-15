@@ -11,6 +11,7 @@ import {
   SectionHead,
   SectionTitle,
 } from "@/pages/app/MergeRequests/components/MrDetailPanel/MrDetailPanel.styles";
+import { pxToRem } from "@/theme/scale";
 
 export interface SectionProps {
   title: string;
@@ -44,7 +45,7 @@ function Section({
   return (
     <SectionBox>
       <SectionHead type="button" onClick={handleToggle}>
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {open ? <ChevronDown size={pxToRem(12)} /> : <ChevronRight size={pxToRem(12)} />}
         <SectionTitle component="span" variant="caption">
           {title}
         </SectionTitle>

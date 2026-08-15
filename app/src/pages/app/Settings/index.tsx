@@ -50,6 +50,7 @@ import { GitConfigSection } from "@/pages/app/Settings/components/GitConfigTab";
 import { IntegrationsSection } from "@/pages/app/Settings/components/IntegrationsTab";
 import { ShortcutsSection } from "@/pages/app/Settings/components/ShortcutsTab";
 import { StorageSection } from "@/pages/app/Settings/components/StorageTab";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const DeveloperTabLazy = import.meta.env.DEV
   ? lazy(() => import("@/pages/app/Settings/components/DeveloperTab"))
@@ -86,23 +87,23 @@ const TABS: TabDescriptor[] = [
 
 const Root = styled(Box)({
   display: "flex",
-  gap: 16,
+  gap: pxToRem(16),
   // Right padding is intentionally 0 so the Body scrollbar sits flush against
   // the viewport edge — same visual rhythm as Activity/Repos. The Body owns
   // its own right-side breathing room via PageInner's paddingRight.
-  padding: "16px 0 16px 24px",
+  padding: pxToRems(16, 0, 16, 24),
   minHeight: 0,
   height: "100%",
   overflow: "hidden",
 }) as typeof Box;
 
 const Nav = styled(Box)(({ theme }) => ({
-  flex: "0 0 220px",
+  flex: `0 0 ${pxToRem(220)}`,
   alignSelf: "stretch",
   display: "flex",
   flexDirection: "column",
-  gap: 2,
-  padding: 8,
+  gap: pxToRem(2),
+  padding: pxToRem(8),
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
@@ -117,13 +118,13 @@ const NavFooter = styled(Box)(({ theme }) => ({
   // Auto top-margin pushes the brand+version block to the bottom of the
   // tab nav regardless of how many tabs are visible (dev mode adds one).
   marginTop: "auto",
-  padding: "10px 12px 6px",
+  padding: pxToRems(10, 12, 6),
   borderTop: `1px solid ${theme.palette.divider}`,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 6,
-  fontSize: 11,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Box;
 
@@ -133,8 +134,8 @@ const FooterName = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const FooterDot = styled(Typography)(({ theme }) => ({
-  width: 3,
-  height: 3,
+  width: pxToRem(3),
+  height: pxToRem(3),
   borderRadius: "50%",
   backgroundColor: theme.palette.text.informationLight,
   flexShrink: 0,
@@ -142,7 +143,7 @@ const FooterDot = styled(Typography)(({ theme }) => ({
 
 const FooterVersion = styled(Typography)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -155,15 +156,15 @@ const TabBtn = styled("button", {
 })<TabBtnProps>(({ theme, active }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "8px 10px",
+  gap: pxToRem(10),
+  padding: pxToRems(8, 10),
   background: active
     ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
     : "transparent",
   border: 0,
   textAlign: "left",
   color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: active ? 600 : 500,
   cursor: "pointer",
   borderRadius: 8,
@@ -187,8 +188,8 @@ const PageInner = styled(Box)({
   // Right padding lives on the content (not the scroll container) so the
   // scrollbar can sit at the viewport edge. Set to 24 so the right edge
   // aligns with the header's `paddingRight: 24` across every page.
-  paddingRight: 24,
-  paddingBottom: 40,
+  paddingRight: pxToRem(24),
+  paddingBottom: pxToRem(40),
   // Each section block rises in with a 40ms-stagger after the 120ms head delay.
   // Matches src-old `.p-settings .a-set-page > .a-set-section`.
   "& > *": {
@@ -204,7 +205,7 @@ const PageInner = styled(Box)({
 }) as typeof Box;
 
 const PageHead = styled(Box)({
-  marginBottom: 20,
+  marginBottom: pxToRem(20),
   // Header block (h2 + intro paragraph) drops down. Matches src-old
   // `.p-settings .a-set-head` with 40ms delay.
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
@@ -213,20 +214,22 @@ const PageHead = styled(Box)({
 }) as typeof Box;
 
 const PageH2 = styled(Typography)(({ theme }) => ({
-  fontSize: 18,
+  fontSize: fontPxToRem(18),
   fontWeight: 700,
   color: theme.palette.text.primary,
-  margin: "0 0 4px",
+  margin: pxToRems(0, 0, 4),
   letterSpacing: "-0.01em",
 })) as typeof Typography;
 
 const PageIntro = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
   margin: 0,
 })) as typeof Typography;
 
 const SectionDivider = styled(Box)(({ theme }) => ({
+  // Hairline rule — stays 1 device px like a border, it must not thicken with
+  // the UI scale.
   height: 1,
   width: "100%",
   backgroundColor: theme.palette.divider,
@@ -315,7 +318,7 @@ function SettingsPage() {
               data-testid={TEST_IDS.settings.tab(tb.id)}
               onClick={() => setTab(tb.id)}
             >
-              <Icon size={13} />
+              <Icon size={pxToRem(13)} />
               <Box component="span">{t(tb.labelKey)}</Box>
             </TabBtn>
           );

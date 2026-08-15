@@ -49,6 +49,7 @@ import { fetchOldestCommitDate, setSelectedRange } from "@/store/actions/activit
 import { toggleSidebar } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectOldestCommitDate, selectSelectedRange } from "@/store/selectors/activity.selectors";
+import { pxToRem } from "@/theme/scale";
 
 interface NavSpec {
   to: AppRoutePath;
@@ -86,14 +87,18 @@ function Sidebar() {
   // would force-set the final width and abort the in-flight interpolation.
   // Only padding is driven from React; width lives entirely on the DOM node
   // via the animate() call.
-  // Collapsed: 49px (38 + side padding + border); expanded: 209.
+  // Collapsed: 49 design px (38 + side padding + border); expanded: 209.
   const [scope, animate] = useAnimate<HTMLElement>();
   const padX = collapsed ? theme.spacing(0.625) : theme.spacing(1);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (!scope.current) return;
-    const target = collapsed ? 49 : 209;
+    // Design px × interface scale rather than rem: framer-motion tweens a
+    // number reliably, but cannot interpolate from a computed px width to a
+    // rem string. Multiplying here gives the same result the rest of the
+    // sidebar gets from `--ui-scale`.
+    const target = (collapsed ? 49 : 209) * theme.uiScale;
     if (isFirstRender.current) {
       // Skip the animation on mount so the Aside doesn't visibly grow from 0.
       scope.current.style.width = `${target}px`;
@@ -105,7 +110,7 @@ function Sidebar() {
       { width: target },
       { type: "tween", duration: 0.18, ease: [0.32, 0.72, 0, 1] },
     );
-  }, [animate, collapsed, scope]);
+  }, [animate, collapsed, scope, theme.uiScale]);
 
   const repoList = Object.values(repos);
   const dirtyCount = repoList.filter((r) => r.status.dirty).length;
@@ -121,13 +126,13 @@ function Sidebar() {
   const nav: NavSpec[] = [
     {
       to: AppRoute.DASHBOARD,
-      icon: <DashboardIcon size={15} />,
+      icon: <DashboardIcon size={pxToRem(15)} />,
       label: t("nav.dashboard"),
       testId: navTestId(AppRoute.DASHBOARD),
     },
     {
       to: AppRoute.REPOS,
-      icon: <ReposIcon size={15} />,
+      icon: <ReposIcon size={pxToRem(15)} />,
       label: t("nav.repos"),
       count: repoList.length,
       testId: navTestId(AppRoute.REPOS),
@@ -138,7 +143,7 @@ function Sidebar() {
       ? [
           {
             to: AppRoute.MERGE_REQUESTS,
-            icon: <MergeRequestsIcon size={15} />,
+            icon: <MergeRequestsIcon size={pxToRem(15)} />,
             label: t("nav.merge_requests"),
             count: mrCount,
             testId: navTestId(AppRoute.MERGE_REQUESTS),
@@ -149,20 +154,20 @@ function Sidebar() {
       : []),
     {
       to: AppRoute.CHANGES,
-      icon: <ChangesIcon size={15} />,
+      icon: <ChangesIcon size={pxToRem(15)} />,
       label: t("nav.changes"),
       count: dirtyCount,
       testId: navTestId(AppRoute.CHANGES),
     },
     {
       to: AppRoute.BRANCHES,
-      icon: <BranchesIcon size={15} />,
+      icon: <BranchesIcon size={pxToRem(15)} />,
       label: t("nav.branches"),
       testId: navTestId(AppRoute.BRANCHES),
     },
     {
       to: AppRoute.ACTIVITY,
-      icon: <ActivityIcon size={15} />,
+      icon: <ActivityIcon size={pxToRem(15)} />,
       label: t("nav.activity"),
       testId: navTestId(AppRoute.ACTIVITY),
     },
@@ -245,7 +250,7 @@ function Sidebar() {
           onClick={() => dispatch(toggleSidebar())}
           aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
         >
-          {collapsed ? <ChevronsRight size={13} /> : <ChevronsLeft size={13} />}
+          {collapsed ? <ChevronsRight size={pxToRem(13)} /> : <ChevronsLeft size={pxToRem(13)} />}
         </FoldButton>
       </GeneralTooltip>
 
@@ -278,7 +283,7 @@ function Sidebar() {
             <StyledNavLink to={AppRoute.SETTINGS} data-testid={TEST_IDS.sidebar.navSettings}>
               {({ isActive }) => (
                 <NavItem collapsed={collapsed} active={isActive} forceBorder>
-                  <SettingsIcon size={15} />
+                  <SettingsIcon size={pxToRem(15)} />
                   {!collapsed && <NavLabel>{settingsLabel}</NavLabel>}
                 </NavItem>
               )}

@@ -1,6 +1,8 @@
 import { LinearProgress, type LinearProgressProps } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 /**
  * Horizontal progress bar — used for clone/fetch/install operations where the
  * caller has a useful percentage to show. Omit `value` for an indeterminate
@@ -30,7 +32,7 @@ interface RootProps {
 const Root = styled(LinearProgress, {
   shouldForwardProp: (p) => p !== "$thickness",
 })<RootProps>(({ theme, $thickness }) => ({
-  height: LINEAR_LOADER_THICKNESS_PX[$thickness],
+  height: pxToRem(LINEAR_LOADER_THICKNESS_PX[$thickness]),
   borderRadius: LINEAR_LOADER_THICKNESS_PX[$thickness] / 2,
   backgroundColor: theme.palette.surface.interface.active,
   "& .MuiLinearProgress-bar": {

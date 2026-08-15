@@ -9,6 +9,7 @@ import {
   LeadingSlot,
   RadioDot,
 } from "@/pages/app/Repos/parts/ChipItem/ChipItem.styles";
+import { pxToRem } from "@/theme/scale";
 
 export interface ChipItemProps {
   label: string;
@@ -40,7 +41,7 @@ export function ChipItem({
       <LeadingSlot component="span" variant="caption">
         {active &&
           (indicator === "check" ? (
-            <Check size={16} />
+            <Check size={pxToRem(16)} />
           ) : (
             <RadioDot component="span" variant="caption" />
           ))}

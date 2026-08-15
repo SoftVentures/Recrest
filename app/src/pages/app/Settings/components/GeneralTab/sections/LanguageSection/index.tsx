@@ -31,6 +31,7 @@ import {
   setWeekStart,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const LOCALES: { code: string; countryCode: string; label: string }[] = [
   { code: "en", countryCode: "GB", label: "English" },
@@ -49,9 +50,9 @@ const DATE_FORMAT_OPTIONS: DateFormat[] = [
 // SVG flags scale crisply at the small icon size — emoji-based flags render
 // inconsistently across Windows (no native colour-emoji font for region flags).
 const LocaleFlag = styled(ReactCountryFlag)({
-  marginRight: 8,
-  width: 16,
-  height: 12,
+  marginRight: pxToRem(8),
+  width: pxToRem(16),
+  height: pxToRem(12),
   borderRadius: 2,
   flexShrink: 0,
   display: "inline-block",
@@ -60,8 +61,8 @@ const LocaleFlag = styled(ReactCountryFlag)({
 // Flag inside an Autocomplete option row — no own margin (the row's `gap`
 // handles spacing) and a fixed 16px slot so flags align in a clean column.
 const RowFlag = styled(ReactCountryFlag)({
-  width: 16,
-  height: 12,
+  width: pxToRem(16),
+  height: pxToRem(12),
   borderRadius: 2,
   flexShrink: 0,
   display: "inline-block",
@@ -71,7 +72,7 @@ const RowFlag = styled(ReactCountryFlag)({
 // time zones that map to no single country (empty spacer) — keeps the text
 // column aligned with flagged rows.
 const IconSlot = styled(Box)(({ theme }) => ({
-  width: 16,
+  width: pxToRem(16),
   flexShrink: 0,
   display: "flex",
   alignItems: "center",
@@ -80,13 +81,13 @@ const IconSlot = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const PickerAutocomplete = styled(Autocomplete)(({ theme }) => ({
-  minWidth: 240,
+  minWidth: pxToRem(240),
   "& .MuiOutlinedInput-root": {
     backgroundColor: theme.palette.surface.interface.backElevation,
     borderRadius: 8,
-    fontSize: 12.5,
-    paddingTop: 1,
-    paddingBottom: 1,
+    fontSize: fontPxToRem(12.5),
+    paddingTop: pxToRem(1),
+    paddingBottom: pxToRem(1),
   },
   "& .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.divider },
 })) as typeof Autocomplete;
@@ -97,8 +98,8 @@ const PickerAutocomplete = styled(Autocomplete)(({ theme }) => ({
 const OptionRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 12.5,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(12.5),
   width: "100%",
   minWidth: 0,
 });
@@ -113,11 +114,11 @@ const OptionLabel = styled(Box)({
 
 const OptionMeta = styled(Box)(({ theme }) => ({
   flexShrink: 0,
-  width: 84,
+  width: pxToRem(84),
   textAlign: "right",
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
 })) as typeof Box;
 
 // Float the popup 4px clear of the input instead of sitting flush on it.
@@ -127,10 +128,10 @@ const POPPER_OFFSET_MODIFIERS = [
 
 const FormatPreview = styled(Box)(({ theme }) => ({
   marginLeft: "auto",
-  paddingLeft: 16,
+  paddingLeft: pxToRem(16),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
 })) as typeof Box;
 
 const FormatOptionRow = styled(Box)({
@@ -305,7 +306,7 @@ export function LanguageSection() {
                 <li key={key} {...rest}>
                   <OptionRow>
                     <IconSlot component="span">
-                      <Languages size={13} aria-hidden />
+                      <Languages size={pxToRem(13)} aria-hidden />
                     </IconSlot>
                     <OptionLabel component="span">{c.label}</OptionLabel>
                   </OptionRow>
@@ -356,7 +357,7 @@ export function LanguageSection() {
                 <li key={key} {...rest}>
                   <OptionRow>
                     <IconSlot component="span">
-                      <Globe size={13} aria-hidden />
+                      <Globe size={pxToRem(13)} aria-hidden />
                     </IconSlot>
                     <OptionLabel component="span">{followTzLabel}</OptionLabel>
                   </OptionRow>

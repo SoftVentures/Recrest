@@ -25,6 +25,7 @@ import { errorMessage } from "@/lib/utils/error.utils";
 import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { addRepo } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export function LocalPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -86,7 +87,7 @@ export function LocalPanel({ onClose }: { onClose: () => void }) {
               disabled={!isTauri()}
               data-testid={TEST_IDS.addRepoDialog.pathBrowse}
             >
-              <FolderOpen size={13} />
+              <FolderOpen size={pxToRem(13)} />
               {t("actions.browse")}
             </BrowseBtn>
           </PathFieldRow>
@@ -102,7 +103,7 @@ export function LocalPanel({ onClose }: { onClose: () => void }) {
           disabled={busy || !path.trim()}
           data-testid={TEST_IDS.addRepoDialog.submit}
         >
-          <ArrowDown size={13} />
+          <ArrowDown size={pxToRem(13)} />
           {busy ? t("actions.adding") : t("actions.add")}
         </PrimaryBtn>
       </Footer>

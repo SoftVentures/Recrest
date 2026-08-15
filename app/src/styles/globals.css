@@ -15,23 +15,47 @@ body {
   overflow: hidden;
 }
 
-/* Interface-size scaling. `--ui-scale` is written from `ThemeWrapper`. The
- * `zoom` property re-rasterises every descendant at the scaled pixel grid
- * (crisp text at lg/xl, unlike `transform: scale()` which would blur sub-
- * pixel hinting). The `100vw / scale` counter-resize keeps the rendered
- * footprint exactly equal to the real viewport so the OS never sees a
- * horizontal/vertical scrollbar regardless of which size step is active. */
-/* Default scale lives on :root (html) so ThemeWrapper's inline override
- * `<html style="--ui-scale: 1.25">` always wins over the fallback without
- * needing `!important`. */
+/* Interface-size scaling. `--ui-scale` is written from `ThemeWrapper` out of
+ * `settings.uiScale`; the default lives on :root (html) so the inline override
+ * `<html style="--ui-scale: 1.25">` always wins without needing `!important`.
+ *
+ * The scale is applied as the ROOT FONT SIZE, not as `zoom`. Every length in
+ * the app is authored in `rem` (see `theme/scale.ts::pxToRem`), so a single
+ * declaration moves text, padding, icon boxes and fixed widths together —
+ * including MUI overlays that portal to `document.body`, which a `zoom` on
+ * `#root` could never reach.
+ *
+ * `zoom` also detached the layout viewport from the visual one: at scale 1.25
+ * `#root` measured 1152 px while `window.innerWidth` / `matchMedia` still
+ * reported 1440, so every breakpoint in the app was blind and content got
+ * clipped instead of collapsing. With rem scaling the viewport is untouched
+ * and the breakpoints are scaled instead (see `scaledBreakpointValues`).
+ *
+ * `--recrest-app-header-height` mirrors `APP_HEADER_HEIGHT_PX` (64) in rem so
+ * portal-mounted overlays can offset below the app chrome in a unit that
+ * already scales. */
 :root {
   --ui-scale: 1;
+  /* Text-only multiplier, written from `settings.fontSize`. Consumed solely by
+   * `theme/scale.ts::fontPxToRem`, so it moves type without touching padding,
+   * icon boxes or fixed widths — that is what separates the "Font size" and
+   * "Interface scale" controls. */
+  --text-scale: 1;
+  --recrest-app-header-height: 4rem;
 }
 
+html {
+  font-size: calc(16px * var(--ui-scale));
+}
+
+/* App shell: fills the window and never scrolls itself. Every page owns an
+ * internal `overflow: auto` scroller and the titlebar/header must stay pinned,
+ * so a scrollbar here would drag the window chrome out of view rather than
+ * help. Overflow is now handled by the breakpoints, which finally see the
+ * effective width. */
 #root {
-  zoom: var(--ui-scale);
-  width: calc(100vw / var(--ui-scale));
-  height: calc(100vh / var(--ui-scale));
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;

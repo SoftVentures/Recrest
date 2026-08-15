@@ -1,4 +1,4 @@
-import { createTheme, responsiveFontSizes } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles";
 
 import {
   CUSTOM_FONT_PREFIX,
@@ -20,6 +20,15 @@ import {
 } from "@/lib/constants/theme.constants";
 import { getPrimaryColorScheme, getThemeById } from "@/lib/utils/theme.utils";
 import MuiOverrides from "@/theme/overrides";
+import {
+  DEFAULT_UI_SCALE,
+  ROOT_FONT_SIZE_PX,
+  baseFontSizeForId,
+  clampUiScale,
+  pxToRem,
+  scaledBreakpointValues,
+  textScaleForFontSize,
+} from "@/theme/scale";
 
 export interface AccessibilityOptions {
   /** Legacy boolean; superseded by `font` but still honoured as a synonym for "opendyslexic". */
@@ -27,6 +36,11 @@ export interface AccessibilityOptions {
   primaryColor?: PrimaryColorScheme | null;
   font?: FontSelection;
   fontSize?: FontSizeId;
+  /** Interface scale (0.8 … 1.5). Drives `--ui-scale` → root font size, and
+   *  therefore every `rem` length. The theme only needs it to scale the
+   *  breakpoints (media queries can't read a CSS variable) and to expose it to
+   *  `styled()` blocks via `theme.uiScale`. */
+  uiScale?: number;
   /** When true, the orthogonal translucency effect is active. The theme nulls
    *  out the canvas-level `background.default` so the OS vibrancy layer can
    *  composite through; styled surfaces (Sidebar, Cards) keep their opaque
@@ -72,47 +86,62 @@ export function fontFamilyForId(id: FontSelection): string {
   }
 }
 
-/** Base body-text size per `FontSizeId`. Display-style rows (h1…h6) scale
- *  via MUI's `responsiveFontSizes` from this anchor. */
-function baseFontSizeForId(id: FontSizeId): number {
-  switch (id) {
-    case "sm":
-      return 12;
-    case "md":
-      return 13;
-    case "lg":
-      return 15;
-    case "xl":
-      return 17;
+/** The type scale in design pixels, authored at `fontSize: "md"`. Rendered
+ *  sizes are `pxToRem(px * textScale)`, so at `md` (textScale 1, root 16 px)
+ *  every variant reproduces the number below exactly. */
+const TYPOGRAPHY_PX = {
+  h1: { px: 60, fontWeight: 700 },
+  h2: { px: 48, fontWeight: 700 },
+  h3: { px: 34, fontWeight: 700 },
+  h4: { px: 24, fontWeight: 700 },
+  h5: { px: 20, fontWeight: 600 },
+  h6: { px: 16, fontWeight: 600 },
+  body1: { px: 14, fontWeight: 400 },
+  body2: { px: 13, fontWeight: 400 },
+  body3: { px: 12, fontWeight: 400 },
+  subtle1: { px: 13, fontWeight: 400 },
+  subtle2: { px: 12, fontWeight: 500 },
+  overline: { px: 10, fontWeight: 600, letterSpacing: "0.04em" },
+  caption: { px: 11, fontWeight: 400 },
+} as const;
+
+type TypographyVariantKey = keyof typeof TYPOGRAPHY_PX;
+
+function buildTypography(fontFamily: string, fontSizeId: FontSizeId) {
+  const textScale = textScaleForFontSize(fontSizeId);
+  const variants = {} as Record<TypographyVariantKey, Record<string, unknown>>;
+  for (const key of Object.keys(TYPOGRAPHY_PX) as TypographyVariantKey[]) {
+    const { px, ...rest } = TYPOGRAPHY_PX[key];
+    variants[key] = { ...rest, fontSize: pxToRem(px * textScale) };
   }
+  return {
+    fontFamily,
+    // `htmlFontSize` is what MUI divides by internally. It was never set
+    // before, so MUI silently assumed 16 while the app behaved as if the root
+    // were 13 — pin it to the value `globals.css` actually uses.
+    htmlFontSize: ROOT_FONT_SIZE_PX,
+    // Stays a plain number (px): MUI derives its internal `pxToRem`
+    // coefficient (`fontSize / 14`) from it, and a string would break that.
+    // Rendered body text comes from the `body*` variants above, not from here.
+    fontSize: baseFontSizeForId(fontSizeId),
+    ...variants,
+  };
 }
 
 const baseTheme = {
-  typography: {
-    fontFamily: "Inter, sans-serif",
-    fontSize: 13,
-    h1: { fontSize: 60, fontWeight: 700 },
-    h2: { fontSize: 48, fontWeight: 700 },
-    h3: { fontSize: 34, fontWeight: 700 },
-    h4: { fontSize: 24, fontWeight: 700 },
-    h5: { fontSize: 20, fontWeight: 600 },
-    h6: { fontSize: 16, fontWeight: 600 },
-    body1: { fontSize: 14, fontWeight: 400 },
-    body2: { fontSize: 13, fontWeight: 400 },
-    body3: { fontSize: 12, fontWeight: 400 },
-    subtle1: { fontSize: 13, fontWeight: 400 },
-    subtle2: { fontSize: 12, fontWeight: 500 },
-    overline: { fontSize: 10, fontWeight: 600, letterSpacing: "0.04em" },
-    caption: { fontSize: 11, fontWeight: 400 },
-  },
-  breakpoints: {
-    values: { xs: 0, sm: 640, md: 768, lg: 1024, xl: 1280 },
-  },
-  spacing: 8,
+  // 8-px grid expressed in rem, so `theme.spacing(2)` is `1rem` — 16 px at
+  // scale 1, 20 px at scale 1.25. Leaving spacing in px while text moved to
+  // rem is precisely how text bursts out of its container.
+  spacing: (factor: number) => pxToRem(8 * factor),
   // Single rectangular radius across the app — Cards, Buttons, Menus,
   // Inputs, Dialogs, Popovers, Chips-as-tile all read this. Pills
   // (borderRadius: 100/999) and circles ("50%") opt out explicitly per
   // component when the design intent is a fully rounded shape.
+  //
+  // Deliberately still a unitless number (px): several MUI components do
+  // arithmetic on `shape.borderRadius`, and a corner radius is a decorative
+  // constant rather than a layout dimension — it should not grow with the
+  // interface scale.
   shape: { borderRadius: 8 },
   components: { ...MuiOverrides },
 };
@@ -130,7 +159,11 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
   const resolvedFont: FontSelection =
     dyslexiaFont && !explicitFont ? "opendyslexic" : (explicitFont ?? DEFAULT_FONT);
   const fontFamily = fontFamilyForId(resolvedFont);
-  const fontSize = baseFontSizeForId(opts?.fontSize ?? DEFAULT_FONT_SIZE);
+  const fontSizeId = opts?.fontSize ?? DEFAULT_FONT_SIZE;
+  // Range-clamped only — see the note in `ThemeWrapper`: breakpoints have to
+  // be derived from the scale that is actually applied, snapping included or
+  // not, or media queries would fire at a width the layout never has.
+  const uiScale = clampUiScale(opts?.uiScale ?? DEFAULT_UI_SCALE);
 
   const primary = getPrimaryColorScheme(opts?.primaryColor);
 
@@ -152,7 +185,13 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
 
   const theme = createTheme({
     ...baseTheme,
-    typography: { ...baseTheme.typography, fontFamily, fontSize },
+    typography: buildTypography(fontFamily, fontSizeId),
+    // Breakpoints have to be rebuilt per scale — see `scaledBreakpointValues`
+    // for why `unit: "em"` cannot do this job.
+    breakpoints: { values: scaledBreakpointValues(uiScale) },
+    // Exposed on the theme so `styled()` blocks can build scale-aware raw
+    // media queries via `mediaDown(px, theme.uiScale)`.
+    uiScale,
     effects: { backdropBlur: effects.backdropBlur, backdropSaturate: effects.backdropSaturate },
     palette: {
       mode: meta.mode,
@@ -291,7 +330,13 @@ export function getTheme(themeId: ThemeId, opts?: AccessibilityOptions) {
     },
   });
 
-  return responsiveFontSizes(theme);
+  // `responsiveFontSizes()` used to wrap this return. It is gone on purpose:
+  // it was fed unitless px numbers, so its `remFontSize <= 1` guard skipped
+  // every body/caption variant and it only ever rewrote `h4` — downwards, to
+  // 1.25rem. Now that the scale is genuinely rem-based it would instead start
+  // shrinking every heading at viewport widths nobody designed for, while the
+  // user-facing scaling knob (`uiScale`) already covers the real use case.
+  return theme;
 }
 
 export { THEMES };

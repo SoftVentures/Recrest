@@ -9,6 +9,7 @@ import type { ReviewQueueEntry } from "@/lib/activityAggregates";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { openExternal } from "@/lib/tauri";
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   entries: ReviewQueueEntry[];
@@ -18,7 +19,7 @@ interface Props {
 const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
@@ -26,9 +27,9 @@ const Item = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: pxToRem(8),
   width: "100%",
-  padding: "6px 4px",
+  padding: pxToRems(6, 4),
   background: "transparent",
   border: 0,
   borderRadius: 8,
@@ -45,13 +46,13 @@ const Item = styled("button")(({ theme }) => ({
 const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   minWidth: 0,
   flex: 1,
 }) as typeof Box;
 
 const Title = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -60,21 +61,21 @@ const Title = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const Meta = styled(Typography)(({ theme }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   flexWrap: "wrap",
 })) as typeof Typography;
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 const Age = styled("span", { shouldForwardProp: (p) => p !== "old" })<{ old?: boolean }>(
   ({ theme, old }) => ({
-    fontSize: 11,
+    fontSize: fontPxToRem(11),
     fontWeight: 700,
     fontVariantNumeric: "tabular-nums",
-    padding: "1px 6px",
+    padding: pxToRems(1, 6),
     borderRadius: 100,
     ...(old
       ? toneChip(theme, StatusTone.WARNING)
@@ -87,9 +88,9 @@ const Age = styled("span", { shouldForwardProp: (p) => p !== "old" })<{ old?: bo
 );
 
 const Empty = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "16px 0",
+  padding: pxToRems(16, 0),
   textAlign: "center",
 })) as typeof Box;
 

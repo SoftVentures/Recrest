@@ -39,13 +39,14 @@ import {
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setGitConfigInLayer } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const AliasRow = styled(CustomRow)({
-  gridTemplateColumns: "minmax(110px, 0.8fr) minmax(200px, 2.4fr) auto auto",
+  gridTemplateColumns: `minmax(${pxToRem(110)}, 0.8fr) minmax(${pxToRem(200)}, 2.4fr) auto auto`,
 }) as typeof CustomRow;
 
 const StaticLayerLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   textAlign: "center",
@@ -114,7 +115,7 @@ function AliasRowItem({ entry, onCommit, onRequestRemove, editLabel, removeLabel
       />
       <RowMetaCell component="div">
         <LayerChip title={entry.sourcePath}>
-          <FileText size={12} aria-hidden />
+          <FileText size={pxToRem(12)} aria-hidden />
           <LayerChipText>{basename(entry.sourcePath)}</LayerChipText>
         </LayerChip>
       </RowMetaCell>
@@ -298,7 +299,7 @@ export default function AliasesEditor({
             <AddFormActions>
               <GeneralButton
                 variant="default"
-                startIcon={<Plus size={14} />}
+                startIcon={<Plus size={pxToRem(14)} />}
                 onClick={() => void submitAdd()}
                 loading={submitting}
                 disabled={!draft.name.trim() || !draft.command.trim() || !draft.filePath}

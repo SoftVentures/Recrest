@@ -4,6 +4,7 @@ import { styled } from "@mui/material/styles";
 import GeneralSkeletonLoader, {
   SkeletonShape,
 } from "@/components/atoms/loaders/GeneralSkeletonLoader";
+import { pxToRem, pxToRems } from "@/theme/scale";
 
 interface SkeletonBoxProps {
   w?: number | string;
@@ -25,10 +26,10 @@ const KpiCardShell = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "14px 16px",
+  padding: pxToRems(14, 16),
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }));
 
 export function KpiSkeleton() {
@@ -44,10 +45,10 @@ export function KpiSkeleton() {
 const ChartShell = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(14, 1fr)",
-  gap: 6,
-  height: 96,
+  gap: pxToRem(6),
+  height: pxToRem(96),
   alignItems: "end",
-  padding: "4px 0 0",
+  padding: pxToRems(4, 0, 0),
 });
 
 const BarColumnShell = styled(Box)({
@@ -72,30 +73,30 @@ const CardShellBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "14px 16px",
+  padding: pxToRems(14, 16),
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: pxToRem(10),
 }));
 
 const CardHead = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: pxToRem(12),
 });
 
 const RowsCol = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
-  paddingTop: 2,
+  gap: pxToRem(8),
+  paddingTop: pxToRem(2),
 });
 
 const Row = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
 });
 
 export interface CardBlockSkeletonProps {
@@ -129,15 +130,15 @@ export function CardBlockSkeleton({ rows = 3, title = true }: CardBlockSkeletonP
 const CommitRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "6px 8px",
+  gap: pxToRem(10),
+  padding: pxToRems(6, 8),
 });
 
 const CommitTextCol = styled(Box)({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
   minWidth: 0,
 });
 

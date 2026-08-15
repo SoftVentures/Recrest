@@ -1,19 +1,21 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Root = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "12px 14px 10px",
+  padding: pxToRems(12, 14, 10),
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
   height: "100%",
 })) as typeof Box;
 
 export const Label = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -22,8 +24,8 @@ export const Label = styled(Box)(({ theme }) => ({
 
 export const Ring = styled(Box)({
   position: "relative",
-  width: 66,
-  height: 66,
+  width: pxToRem(66),
+  height: pxToRem(66),
   flexShrink: 0,
 }) as typeof Box;
 
@@ -40,7 +42,7 @@ export const RingLabel = styled(Box)({
 }) as typeof Box;
 
 export const RingValue = styled(Box)({
-  fontSize: 15,
+  fontSize: fontPxToRem(15),
   fontWeight: 700,
   letterSpacing: "-0.2px",
   fontVariantNumeric: "tabular-nums",
@@ -50,21 +52,21 @@ export const RingValue = styled(Box)({
 export const HeadRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 export const Legend = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
-  gap: "4px 10px",
-  marginTop: 2,
+  gap: pxToRems(4, 10),
+  marginTop: pxToRem(2),
 }) as typeof Box;
 
 export const LegendItem = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  fontSize: 10.5,
+  gap: pxToRem(4),
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -72,8 +74,8 @@ export const LegendItem = styled(Typography)(({ theme }) => ({
 export const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   color: string;
 }>(({ color }) => ({
-  width: 6,
-  height: 6,
+  width: pxToRem(6),
+  height: pxToRem(6),
   borderRadius: "50%",
   backgroundColor: color,
 }));

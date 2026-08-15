@@ -21,6 +21,7 @@ import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { scanForRepos } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 export interface InitialScanStepProps {
   onBack: () => void;
@@ -31,9 +32,9 @@ const ScanState = styled(Box)({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 14,
-  paddingTop: 32,
-  paddingBottom: 32,
+  gap: pxToRem(14),
+  paddingTop: pxToRem(32),
+  paddingBottom: pxToRem(32),
   flex: 1,
   justifyContent: "center",
 }) as typeof Box;
@@ -49,8 +50,8 @@ const sweep = keyframes`
 `;
 
 const ScanArea = styled(Box)(({ theme }) => ({
-  width: 56,
-  height: 56,
+  width: pxToRem(56),
+  height: pxToRem(56),
   borderRadius: "50%",
   display: "flex",
   alignItems: "center",
@@ -68,17 +69,17 @@ const ScanGlass = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const Summary = styled(Typography)(({ theme }) => ({
-  fontSize: 15,
+  fontSize: fontPxToRem(15),
   fontWeight: 600,
   color: theme.palette.text.primary,
   textAlign: "center",
 })) as typeof Typography;
 
 const SubSummary = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
   textAlign: "center",
-  maxWidth: 360,
+  maxWidth: pxToRem(360),
   lineHeight: 1.5,
 })) as typeof Typography;
 
@@ -125,7 +126,7 @@ function InitialScanStep({ onBack, onNext }: InitialScanStepProps) {
             <>
               <ScanArea>
                 <ScanGlass>
-                  <Search size={26} strokeWidth={2.25} />
+                  <Search size={pxToRem(26)} strokeWidth={2.25} />
                 </ScanGlass>
               </ScanArea>
               <SubSummary component="p">{t("scan.scanning")}</SubSummary>

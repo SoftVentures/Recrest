@@ -58,6 +58,7 @@ import { loadRepos } from "@/store/actions/repos.actions";
 import { saveSettings } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { keyFor } from "@/store/types/remoteImport.types";
+import { pxToRem } from "@/theme/scale";
 
 interface ProvidersPanelProps {
   connectedProviders: ProviderId[];
@@ -252,7 +253,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
     return (
       <ConnectFirst>
         <ConnectIcon>
-          <FolderGit2 size={26} />
+          <FolderGit2 size={pxToRem(26)} />
         </ConnectIcon>
         <ConnectBrands>
           <BrandIcon slug={Provider.GITHUB} size={22} />
@@ -298,7 +299,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
               >
                 {PROVIDER_NAMES[id]}
               </Box>
-              <ChevronRight size={12} />
+              <ChevronRight size={pxToRem(12)} />
             </AsideItem>
             {activeProvider === id &&
               decoratedOrgs.map(({ org, depth, label }) => {
@@ -359,7 +360,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
           />
           {selected.size > 0 && (
             <SelectedPill component="span" variant="caption">
-              <Check size={11} />{" "}
+              <Check size={pxToRem(11)} />{" "}
               {t("add_modal.selected", { ns: I18nNamespace.REPOS, count: selected.size })}
             </SelectedPill>
           )}
@@ -368,12 +369,12 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
         <RepoListScroll>
           {loading && totalCount === 0 ? (
             <EmptyState>
-              <Spin size={20} />
+              <Spin size={pxToRem(20)} />
               {t("import.loading")}
             </EmptyState>
           ) : totalCount === 0 ? (
             <EmptyState>
-              <Inbox size={22} />
+              <Inbox size={pxToRem(22)} />
               {t("import.no_results")}
             </EmptyState>
           ) : (
@@ -436,7 +437,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             onChange={(e) => setDestination(e.target.value)}
             placeholder={t("import.dest_placeholder")}
             data-testid={TEST_IDS.addRepoDialog.bulkDest}
-            style={{ flex: 1, marginRight: 8 }}
+            style={{ flex: 1, marginRight: pxToRem(8) }}
           />
           <BrowseBtn
             type="button"
@@ -444,7 +445,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             disabled={!isTauri()}
             data-testid={TEST_IDS.addRepoDialog.bulkDestBrowse}
           >
-            <FolderOpen size={13} />
+            <FolderOpen size={pxToRem(13)} />
             {t("actions.browse")}
           </BrowseBtn>
           <SecondaryBtn type="button" onClick={onClose}>
@@ -456,7 +457,7 @@ export function ProvidersPanel({ connectedProviders, onClose }: ProvidersPanelPr
             disabled={!canImport}
             data-testid={TEST_IDS.addRepoDialog.import}
           >
-            {cloning ? <Spin size={13} /> : <ArrowDown size={13} />}
+            {cloning ? <Spin size={pxToRem(13)} /> : <ArrowDown size={pxToRem(13)} />}
             {cloning
               ? t("actions.importing")
               : t("add_modal.import_submit", { ns: I18nNamespace.REPOS, count: selected.size })}

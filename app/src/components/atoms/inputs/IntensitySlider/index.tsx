@@ -4,6 +4,7 @@ import { Box, Slider, type SliderProps } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import GeneralTooltip from "@/components/atoms/feedback/GeneralTooltip";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 /**
  * A 0..max integer slider with a tooltip that shows the current value while
@@ -33,18 +34,18 @@ export interface IntensitySliderProps {
 const Container = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 16,
-  paddingLeft: 24,
+  gap: pxToRem(16),
+  paddingLeft: pxToRem(24),
 });
 
 const StyledSlider = styled(Slider)({
-  width: 200,
+  width: pxToRem(200),
 });
 
 const ValueBadge = styled(Box)(({ theme }) => ({
-  minWidth: 36,
+  minWidth: pxToRem(36),
   textAlign: "right",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontVariantNumeric: "tabular-nums",
   color: theme.palette.text.secondary,
   whiteSpace: "nowrap",

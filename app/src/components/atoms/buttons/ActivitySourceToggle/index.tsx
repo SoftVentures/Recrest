@@ -10,6 +10,7 @@ import GeneralButtonGroup, {
 import { ActivitySource } from "@/lib/constants/activity.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 export interface ActivitySourceToggleProps {
   value: ActivitySource;
@@ -45,7 +46,7 @@ function ActivitySourceToggle({ value, onChange }: ActivitySourceToggleProps) {
         aria-label={allLabel}
         data-testid={TEST_IDS.activity.sourceToggle.all}
       >
-        <Monitor size={14} aria-hidden />
+        <Monitor size={pxToRem(14)} aria-hidden />
         <Box component="span">{allLabel}</Box>
       </GeneralButtonGroupItem>
       <GeneralButtonGroupItem
@@ -53,7 +54,7 @@ function ActivitySourceToggle({ value, onChange }: ActivitySourceToggleProps) {
         aria-label={remoteLabel}
         data-testid={TEST_IDS.activity.sourceToggle.remote}
       >
-        <Globe size={14} aria-hidden />
+        <Globe size={pxToRem(14)} aria-hidden />
         <Box component="span">{remoteLabel}</Box>
       </GeneralButtonGroupItem>
     </GeneralButtonGroup>

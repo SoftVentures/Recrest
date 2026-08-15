@@ -43,6 +43,7 @@ import {
   setPollingIntervalMinutes,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 /** Terminal-select sentinel for the "type my own launch command" mode.
  *  Persisted as `terminal.id = "custom"`; the Rust `open_at` custom-command
@@ -66,14 +67,14 @@ const DETECTED_SHELLS_BY_PLATFORM: Record<Platform, ShellId[]> = {
 
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / autofocus / IME
 const NumberInput = styled("input")(({ theme }) => ({
-  width: 80,
-  height: 32,
-  padding: "0 10px",
+  width: pxToRem(80),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontFamily: "inherit",
   outline: "none",
   "&:focus": { borderColor: theme.palette.border.hover },
@@ -81,20 +82,20 @@ const NumberInput = styled("input")(({ theme }) => ({
 
 // eslint-disable-next-line no-restricted-syntax -- native text input mirrors the NumberInput pattern for free-text settings
 const TextInput = styled("input")(({ theme }) => ({
-  width: 260,
-  height: 32,
-  padding: "0 10px",
+  width: pxToRem(260),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontFamily: "inherit",
   outline: "none",
   "&:focus": { borderColor: theme.palette.border.hover },
 }));
 
-const WideSelect = styled(SelectControl)({ minWidth: 260 });
+const WideSelect = styled(SelectControl)({ minWidth: pxToRem(260) });
 
 const MenuLabel = styled(Box, {
   shouldForwardProp: (p) => p !== "indent" && p !== "dimmed",
@@ -119,13 +120,13 @@ const CustomCommandInputRow = styled(Box)(({ theme }) => ({
 }));
 
 const SuccessText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   margin: 0,
   color: theme.palette.success.main,
 })) as typeof Typography;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   margin: 0,
   color: theme.palette.error.main,
 })) as typeof Typography;

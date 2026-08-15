@@ -9,6 +9,7 @@ import { X as CloseIcon, Copy as CopyIcon, ExternalLink } from "lucide-react";
 
 import GeneralIconButton, { IconButtonSize } from "@/components/atoms/buttons/GeneralIconButton";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 /** Title slot for `GeneralModal` — the row with title/subtitle on the left and
  *  optional copy / open-in-browser / close icon-buttons on the right. */
@@ -27,7 +28,7 @@ const StyledTitle = styled(DialogTitle)({
   display: "flex",
   flexDirection: "column",
   position: "relative",
-  padding: "0 0 14px",
+  padding: pxToRems(0, 0, 14),
 }) as typeof DialogTitle;
 
 const TitleRow = styled(Box)({
@@ -35,13 +36,13 @@ const TitleRow = styled(Box)({
   flexDirection: "row",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 const TitleActions = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   marginLeft: "auto",
   flexShrink: 0,
 }) as typeof Box;
@@ -58,9 +59,9 @@ const TitleText = styled(Box, {
   shouldForwardProp: (p) => p !== "capitalize",
 })<TitleTextProps>(({ theme, capitalize }) => ({
   margin: 0,
-  fontSize: 18,
+  fontSize: fontPxToRem(18),
   fontWeight: 700,
-  lineHeight: "24px",
+  lineHeight: 24 / 18,
   color: theme.palette.text.primary,
   letterSpacing: "-0.01em",
   textTransform: capitalize ? "capitalize" : "none",
@@ -69,10 +70,10 @@ const TitleText = styled(Box, {
 }));
 
 const Subtitle = styled(Typography)(({ theme }) => ({
-  marginTop: 4,
-  fontSize: 12.5,
+  marginTop: pxToRem(4),
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
-  lineHeight: "18px",
+  lineHeight: 18 / 12.5,
 })) as typeof Typography;
 
 function ModalTitle({
@@ -95,7 +96,7 @@ function ModalTitle({
               size={IconButtonSize.SM}
               aria-label={t("modal.copy")}
               onClick={onCopy}
-              icon={<CopyIcon size={13} />}
+              icon={<CopyIcon size={pxToRem(13)} />}
             />
           )}
           {onOpenInNewTab && (
@@ -103,7 +104,7 @@ function ModalTitle({
               size={IconButtonSize.SM}
               aria-label={t("modal.open_in_browser")}
               onClick={onOpenInNewTab}
-              icon={<ExternalLink size={13} />}
+              icon={<ExternalLink size={pxToRem(13)} />}
             />
           )}
           {onClose && (
@@ -111,7 +112,7 @@ function ModalTitle({
               size={IconButtonSize.SM}
               aria-label={t("modal.close")}
               onClick={onClose}
-              icon={<CloseIcon size={14} />}
+              icon={<CloseIcon size={pxToRem(14)} />}
             />
           )}
         </TitleActions>

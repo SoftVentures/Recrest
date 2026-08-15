@@ -3,6 +3,8 @@ import { type ReactNode } from "react";
 import { Box } from "@mui/material";
 import { styled, useTheme } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 export interface GeneralAvatarProps {
   size: number;
   radius: number;
@@ -34,8 +36,8 @@ const FORWARD = (p: PropertyKey) =>
 const Tile = styled(Box, { shouldForwardProp: FORWARD })<TileProps>(
   ({ theme, size, radius, gradient, hasImage, neutralBg }) => ({
     position: "relative",
-    width: size,
-    height: size,
+    width: pxToRem(size),
+    height: pxToRem(size),
     borderRadius: radius,
     background: hasImage ? neutralBg : gradient,
     border: `1px solid ${theme.palette.divider}`,
@@ -43,7 +45,10 @@ const Tile = styled(Box, { shouldForwardProp: FORWARD })<TileProps>(
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: Math.round(size * 0.5),
+    // `pxToRem`, not `fontPxToRem`: the initial is derived from `size`, so it
+    // has to ride the same scale as the square it sits in. `--text-scale`
+    // would push it 31 % past a box that cannot grow with it.
+    fontSize: pxToRem(Math.round(size * 0.5)),
     fontWeight: 700,
     letterSpacing: "-0.02em",
     flexShrink: 0,

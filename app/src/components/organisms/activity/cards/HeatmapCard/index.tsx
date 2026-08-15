@@ -18,6 +18,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useLocalePrefs, useResolvedLocale } from "@/lib/utils/datetime.utils";
 import { weekdayLabel } from "@/lib/utils/locale.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -141,7 +142,7 @@ export default memo(HeatmapCard);
 // equal-height rows); `minHeight` keeps a sensible floor on content-sized rows.
 const Grid = styled(Box)({
   flex: "1 1 auto",
-  minHeight: 180,
+  minHeight: pxToRem(180),
   minWidth: 0,
   position: "relative",
 });
@@ -151,8 +152,8 @@ const Tooltip = styled(Box)(({ theme }) => ({
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  fontSize: 12,
-  padding: "6px 10px",
+  fontSize: fontPxToRem(12),
+  padding: pxToRems(6, 10),
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
 }));

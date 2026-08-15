@@ -52,7 +52,7 @@ function GeneralDrawer({
         root: {
           ...(slotProps?.root ?? {}),
           sx: {
-            top: "var(--recrest-app-chrome-bottom, 64px)",
+            top: "var(--recrest-app-chrome-bottom, 4rem)",
             // The MuiModal root still paints a full-viewport presentation
             // div behind the paper; lock its events to "none" so it
             // doesn't swallow header / sidebar clicks. Per-paper
@@ -69,8 +69,8 @@ function GeneralDrawer({
                 sx: {
                   width,
                   maxWidth: "100vw",
-                  top: "var(--recrest-app-chrome-bottom, 64px)",
-                  height: "calc(100% - var(--recrest-app-chrome-bottom, 64px))",
+                  top: "var(--recrest-app-chrome-bottom, 4rem)",
+                  height: "calc(100% - var(--recrest-app-chrome-bottom, 4rem))",
                   pointerEvents: "auto",
                   borderLeft: (theme: Theme) => `1px solid ${theme.palette.divider}`,
                   borderRight: 0,

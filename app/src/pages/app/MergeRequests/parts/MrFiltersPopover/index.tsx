@@ -19,6 +19,7 @@ import {
   cloneMrFilters,
   toggleInSet,
 } from "@/pages/app/MergeRequests/utils/mrFilters";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface RepoOption {
   id: string;
@@ -56,7 +57,7 @@ const CI_ORDER: CiStatus[] = [
   CiStatus.NONE,
 ];
 
-const CI_ICONS: Record<CiStatus, React.ComponentType<{ size?: number }>> = {
+const CI_ICONS: Record<CiStatus, React.ComponentType<{ size?: number | string }>> = {
   success: CheckCircle2,
   failure: XCircle,
   running: Loader,
@@ -190,7 +191,7 @@ export default function MrFiltersPopover({
           <FilterMenuItem
             label={t("mrs.filter_panel.include_drafts")}
             active={filters.includeDrafts}
-            icon={<Check size={14} />}
+            icon={<Check size={pxToRem(14)} />}
             onSelect={() =>
               update((d) => {
                 d.includeDrafts = !d.includeDrafts;
@@ -212,7 +213,7 @@ export default function MrFiltersPopover({
             key={status}
             label={t(`mrs.filter_panel.ci.${status}`)}
             active={checked}
-            icon={<Icon size={14} />}
+            icon={<Icon size={pxToRem(14)} />}
             onSelect={() =>
               update((d) => {
                 d.ciStatuses = toggleInSet(d.ciStatuses, status);
@@ -229,11 +230,11 @@ export default function MrFiltersPopover({
 
 const FilterMenu = styled(Menu)(({ theme }) => ({
   "& .MuiPaper-root": {
-    minWidth: 260,
+    minWidth: pxToRem(260),
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.paper,
-    paddingTop: 4,
-    paddingBottom: 4,
+    paddingTop: pxToRem(4),
+    paddingBottom: pxToRem(4),
   },
 }));
 
@@ -241,17 +242,17 @@ const HeaderRow = styled(MenuItem)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 6,
-  padding: "6px 12px 6px",
+  gap: pxToRem(6),
+  padding: pxToRems(6, 12, 6),
   background: "transparent",
   cursor: "default",
   borderBottom: `1px solid ${theme.palette.divider}`,
-  marginBottom: 4,
+  marginBottom: pxToRem(4),
   "&:hover": { background: "transparent" },
 }));
 
 const HeaderTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 700,
   color: theme.palette.text.primary,
 })) as typeof Typography;
@@ -262,10 +263,10 @@ const ResetBtn = styled("button")(({ theme }) => ({
   background: "transparent",
   color: theme.palette.text.information,
   fontFamily: "inherit",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
   cursor: "pointer",
-  padding: "2px 4px",
+  padding: pxToRems(2, 4),
   borderRadius: 4,
   "&:hover": { color: theme.palette.text.primary },
   "&:focus-visible": {
@@ -284,7 +285,7 @@ const MenuSeparator = styled(Divider)(({ theme }) => ({
 }));
 
 const EmptyHint = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
-  padding: "4px 12px 8px",
+  padding: pxToRems(4, 12, 8),
 })) as typeof Typography;

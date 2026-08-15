@@ -10,6 +10,7 @@ import {
   pgZoom,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { pxToRem, pxToRems } from "@/theme/scale";
 
 export interface BranchesSkeletonProps {
   /** How many placeholder repo-groups to draw (matched to the repo count so
@@ -70,8 +71,8 @@ const Card = styled(Box)(({ theme }) => ({
 const Head = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "11px 16px",
+  gap: pxToRem(10),
+  padding: pxToRems(11, 16),
   backgroundColor: theme.palette.surface.interface.backElevation,
   borderBottom: `1px solid ${theme.palette.divider}`,
 })) as typeof Box;
@@ -84,8 +85,8 @@ const List = styled(Box)({
 const Row = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "12px 16px",
+  gap: pxToRem(10),
+  padding: pxToRems(12, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
 })) as typeof Box;

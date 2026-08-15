@@ -21,6 +21,7 @@ import PowershellLogo from "@/assets/icons/terminals/powershell.svg?react";
 import TilixLogo from "@/assets/icons/terminals/tilix.svg?react";
 import WindowsTerminalLogo from "@/assets/icons/terminals/windows-terminal.svg?react";
 import XtermLogo from "@/assets/icons/terminals/xterm.svg?react";
+import { pxToRem } from "@/theme/scale";
 
 /**
  * Brand marks for every terminal emulator Recrest knows about. Mirrors the
@@ -75,8 +76,8 @@ function TerminalIcon({ id, size = 16, color = "brand", title, style }: Terminal
   if (VendorLogo) {
     return (
       <VendorLogo
-        width={size}
-        height={size}
+        width={pxToRem(size)}
+        height={pxToRem(size)}
         role="img"
         aria-label={title ?? id}
         style={{
@@ -93,8 +94,8 @@ function TerminalIcon({ id, size = 16, color = "brand", title, style }: Terminal
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
+        width={pxToRem(size)}
+        height={pxToRem(size)}
         viewBox="0 0 24 24"
         role="img"
         aria-label={title ?? si.title}
@@ -105,7 +106,7 @@ function TerminalIcon({ id, size = 16, color = "brand", title, style }: Terminal
     );
   }
 
-  return <LucideTerminal size={size} aria-label={title ?? id} style={baseStyle} />;
+  return <LucideTerminal size={pxToRem(size)} aria-label={title ?? id} style={baseStyle} />;
 }
 
 export default TerminalIcon;

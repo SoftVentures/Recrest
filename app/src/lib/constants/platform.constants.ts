@@ -57,7 +57,13 @@ export const PLATFORM_WINDOW_CHROME: Record<Platform, WindowChrome> = {
 /** Height in pixels of each chrome variant. Mirrors the `height` set in the
  *  matching titlebar component (`MacOverlayTitlebar`, `Win11Titlebar`,
  *  `GnomeTitlebar`). Anything that paints over the app frame (drawers,
- *  fixed overlays) needs to add this to the 64 px app header. */
+ *  fixed overlays) needs to add this to the app header height.
+ *
+ *  These are real, unscaled pixels: the custom titlebar has to align with the
+ *  OS-drawn window decoration beside it, which ignores `--ui-scale`. The app
+ *  header next to it *does* scale (`--recrest-app-header-height`, 4rem), so
+ *  consumers must add the two in a `calc()` rather than as plain numbers —
+ *  see `AppLayout`'s `--recrest-app-chrome-bottom`. */
 export const WINDOW_CHROME_HEIGHT_PX: Record<WindowChrome, number> = {
   [WindowChrome.MACOS_OVERLAY]: 38,
   [WindowChrome.WIN11]: 32,

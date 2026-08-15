@@ -1,6 +1,8 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export type AheadBehindSize = "sm" | "md";
 export type AheadBehindVariant = "compact" | "separated";
 
@@ -29,8 +31,9 @@ const Root = styled(Box, { shouldForwardProp: FORWARD })<RootProps>(({ theme, si
   // `separated` is the Dashboard KPI hero value: the numbers carry the weight
   // and colour of a real KPI figure (so the card matches its siblings), with
   // the ↑/↓ glyphs + slash as smaller, muted affordances scaled via `em`.
-  gap: variant === "separated" ? 6 : size === "md" ? 10 : 5,
-  fontSize: variant === "separated" ? 32 : size === "md" ? 13 : 11,
+  gap: variant === "separated" ? pxToRem(6) : size === "md" ? pxToRem(10) : pxToRem(5),
+  fontSize:
+    variant === "separated" ? fontPxToRem(32) : size === "md" ? fontPxToRem(13) : fontPxToRem(11),
   fontWeight: variant === "separated" ? 700 : size === "md" ? 700 : 400,
   letterSpacing: variant === "separated" ? "-0.02em" : undefined,
   color: variant === "separated" ? theme.palette.text.primary : theme.palette.text.information,
@@ -49,7 +52,7 @@ const Sep = styled(Box)(({ theme }) => ({
   fontSize: "0.6em",
   fontWeight: 400,
   color: theme.palette.text.informationLight,
-  margin: "0 2px",
+  margin: pxToRems(0, 2),
 })) as typeof Box;
 
 /**

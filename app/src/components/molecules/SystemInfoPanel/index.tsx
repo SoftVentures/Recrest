@@ -12,14 +12,15 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { prettyArch } from "@/lib/utils/about.utils";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const FactRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  fontSize: 12,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
-  padding: "10px 16px",
+  padding: pxToRems(10, 16),
   fontFamily: MONO_STACK,
   "& strong": {
     fontWeight: 600,

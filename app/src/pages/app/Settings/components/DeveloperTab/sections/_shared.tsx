@@ -8,23 +8,24 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { isTauri, revealPathInSystem } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const ButtonRow = styled(Box)({
   display: "inline-flex",
-  gap: 6,
+  gap: pxToRem(6),
   flexWrap: "wrap",
   alignItems: "center",
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / autofocus / IME
 export const TextInput = styled("input")(({ theme }) => ({
-  height: 30,
-  padding: "0 10px",
+  minHeight: pxToRem(30),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
@@ -33,13 +34,13 @@ export const TextInput = styled("input")(({ theme }) => ({
 
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / autofocus / IME
 export const SelectNative = styled("select")(({ theme }) => ({
-  height: 30,
-  padding: "0 8px",
+  minHeight: pxToRem(30),
+  padding: pxToRems(0, 8),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.backElevation,
   color: theme.palette.text.primary,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontFamily: "inherit",
   outline: "none",
 }));
@@ -47,26 +48,26 @@ export const SelectNative = styled("select")(({ theme }) => ({
 export const FactRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  padding: "10px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(10, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-child": { borderBottom: 0 },
 })) as typeof Box;
 
 export const FactKey = styled(Box)(({ theme }) => ({
   flex: 1,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.primary,
   fontWeight: 500,
 })) as typeof Box;
 
 export const FactVal = styled(Box)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 })) as typeof Box;
 
 export const Card = styled(Box)(({ theme }) => ({
@@ -74,35 +75,35 @@ export const Card = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   overflow: "hidden",
-  marginBottom: 18,
+  marginBottom: pxToRem(18),
 })) as typeof Box;
 
 export const InlineLabel = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  fontSize: 12,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.secondary,
 })) as typeof Typography;
 
 export const SectionHeading = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
-  margin: "0 0 10px",
+  margin: pxToRems(0, 0, 10),
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   fontWeight: 600,
 })) as typeof Typography;
 
 export const SectionWrap = styled(Box)({
-  marginBottom: 22,
+  marginBottom: pxToRem(22),
 }) as typeof Box;
 
 const PathRowBody = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 
 const PathRowVal = styled(FactVal)({
   display: "block",
-  marginTop: 2,
+  marginTop: pxToRem(2),
   wordBreak: "break-all",
 });
 

@@ -26,6 +26,7 @@ import { invoke } from "@/lib/tauri";
 import { normalizeGitlabBaseUrl } from "@/lib/utils/gitlabBaseUrl.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 export type GitlabVariant = "cloud" | "self";
 
@@ -44,12 +45,12 @@ const ChoiceLabel = styled(Typography)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(0.75),
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 const ChoiceSub = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   marginLeft: theme.spacing(3.75),
 })) as typeof Typography;
@@ -59,12 +60,12 @@ const DomainField = styled(TextField)({
 });
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: toneText(theme, StatusTone.ERROR),
 })) as typeof Typography;
 
 const SuccessText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Typography;
 
@@ -136,7 +137,7 @@ function GitlabVariantStep({ onBack, onResolved }: GitlabVariantStepProps) {
             control={<Radio data-testid={TEST_IDS.onboarding.gitlabVariantCloud} />}
             label={
               <ChoiceLabel component="span">
-                <Cloud size={14} /> {t("gitlab.cloud")}
+                <Cloud size={pxToRem(14)} /> {t("gitlab.cloud")}
               </ChoiceLabel>
             }
           />
@@ -146,7 +147,7 @@ function GitlabVariantStep({ onBack, onResolved }: GitlabVariantStepProps) {
             control={<Radio data-testid={TEST_IDS.onboarding.gitlabVariantSelf} />}
             label={
               <ChoiceLabel component="span">
-                <Server size={14} /> {t("gitlab.self_hosted")}
+                <Server size={pxToRem(14)} /> {t("gitlab.self_hosted")}
               </ChoiceLabel>
             }
           />

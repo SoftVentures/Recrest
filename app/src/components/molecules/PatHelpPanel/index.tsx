@@ -11,6 +11,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { openExternal } from "@/lib/tauri";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 export interface PatHelpPanelProps {
   provider: ProviderKey;
@@ -30,7 +31,7 @@ const Root = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const Heading = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -47,7 +48,7 @@ const ScopeList = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const ScopeItem = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   lineHeight: 1.5,
   color: theme.palette.text.primary,
   margin: 0,
@@ -61,7 +62,7 @@ const Actions = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const ManualHint = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   lineHeight: 1.5,
   color: theme.palette.text.information,
   margin: 0,
@@ -97,7 +98,7 @@ export function PatHelpPanel({ provider, baseUrl = "" }: PatHelpPanelProps) {
         <GeneralButton
           variant="outline"
           size="sm"
-          startIcon={<BookOpen size={13} />}
+          startIcon={<BookOpen size={pxToRem(13)} />}
           onClick={() => void openExternal(info.docsUrl)}
           data-testid={TEST_IDS.onboarding.patHelpDocs}
         >
@@ -106,7 +107,7 @@ export function PatHelpPanel({ provider, baseUrl = "" }: PatHelpPanelProps) {
         <GeneralButton
           variant="default"
           size="sm"
-          startIcon={<ExternalLink size={13} />}
+          startIcon={<ExternalLink size={pxToRem(13)} />}
           onClick={() => void openExternal(createUrl)}
           data-testid={TEST_IDS.onboarding.patHelpCreate}
         >

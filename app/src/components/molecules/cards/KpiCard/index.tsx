@@ -3,6 +3,8 @@ import { type ReactNode } from "react";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export type KpiCardSize = "md" | "lg";
 
 export interface KpiCardProps {
@@ -31,11 +33,11 @@ const Root = styled("button", { shouldForwardProp: FORWARD })<ButtonProps>(
       size === "lg" ? theme.palette.surface.interface.base : theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: 8,
-    padding: size === "lg" ? "20px 22px" : 14,
+    padding: size === "lg" ? pxToRems(20, 22) : pxToRem(14),
     cursor: clickable ? "pointer" : "default",
     display: "flex",
     flexDirection: "column",
-    gap: size === "lg" ? 0 : 4,
+    gap: size === "lg" ? 0 : pxToRem(4),
     fontFamily: "inherit",
     color: "inherit",
     width: "100%",
@@ -61,7 +63,7 @@ const Root = styled("button", { shouldForwardProp: FORWARD })<ButtonProps>(
 );
 
 const Label = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -76,17 +78,17 @@ interface ValueProps {
 const Value = styled(Box, {
   shouldForwardProp: (p) => p !== "accent" && p !== "size",
 })<ValueProps>(({ theme, accent, size }) => ({
-  fontSize: size === "lg" ? 44 : 26,
+  fontSize: size === "lg" ? fontPxToRem(44) : fontPxToRem(26),
   fontWeight: size === "lg" ? 700 : 600,
-  lineHeight: size === "lg" ? 1 : "30px",
+  lineHeight: size === "lg" ? 1 : 30 / 26,
   letterSpacing: size === "lg" ? "-0.03em" : "-0.01em",
   color: accent ? theme.palette.primary.main : theme.palette.text.primary,
-  margin: size === "lg" ? "12px 0 6px" : 0,
+  margin: size === "lg" ? pxToRems(12, 0, 6) : 0,
   fontVariantNumeric: "tabular-nums",
 }));
 
 const Sub = styled(Box)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Box;
 

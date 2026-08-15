@@ -28,6 +28,10 @@ const Bar = styled(Box)(({ theme }) => ({
   // the desktop, not the application.
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif',
+  // Window-chrome geometry stays in PX on purpose — it must line up with the
+  // OS-drawn decoration next to it (traffic lights / caption buttons / native
+  // shell), which does not follow the app's `--ui-scale`. Do NOT convert the
+  // heights, widths or insets in this file to rem.
   height: 38,
   flex: "0 0 38px",
   // 84px left reservation so brand never collides with system traffic lights

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import type { BotId } from "@/lib/utils/bot.utils";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   /** Recognised bot id, or `null` for a generic `[bot]` account. */
@@ -25,7 +26,7 @@ interface Props {
  *  gets its real logo rather than a stand-in icon. */
 function FigmaGlyph({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 38 57" aria-hidden role="img">
+    <svg width={pxToRem(size)} height={pxToRem(size)} viewBox="0 0 38 57" aria-hidden role="img">
       <path d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" fill="#1ABCFE" />
       <path d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z" fill="#0ACF83" />
       <path d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z" fill="#FF7262" />
@@ -56,7 +57,7 @@ const GLYPH_BY_BOT: Record<Exclude<BotId, "figma">, typeof Bot> = {
 function BotIcon({ id, size = 14 }: Props) {
   if (id === "figma") return <FigmaGlyph size={size} />;
   const Glyph = id ? GLYPH_BY_BOT[id] : Bot;
-  return <Glyph size={size} aria-hidden />;
+  return <Glyph size={pxToRem(size)} aria-hidden />;
 }
 
 export default BotIcon;

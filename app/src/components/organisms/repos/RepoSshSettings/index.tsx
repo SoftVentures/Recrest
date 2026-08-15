@@ -14,35 +14,36 @@ import { isTauri } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { gitFetch, setRepoSshKey, sshUnlockKey } from "@/store/actions/repos.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Wrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 const Desc = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 const InputRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / IME
 const TextInput = styled("input")(({ theme }) => ({
   flex: 1,
   minWidth: 0,
-  height: 32,
-  padding: "0 10px",
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },

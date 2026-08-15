@@ -38,6 +38,7 @@ import {
   StatusGroup,
   StatusText,
 } from "@/pages/app/Repos/components/RepoCard/RepoCard.styles";
+import { pxToRem } from "@/theme/scale";
 
 export interface RepoCardProps {
   repo: EnrichedRepo;
@@ -87,7 +88,7 @@ export function RepoCard({ repo, selected, onClick }: RepoCardProps) {
         <BranchRow>
           <BranchChip>
             <IconSlot>
-              <GitBranch size={11} />
+              <GitBranch size={pxToRem(11)} />
             </IconSlot>
             <BranchText component="span">{repo.status.branch ?? "—"}</BranchText>
           </BranchChip>

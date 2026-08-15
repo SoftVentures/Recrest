@@ -12,6 +12,7 @@ import { useChartTooltip } from "@/components/organisms/activity/cards/parts/Cha
 import { useNivoTheme } from "@/lib/charts/nivoTheme";
 import { fade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -26,11 +27,11 @@ const Wrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
-  gap: 6,
+  gap: pxToRem(6),
 });
 
 const Chart = styled(Box)({
-  height: 150,
+  height: pxToRem(150),
 });
 
 // TODO(next-pass): unify with parts/ChartTooltip
@@ -38,22 +39,22 @@ const Tooltip = styled(Box)(({ theme }) => ({
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  fontSize: 12,
-  padding: "6px 10px",
+  fontSize: fontPxToRem(12),
+  padding: pxToRems(6, 10),
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
 }));
 
 const Foot = styled(Box)(({ theme }) => ({
   textAlign: "center",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   "& > strong": {
     display: "block",
     color: theme.palette.text.primary,
     fontWeight: 700,
     fontVariantNumeric: "tabular-nums",
-    marginBottom: 1,
+    marginBottom: pxToRem(1),
   },
 }));
 

@@ -4,13 +4,14 @@ import { alpha, styled } from "@mui/material/styles";
 import { DIFF_ATTR } from "@/lib/constants/diff.constants";
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const MONO = MONO_STACK;
 
 export const Root = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 export const FileBlock = styled(Box)(({ theme }) => ({
@@ -24,12 +25,12 @@ export const FileBlock = styled(Box)(({ theme }) => ({
 export const FileHeader = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   width: "100%",
   border: "none",
   background: theme.palette.surface.interface.base,
   borderBottom: `1px solid ${theme.palette.divider}`,
-  padding: "8px 12px",
+  padding: pxToRems(8, 12),
   cursor: "pointer",
   textAlign: "left",
   fontFamily: "inherit",
@@ -44,7 +45,7 @@ export const FileHeader = styled("button")(({ theme }) => ({
 export const FilePath = styled(Typography)({
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   flex: 1,
   minWidth: 0,
@@ -57,11 +58,11 @@ export const FilePath = styled(Typography)({
 export const StatusTag = styled("span", { shouldForwardProp: (p) => p !== "tone" })<{
   tone: "add" | "remove" | "neutral";
 }>(({ theme, tone }) => ({
-  fontSize: 9.5,
+  fontSize: fontPxToRem(9.5),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
-  padding: "1px 6px",
+  padding: pxToRems(1, 6),
   borderRadius: 100,
   color:
     tone === "add"
@@ -75,17 +76,17 @@ export const StatusTag = styled("span", { shouldForwardProp: (p) => p !== "tone"
 export const RenamedFrom = styled(Typography)(({ theme }) => ({
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const HunkHeader = styled(Box)(({ theme }) => ({
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   backgroundColor: theme.palette.surface.interface.backElevation,
-  padding: "3px 12px",
+  padding: pxToRems(3, 12),
   borderTop: `1px solid ${theme.palette.divider}`,
 })) as typeof Box;
 
@@ -127,12 +128,12 @@ export const Line = styled("div", {
   selBottom?: boolean;
 }>(({ theme, kind, selected, selTop, selBottom }) => ({
   display: "grid",
-  gridTemplateColumns: "44px 44px 1fr auto",
+  gridTemplateColumns: `${pxToRem(44)} ${pxToRem(44)} 1fr auto`,
   alignItems: "stretch",
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 12,
-  lineHeight: "18px",
+  fontSize: fontPxToRem(12),
+  lineHeight: 18 / 12,
   position: "relative",
   backgroundColor:
     kind === "add"
@@ -170,15 +171,15 @@ export const Line = styled("div", {
 
 export const Gutter = styled(Box)(({ theme }) => ({
   textAlign: "right",
-  padding: "0 6px",
+  padding: pxToRems(0, 6),
   color: theme.palette.text.informationLight,
   userSelect: "none",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   borderRight: `1px solid ${theme.palette.divider}`,
 })) as typeof Box;
 
 export const Sign = styled(Box)({
-  width: 14,
+  width: pxToRem(14),
   textAlign: "center",
   display: "inline-block",
 }) as typeof Box;
@@ -186,16 +187,16 @@ export const Sign = styled(Box)({
 export const Content = styled(Box)({
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
-  paddingRight: 8,
+  paddingRight: pxToRem(8),
   display: "flex",
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required: a hover-revealed per-line affordance that must stay keyboard-focusable
 export const CommentAffordance = styled("button")(({ theme }) => ({
   alignSelf: "center",
-  marginRight: 6,
-  width: 18,
-  height: 18,
+  marginRight: pxToRem(6),
+  width: pxToRem(18),
+  height: pxToRem(18),
   borderRadius: 4,
   border: "none",
   display: "inline-flex",
@@ -223,7 +224,7 @@ export const CommentRow = styled(Box)(({ theme }) => ({
   borderTop: `1px solid ${theme.palette.divider}`,
   borderBottom: `1px solid ${theme.palette.divider}`,
   background: theme.palette.surface.interface.base,
-  padding: "8px 12px",
+  padding: pxToRems(8, 12),
 })) as typeof Box;
 
 export const PostedComment = styled(Box)(({ theme }) => ({
@@ -231,13 +232,13 @@ export const PostedComment = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   background: theme.palette.surface.interface.backElevation,
-  margin: "6px 10px",
-  padding: "8px 12px",
+  margin: pxToRems(6, 10),
+  padding: pxToRems(8, 12),
   fontFamily: theme.typography.fontFamily,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
   transition: "border-color 120ms ease",
   // Hovering the card sharpens its border (and, via JS, gives its covered lines
   // a gentle tint so you can see which lines it refers to).
@@ -249,17 +250,17 @@ export const PostedComment = styled(Box)(({ theme }) => ({
 export const PostedHead = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 export const PostedAuthor = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 export const PostedBody = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
@@ -268,17 +269,17 @@ export const PostedBody = styled(Box)(({ theme }) => ({
 export const RangeBadge = styled(Box)(({ theme }) => ({
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 600,
-  padding: "1px 6px",
-  marginRight: 6,
+  padding: pxToRems(1, 6),
+  marginRight: pxToRem(6),
   borderRadius: 100,
   color: theme.palette.primary.main,
   backgroundColor: alpha(theme.palette.primary.main, 0.12),
 })) as typeof Box;
 
 export const Empty = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "8px 4px",
+  padding: pxToRems(8, 4),
 })) as typeof Typography;

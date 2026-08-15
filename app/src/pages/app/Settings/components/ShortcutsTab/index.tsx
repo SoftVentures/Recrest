@@ -29,6 +29,7 @@ import {
   setShortcutOverride,
 } from "@/store/actions/shortcuts.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 const SECTIONS: { group: ShortcutGroup; titleKey: string; testId: string }[] = [
   {
@@ -146,7 +147,7 @@ export function ShortcutsSection() {
           <GeneralButton
             variant="ghost"
             size="sm"
-            startIcon={<RotateCcw size={14} aria-hidden />}
+            startIcon={<RotateCcw size={pxToRem(14)} aria-hidden />}
             onClick={handleResetAll}
             data-testid={TEST_IDS.settings.shortcuts.resetAll}
           >

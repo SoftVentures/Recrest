@@ -8,6 +8,7 @@ import GeneralCircularLoader, {
   CircularLoaderSize,
 } from "@/components/atoms/loaders/GeneralCircularLoader";
 import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
+import { pxToRem } from "@/theme/scale";
 
 const Success = styled(Check)(({ theme }) => ({ color: theme.palette.success.main }));
 const Failure = styled(X)(({ theme }) => ({ color: theme.palette.error.main }));
@@ -34,8 +35,8 @@ export function ActionFeedbackIcon({
 }: ActionFeedbackIconProps) {
   if (state === "loading")
     return <GeneralCircularLoader size={loaderSize} color="inherit" aria-hidden="true" />;
-  if (state === "success") return <Success size={size} aria-hidden="true" />;
-  if (state === "error") return <Failure size={size} aria-hidden="true" />;
+  if (state === "success") return <Success size={pxToRem(size)} aria-hidden="true" />;
+  if (state === "error") return <Failure size={pxToRem(size)} aria-hidden="true" />;
   return <>{fallback}</>;
 }
 

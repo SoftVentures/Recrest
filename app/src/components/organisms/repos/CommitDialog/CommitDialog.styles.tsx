@@ -3,6 +3,7 @@ import { styled } from "@mui/material/styles";
 
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // eslint-disable-next-line no-restricted-syntax -- native <form> for submit semantics
 export const Form = styled("form")(({ theme }) => ({
@@ -16,31 +17,31 @@ export const ContextRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: pxToRem(8),
   flexWrap: "wrap",
   paddingBottom: theme.spacing(1),
   marginTop: -theme.spacing(0.5),
   borderBottom: `1px solid ${theme.palette.divider}`,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Box;
 
 export const ContextText = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   flexWrap: "wrap",
 }) as typeof Box;
 
 export const BranchChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  padding: "2px 8px",
+  gap: pxToRem(4),
+  padding: pxToRems(2, 8),
   borderRadius: 100,
   fontFamily: MONO_STACK,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.primary,
   backgroundColor: theme.palette.surface.interface.backElevation,
 })) as typeof Box;
@@ -48,7 +49,7 @@ export const BranchChip = styled(Box)(({ theme }) => ({
 export const AuthorLine = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   color: theme.palette.text.primary,
   fontWeight: 500,
 })) as typeof Box;
@@ -56,13 +57,13 @@ export const AuthorLine = styled(Box)(({ theme }) => ({
 export const HooksBadge = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  padding: "2px 8px",
+  gap: pxToRem(6),
+  padding: pxToRems(2, 8),
   borderRadius: 100,
   border: `1px solid ${theme.palette.warning.main}`,
   color: toneText(theme, StatusTone.WARNING),
   backgroundColor: `color-mix(in srgb, ${theme.palette.warning.main} 12%, transparent)`,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -73,15 +74,15 @@ export const HooksBadge = styled(Box)(({ theme }) => ({
 export const FilesHeader = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   width: "100%",
-  padding: "8px 10px",
+  padding: pxToRems(8, 10),
   background: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   cursor: "pointer",
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   color: theme.palette.text.primary,
   textAlign: "left",
@@ -102,25 +103,27 @@ export const FilesHeaderLabel = styled(Box)({
 export const FilesList = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   border: `1px solid ${theme.palette.divider}`,
   borderTop: 0,
   borderBottomLeftRadius: 8,
   borderBottomRightRadius: 8,
+  // -1 px, not rem: it cancels the header's 1 px bottom border, which stays a
+  // hairline at every scale.
   marginTop: -1,
-  padding: "6px 10px",
-  maxHeight: 160,
+  padding: pxToRems(6, 10),
+  maxHeight: pxToRem(160),
   overflowY: "auto",
   fontFamily: MONO_STACK,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
 })) as typeof Box;
 
 export const FileRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "2px 0",
+  gap: pxToRem(8),
+  padding: pxToRems(2, 0),
   color: theme.palette.text.primary,
 })) as typeof Box;
 
@@ -156,16 +159,16 @@ export const KindBadge = styled("span", {
     palette.modified ?? { color: infoColor, bg: theme.palette.surface.interface.backElevation };
   return {
     fontFamily: "inherit",
-    fontSize: 9.5,
+    fontSize: fontPxToRem(9.5),
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.05em",
-    padding: "1px 5px",
+    padding: pxToRems(1, 5),
     borderRadius: 6,
     color: tone.color,
     backgroundColor: tone.bg,
     flexShrink: 0,
-    minWidth: 60,
+    minWidth: pxToRem(60),
     textAlign: "center",
   };
 });
@@ -173,19 +176,19 @@ export const KindBadge = styled("span", {
 export const Field = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 export const FieldLabelRow = styled(Box)({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <label> required for input association
 export const FieldLabel = styled("label")(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -195,7 +198,7 @@ export const FieldLabel = styled("label")(({ theme }) => ({
 export const SubjectRow = styled(Box)({
   display: "flex",
   alignItems: "stretch",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const SubjectField = styled(Box)({
@@ -212,14 +215,14 @@ export const TemplateSlot = styled(Box)({
   display: "flex",
   alignItems: "stretch",
   "& > button": {
-    height: 40,
+    height: pxToRem(40),
   },
 }) as typeof Box;
 
 export const SubjectCounter = styled(Typography, {
   shouldForwardProp: (p) => p !== "tone",
 })<{ tone: "default" | "warn" | "error" }>(({ theme, tone }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   fontFamily: MONO_STACK,
   fontFeatureSettings: CODE_LIGATURES,
   fontVariantNumeric: "tabular-nums",
@@ -235,7 +238,7 @@ export const SubjectCounter = styled(Typography, {
 export const NoAuthorWarn = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   color: toneText(theme, StatusTone.WARNING),
   fontWeight: 500,
 })) as typeof Box;

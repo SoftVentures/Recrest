@@ -1,5 +1,7 @@
 import type { Components, Theme } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 const MuiOverrides: Components<Omit<Theme, "components">> = {
   MuiButton: {
     defaultProps: {
@@ -29,15 +31,15 @@ const MuiOverrides: Components<Omit<Theme, "components">> = {
         color: theme.palette.text.primary,
         border: `1px solid ${theme.palette.divider}`,
         borderRadius: 8,
-        padding: "8px 10px",
-        fontSize: 11.5,
+        padding: pxToRems(8, 10),
+        fontSize: fontPxToRem(11.5),
         fontWeight: 500,
         lineHeight: 1.4,
         boxShadow:
           theme.palette.mode === "dark"
             ? "0 4px 16px rgba(0, 0, 0, 0.45)"
             : "0 4px 16px rgba(17, 17, 22, 0.12)",
-        maxWidth: 320,
+        maxWidth: pxToRem(320),
       }),
       arrow: ({ theme }) => ({
         color: theme.palette.surface.interface.base,
@@ -46,6 +48,28 @@ const MuiOverrides: Components<Omit<Theme, "components">> = {
           backgroundColor: theme.palette.surface.interface.base,
         },
       }),
+    },
+  },
+  // MUI hard-codes the menu/list box metrics in px (`padding: '6px 16px'` on
+  // MenuItem, `8px 0` on List), which would leave body-portalled menus with
+  // scaled text inside unscaled padding. Restated in rem — byte-identical at
+  // scale 1, correct at every other scale.
+  MuiMenuItem: {
+    styleOverrides: {
+      root: {
+        paddingTop: pxToRem(6),
+        paddingBottom: pxToRem(6),
+        paddingLeft: pxToRem(16),
+        paddingRight: pxToRem(16),
+      },
+    },
+  },
+  MuiList: {
+    styleOverrides: {
+      padding: {
+        paddingTop: pxToRem(8),
+        paddingBottom: pxToRem(8),
+      },
     },
   },
   MuiPaper: {
@@ -67,6 +91,9 @@ const MuiOverrides: Components<Omit<Theme, "components">> = {
       body: {
         fontFeatureSettings: '"cv11", "ss01", "ss03"',
       },
+      // Scrollbar metrics stay in px: they are chrome the user reads as part
+      // of the window, not as part of the content, and 4 px is already at the
+      // lower bound of a usable hit target.
       "*::-webkit-scrollbar": {
         width: 4,
         height: 4,

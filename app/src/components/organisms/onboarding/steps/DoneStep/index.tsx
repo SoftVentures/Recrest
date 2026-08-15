@@ -15,6 +15,7 @@ import {
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { OnboardingStep } from "@/lib/constants/onboarding.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 export interface DoneStepProps {
   onFinish: () => void;
@@ -25,16 +26,16 @@ const Celebrate = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   textAlign: "center",
-  gap: 14,
-  paddingTop: 24,
-  paddingBottom: 16,
+  gap: pxToRem(14),
+  paddingTop: pxToRem(24),
+  paddingBottom: pxToRem(16),
   flex: 1,
   justifyContent: "center",
 }) as typeof Box;
 
 const Body = styled(StepBody)({
   textAlign: "center",
-  maxWidth: 380,
+  maxWidth: pxToRem(380),
 }) as typeof StepBody;
 
 function DoneStep({ onFinish }: DoneStepProps) {

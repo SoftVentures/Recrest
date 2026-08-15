@@ -3,7 +3,7 @@ import { type PropsWithChildren, useEffect, useMemo } from "react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 
-import { type FontSizeId, TauriCommand } from "@recrest/shared";
+import { TauriCommand } from "@recrest/shared";
 
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import {
@@ -16,30 +16,14 @@ import { codeLigatureFeatureSettings, fontCssFamily } from "@/lib/utils/appearan
 import { syncSystemTheme } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getTheme } from "@/theme";
-
-/**
- * Interface-size multiplier — values mirrored from src-old's tokens.scss so
- * existing layouts that were tuned at md (1×) keep their proportions at the
- * other steps. The four stops cover ~30% total range, enough to feel like a
- * meaningful change without forcing every layout decision to be fluid.
- *
- * Applied via CSS `zoom` on `#root` (not `<body>`/`<html>`) plus inline
- * `width: 100vw / scale` and `height: 100vh / scale` — see globals.css.
- * `zoom` re-rasterises text at the scaled pixel grid so the result stays
- * crisp at lg/xl; `transform: scale()` would blur sub-pixel hinting.
- */
-function scaleForSize(id: FontSizeId): number {
-  switch (id) {
-    case "sm":
-      return 0.94;
-    case "md":
-      return 1;
-    case "lg":
-      return 1.12;
-    case "xl":
-      return 1.25;
-  }
-}
+import {
+  CSS_VAR_TEXT_SCALE,
+  CSS_VAR_UI_SCALE,
+  baseFontSizeForId,
+  clampUiScale,
+  pxToRem,
+  textScaleForFontSize,
+} from "@/theme/scale";
 
 /**
  * Reads the user's theme preferences from the Redux `settings` slice and
@@ -63,6 +47,7 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
   const codeFont = useAppSelector((s) => s.settings.codeFont);
   const codeLigatures = useAppSelector((s) => s.settings.codeLigatures);
   const fontSize = useAppSelector((s) => s.settings.fontSize);
+  const uiScale = useAppSelector((s) => s.settings.uiScale);
   const highContrast = useAppSelector((s) => s.settings.highContrast);
   const reducedMotion = useAppSelector((s) => s.settings.reducedMotion);
   const underlineLinks = useAppSelector((s) => s.settings.underlineLinks);
@@ -149,9 +134,10 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
         dyslexiaFont,
         font,
         fontSize,
+        uiScale,
         translucent: translucencyEnabled,
       }),
-    [themeId, primaryColor, dyslexiaFont, font, fontSize, translucencyEnabled],
+    [themeId, primaryColor, dyslexiaFont, font, fontSize, uiScale, translucencyEnabled],
   );
 
   // Single root-element side-effect. Combining background + font + a11y +
@@ -214,7 +200,6 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // path; this effect only drives the `::before` rgba tint + intensity.
 
     root.style.setProperty("--app-font-family", theme.typography.fontFamily ?? "");
-    root.style.setProperty("--app-font-size", `${theme.typography.fontSize}px`);
     // Code-surface font + ligatures consumed by `MONO_STACK` / `CODE_LIGATURES`.
     root.style.setProperty("--recrest-font-mono", fontCssFamily(codeFont, "mono"));
     root.style.setProperty("--recrest-code-ligatures", codeLigatureFeatureSettings(codeLigatures));
@@ -229,16 +214,24 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // Drive a body-level font-family so children that don't read from MUI's
     // theme (raw <input>, <select>, lucide icons) still match.
     document.body.style.fontFamily = theme.typography.fontFamily ?? "";
-    document.body.style.fontSize = `${theme.typography.fontSize}px`;
-    // Interface-size scaling — CSS `zoom` scales every descendant uniformly
-    // (font-size, padding, border-width, fixed-px widths in styled() rules,
-    // SVG icons) without us having to convert every magic number to `em`.
-    // We write the multiplier into a CSS custom property on `<html>`;
-    // `globals.css` consumes it via:
-    //   #root { zoom: var(--ui-scale); width: calc(100vw / var(--ui-scale)); ... }
-    // so the visible rendered size always equals the real viewport while
-    // every descendant length scales uniformly.
-    root.style.setProperty("--ui-scale", String(scaleForSize(fontSize)));
+    // Body text size in rem so it rides the root font size like everything
+    // else. 13 px at `md` × scale 1 — exactly what this used to emit.
+    document.body.style.fontSize = pxToRem(baseFontSizeForId(fontSize));
+    // Interface scaling. `globals.css` consumes this as
+    //   html { font-size: calc(16px * var(--ui-scale)) }
+    // so every `rem` length in the app — including body-portalled overlays,
+    // which the old `zoom` on `#root` could not reach — scales together while
+    // the layout viewport (and therefore every media query) stays honest.
+    //
+    // This is driven by `settings.uiScale`, NOT by `settings.fontSize`. The
+    // two controls are now genuinely orthogonal: `fontSize` moves the
+    // typography scale only, `uiScale` moves the whole interface.
+    // Clamped *and* snapped: `settings.uiScale` is only ever a slider step, so
+    // this is a no-op for well-formed state and a repair for anything else.
+    root.style.setProperty(CSS_VAR_UI_SCALE, String(clampUiScale(uiScale)));
+    // Text-only multiplier consumed by `fontPxToRem`. Exactly 1 at `md`, so
+    // the default rendering is untouched.
+    root.style.setProperty(CSS_VAR_TEXT_SCALE, String(textScaleForFontSize(fontSize)));
 
     // Toggle the OS blur material (attach when translucent, detach otherwise).
     // The CSS `::before` rgba above only tints; the actual blur is this native
@@ -261,6 +254,7 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     codeFont,
     codeLigatures,
     fontSize,
+    uiScale,
     highContrast,
     reducedMotion,
     underlineLinks,

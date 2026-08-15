@@ -7,6 +7,7 @@ import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { colorForRepo } from "@/lib/activityStats";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { EnrichedRepo } from "@/lib/repoEnrich";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   quietestRepoIds: string[];
@@ -16,18 +17,18 @@ interface Props {
 const ChipRow = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 const Chip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  padding: "2px 7px 2px 6px",
+  gap: pxToRem(5),
+  padding: pxToRems(2, 7, 2, 6),
   backgroundColor: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 100,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
   color: theme.palette.text.primary,
 })) as typeof Box;
@@ -35,8 +36,8 @@ const Chip = styled(Box)(({ theme }) => ({
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
 const Dot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{ color: string }>(
   ({ color }) => ({
-    width: 7,
-    height: 7,
+    width: pxToRem(7),
+    height: pxToRem(7),
     borderRadius: "50%",
     backgroundColor: color,
     display: "inline-block",
@@ -44,15 +45,15 @@ const Dot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{ color:
 );
 
 const More = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
-  padding: "2px 6px",
+  padding: pxToRems(2, 6),
 })) as typeof Typography;
 
 const Empty = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "10px 0",
+  padding: pxToRems(10, 0),
 })) as typeof Box;
 
 function QuietestReposCard({ quietestRepoIds, reposById }: Props) {

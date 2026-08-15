@@ -33,15 +33,16 @@ import {
   InlineErrorText,
 } from "@/pages/app/Settings/components/GitConfigTab/GitConfigTab.styles";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const CustomRowFour = styled(CustomRow)({
-  gridTemplateColumns: "minmax(140px, 1fr) minmax(220px, 2.2fr) auto auto",
+  gridTemplateColumns: `minmax(${pxToRem(140)}, 1fr) minmax(${pxToRem(220)}, 2.2fr) auto auto`,
 }) as typeof CustomRow;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.error.main,
-  paddingTop: 4,
+  paddingTop: pxToRem(4),
 })) as typeof Typography;
 
 export interface CustomKeysListProps {
@@ -90,7 +91,7 @@ function CustomRowItem({ rowKey, entry, onSave, onRemove, removeLabel }: RowProp
         }}
       />
       <LayerChip title={entry.sourcePath}>
-        <FileText size={12} aria-hidden />
+        <FileText size={pxToRem(12)} aria-hidden />
         <LayerChipText>{basename(entry.sourcePath)}</LayerChipText>
       </LayerChip>
       <CustomRowActions>
@@ -219,7 +220,7 @@ export default function CustomKeysList({ entries, writableLayers, onSave }: Cust
               </GeneralButton>
               <GeneralButton
                 variant="default"
-                startIcon={<Plus size={14} />}
+                startIcon={<Plus size={pxToRem(14)} />}
                 onClick={() => void submitAdd()}
                 loading={submitting}
                 disabled={!draft.key.trim() || !draft.filePath}
@@ -239,7 +240,7 @@ export default function CustomKeysList({ entries, writableLayers, onSave }: Cust
             size="sm"
             variant="outline"
             onClick={openAdd}
-            startIcon={<Plus size={14} />}
+            startIcon={<Plus size={pxToRem(14)} />}
             data-testid={TEST_IDS.gitConfigSettings.customKeyAdd}
           >
             {t("settings.git.add_custom_key")}

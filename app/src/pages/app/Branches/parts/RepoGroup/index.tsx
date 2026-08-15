@@ -21,6 +21,7 @@ import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
 import BranchRowItem from "@/pages/app/Branches/parts/BranchRowItem";
 import { type BranchesByRepo } from "@/pages/app/Branches/parts/_shared";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // Branches render in pages of this size per repo group — a "+N entries" row
 // reveals the next page. Keeps repos with hundreds of branches from rendering
@@ -67,7 +68,7 @@ export function RepoGroup({ group, stateFor, run, t }: RepoGroupProps) {
           }}
         >
           <ChevronDown
-            size={12}
+            size={pxToRem(12)}
             style={{
               transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
               transition: "transform 120ms ease",
@@ -97,7 +98,11 @@ export function RepoGroup({ group, stateFor, run, t }: RepoGroupProps) {
             );
           }}
         >
-          <ActionFeedbackIcon state={fetchState} fallback={<RefreshCw size={12} />} size={12} />
+          <ActionFeedbackIcon
+            state={fetchState}
+            fallback={<RefreshCw size={pxToRem(12)} />}
+            size={12}
+          />
           {t("branches.actions.fetch")}
         </FetchBtn>
       </GroupHead>
@@ -145,8 +150,8 @@ const GroupCard = styled(Box)(({ theme }) => ({
 const GroupHead = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "11px 16px",
+  gap: pxToRem(10),
+  padding: pxToRems(11, 16),
   backgroundColor: theme.palette.surface.interface.backElevation,
   borderBottom: `1px solid ${theme.palette.divider}`,
 })) as typeof Box;
@@ -154,7 +159,7 @@ const GroupHead = styled(Box)(({ theme }) => ({
 const GroupHandle = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   flex: 1,
   minWidth: 0,
   cursor: "pointer",
@@ -171,14 +176,14 @@ const GroupHandle = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const GroupName = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.1px",
 })) as typeof Typography;
 
 const GroupRemote = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   flex: 1,
@@ -188,7 +193,7 @@ const GroupRemote = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const GroupCount = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
@@ -196,16 +201,16 @@ const GroupCount = styled(Typography)(({ theme }) => ({
 const FetchBtn = styled(Button)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   minWidth: 0,
-  height: 24,
-  padding: "0 8px",
-  marginLeft: 4,
+  minHeight: pxToRem(24),
+  padding: pxToRems(0, 8),
+  marginLeft: pxToRem(4),
   backgroundColor: "transparent",
   border: "1px solid transparent",
   borderRadius: 8,
   color: theme.palette.text.secondary,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   textTransform: "none",
   cursor: "pointer",
@@ -229,13 +234,13 @@ const LoadMore = styled(Button)(({ theme }) => ({
   justifyContent: "center",
   width: "100%",
   minWidth: 0,
-  padding: "10px 16px",
+  padding: pxToRems(10, 16),
   border: 0,
   borderTop: `1px solid ${theme.palette.divider}`,
   borderRadius: 0,
   backgroundColor: "transparent",
   color: theme.palette.text.link,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   fontVariantNumeric: "tabular-nums",
   textTransform: "none",

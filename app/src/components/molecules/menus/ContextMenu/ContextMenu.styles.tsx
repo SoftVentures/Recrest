@@ -1,16 +1,18 @@
 import { Divider, ListItemIcon, ListItemText, MenuItem } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Item = styled(MenuItem)({
-  minHeight: 32,
-  fontSize: 13,
-  paddingTop: 6,
-  paddingBottom: 6,
-  paddingLeft: 12,
-  paddingRight: 12,
-  gap: 8,
+  minHeight: pxToRem(32),
+  fontSize: fontPxToRem(13),
+  paddingTop: pxToRem(6),
+  paddingBottom: pxToRem(6),
+  paddingLeft: pxToRem(12),
+  paddingRight: pxToRem(12),
+  gap: pxToRem(8),
   borderRadius: 6,
-  margin: "0 4px",
+  margin: pxToRems(0, 4),
   "& .MuiListItemIcon-root": {
     minWidth: 0,
     display: "flex",

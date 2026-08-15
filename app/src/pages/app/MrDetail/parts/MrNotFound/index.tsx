@@ -8,6 +8,7 @@ import EmptyState from "@/components/molecules/feedback/EmptyState";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { BackBar, BackButton, NotFoundRoot, Root } from "@/pages/app/MrDetail/MrDetail.styles";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   prNumber: number | null;
@@ -27,7 +28,7 @@ export default function MrNotFound({ prNumber, onBack }: Props) {
           data-testid={TEST_IDS.mr.backToList}
           aria-label={tAria("actions.go_back", { ns: I18nNamespace.COMMON })}
         >
-          <ArrowLeft size={13} />
+          <ArrowLeft size={pxToRem(13)} />
           <Box component="span">{tPrs("detail.back")}</Box>
         </BackButton>
       </BackBar>
