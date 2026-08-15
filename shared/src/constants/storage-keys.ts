@@ -44,6 +44,12 @@ export const StorageKey = {
    *  from settings.json" and "explicitly 1.0" arrive at the renderer
    *  indistinguishable. */
   UI_SCALE_MIGRATED: `${STORAGE_PREFIX}ui-scale-migrated`,
+  /** The user's interface scale as a raw multiplier ("1.25"). Mirrored so the
+   *  anti-flash inline script in `index.html` can seed `--ui-scale` before the
+   *  bundle loads. Without it the whole UI paints at 100 % and then jumps once
+   *  `loadSettings` has round-tripped to the backend — a full reflow, not a
+   *  tint change, and largest for exactly the users the scale exists for. */
+  UI_SCALE: `${STORAGE_PREFIX}ui-scale`,
   /** dev:web only: serialized AppSettings overlay so reloads persist user
    *  changes against the seed. Real Tauri uses `settings.json` on disk. */
   DEV_SETTINGS: `${STORAGE_PREFIX}dev-settings`,

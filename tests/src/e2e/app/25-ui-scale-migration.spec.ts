@@ -68,3 +68,57 @@ test.describe("app / ui scale migration", () => {
     await expect.poll(uiScale).toBe("1");
   });
 });
+
+/**
+ * The heaviest state the migration can produce: an `xl` user lands on
+ * `uiScale 1.25` **and** keeps `--text-scale 17/13`, so their text renders
+ * ~1.63× the design size while the chrome around it rides 1.25×. That
+ * divergence is the whole point of splitting the two controls, and it is
+ * exactly what the `fontPxToRem` / `pxToRem` containment policy has to
+ * survive — a box sized with `pxToRem` holding text sized with
+ * `fontPxToRem` is the pairing that clips if the policy is violated.
+ */
+test.describe("app / ui scale migration — densest pages at xl", () => {
+  test.skip(({ browserName }) => browserName !== "chromium", "chromium only");
+  test.use({
+    uiLocale: "en",
+    seed: {
+      settings: {
+        ...SEED_SETTINGS,
+        uiScale: 1.25,
+        appearance: { ...SEED_SETTINGS.appearance, fontSize: "xl" as const },
+      },
+    },
+  });
+
+  for (const route of [AppRoute.REPOS, AppRoute.MERGE_REQUESTS] as const) {
+    test(`${route} keeps its chrome inside the viewport`, async ({ page }) => {
+      await page.goto(route);
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            getComputedStyle(document.documentElement).getPropertyValue("--ui-scale").trim(),
+          ),
+        )
+        .toBe("1.25");
+
+      // Not `scrollWidth`: `html` and `body` are `overflow-x: hidden`, so an
+      // over-wide layout is silently *cut off* rather than turned into a
+      // scrollbar — measured, and it is why the original Wayland report read
+      // "das Drumherum ist nicht zu sehen". The honest symptom is a testid'd
+      // element whose box sits past the viewport edge.
+      const escaped = await page.evaluate(() =>
+        [...document.querySelectorAll("[data-testid]")]
+          .filter((el) => {
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
+          })
+          .map(
+            (el) =>
+              `${(el as HTMLElement).dataset.testid}@${Math.round(el.getBoundingClientRect().right)}`,
+          ),
+      );
+      expect(escaped).toEqual([]);
+    });
+  }
+});

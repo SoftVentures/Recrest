@@ -10,8 +10,10 @@ import {
 import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // `containerType` lets DetailPane's width ladder query the *layout* width:
-// `#root` carries `zoom: var(--ui-scale)`, and a `@media` px threshold reports
-// the unscaled viewport, so it fires at the wrong moment on scaled setups.
+// the pane sits beside the sidebar, so the viewport a `@media` threshold reports
+// is not the width that decides its layout. The thresholds are in rem so they
+// track `--ui-scale` — at a larger scale a step has to fire at a *wider*
+// container width, because the content's own floor grew with it.
 export const PageRoot = styled(Box)({
   display: "flex",
   height: "100%",

@@ -38,7 +38,10 @@ const Tile = styled(Box, { shouldForwardProp: FORWARD })<TileProps>(
     position: "relative",
     width: pxToRem(size),
     height: pxToRem(size),
-    borderRadius: radius,
+    // A radius derived from a scaled dimension is a layout dimension, not a
+    // decorative constant: `AuthorAvatar` passes `size / 2` to get a circle,
+    // so leaving this in px turns every avatar into a squircle above scale 1.
+    borderRadius: pxToRem(radius),
     background: hasImage ? neutralBg : gradient,
     border: `1px solid ${theme.palette.divider}`,
     color: "#ffffff",

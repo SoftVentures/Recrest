@@ -33,10 +33,10 @@ const Root = styled(LinearProgress, {
   shouldForwardProp: (p) => p !== "$thickness",
 })<RootProps>(({ theme, $thickness }) => ({
   height: pxToRem(LINEAR_LOADER_THICKNESS_PX[$thickness]),
-  borderRadius: LINEAR_LOADER_THICKNESS_PX[$thickness] / 2,
+  borderRadius: pxToRem(LINEAR_LOADER_THICKNESS_PX[$thickness] / 2),
   backgroundColor: theme.palette.surface.interface.active,
   "& .MuiLinearProgress-bar": {
-    borderRadius: LINEAR_LOADER_THICKNESS_PX[$thickness] / 2,
+    borderRadius: pxToRem(LINEAR_LOADER_THICKNESS_PX[$thickness] / 2),
   },
 }));
 

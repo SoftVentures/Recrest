@@ -1,4 +1,4 @@
-import { type ReactElement } from "react";
+import { type ReactElement, useMemo, useRef } from "react";
 
 import { Box, Slider, type SliderProps } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -86,6 +86,17 @@ export function IntensitySlider({
   dataTestId,
   formatValue = defaultFormat,
 }: IntensitySliderProps) {
+  // `slots.valueLabel` is a *component type*: a fresh identity on every
+  // render makes React unmount and remount the whole value-label subtree —
+  // and the thumb it wraps, which owns the `<input type="range">`. The
+  // visible symptom is that the slider drops keyboard focus after every
+  // single arrow-key step, so a keyboard user has to tab back in between
+  // each increment. The type is therefore created once and reads the
+  // formatter through a ref, because callers pass `formatValue` as an inline
+  // arrow — memoizing on the prop itself would still churn every render.
+  const formatRef = useRef(formatValue);
+  formatRef.current = formatValue;
+  const ValueLabel = useMemo(() => makeValueLabel((n) => formatRef.current(n)), []);
   const props: SliderProps = {
     min,
     max,
@@ -93,7 +104,7 @@ export function IntensitySlider({
     value,
     "aria-label": ariaLabel,
     valueLabelDisplay: "auto",
-    slots: { valueLabel: makeValueLabel(formatValue) },
+    slots: { valueLabel: ValueLabel },
     onChange: (_event, next) => {
       const n = Array.isArray(next) ? next[0] : next;
       if (typeof n === "number") onChange(n);

@@ -3,7 +3,7 @@ import { type PropsWithChildren, useEffect, useMemo } from "react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 
-import { TauriCommand } from "@recrest/shared";
+import { StorageKey, TauriCommand } from "@recrest/shared";
 
 import { Platform, usePlatform } from "@/hooks/usePlatform";
 import {
@@ -228,7 +228,17 @@ export function ThemeWrapper({ children }: PropsWithChildren) {
     // typography scale only, `uiScale` moves the whole interface.
     // Clamped *and* snapped: `settings.uiScale` is only ever a slider step, so
     // this is a no-op for well-formed state and a repair for anything else.
-    root.style.setProperty(CSS_VAR_UI_SCALE, String(clampUiScale(uiScale)));
+    const resolvedUiScale = clampUiScale(uiScale);
+    root.style.setProperty(CSS_VAR_UI_SCALE, String(resolvedUiScale));
+    // Mirrored for the anti-flash script in `index.html`, which seeds the same
+    // variable before the bundle loads. Written here rather than in
+    // `settingsBackendSync` so it also covers the boot path, where the scale
+    // arrives from `loadSettings` instead of a user action.
+    try {
+      window.localStorage.setItem(StorageKey.UI_SCALE, String(resolvedUiScale));
+    } catch {
+      /* localStorage blocked — non-fatal; one extra reflow next boot */
+    }
     // Text-only multiplier consumed by `fontPxToRem`. Exactly 1 at `md`, so
     // the default rendering is untouched.
     root.style.setProperty(CSS_VAR_TEXT_SCALE, String(textScaleForFontSize(fontSize)));

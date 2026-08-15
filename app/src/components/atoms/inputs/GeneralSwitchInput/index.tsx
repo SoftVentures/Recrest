@@ -58,7 +58,7 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
     boxShadow: "0 3px 1px rgba(0,0,0,0.06), 0 3px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.04)",
   },
   "& .MuiSwitch-track": {
-    borderRadius: 26 / 2,
+    borderRadius: pxToRem(26 / 2),
     backgroundColor: theme.palette.mode === "dark" ? "#39393D" : "#E9E9EA",
     opacity: 1,
     transition: theme.transitions.create(["background-color"], { duration: 260 }),

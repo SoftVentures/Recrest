@@ -30,6 +30,10 @@ export function buildNivoTheme(mui: MuiTheme): NivoTheme {
   // while the type still claims `number`. Without this fallback every size below
   // is `NaN` and the canvas renderer's `${fontSize}px` emits the literal
   // `"NaNpx"`, which silently drops all chart text.
+  // Deliberately `uiScale` only, not the text scale: the "Font size" setting
+  // moves reading text, and chart chrome (axis ticks, legends, tooltip) is
+  // labelling on a fixed plot area, not prose. Letting it grow 31 % at `xl`
+  // would eat the gutter without making the chart more legible.
   const px = (designPx: number) => designPx * (mui.uiScale ?? 1);
   const tick = { fill: mui.palette.text.secondary, fontSize: px(11) };
   return {

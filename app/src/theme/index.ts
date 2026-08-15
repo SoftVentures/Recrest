@@ -142,6 +142,12 @@ const baseTheme = {
   // arithmetic on `shape.borderRadius`, and a corner radius is a decorative
   // constant rather than a layout dimension — it should not grow with the
   // interface scale.
+  //
+  // The exception is a radius *derived* from a scaled dimension — `size / 2`
+  // for a circle, `height / 2` for a pill. That one is geometry, not
+  // decoration: it has to ride `--ui-scale` with the box it rounds, or the
+  // shape breaks above scale 1. Those go through `pxToRem` (see
+  // `GeneralAvatar`, `GeneralSwitchInput`, `GeneralLinearLoader`).
   shape: { borderRadius: 8 },
   components: { ...MuiOverrides },
 };

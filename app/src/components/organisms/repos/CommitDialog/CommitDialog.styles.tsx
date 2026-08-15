@@ -20,7 +20,7 @@ export const ContextRow = styled(Box)(({ theme }) => ({
   gap: pxToRem(8),
   flexWrap: "wrap",
   paddingBottom: theme.spacing(1),
-  marginTop: -theme.spacing(0.5),
+  marginTop: theme.spacing(-0.5),
   borderBottom: `1px solid ${theme.palette.divider}`,
   fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
