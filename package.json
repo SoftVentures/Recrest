@@ -48,12 +48,12 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.0.2",
+    "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "husky": "^9.1.6",
-    "lint-staged": "^17.0.7",
-    "prettier": "^3.3.3",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
     "typescript": "^6.0.3"
   },
   "resolutions": {
