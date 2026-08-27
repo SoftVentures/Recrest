@@ -1,7 +1,10 @@
 # Plan 11 — Linux-Packaging: AppImage raus, AUR live, Flatpak rein
 
-**Status:** Umgesetzt bis auf die zwei Veröffentlichungsschritte (AUR-Push,
-Flathub-Submission), die Zugangsdaten brauchen — siehe „Was offen bleibt".
+**Status:** Umgesetzt und verifiziert. Der Flatpak-Offline-Build läuft in CI
+grün durch und lädt ein installierbares Bundle hoch. Offen bleiben die zwei
+Veröffentlichungsschritte (AUR-Push, Flathub-Submission — letzterer erst nach
+dem nächsten Release) und die Sandbox-Checks auf einer echten Linux-Session;
+siehe „Was offen bleibt".
 **Datum:** 2026-08-27
 **Vorgänger:** `10-linux-scaling-and-packaging-audit.md` (Befunde 14–16 und „Empfohlene Reihenfolge für neue Kanäle")
 
@@ -540,11 +543,18 @@ sich im Repository erledigen.
 
 ### Erfordert eine Linux-Maschine
 
-3. **Flatpak lokal bauen und die fünf Sandbox-Punkte durchgehen**
-   (Repo-Scan, IDE, Terminal, Keyring, Deep Link + Tray) — die Liste steht in
-   `packaging/flatpak/README.md`. Der `host_command`-Wrapper ist unit-getestet
-   und auf allen anderen Kanälen nachweislich verhaltensneutral, aber der
-   `flatpak-spawn`-Zweig kann ohne echte Sandbox nicht ausgeführt werden.
+3. **Die fünf Sandbox-Punkte durchgehen** (Repo-Scan, IDE, Terminal, Keyring,
+   Deep Link + Tray) — die Liste steht in `packaging/flatpak/README.md`.
+
+   Bauen musst du dafür nichts mehr: der `flatpak.yml`-Lauf lädt ein fertiges
+   `recrest.flatpak` als Artefakt hoch (7 Tage). `flatpak install --user
+   recrest.flatpak` genügt.
+
+   Das ist der Rest, den kein Build beantworten kann. Der Container beweist, dass
+   es *baut* — nicht, dass es in der Sandbox *funktioniert*. Der
+   `host_command`-Wrapper ist unit-getestet und auf allen anderen Kanälen
+   nachweislich verhaltensneutral, aber der `flatpak-spawn`-Zweig braucht eine
+   echte Sandbox mit Desktop-Session.
 4. **`recrest-bin` mit `makepkg -si` auf einem frischen Arch-System prüfen.**
    Die Checksummen sind gegen das echte v0.11.0-`.deb` erzeugt, die
    Entpack-Logik ist gegen dessen tatsächlichen Dateibaum geschrieben — aber
