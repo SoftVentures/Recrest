@@ -1,10 +1,10 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use tauri::AppHandle;
 
 use super::error::CommandError;
+use crate::platform::host_command::{host_command, host_which};
 
 /// IDE identifier → command name pairs. Kept in sync with
 /// `shared/src/constants/ide.ts` (source of truth for UI).
@@ -87,8 +87,15 @@ fn extra_search_paths(bin: &str) -> Vec<PathBuf> {
 /// Resolves the binary via `which`, falling back to the platform-specific
 /// directories above. Returns the **full path** so `Command::new(...)` never
 /// has to do its own PATH lookup (GUI apps often inherit a reduced PATH).
+///
+/// `host_which` rather than `which::which`: inside a Flatpak sandbox the user's
+/// editors are installed on the host, which the sandbox `PATH` does not cover,
+/// so a plain lookup reports "no IDE detected" on a machine full of them. The
+/// directory fallback below stays as it is — it probes with `Path::exists`,
+/// which cannot see the host either, but by then `host_which` has already had
+/// its turn and a miss costs nothing.
 fn resolve_binary(bin: &str) -> Option<PathBuf> {
-    if let Ok(path) = which::which(bin) {
+    if let Some(path) = host_which(bin) {
         return Some(path);
     }
 
@@ -242,7 +249,7 @@ fn plan_launch(binary: &Path, args: &[OsString], windows: bool) -> (OsString, Ve
 
 fn spawn_detached_args(binary: &Path, args: &[OsString]) -> std::io::Result<()> {
     let (program, args) = plan_launch(binary, args, cfg!(windows));
-    let mut cmd = Command::new(program);
+    let mut cmd = host_command(program);
     cmd.args(&args);
 
     #[cfg(windows)]

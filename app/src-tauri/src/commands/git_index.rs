@@ -14,6 +14,7 @@ use super::error::CommandError;
 use super::git_ops::resolve_repo_path;
 use super::repos::read_status_off_thread;
 use crate::git::status::RepoStatusDto;
+use crate::platform::host_command::host_command_async;
 use crate::AppState;
 
 /// Stage the given repo-relative paths. Honors gitignore (silently skips
@@ -413,7 +414,9 @@ pub async fn commit_via_git(
     message: &str,
     fallback: Option<(&str, &str)>,
 ) -> Result<(), CommandError> {
-    let mut cmd = tokio::process::Command::new("git");
+    // `host_command_async`: the whole point of this path is running the user's
+    // own hooks with their own git, which only exists on the host.
+    let mut cmd = host_command_async("git");
     // CREATE_NO_WINDOW — without it the hook-aware commit flashes a console
     // window on the packaged Windows build. `process::configure` only takes a
     // std Command, so set the flag inline on the tokio builder.

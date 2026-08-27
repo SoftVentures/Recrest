@@ -1,9 +1,8 @@
-use std::process::Command;
-
 use serde::Serialize;
 
 use super::error::CommandError;
 use super::process::configure as no_window;
+use crate::platform::host_command::host_command;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,7 +20,10 @@ pub async fn check_git() -> Result<GitInfo, CommandError> {
 }
 
 fn detect() -> GitInfo {
-    let mut cmd = Command::new("git");
+    // `host_command`: `git` is not part of a Flatpak runtime, so inside the
+    // sandbox this has to ask the host — otherwise Recrest reports "git is not
+    // installed" on a machine that obviously has it.
+    let mut cmd = host_command("git");
     cmd.arg("--version");
     no_window(&mut cmd);
     let version = match cmd.output() {
@@ -53,9 +55,9 @@ pub(crate) fn parse_version(stdout: &str) -> Option<String> {
 /// in `commands/ide.rs` so we don't pull in a new dependency just for this.
 fn locate_git() -> Option<String> {
     #[cfg(unix)]
-    let mut cmd = Command::new("which");
+    let mut cmd = host_command("which");
     #[cfg(windows)]
-    let mut cmd = Command::new("where");
+    let mut cmd = host_command("where");
     cmd.arg("git");
     no_window(&mut cmd);
     let output = cmd.output().ok()?;
