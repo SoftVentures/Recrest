@@ -22,16 +22,20 @@ fi
 # The executable's file name is NOT the same on every channel, so probe instead
 # of hardcoding one. Cargo emits `Recrest` (capital R — see the `[[bin]]`
 # comment in Cargo.toml, the name drives the macOS Dock label) and that is what
-# the .deb / .rpm / .AppImage bundles install as `usr/bin/Recrest`, while the
-# AUR package deliberately installs it lowercase as `/usr/bin/recrest`. v0.11.0
-# shipped a launcher that only knew the lowercase path, which on any
-# case-sensitive filesystem is a dead menu entry.
+# the .deb / .rpm bundles install as `usr/bin/Recrest`, while the AUR packages
+# and the Flatpak deliberately install it lowercase. v0.11.0 shipped a launcher
+# that only knew the lowercase path, which on any case-sensitive filesystem is a
+# dead menu entry.
 #
-# `$APPDIR` (exported by every AppImage runtime) and this script's own directory
-# are probed first so an AppImage resolves the binary inside its own mount
-# rather than picking up an unrelated system-wide install. AppImage's AppRun
-# execs us through PATH, so `$0` can be a bare name — hence the explicit
-# `$APPDIR` entries rather than relying on the dirname alone.
+# This script's own directory is probed before the system prefixes so a
+# self-contained install resolves its own binary rather than picking up an
+# unrelated system-wide one — that is what makes the Flatpak (/app/bin) work
+# without a special case.
+#
+# The `$APPDIR` entries are legacy: plan 11 dropped the AppImage, so nothing
+# sets that variable any more. They are kept because an AppImage from an older
+# release still runs this launcher, and removing two dead candidates from a
+# probe loop buys nothing.
 self_dir=$(dirname -- "$0")
 case "$self_dir" in
     /*) ;;

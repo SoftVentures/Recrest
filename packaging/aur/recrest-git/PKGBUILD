@@ -62,7 +62,7 @@ build() {
   cd "$pkgname"
 
   # `--no-bundle` stops the Tauri CLI after linking the executable. We do not want
-  # its .deb/.rpm/.AppImage bundles (tauri.conf.json sets `targets: "all"`), and
+  # its .deb/.rpm bundles (see `bundle.targets` in tauri.conf.json), and
   # bundling would additionally demand a TAURI_SIGNING_PRIVATE_KEY because
   # `createUpdaterArtifacts` is enabled upstream.
   yarn workspace @recrest/app tauri build --no-bundle
@@ -76,7 +76,7 @@ package() {
   # recrest-launcher.sh does not hardcode either spelling — it probes
   # `$APPDIR/usr/bin`, its own directory, `/usr/bin` and `/usr/local/bin` for both
   # `Recrest` and `recrest` and execs the first hit — because the upstream
-  # .deb/.rpm/.AppImage install the capitalised name while we install the
+  # .deb/.rpm install the capitalised name while we install the
   # lowercase one. Renaming the binary here therefore stays purely our choice,
   # and upstream's `mainBinaryName` is deliberately NOT set: it would rename
   # `target/release/Recrest` for every `tauri build` and break the install below.

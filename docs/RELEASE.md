@@ -134,7 +134,6 @@ re-uploads them under the contract names the landingpage download page links
 | mac x64       | `Recrest_x.y.z_x64.dmg`         | `recrest-${TAG}-mac-x64.dmg`        |
 | windows x64   | `Recrest_x.y.z_x64-setup.exe`   | `recrest-${TAG}-windows-x64.exe`    |
 | windows arm64 | `Recrest_x.y.z_arm64-setup.exe` | `recrest-${TAG}-windows-arm64.exe`  |
-| linux x64     | `Recrest_x.y.z_amd64.AppImage`  | `recrest-${TAG}-linux-x64.AppImage` |
 | linux x64     | `Recrest_x.y.z_amd64.deb`       | `recrest-${TAG}-linux-x64.deb`      |
 | linux x64     | `Recrest-x.y.z-1.x86_64.rpm`    | `recrest-${TAG}-linux-x64.rpm`      |
 
@@ -142,11 +141,28 @@ The Windows download is the **NSIS `.exe`**. The `.msi` is built too, but only
 as an updater payload.
 
 The `prune` job then deletes the tauri-named _installers_. The **updater
-payloads** (`*.msi`, `*.app.tar.gz`, `*.AppImage`, their `.sig` files and
-`latest.json`) stay under their tauri-default names, because `latest.json`
-references them by exact name — renaming them would break auto-update. The
-Linux AppImage is therefore _copied_, not moved: the tauri-named original
-serves the updater, the friendly copy serves the download page.
+payloads** (`*.msi`, `*.app.tar.gz`, their `.sig` files and `latest.json`) stay
+under their tauri-default names, because `latest.json` references them by exact
+name — renaming them would break auto-update. That is why the rename step
+_copies_ rather than moves.
+
+### Linux has no updater payload
+
+Plan 11 dropped the AppImage, which was the only Linux format
+`tauri-plugin-updater` can install in place. `.deb` and `.rpm` are download-page
+assets only.
+
+That is enforced, not merely assumed: the **`strip-linux-updater-entries`** job
+removes every `linux-*` key from `latest.json` before `prune` runs. Without it
+the bundler leaves a plain `linux-x86_64` entry pointing at the `.deb`, and an
+installation still running an old AppImage would resolve to it — the plugin's
+`install_appimage` writes the payload straight over the running image without
+checking what the bytes are, so an unattended auto-update would replace the
+user's AppImage with a `.deb` and leave them with nothing that runs.
+
+With the entries gone the plugin reports `TargetsNotFound`, `update/mod.rs`
+falls through to the GitHub-API check, and Linux users get a notice with a link
+instead of an install button. **Do not "restore" the Linux entries.**
 
 The source of truth for the contract filenames is
 `landingpage/src/lib/downloadUrl.ts` plus the rename step in
@@ -175,7 +191,7 @@ an empty `.p12`).
 | Updater payloads    | **Signed** (minisign). `plugins.updater.pubkey` is set and the updater is active. |
 | macOS `.app`/`.dmg` | **Ad-hoc signed**, not notarized — `bundle.macOS.signingIdentity: "-"`.           |
 | Windows `.exe`      | **Unsigned.**                                                                     |
-| Linux packages      | Unsigned (normal for `.AppImage` / `.deb` / `.rpm`).                              |
+| Linux packages      | Unsigned (normal for `.deb` / `.rpm`).                                            |
 
 macOS ad-hoc signing is deliberate and not cosmetic: on Apple Silicon,
 Gatekeeper refuses to launch a quarantined arm64 app whose signature envelope
@@ -200,7 +216,7 @@ So end users see:
   → **Open**, or `xattr -cr /Applications/Recrest.app`.
 - **Windows** — SmartScreen → _More info_ → _Run anyway_. The warning fades as
   the installer builds reputation.
-- **Linux** — no warning; `.AppImage` / `.deb` / `.rpm` install as-is.
+- **Linux** — no warning; `.deb` / `.rpm` install as-is.
 
 See the [README](../README.md#download--install) for the verbatim end-user
 instructions.

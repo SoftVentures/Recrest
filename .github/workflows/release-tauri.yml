@@ -8,10 +8,13 @@
 # Linux x64) and uploads each as an individually, friendly-named GitHub-Release
 # asset (`recrest-<tag>-mac-arm64.dmg`, `recrest-<tag>-windows-x64.exe`, …) that
 # the landingpage download page links directly. No per-OS ZIP wrapper.
-# Updater payloads (`*.msi` / `*.app.tar.gz` / `*.AppImage` + `*.sig` +
-# `latest.json`) stay under their tauri-default names so the auto-updater keeps
-# resolving. Signing/notarization features activate automatically when the
-# matching secrets are populated.
+# Updater payloads (`*.msi` / `*.app.tar.gz` + `*.sig` + `latest.json`) stay
+# under their tauri-default names so the auto-updater keeps resolving. Linux
+# has no updater payload since plan 11 dropped the AppImage — Linux clients
+# learn about new versions through the GitHub-API fallback in
+# `update/github.rs`, and `.deb`/`.rpm` are download-page assets only.
+# Signing/notarization features activate automatically when the matching
+# secrets are populated.
 name: 📦 Release (Tauri)
 
 on:
@@ -160,7 +163,7 @@ jobs:
           # asserted; the history below it is meant to stay as it is.
           metainfo="app/src-tauri/resources/eu.softventures.recrest.metainfo.xml"
           if [ ! -f "$metainfo" ]; then
-            echo "::error::$metainfo is missing — the deb/rpm/AppImage bundles reference it by path and would fail to build."
+            echo "::error::$metainfo is missing — the deb/rpm bundles reference it by path and would fail to build."
             rc=1
           else
             check_version "$metainfo (newest <release>)" \
@@ -518,12 +521,15 @@ jobs:
       # output, copy/rename each to the contract name, and upload with
       # --clobber. The original tauri-named *installers* (.dmg/.exe/.deb/.rpm)
       # are deleted later by the `prune` job; the updater payloads
-      # (.msi/.app.tar.gz/.AppImage + .sig + latest.json) are KEPT under their
-      # tauri names because `latest.json` references them by those exact names —
-      # renaming them would break the auto-updater. The Linux AppImage is both
-      # the updater payload AND a download-page asset, so it is COPIED (not
-      # moved): the tauri-named original stays for the updater, the friendly
-      # copy serves the download page.
+      # (.msi/.app.tar.gz + .sig + latest.json) are KEPT under their tauri names
+      # because `latest.json` references them by those exact names — renaming
+      # them would break the auto-updater.
+      #
+      # Linux has NO updater payload: the AppImage was the only Linux format
+      # tauri-plugin-updater can self-install, and it was dropped in plan 11.
+      # `.deb`/`.rpm` are download-page assets only, and Linux clients learn
+      # about new versions through the GitHub-API fallback in
+      # `update/github.rs` instead of `latest.json`.
       #
       # Tauri-default → contract filename map (productName "Recrest"; ${V} is the
       # package.json version, e.g. 0.9.1; ${TAG} = v${V}):
@@ -531,7 +537,6 @@ jobs:
       #   mac x64     Recrest_${V}_x64.dmg              → recrest-${TAG}-mac-x64.dmg
       #   win x64     Recrest_${V}_x64-setup.exe        → recrest-${TAG}-windows-x64.exe
       #   win arm64   Recrest_${V}_arm64-setup.exe      → recrest-${TAG}-windows-arm64.exe
-      #   linux x64   Recrest_${V}_amd64.AppImage       → recrest-${TAG}-linux-x64.AppImage
       #   linux x64   Recrest_${V}_amd64.deb            → recrest-${TAG}-linux-x64.deb
       #   linux x64   Recrest-${V}-1.x86_64.rpm         → recrest-${TAG}-linux-x64.rpm
       # We discover files by extension within the bundle tree rather than
@@ -552,9 +557,9 @@ jobs:
           rc=0
 
           # $1 = source file (may not exist), $2 = contract basename.
-          # Copies (never moves) so updater payloads stay in place; uploads with
-          # retries to absorb the transient GitHub 401 seen mid-sequence on the
-          # large AppImage upload.
+          # Copies (never moves) so the Windows/macOS updater payloads stay in
+          # place under their tauri names; uploads with retries to absorb the
+          # transient GitHub 401 that has been seen mid-sequence.
           publish() {
             local src="$1" dest="$2"
             if [ -z "$src" ] || [ ! -f "$src" ]; then
@@ -585,22 +590,27 @@ jobs:
             windows-x64)   publish "$(find_one '*-setup.exe')" "recrest-${TAG}-windows-x64.exe" ;;
             windows-arm64) publish "$(find_one '*-setup.exe')" "recrest-${TAG}-windows-arm64.exe" ;;
             linux-x64)
-              publish "$(find_one '*.AppImage')" "recrest-${TAG}-linux-x64.AppImage"
-              publish "$(find_one '*.deb')"      "recrest-${TAG}-linux-x64.deb"
-              publish "$(find_one '*.rpm')"      "recrest-${TAG}-linux-x64.rpm"
+              publish "$(find_one '*.deb')" "recrest-${TAG}-linux-x64.deb"
+              publish "$(find_one '*.rpm')" "recrest-${TAG}-linux-x64.rpm"
               ;;
             *) echo "::error::unmapped matrix leg $OS-$ARCH"; rc=1 ;;
           esac
           exit $rc
 
       # Backstop for tauri-action's asset upload, which intermittently returns
-      # a transient GitHub 401 ("Requires authentication") mid-sequence — seen
-      # on the ~100 MB Linux AppImage while the smaller deb/rpm went through.
-      # Narrowed to UPDATER PAYLOADS only (.msi / .app.tar.gz / .AppImage / .sig)
-      # because those must stay on the release under their tauri-default names
-      # for `latest.json` to resolve. The download-page installers are handled
-      # by the "Publish contract-named installers" step above. Runs always() so
-      # a failed action upload doesn't skip it; idempotent --clobber + retries.
+      # a transient GitHub 401 ("Requires authentication") mid-sequence — first
+      # seen on a large bundle upload while the smaller ones went through.
+      # Narrowed to UPDATER PAYLOADS only (.msi / .app.tar.gz / .sig) because
+      # those must stay on the release under their tauri-default names for
+      # `latest.json` to resolve. The download-page installers are handled by
+      # the "Publish contract-named installers" step above. Runs always() so a
+      # failed action upload doesn't skip it; idempotent --clobber + retries.
+      #
+      # The Linux leg still matches its `.deb.sig` / `.rpm.sig` here — the
+      # bundler signs them because `createUpdaterArtifacts` is global and cannot
+      # be disabled per platform. They are harmless: once
+      # `strip-linux-updater-entries` has removed the Linux platform keys,
+      # nothing references them and `prune` deletes them in the same run.
       - name: Backstop — ensure updater payloads are on the release
         if: always()
         shell: bash
@@ -626,10 +636,80 @@ jobs:
             done
             [ "$ok" -eq 1 ] || { echo "::error::could not upload $(basename "$f") after retries"; rc=1; }
           done < <(find app/src-tauri/target -type f -path '*/release/bundle/*' \
-            \( -name '*.AppImage' -o -name '*.msi' -o -name '*.tar.gz' \
-               -o -name '*.sig' \) 2>/dev/null)
+            \( -name '*.msi' -o -name '*.tar.gz' -o -name '*.sig' \) 2>/dev/null)
           [ "$found" -eq 1 ] || echo "No updater payloads found under app/src-tauri/target — nothing to backstop."
           exit $rc
+
+  # Strips every `linux-*` entry out of latest.json. This is a SAFETY job, not
+  # tidiness — read before removing it.
+  #
+  # tauri-plugin-updater resolves its download in `Updater::get_urls` by trying
+  # `{os}-{arch}-{installer}` first and then falling back to the un-suffixed
+  # `{os}-{arch}`. Since plan 11 dropped the AppImage, the bundler still writes
+  # `linux-x86_64-deb`, `linux-x86_64-rpm` and `linux-x86_64` — and the plain
+  # `linux-x86_64` key now points at a `.deb`.
+  #
+  # An installation still running an OLD AppImage therefore resolves:
+  #   linux-x86_64-appimage → absent → linux-x86_64 → the .deb
+  # and `install_appimage` (updater.rs, "rewriting AppImage") writes the payload
+  # over the running image with a plain `std::fs::write`, without checking that
+  # the bytes are an AppImage at all. With "Automatic updates" on, that happens
+  # on launch, unattended: the user's AppImage is silently replaced by a .deb
+  # and no longer runs. `can_self_install()` on our side does not save them —
+  # it returns true for AppImage, which is exactly the case that breaks.
+  #
+  # Removing the Linux entries makes the plugin return `TargetsNotFound`, which
+  # `update/mod.rs` treats as "plugin path unavailable" and answers with the
+  # GitHub-API fallback: a banner, no install button, and a link the user acts
+  # on themselves. That is the intended Linux behaviour after plan 11 — the
+  # deb/rpm/AUR channels are updated by their package manager, not by us.
+  #
+  # Runs before `prune`, which derives its keep-list from this manifest: with
+  # the Linux entries gone, the tauri-named `.deb`/`.rpm` duplicates are
+  # unreferenced and get cleaned up in the same run.
+  strip-linux-updater-entries:
+    name: Strip Linux entries from latest.json
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.resolve.outputs.tag }}
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Remove linux-* platforms and re-upload
+        run: |
+          set -uo pipefail
+          if ! gh release download "$TAG" --repo "$REPO" --pattern 'latest.json' --dir .; then
+            echo "::error::could not download latest.json from $TAG"
+            exit 1
+          fi
+
+          before="$(jq -r '.platforms | keys | join(", ")' latest.json)"
+          echo "platforms before: $before"
+
+          # `del(.platforms[] | select(...))` cannot be used here: it deletes by
+          # value path and renumbers, so filter the key set explicitly instead.
+          jq '.platforms |= with_entries(select(.key | startswith("linux-") | not))' \
+            latest.json > latest.stripped.json
+          if [ ! -s latest.stripped.json ]; then
+            echo "::error::jq produced an empty manifest — refusing to upload"
+            exit 1
+          fi
+
+          after="$(jq -r '.platforms | keys | join(", ")' latest.stripped.json)"
+          echo "platforms after:  $after"
+          if [ -z "$after" ]; then
+            echo "::error::stripping left no platforms at all — the manifest would be useless to every OS"
+            exit 1
+          fi
+          if jq -e '.platforms | keys[] | select(startswith("linux-"))' latest.stripped.json >/dev/null; then
+            echo "::error::a linux-* platform survived the strip"
+            exit 1
+          fi
+
+          mv latest.stripped.json latest.json
+          gh release upload "$TAG" latest.json --clobber --repo "$REPO"
+          echo "✓ latest.json re-uploaded without Linux entries"
 
   # Removes the tauri-default-named INSTALLERS that tauri-action uploaded
   # alongside the contract-named copies, so the release page shows exactly one
@@ -652,18 +732,22 @@ jobs:
   #   recrest-v*                                — download-page contract assets
   #   latest.json, SHA256SUMS.txt               — manifest + checksums
   #
-  # Consequence worth knowing before someone "fixes" this back: latest.json
-  # references the NSIS .exe, the .deb and the .rpm under their tauri names, so
-  # those are now kept and the release page shows them next to the contract-named
-  # copies. Only the .dmg duplicates and the un-suffixed `Recrest.app.tar.gz` are
-  # actually removed. Keeping a referenced asset beats a tidy asset list — a
-  # deleted one is a 404 in the updater. The kept duplicates are absent from
-  # SHA256SUMS.txt (which covers `recrest-v*`, the assets the download page
-  # links); that is fine because the updater verifies them via minisign, which
-  # is a stronger guarantee than a checksum a user has to compare by hand.
+  # Consequence worth knowing before someone "fixes" this back: whatever
+  # latest.json references under its tauri name is kept, so the release page may
+  # show those next to the contract-named copies. Keeping a referenced asset
+  # beats a tidy asset list — a deleted one is a 404 in the updater. The kept
+  # duplicates are absent from SHA256SUMS.txt (which covers `recrest-v*`, the
+  # assets the download page links); that is fine because the updater verifies
+  # them via minisign, which is a stronger guarantee than a checksum a user has
+  # to compare by hand.
+  #
+  # Since `strip-linux-updater-entries` runs first, the manifest no longer names
+  # any Linux payload, so the tauri-named `Recrest_*_amd64.deb` and
+  # `Recrest-*.x86_64.rpm` are unreferenced here and get deleted — the
+  # contract-named `recrest-v*` copies are what the download page links.
   prune:
     name: Prune tauri-named installer duplicates
-    needs: [resolve, build]
+    needs: [resolve, build, strip-linux-updater-entries]
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.resolve.outputs.tag }}
@@ -752,7 +836,6 @@ jobs:
             --dir assets \
             --pattern 'recrest-v*.dmg' \
             --pattern 'recrest-v*.exe' \
-            --pattern 'recrest-v*.AppImage' \
             --pattern 'recrest-v*.deb' \
             --pattern 'recrest-v*.rpm'
           ls -la assets
@@ -787,7 +870,6 @@ jobs:
             "recrest-${TAG}-mac-arm64.dmg" \
             "recrest-${TAG}-mac-x64.dmg" \
             "recrest-${TAG}-windows-x64.exe" \
-            "recrest-${TAG}-linux-x64.AppImage" \
             "recrest-${TAG}-linux-x64.deb" \
             "recrest-${TAG}-linux-x64.rpm"; do
             if ! printf '%s\n' "$published" | grep -Fxq "$name"; then
@@ -915,7 +997,6 @@ jobs:
           check "recrest-${TAG}-mac-arm64.dmg"        required
           check "recrest-${TAG}-mac-x64.dmg"          required
           check "recrest-${TAG}-windows-x64.exe"      required
-          check "recrest-${TAG}-linux-x64.AppImage"   required
           check "recrest-${TAG}-linux-x64.deb"        required
           check "recrest-${TAG}-linux-x64.rpm"        required
           check "recrest-${TAG}-windows-arm64.exe"    optional

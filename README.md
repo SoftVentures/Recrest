@@ -76,16 +76,23 @@ Pick the file for your platform:
 | macOS 10.15+ (Intel)            | `recrest-v<version>-mac-x64.dmg`        |
 | Windows 10 / 11 (x64)           | `recrest-v<version>-windows-x64.exe`    |
 | Windows 11 (ARM64, best-effort) | `recrest-v<version>-windows-arm64.exe`  |
-| Linux (most distros)            | `recrest-v<version>-linux-x64.AppImage` |
 | Debian / Ubuntu                 | `recrest-v<version>-linux-x64.deb`      |
 | Fedora / RHEL                   | `recrest-v<version>-linux-x64.rpm`      |
-| Arch Linux / derivatives        | AUR: `recrest` or `recrest-git`         |
+| Arch Linux / derivatives        | AUR: `recrest-bin`, `recrest`, `recrest-git` |
 
 `<version>` is the tag without its leading `v` — for `v0.11.0` the macOS Apple
 Silicon file is `recrest-v0.11.0-mac-arm64.dmg`. There is no universal macOS
 disk image any more: Apple Silicon and Intel are separate builds. The Windows
 download is the NSIS `.exe` installer, not an MSI. Linux is x86_64 only —
 there are no `aarch64` builds yet.
+
+> **No AppImage.** It was dropped in favour of `.deb`, `.rpm` and the AUR
+> packages; a Flatpak on Flathub is in preparation
+> ([`packaging/flatpak/`](./packaging/flatpak/)). One consequence is worth
+> knowing: **Linux has no in-app auto-update.** The AppImage was the only Linux
+> format the updater could replace in place. Recrest still tells you when a new
+> version exists — through your package manager on Arch, and as a notice with a
+> link everywhere else.
 
 > **ARM64 Windows** is built on a GitHub-hosted `windows-11-arm` runner whose
 > availability varies by plan and region. The release pipeline treats that leg
@@ -133,13 +140,6 @@ reputation system catches up — or once we can afford a signing cert.
 
 ### Installing on Linux
 
-- **AppImage:**
-
-  ```bash
-  chmod +x recrest-v*-linux-x64.AppImage
-  ./recrest-v*-linux-x64.AppImage
-  ```
-
 - **deb:**
 
   ```bash
@@ -152,27 +152,32 @@ reputation system catches up — or once we can afford a signing cert.
   sudo dnf install ./recrest-v*-linux-x64.rpm
   ```
 
-- **Arch Linux (AUR):** two packages, both built from source on your machine —
-  `recrest` tracks the latest tagged release, `recrest-git` tracks `main`.
+- **Arch Linux (AUR):** three packages. `recrest-bin` repacks the published
+  `.deb` and installs in seconds; `recrest` builds the tagged release from
+  source; `recrest-git` builds `main`.
 
   > Not published to the AUR yet. The PKGBUILDs live in this repo (see below);
   > the commands underneath start working once the packages are pushed to
-  > `aur.archlinux.org`. Until then, build from `packaging/aur/recrest/`
+  > `aur.archlinux.org`. Until then, build from `packaging/aur/recrest-bin/`
   > directly with `makepkg -si`.
 
   ```bash
   # with an AUR helper
-  paru -S recrest        # or: recrest-git
+  paru -S recrest-bin    # or: recrest / recrest-git
 
   # or by hand
-  git clone https://aur.archlinux.org/recrest.git
-  cd recrest && makepkg -si
+  git clone https://aur.archlinux.org/recrest-bin.git
+  cd recrest-bin && makepkg -si
   ```
 
-  Because these compile the Rust backend in release profile, the first build
-  takes a while. The PKGBUILD sources live in
-  [`packaging/aur/`](./packaging/aur/) — send packaging fixes there, not to the
-  AUR clone.
+  `recrest` and `recrest-git` compile the Rust backend in release profile, so
+  the first build takes a while — `recrest-bin` exists to avoid exactly that.
+  The PKGBUILD sources live in [`packaging/aur/`](./packaging/aur/) — send
+  packaging fixes there, not to the AUR clone.
+
+  This is the only Linux channel where updates arrive on their own: `pacman`
+  upgrades Recrest with everything else. The `.deb` and `.rpm` have to be
+  re-downloaded by hand — there is no APT or DNF repository.
 
 No signature prompts — Linux simply trusts the repo you installed from.
 

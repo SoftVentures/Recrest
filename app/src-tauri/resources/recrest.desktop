@@ -5,7 +5,8 @@
 # into the AUR package. The bundler writes the rendered result to
 # `usr/share/applications/Recrest.desktop` — the name comes from `productName`
 # and cannot be configured, so the desktop-file-id differs per channel
-# (`Recrest.desktop` in deb/rpm/AppImage, `recrest.desktop` on Arch); anything
+# (`Recrest.desktop` in deb/rpm, `recrest.desktop` on Arch,
+# `eu.softventures.recrest.desktop` in the Flatpak); anything
 # referencing it by id (AppStream `<launchable>`) must match its channel.
 [Desktop Entry]
 Type=Application

@@ -13,6 +13,8 @@ use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
+use super::channel::InstallChannel;
+
 const DEFAULT_URL: &str = "https://api.github.com/repos/SoftVentures/Recrest/releases/latest";
 
 /// Session-only cache of the last `ETag` header seen on a successful
@@ -88,12 +90,20 @@ pub async fn check_latest(app: AppHandle, override_url: Option<String>) {
         return;
     }
     let body_text = json["body"].as_str().unwrap_or("").to_string();
-    // `pick_platform_asset` returns `None` rather than an asset built for a
-    // different CPU — see its doc comment. Falling back to the release page
-    // keeps the banner's button useful in that case (the user picks the right
-    // file themselves) instead of handing them an installer that cannot run.
-    let download_url = pick_platform_asset(&json, std::env::consts::OS, std::env::consts::ARCH)
-        .or_else(|| json["html_url"].as_str().map(|s| s.to_string()));
+    let install_channel = super::channel::current_channel();
+    // `pick_platform_asset` returns `None` rather than an asset the machine
+    // cannot install — wrong CPU, or on Linux a package format that does not
+    // match the install channel. See its doc comment. Falling back to the
+    // release page keeps the banner's button useful in that case (the user
+    // picks the right file themselves) instead of handing them an installer
+    // that cannot run.
+    let download_url = pick_platform_asset(
+        &json,
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        install_channel,
+    )
+    .or_else(|| json["html_url"].as_str().map(|s| s.to_string()));
 
     let _ = app.emit(
         "updater://available",
@@ -102,7 +112,7 @@ pub async fn check_latest(app: AppHandle, override_url: Option<String>) {
             "currentVersion": current,
             "body": body_text,
             "canAutoInstall": false,
-            "installChannel": super::channel::current_channel(),
+            "installChannel": install_channel,
             "downloadUrl": download_url,
         }),
     );
@@ -158,11 +168,29 @@ fn contract_arch(arch: &str) -> Option<&'static str> {
 /// Windows lists `exe` before `msi`: the contract asset is the NSIS `.exe`,
 /// while the `.msi` only survives on the release because `latest.json`
 /// references it as the updater payload.
-fn installer_extensions(os: &str) -> &'static [&'static str] {
+///
+/// Linux additionally depends on the install channel, for exactly the reason
+/// the arch check exists (see [`pick_platform_asset`]): a package format the
+/// machine cannot install is a broken download, not a degraded one. Since the
+/// AppImage was dropped, a release carries only `.deb` and `.rpm` — so:
+///
+/// * [`InstallChannel::AppImage`] (an older install, still running) matches an
+///   AppImage and nothing else. Current releases have none, so the caller links
+///   the release page and the user picks their new format deliberately.
+/// * Every other Linux channel yields no extension at all. `SystemPackage`
+///   cannot tell dpkg from rpm apart, and `Unknown` means we could not classify
+///   the install — guessing `.deb` there would hand an rpm or Arch user a file
+///   they have nothing to open with. The release page is the honest answer, and
+///   on a package-managed install the banner hides the download button anyway
+///   in favour of the "update through your package manager" hint.
+fn installer_extensions(os: &str, channel: InstallChannel) -> &'static [&'static str] {
     match os {
         "windows" => &["exe", "msi"],
         "macos" => &["dmg"],
-        "linux" => &["appimage", "deb", "rpm"],
+        "linux" => match channel {
+            InstallChannel::AppImage => &["appimage"],
+            _ => &[],
+        },
         _ => &[],
     }
 }
@@ -203,15 +231,20 @@ fn legacy_arch_tokens(arch: &str) -> &'static [&'static str] {
 /// broken one: the arm64 MSI refuses to install on x64, and an arm64 `.app` on an
 /// Intel Mac cannot launch at all. The caller turns `None` into a link to the
 /// release page, which is always actionable.
+///
+/// `channel` extends that same rule from CPU to package format on Linux — see
+/// [`installer_extensions`]. It is ignored on Windows and macOS, where there is
+/// one installer per arch and no package manager to conflict with.
 pub(crate) fn pick_platform_asset(
     json: &serde_json::Value,
     os: &str,
     arch: &str,
+    channel: InstallChannel,
 ) -> Option<String> {
     let assets = json["assets"].as_array()?;
     let os_token = contract_os(os)?;
     let arch_token = contract_arch(arch)?;
-    let extensions = installer_extensions(os);
+    let extensions = installer_extensions(os, channel);
 
     // Asset names are compared lowercased throughout so `.AppImage` and the
     // `en-US` locale segment can't turn into casing bugs.
@@ -334,56 +367,156 @@ mod tests {
 
     #[test]
     fn pick_platform_asset_windows_x64_picks_the_x64_installer() {
-        let got = pick_platform_asset(&synthetic_release(), "windows", "x86_64");
+        let got = pick_platform_asset(
+            &synthetic_release(),
+            "windows",
+            "x86_64",
+            InstallChannel::Bundle,
+        );
         assert_eq!(got, Some(url("recrest-v0.10.2-windows-x64.exe")));
     }
 
     #[test]
     fn pick_platform_asset_windows_arm64_picks_the_arm64_installer() {
-        let got = pick_platform_asset(&synthetic_release(), "windows", "aarch64");
+        let got = pick_platform_asset(
+            &synthetic_release(),
+            "windows",
+            "aarch64",
+            InstallChannel::Bundle,
+        );
         assert_eq!(got, Some(url("recrest-v0.10.2-windows-arm64.exe")));
     }
 
     #[test]
     fn pick_platform_asset_macos_arm64_picks_the_arm64_dmg() {
-        let got = pick_platform_asset(&synthetic_release(), "macos", "aarch64");
+        let got = pick_platform_asset(
+            &synthetic_release(),
+            "macos",
+            "aarch64",
+            InstallChannel::Bundle,
+        );
         assert_eq!(got, Some(url("recrest-v0.10.2-mac-arm64.dmg")));
     }
 
     #[test]
     fn pick_platform_asset_macos_x64_picks_the_intel_dmg() {
-        let got = pick_platform_asset(&synthetic_release(), "macos", "x86_64");
+        let got = pick_platform_asset(
+            &synthetic_release(),
+            "macos",
+            "x86_64",
+            InstallChannel::Bundle,
+        );
         assert_eq!(got, Some(url("recrest-v0.10.2-mac-x64.dmg")));
     }
 
+    /// A release built after plan 11 dropped the AppImage: Linux ships `.deb`
+    /// and `.rpm` only, and there is no Linux updater payload left for `prune`
+    /// to keep under its tauri name.
+    fn current_release() -> serde_json::Value {
+        json!({
+            "tag_name": "v0.12.0",
+            "body": "release notes",
+            "html_url": "https://example.test/releases/v0.12.0",
+            "assets": [
+                asset("Recrest_0.12.0_x64_en-US.msi"),
+                asset("recrest-v0.12.0-mac-arm64.dmg"),
+                asset("recrest-v0.12.0-windows-x64.exe"),
+                asset("recrest-v0.12.0-linux-x64.deb"),
+                asset("recrest-v0.12.0-linux-x64.rpm"),
+                asset("latest.json"),
+                asset("SHA256SUMS.txt")
+            ]
+        })
+    }
+
     #[test]
-    fn pick_platform_asset_linux_x64_prefers_the_appimage() {
-        let got = pick_platform_asset(&synthetic_release(), "linux", "x86_64");
+    fn pick_platform_asset_linux_appimage_channel_picks_the_appimage() {
+        let got = pick_platform_asset(
+            &synthetic_release(),
+            "linux",
+            "x86_64",
+            InstallChannel::AppImage,
+        );
         assert_eq!(got, Some(url("recrest-v0.10.2-linux-x64.AppImage")));
+    }
+
+    #[test]
+    fn pick_platform_asset_linux_appimage_channel_skips_a_release_without_one() {
+        // Someone still running an old AppImage against a post-plan-11 release.
+        // A `.deb` is not a downgrade for them, it is a file they cannot use —
+        // so the caller links the release page and they choose a new channel.
+        assert!(pick_platform_asset(
+            &current_release(),
+            "linux",
+            "x86_64",
+            InstallChannel::AppImage
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn pick_platform_asset_linux_non_appimage_channels_never_pick_a_file() {
+        // dpkg vs rpm vs pacman is not something the asset list can tell us,
+        // and `Unknown` means we could not classify the install at all.
+        for channel in [
+            InstallChannel::SystemPackage,
+            InstallChannel::Flatpak,
+            InstallChannel::Snap,
+            InstallChannel::Unknown,
+        ] {
+            assert!(
+                pick_platform_asset(&current_release(), "linux", "x86_64", channel).is_none(),
+                "{channel:?}: must not be handed a package file it may not be able to install"
+            );
+        }
     }
 
     #[test]
     fn pick_platform_asset_linux_arm64_returns_none() {
         // The release matrix has no linux-arm64 leg, and the amd64 AppImage
         // would not run on that machine.
-        assert!(pick_platform_asset(&synthetic_release(), "linux", "aarch64").is_none());
+        assert!(pick_platform_asset(
+            &synthetic_release(),
+            "linux",
+            "aarch64",
+            InstallChannel::AppImage
+        )
+        .is_none());
     }
 
     #[test]
     fn pick_platform_asset_unknown_os_returns_none() {
-        assert!(pick_platform_asset(&synthetic_release(), "freebsd", "x86_64").is_none());
+        assert!(pick_platform_asset(
+            &synthetic_release(),
+            "freebsd",
+            "x86_64",
+            InstallChannel::Bundle
+        )
+        .is_none());
     }
 
     #[test]
     fn pick_platform_asset_unknown_arch_returns_none() {
-        assert!(pick_platform_asset(&synthetic_release(), "windows", "x86").is_none());
-        assert!(pick_platform_asset(&synthetic_release(), "linux", "riscv64").is_none());
+        assert!(pick_platform_asset(
+            &synthetic_release(),
+            "windows",
+            "x86",
+            InstallChannel::Bundle
+        )
+        .is_none());
+        assert!(pick_platform_asset(
+            &synthetic_release(),
+            "linux",
+            "riscv64",
+            InstallChannel::AppImage
+        )
+        .is_none());
     }
 
     #[test]
     fn pick_platform_asset_missing_assets_returns_none() {
         let json = json!({ "tag_name": "v0.10.2" });
-        assert!(pick_platform_asset(&json, "windows", "x86_64").is_none());
+        assert!(pick_platform_asset(&json, "windows", "x86_64", InstallChannel::Bundle).is_none());
     }
 
     /// Releases published before the contract-rename step only carry
@@ -405,7 +538,12 @@ mod tests {
 
     #[test]
     fn pick_platform_asset_legacy_windows_x64_prefers_the_x64_exe() {
-        let got = pick_platform_asset(&legacy_release(), "windows", "x86_64");
+        let got = pick_platform_asset(
+            &legacy_release(),
+            "windows",
+            "x86_64",
+            InstallChannel::Bundle,
+        );
         assert_eq!(got, Some(url("Recrest_0.7.0_x64-setup.exe")));
     }
 
@@ -413,25 +551,40 @@ mod tests {
     fn pick_platform_asset_legacy_windows_arm64_skips_the_x64_exe() {
         // No arm64 `.exe` exists here, so the picker must fall through to the
         // arm64 MSI rather than take the x64 setup that sorts first.
-        let got = pick_platform_asset(&legacy_release(), "windows", "aarch64");
+        let got = pick_platform_asset(
+            &legacy_release(),
+            "windows",
+            "aarch64",
+            InstallChannel::Bundle,
+        );
         assert_eq!(got, Some(url("Recrest_0.7.0_arm64_en-US.msi")));
     }
 
     #[test]
     fn pick_platform_asset_legacy_macos_matches_the_running_arch() {
         assert_eq!(
-            pick_platform_asset(&legacy_release(), "macos", "aarch64"),
+            pick_platform_asset(
+                &legacy_release(),
+                "macos",
+                "aarch64",
+                InstallChannel::Bundle
+            ),
             Some(url("Recrest_0.7.0_aarch64.dmg"))
         );
         assert_eq!(
-            pick_platform_asset(&legacy_release(), "macos", "x86_64"),
+            pick_platform_asset(&legacy_release(), "macos", "x86_64", InstallChannel::Bundle),
             Some(url("Recrest_0.7.0_x64.dmg"))
         );
     }
 
     #[test]
     fn pick_platform_asset_legacy_linux_x64_matches_amd64() {
-        let got = pick_platform_asset(&legacy_release(), "linux", "x86_64");
+        let got = pick_platform_asset(
+            &legacy_release(),
+            "linux",
+            "x86_64",
+            InstallChannel::AppImage,
+        );
         assert_eq!(got, Some(url("Recrest_0.7.0_amd64.AppImage")));
     }
 
@@ -447,9 +600,15 @@ mod tests {
                 asset("Recrest_0.10.2_x64_en-US.msi")
             ]
         });
-        for os in ["windows", "macos", "linux"] {
+        // Linux is probed as an AppImage install — the one channel that still
+        // matches a file at all, so the arch check is what has to reject it.
+        for (os, channel) in [
+            ("windows", InstallChannel::Bundle),
+            ("macos", InstallChannel::Bundle),
+            ("linux", InstallChannel::AppImage),
+        ] {
             assert!(
-                pick_platform_asset(&x64_only, os, "aarch64").is_none(),
+                pick_platform_asset(&x64_only, os, "aarch64", channel).is_none(),
                 "{os}: arm64 must not be offered an x64 asset"
             );
         }
@@ -465,8 +624,8 @@ mod tests {
                 asset("recrest-v0.10.2-windows-x64.exe.sig")
             ]
         });
-        assert!(pick_platform_asset(&json, "windows", "x86_64").is_none());
-        assert!(pick_platform_asset(&json, "macos", "x86_64").is_none());
+        assert!(pick_platform_asset(&json, "windows", "x86_64", InstallChannel::Bundle).is_none());
+        assert!(pick_platform_asset(&json, "macos", "x86_64", InstallChannel::Bundle).is_none());
     }
 
     #[tokio::test]

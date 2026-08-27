@@ -246,7 +246,7 @@ jobs:
             fi
           done < <(find app/src-tauri/target -type f -path '*/release/bundle/*' \
             \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' \
-               -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) 2>/dev/null)
+               -o -name '*.deb' -o -name '*.rpm' \) 2>/dev/null)
           if [ "$found" -eq 0 ]; then
             echo "::error::no installers found under app/src-tauri/target for $OS — the bundle step produced nothing"
             exit 1
@@ -411,7 +411,7 @@ jobs:
           expect_one "macOS x64 DMG"      macos   '*x64*.dmg'          required
           expect_one "Windows x64 NSIS"   windows '*x64*-setup.exe'    required
           expect_one "Windows x64 MSI"    windows '*x64*.msi'          required
-          expect_one "Linux AppImage"     linux   '*.AppImage'         required
+          # No AppImage: plan 11 removed it from `bundle.targets`.
           expect_one "Linux .deb"         linux   '*.deb'              required
           expect_one "Linux .rpm"         linux   '*.rpm'              required
           # The documented `windows-11-arm` exception — same one

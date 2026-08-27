@@ -49,7 +49,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb", "rpm", "msi", "nsis", "app", "dmg"],
     "icon": [
       "icons/linux/32x32.png",
       "icons/linux/64x64.png",
@@ -115,18 +115,6 @@
       "rpm": {
         "depends": ["desktop-file-utils", "hicolor-icon-theme"],
         "desktopTemplate": "resources/recrest.desktop",
-        "files": {
-          "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
-          "/usr/share/metainfo/eu.softventures.recrest.metainfo.xml": "resources/eu.softventures.recrest.metainfo.xml",
-          "/usr/share/icons/hicolor/32x32/apps/recrest.png": "icons/linux/32x32.png",
-          "/usr/share/icons/hicolor/64x64/apps/recrest.png": "icons/linux/64x64.png",
-          "/usr/share/icons/hicolor/128x128/apps/recrest.png": "icons/linux/128x128.png",
-          "/usr/share/icons/hicolor/256x256/apps/recrest.png": "icons/linux/256x256.png",
-          "/usr/share/icons/hicolor/512x512/apps/recrest.png": "icons/linux/512x512.png"
-        }
-      },
-      "appimage": {
-        "bundleMediaFramework": true,
         "files": {
           "/usr/bin/recrest-launcher": "resources/recrest-launcher.sh",
           "/usr/share/metainfo/eu.softventures.recrest.metainfo.xml": "resources/eu.softventures.recrest.metainfo.xml",

@@ -210,7 +210,7 @@ tag v*  ─▶  .github/workflows/release-tauri.yml
                 ├─▶ matrix: macos-latest / ubuntu-latest / windows-latest
                 │    ├─ yarn install --frozen-lockfile
                 │    ├─ tauri-action@v0 (unsigned unless secrets set)
-                │    └─ upload .dmg / .msi / .AppImage / .deb / .rpm
+                │    └─ upload .dmg / .msi / .deb / .rpm
                 │
                 └─▶ checksums job
                      ├─ gh release download <tag>

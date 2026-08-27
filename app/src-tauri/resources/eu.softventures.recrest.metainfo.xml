@@ -43,7 +43,7 @@
 
   <!-- The Tauri bundler derives this name from productName and it is not
        configurable: tauri-bundler freedesktop/mod.rs:106 (tauri-cli-v2.10.1)
-       formats "{product_name}.desktop", so deb/rpm/AppImage install
+       formats "{product_name}.desktop", so deb/rpm install
        /usr/share/applications/Recrest.desktop. -->
   <launchable type="desktop-id">Recrest.desktop</launchable>
 
