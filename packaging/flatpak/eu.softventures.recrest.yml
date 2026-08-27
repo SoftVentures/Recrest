@@ -1,0 +1,125 @@
+# Source of truth for the Flathub manifest. The Flathub repository
+# (flathub/eu.softventures.recrest) is a downstream copy of this file plus the
+# two generated source lists — see README.md in this directory.
+
+id: eu.softventures.recrest
+
+# GNOME 47 rather than a newer runtime: Tauri v2 links webkit2gtk-4.1 (GTK 3),
+# and that is the newest org.gnome.Platform that still carries it. Bumping the
+# runtime is not a cosmetic change — verify webkit2gtk-4.1 is present first, or
+# the build fails at link time.
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node22
+  - org.freedesktop.Sdk.Extension.rust-stable
+
+build-options:
+  append-path: /usr/lib/sdk/node22/bin:/usr/lib/sdk/rust-stable/bin
+
+command: recrest-launcher
+
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  - --share=network
+
+  # Recrest scans arbitrary filesystem roots for git repositories
+  # (`git/scanner.rs`) — the user picks the roots, and they are routinely
+  # outside $HOME (/mnt, /srv, an external drive). A narrower
+  # `--filesystem=home` would silently return "no repositories found" for those.
+  - --filesystem=host
+
+  # `flatpak-spawn --host`, used by `platform/host_command.rs` to run the user's
+  # own `git`, IDE and terminal emulator. None of those exist inside the
+  # runtime; without this the app reports "git is not installed" and "no IDE
+  # detected" on a machine that has both. This is the permission Flathub reviews
+  # most closely — the justification belongs in the submission PR.
+  - --talk-name=org.freedesktop.Flatpak
+
+  # Provider tokens live in the OS keyring (`auth/token.rs` via the `keyring`
+  # crate), which talks to the Secret Service over D-Bus. Without this every
+  # sign-in fails to persist.
+  - --talk-name=org.freedesktop.secrets
+
+  # System tray icon (`TrayIconBuilder` in lib.rs).
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=xdg-run/tray-icon:create
+
+modules:
+  - name: recrest
+    buildsystem: simple
+
+    # Flathub builds without network access, so both dependency trees have to be
+    # vendored ahead of time. `cargo-sources.json` and `node-sources.json` are
+    # generated — see README.md. They must be regenerated whenever `yarn.lock`
+    # or `app/src-tauri/Cargo.lock` changes, which is what the `flatpak.yml`
+    # workflow guards.
+    env:
+      HOME: /run/build/recrest
+      CARGO_HOME: /run/build/recrest/cargo
+      XDG_CACHE_HOME: /run/build/recrest/flatpak-node/cache
+      YARN_CACHE_FOLDER: /run/build/recrest/flatpak-node/yarn-cache
+
+    sources:
+      # Flathub requires both `tag` and `commit`: the tag documents intent, the
+      # commit is what actually gets checked out, so a moved tag cannot change
+      # what was reviewed. Both move together on every release.
+      - type: git
+        url: https://github.com/SoftVentures/Recrest.git
+        tag: v0.11.0
+        commit: 7be73029758b945a038c51c813aebd2bbf60dd62
+      - cargo-sources.json
+      - node-sources.json
+
+    build-commands:
+      # Point yarn at the vendored offline mirror. This REPLACES the repo's own
+      # .yarnrc, which sets `engine-strict true` against an exact Node patch
+      # version the SDK extension will never match — the same mismatch the AUR
+      # PKGBUILDs work around with `--ignore-engines`.
+      - >-
+        printf 'yarn-offline-mirror "/run/build/recrest/flatpak-node/yarn-mirror"\nyarn-offline-mirror-pruning
+        true\n' > .yarnrc
+
+      - mkdir -p app/src-tauri/.cargo
+      - >-
+        printf '[source.crates-io]\nreplace-with = "vendored-sources"\n\n[source.vendored-sources]\ndirectory
+        = "/run/build/recrest/cargo/vendor"\n' > app/src-tauri/.cargo/config.toml
+
+      # `--ignore-scripts` skips `check-node.cjs` (hard-fails on the version
+      # mismatch above) and `husky` (wants a .git dir the build does not keep).
+      # The one postinstall step that matters is building @recrest/shared, which
+      # `app/tsconfig.app.json` references as a TS project — so it runs
+      # explicitly, exactly as the PKGBUILDs do.
+      - yarn install --offline --frozen-lockfile --ignore-scripts --non-interactive
+      - yarn workspace @recrest/shared build
+
+      # `--no-bundle` stops after linking. The bundler's own .deb/.rpm output is
+      # not wanted here, and running it would demand a TAURI_SIGNING_PRIVATE_KEY
+      # because `createUpdaterArtifacts` is enabled upstream.
+      - yarn workspace @recrest/app tauri build --no-bundle
+
+      # The `[[bin]]` name is capitalised for the macOS Dock label, so cargo
+      # emits `Recrest`. Installed lowercase, like the AUR packages.
+      - install -Dm755 app/src-tauri/target/release/Recrest /app/bin/recrest
+      - install -Dm755 app/src-tauri/resources/recrest-launcher.sh /app/bin/recrest-launcher
+
+      # Flathub requires the desktop file, the icon and the metainfo to be named
+      # after the app id. The repo's own copies are named for the other channels
+      # (`recrest.desktop` on Arch, `Recrest.desktop` from the Tauri bundler),
+      # so they are renamed on the way in and the AppStream `<launchable>` is
+      # repointed to match — a mismatch there leaves GNOME Software with a
+      # launcher it cannot find.
+      - install -Dm644 app/src-tauri/resources/recrest.desktop /app/share/applications/eu.softventures.recrest.desktop
+      - sed -i 's/^Icon=.*/Icon=eu.softventures.recrest/' /app/share/applications/eu.softventures.recrest.desktop
+      - install -Dm644 app/src-tauri/resources/eu.softventures.recrest.metainfo.xml /app/share/metainfo/eu.softventures.recrest.metainfo.xml
+      - >-
+        sed -i 's|<launchable type="desktop-id">.*</launchable>|<launchable
+        type="desktop-id">eu.softventures.recrest.desktop</launchable>|'
+        /app/share/metainfo/eu.softventures.recrest.metainfo.xml
+
+      - for s in 32 64 128 256 512; do install -Dm644 "app/src-tauri/icons/linux/${s}x${s}.png" "/app/share/icons/hicolor/${s}x${s}/apps/eu.softventures.recrest.png"; done

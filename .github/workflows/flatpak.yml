@@ -1,0 +1,107 @@
+# Guards the Flathub manifest against silent rot.
+#
+# Flathub builds with no network access, so `packaging/flatpak/cargo-sources.json`
+# and `node-sources.json` list every crate and npm package explicitly. Any change
+# to a lockfile invalidates them — and nothing else in this repository would
+# notice. Without this workflow the first sign of a stale manifest is a failed
+# Flathub build, days or weeks after the dependency bump that caused it.
+#
+# The check is the real thing: `flatpak-builder --disable-download` reproduces
+# Flathub's offline environment exactly. If it links, the vendored sources are
+# complete.
+#
+# This does NOT publish anything. Flathub builds from its own repository; here we
+# only prove the manifest still works. See packaging/flatpak/README.md.
+name: 📦 Flatpak (manifest check)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "packaging/flatpak/**"
+      - "app/**"
+      - "shared/**"
+      - "yarn.lock"
+      - "app/src-tauri/Cargo.lock"
+      - ".github/workflows/flatpak.yml"
+  pull_request:
+    paths:
+      - "packaging/flatpak/**"
+      - "app/**"
+      - "shared/**"
+      - "yarn.lock"
+      - "app/src-tauri/Cargo.lock"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Offline build
+    runs-on: ubuntu-latest
+    # The runtime download plus a full Rust release build of the Tauri tree runs
+    # well past the 6h default only if something hangs; 90 minutes is a
+    # deliberate ceiling rather than an estimate.
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # Fails loudly when the generated sources were never committed, instead of
+      # letting flatpak-builder produce a confusing "no such file" mid-build.
+      - name: Assert the vendored source lists exist
+        run: |
+          set -euo pipefail
+          missing=0
+          for f in packaging/flatpak/cargo-sources.json packaging/flatpak/node-sources.json; do
+            if [ ! -s "$f" ]; then
+              echo "::error::$f is missing or empty — run packaging/flatpak/generate-sources.sh and commit the result"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      # flatpak-builder is invoked directly rather than through
+      # flathub-infra/flatpak-github-actions: the container already provides the
+      # toolchain, so the action would only add a third-party dependency to pin
+      # and audit for no capability we do not already have here.
+      - name: Build offline
+        run: |
+          set -euo pipefail
+          # --disable-download is the assertion: it reproduces Flathub's offline
+          # environment. A build that needs the network fails here rather than in
+          # a Flathub review.
+          flatpak-builder \
+            --force-clean \
+            --disable-download \
+            --repo=repo \
+            build \
+            packaging/flatpak/eu.softventures.recrest.yml
+
+      - name: Bundle
+        run: flatpak build-bundle repo recrest.flatpak eu.softventures.recrest
+
+      # AppStream metadata is shared with the deb/rpm bundles, so a validation
+      # failure here is a problem on every Linux channel, not just Flatpak.
+      - name: Validate AppStream metadata
+        run: |
+          set -euo pipefail
+          appstreamcli validate --explain \
+            app/src-tauri/resources/eu.softventures.recrest.metainfo.xml
+
+      - name: Upload bundle for manual testing
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: recrest-flatpak-x86_64
+          path: recrest.flatpak
+          retention-days: 7
+          if-no-files-found: error
