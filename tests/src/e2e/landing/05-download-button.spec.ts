@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures/landing.fixture.js";
 import {
   DOWNLOAD_ROUTE_HASH,
+  EXPECTED_AUR_COMMAND,
   EXPECTED_DOWNLOAD_ASSETS,
   expectedAssetUrl,
 } from "../../helpers/constants.js";
@@ -108,4 +109,21 @@ test.describe("landing / download — release assets", () => {
       }
     });
   }
+});
+
+test.describe("landing / download — package-manager channels", () => {
+  test("the Linux card offers the AUR package as a command, not a download", async ({ page }) => {
+    await page.goto(`/${DOWNLOAD_ROUTE_HASH}`);
+    const card = cardFor(page, "linux");
+
+    await expect(card.locator(".download-card__cmd-text")).toHaveText(EXPECTED_AUR_COMMAND);
+    await expect(card.locator(".download-card__cmd-copy")).toHaveCount(1);
+  });
+
+  test("no card links an AppImage", async ({ page }) => {
+    // Plan 11 dropped it; the release workflow no longer builds one, so any
+    // surviving link is a guaranteed 404 for the visitor.
+    await page.goto(`/${DOWNLOAD_ROUTE_HASH}`);
+    await expect(page.locator('a[href$=".AppImage"]')).toHaveCount(0);
+  });
 });

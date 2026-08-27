@@ -54,7 +54,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildDownloadUrl, getAssetsForOs } from "../landingpage/src/lib/downloadUrl.ts";
+import { buildDownloadUrl, getChannelsForOs } from "../landingpage/src/lib/downloadUrl.ts";
 import {
   EXPECTED_APP_VERSION,
   EXPECTED_DOWNLOAD_ASSETS,
@@ -83,14 +83,19 @@ const rootVersion = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "ut
 const version = arg("version") ?? rootVersion;
 const releaseRef = arg("release");
 
-// 1 — the two catalogues must describe the same seven files. Compared with the
+// Only the downloadable channels are release assets. A package-manager channel
+// (the AUR command) is a string the page renders, with nothing on the release to
+// compare it against — including it here would fail every check.
+const fileNames = (os, v) =>
+  getChannelsForOs(os, v)
+    .filter((c) => c.kind === "file")
+    .map((c) => c.filename);
+
+// 1 — the two catalogues must describe the same files. Compared with the
 // version token folded out, so a `--version` drill doesn't read as a mismatch.
 const normalise = (names, v) => names.map((n) => n.replace(`recrest-v${v}-`, "recrest-v<V>-"));
 for (const os of PLATFORMS) {
-  const fromPage = normalise(
-    getAssetsForOs(os, version).map((a) => a.filename),
-    version,
-  );
+  const fromPage = normalise(fileNames(os, version), version);
   const fromSpec = normalise([...EXPECTED_DOWNLOAD_ASSETS[os]], EXPECTED_APP_VERSION);
   if (fromPage.join("\n") !== fromSpec.join("\n")) {
     fail(
@@ -104,7 +109,7 @@ for (const os of PLATFORMS) {
   }
 }
 
-const expected = PLATFORMS.flatMap((os) => getAssetsForOs(os, version).map((a) => a.filename));
+const expected = PLATFORMS.flatMap((os) => fileNames(os, version));
 
 // The `/releases/latest` assertion below is only meaningful for URLs that
 // actually carry that path. If the shape ever changes, this guard must change

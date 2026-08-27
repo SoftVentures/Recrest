@@ -1,9 +1,10 @@
 import { useTranslation } from "react-i18next";
 
 import type { Os } from "../../hooks/useOsDetect";
-import { buildDownloadUrl, getAssetsForOs } from "../../lib/downloadUrl";
+import { buildDownloadUrl, getChannelsForOs } from "../../lib/downloadUrl";
 import { InstallInstructions } from "../InstallInstructions";
 import { AppleIcon, DownloadIcon, LinuxIcon, WindowsIcon } from "../icons";
+import { CommandChannelRow } from "./parts/CommandChannelRow";
 
 type Props = {
   os: Exclude<Os, "unknown">;
@@ -24,7 +25,7 @@ const OS_ICON = {
 
 export function DownloadCard({ os, highlighted = false }: Props) {
   const { t } = useTranslation();
-  const assets = getAssetsForOs(os, __APP_VERSION__);
+  const channels = getChannelsForOs(os, __APP_VERSION__);
   const OsIcon = OS_ICON[os];
 
   return (
@@ -39,18 +40,24 @@ export function DownloadCard({ os, highlighted = false }: Props) {
       <p className="download-card__sub">{t(`download.osSub.${os}`)}</p>
 
       <ul className="download-card__links">
-        {assets.map((asset) => (
-          <li key={asset.filename}>
-            <a
-              href={buildDownloadUrl(__REPO_URL__, asset.filename)}
-              className="btn btn-primary download-card__btn"
-              download
-            >
-              <DownloadIcon />
-              {t("download.downloadLabel", { arch: asset.label })}
-            </a>
-          </li>
-        ))}
+        {channels.map((channel) =>
+          channel.kind === "file" ? (
+            <li key={channel.filename}>
+              <a
+                href={buildDownloadUrl(__REPO_URL__, channel.filename)}
+                className="btn btn-primary download-card__btn"
+                download
+              >
+                <DownloadIcon />
+                {t("download.downloadLabel", { arch: channel.label })}
+              </a>
+            </li>
+          ) : (
+            <li key={channel.command}>
+              <CommandChannelRow channel={channel} />
+            </li>
+          ),
+        )}
       </ul>
 
       <InstallInstructions os={os} />

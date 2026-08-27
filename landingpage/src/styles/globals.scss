@@ -336,6 +336,62 @@
   justify-content: center;
 }
 
+/* Package-manager channels (AUR): a command to copy, not a file to download. */
+.download-card__cmd {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.download-card__cmd-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+}
+
+.download-card__cmd-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.download-card__cmd-text {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-1);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+}
+
+.download-card__cmd-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ink-0);
+    background: var(--surface-3);
+  }
+}
+
 /* InstallInstructions */
 .install-instructions {
   border-top: 1px solid var(--hairline);

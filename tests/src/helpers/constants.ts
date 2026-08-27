@@ -50,12 +50,21 @@ export const EXPECTED_DOWNLOAD_ASSETS = {
     `recrest-v${EXPECTED_APP_VERSION}-windows-x64.exe`,
     `recrest-v${EXPECTED_APP_VERSION}-windows-arm64.exe`,
   ],
+  // No AppImage since plan 11 dropped it, and no AUR entry either: the Arch
+  // channel is a command the page shows, not a file it links, so there is no
+  // release asset to verify.
   linux: [
-    `recrest-v${EXPECTED_APP_VERSION}-linux-x64.AppImage`,
     `recrest-v${EXPECTED_APP_VERSION}-linux-x64.deb`,
     `recrest-v${EXPECTED_APP_VERSION}-linux-x64.rpm`,
   ],
 } as const;
+
+/** The install command the Linux card shows for the Arch channel. Hard-coded
+ *  for the same reason as `EXPECTED_DOWNLOAD_ASSETS`: importing it from the page
+ *  would compare the page against itself. Unlike the file assets there is no
+ *  release asset to verify it against — the check is that the page renders a
+ *  copyable command rather than a download link. */
+export const EXPECTED_AUR_COMMAND = "paru -S recrest-bin";
 
 /** Mirrors `landingpage/src/lib/downloadUrl.ts::buildDownloadUrl`. */
 export function expectedAssetUrl(filename: string): string {
