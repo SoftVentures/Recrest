@@ -16,8 +16,18 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node22
   - org.freedesktop.Sdk.Extension.rust-stable
 
+# `env` belongs here, NOT on the module. flatpak-builder has no `env` property on
+# a module and only warns about it ("Unknown property env for type
+# BuilderModule") — the variables are silently dropped, and the offline install
+# then looks for the vendored caches in the wrong place. Verified with
+# flatpak-builder 1.4.6.
 build-options:
   append-path: /usr/lib/sdk/node22/bin:/usr/lib/sdk/rust-stable/bin
+  env:
+    HOME: /run/build/recrest
+    CARGO_HOME: /run/build/recrest/cargo
+    XDG_CACHE_HOME: /run/build/recrest/flatpak-node/cache
+    YARN_CACHE_FOLDER: /run/build/recrest/flatpak-node/yarn-cache
 
 command: recrest-launcher
 
@@ -59,28 +69,31 @@ modules:
     # generated — see README.md. They must be regenerated whenever `yarn.lock`
     # or `app/src-tauri/Cargo.lock` changes, which is what the `flatpak.yml`
     # workflow guards.
-    env:
-      HOME: /run/build/recrest
-      CARGO_HOME: /run/build/recrest/cargo
-      XDG_CACHE_HOME: /run/build/recrest/flatpak-node/cache
-      YARN_CACHE_FOLDER: /run/build/recrest/flatpak-node/yarn-cache
-
     sources:
-      # Flathub requires both `tag` and `commit`: the tag documents intent, the
-      # commit is what actually gets checked out, so a moved tag cannot change
-      # what was reviewed. Both move together on every release.
+      # Points at a develop commit, NOT a release tag, and that is deliberate
+      # until the next release ships.
+      #
+      # The build installs `eu.softventures.recrest.metainfo.xml`, which the
+      # AppStream requirement makes mandatory for Flathub — and that file did not
+      # exist until commit 49690f3, well after v0.11.0. Building the v0.11.0 tag
+      # therefore fails at the very last step with "cannot stat
+      # …/eu.softventures.recrest.metainfo.xml", after a full 8-minute Rust
+      # compile. No amount of correct vendoring fixes that.
+      #
+      # So: this pins a commit that has the file, which keeps the offline build
+      # verifiable in CI today. **The Flathub submission needs a real release
+      # tag** — when the next version is tagged, set `tag:` and `commit:` to it
+      # and regenerate the sources (generate-sources.sh reads `commit:` from this
+      # file, so the two cannot drift apart).
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        tag: v0.11.0
-        commit: 7be73029758b945a038c51c813aebd2bbf60dd62
+        commit: 4b42f47f85ddc3a9cf6ac25f36f990688c14f956
       - cargo-sources.json
       - node-sources.json
 
     build-commands:
       # Point yarn at the vendored offline mirror. This REPLACES the repo's own
-      # .yarnrc, which sets `engine-strict true` against an exact Node patch
-      # version the SDK extension will never match — the same mismatch the AUR
-      # PKGBUILDs work around with `--ignore-engines`.
+      # .yarnrc, which also carries `engine-strict true`.
       - >-
         printf 'yarn-offline-mirror "/run/build/recrest/flatpak-node/yarn-mirror"\nyarn-offline-mirror-pruning
         true\n' > .yarnrc
@@ -90,12 +103,19 @@ modules:
         printf '[source.crates-io]\nreplace-with = "vendored-sources"\n\n[source.vendored-sources]\ndirectory
         = "/run/build/recrest/cargo/vendor"\n' > app/src-tauri/.cargo/config.toml
 
-      # `--ignore-scripts` skips `check-node.cjs` (hard-fails on the version
-      # mismatch above) and `husky` (wants a .git dir the build does not keep).
-      # The one postinstall step that matters is building @recrest/shared, which
+      # `--ignore-engines` is required even though the .yarnrc above was
+      # replaced: package.json pins `engines.node` to an exact patch version
+      # (22.22.3) and the node22 SDK extension ships a different one (22.23.1 as
+      # of freedesktop 24.08), which yarn rejects outright — verified, the build
+      # dies with "The engine node is incompatible with this module". The AUR
+      # PKGBUILDs pass the same flag for the same reason.
+      #
+      # `--ignore-scripts` skips `check-node.cjs` (hard-fails on that same
+      # mismatch) and `husky` (wants a .git dir the build does not keep). The one
+      # postinstall step that matters is building @recrest/shared, which
       # `app/tsconfig.app.json` references as a TS project — so it runs
       # explicitly, exactly as the PKGBUILDs do.
-      - yarn install --offline --frozen-lockfile --ignore-scripts --non-interactive
+      - yarn install --offline --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
       - yarn workspace @recrest/shared build
 
       # `--no-bundle` stops after linking. The bundler's own .deb/.rpm output is

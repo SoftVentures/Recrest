@@ -6,9 +6,8 @@
 # notice. Without this workflow the first sign of a stale manifest is a failed
 # Flathub build, days or weeks after the dependency bump that caused it.
 #
-# The check is the real thing: `flatpak-builder --disable-download` reproduces
-# Flathub's offline environment exactly. If it links, the vendored sources are
-# complete.
+# The check is the real thing: the sources are fetched, and then the build runs
+# with the network disabled. If it links, the vendored lists are complete.
 #
 # This does NOT publish anything. Flathub builds from its own repository; here we
 # only prove the manifest still works. See packaging/flatpak/README.md.
@@ -45,10 +44,12 @@ jobs:
   build:
     name: Offline build
     runs-on: ubuntu-latest
-    # The runtime download plus a full Rust release build of the Tauri tree runs
-    # well past the 6h default only if something hangs; 90 minutes is a
-    # deliberate ceiling rather than an estimate.
-    timeout-minutes: 90
+    # Runtime download, then ~3100 sources fetched, then a full release-profile
+    # Rust build of the Tauri tree. 120 minutes is a ceiling against a hang, not
+    # an estimate — if this starts timing out rather than failing, the fix is to
+    # cache the flatpak-builder download directory, not to raise the number
+    # again.
+    timeout-minutes: 120
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
       options: --privileged
@@ -92,15 +93,34 @@ jobs:
       # flathub-infra/flatpak-github-actions: the container already provides the
       # toolchain, so the action would only add a third-party dependency to pin
       # and audit for no capability we do not already have here.
-      - name: Build offline
+      #
+      # Two stages, because that is what Flathub actually does — and what makes
+      # the check mean anything.
+      #
+      # `--disable-download` on its own does NOT reproduce Flathub. It blocks
+      # every download including the app's own git checkout, so the build dies
+      # with "cannot stat .flatpak-builder/git/…" before compiling a line. That
+      # failure says nothing about whether the vendored sources are complete.
+      #
+      # Fetching first and then building with the network disabled is the real
+      # assertion: the *build* must not need the network. If a crate or an npm
+      # package is missing from the generated lists, the second stage is where it
+      # surfaces — here, instead of in a Flathub review.
+      - name: Fetch sources
         if: steps.sources.outputs.ready == 'true'
         run: |
           set -euo pipefail
-          # --disable-download is the assertion: it reproduces Flathub's offline
-          # environment. A build that needs the network fails here rather than in
-          # a Flathub review.
           flatpak-builder \
             --force-clean \
+            --download-only \
+            build \
+            packaging/flatpak/eu.softventures.recrest.yml
+
+      - name: Build with the network disabled
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak-builder \
             --disable-download \
             --repo=repo \
             build \

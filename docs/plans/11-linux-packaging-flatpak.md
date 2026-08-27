@@ -264,6 +264,52 @@ Kanal passen, sonst zeigt GNOME Software auf einen Launcher, den es nicht gibt.
 Im Flatpak-Manifest per `mv` in den `build-commands` lösen, damit die
 Repo-Variante für deb/rpm unverändert bleibt.
 
+### Verifiziert im Container (2026-08-27)
+
+Der Offline-Build wurde im echten Flathub-Image (`flatpak-builder 1.4.6`)
+durchgespielt. **Ergebnis: der netzlose Build kompiliert durch** —
+`yarn install --offline`, Vite-Build und der Rust-Release-Build der 1489
+vendored Crates laufen ohne Netzzugriff (8 min für den Rust-Teil). Die
+generierten Source-Listen sind damit nachweislich vollständig.
+
+Auf dem Weg dahin fielen sechs Fehler auf, die alle erst beim Ausführen sichtbar
+werden und alle behoben sind:
+
+| Fehler                                                        | Wirkung ohne Fix                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `env` auf Modulebene im Manifest                               | still verworfen (nur eine Warnung); Caches am falschen Ort         |
+| `--ignore-engines` fehlte trotz ersetzter `.yarnrc`            | `yarn install` bricht ab: Node 22.23.1 ≠ gepinnte 22.22.3          |
+| `--disable-download` allein im CI-Workflow                      | blockt auch den Git-Checkout; Build stirbt vor der ersten Zeile    |
+| `--force-clean` fehlte in der zweiten Stufe                     | „App dir 'build' is not empty"                                     |
+| Generator las die Lockfiles des Arbeitsbaums                    | Sources für den falschen Commit — siehe unten                      |
+| `--xdg-layout` / Skript-Aufruf des Node-Generators veraltet     | Generator startet gar nicht                                        |
+
+Die Lockfile-Divergenz ist die, die ohne Fix bei **jedem** Release erneut
+zuschnappt: `develop` hatte `motion@^13.0.0`, v0.11.0 `motion@^12.40.0`, und der
+Fehler tarnt sich als fehlendes Paket (`Can't make a request in offline mode
+(…/motion-12.40.0.tgz)`) statt als falscher Commit. `generate-sources.sh` liest
+den Commit deshalb jetzt selbst aus dem Manifest.
+
+Drei weitere Fehlschläge gingen auf das Container-Setup zurück und sind
+**keine** Repo-Fehler — `rofiles-fuse` (fehlendes `/dev/fuse`),
+`Extension …/47 not installed` (`--rm` verwarf die Installation) und
+`state dir is not on the same filesystem` (Volume-Layout). Der
+Extension-Point im GNOME SDK deklariert `version = 24.08` und löst korrekt auf;
+eine Manifest-Änderung dafür wäre falsch gewesen. Der verifizierte
+Container-Aufruf steht in `packaging/flatpak/README.md`.
+
+### Das Manifest pinnt einen Commit, keinen Tag
+
+Bis zum nächsten Release ist das so beabsichtigt. Der Build installiert
+`eu.softventures.recrest.metainfo.xml`, die für Flathub Pflicht ist — und die
+existiert erst seit `49690f3`, also nach v0.11.0. Ein Build des Tags scheitert
+nach vollständiger Kompilierung am letzten `install`-Schritt.
+
+Das Manifest zeigt deshalb auf einen develop-Commit, der die Datei hat. Damit
+bleibt der Kanal in CI prüfbar. **Die Flathub-Submission braucht trotzdem einen
+Release-Tag** — beim nächsten Release `commit:` (und `tag:`) umstellen und die
+Sources neu erzeugen.
+
 ### Was bereits erledigt ist
 
 - **AppStream-Metadaten** (`eu.softventures.recrest.metainfo.xml`) existieren.
