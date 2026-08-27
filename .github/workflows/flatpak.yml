@@ -52,7 +52,11 @@ jobs:
     timeout-minutes: 120
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
-      options: --privileged
+      # --device /dev/fuse: flatpak-builder wants FUSE for its rofiles overlay.
+      # The build step also passes --disable-rofiles-fuse as a fallback, because
+      # a container without working FUSE fails with the opaque
+      # "Failure spawning rofiles-fuse, exit_status: 256".
+      options: --privileged --device /dev/fuse
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -112,6 +116,12 @@ jobs:
       # installed". The `/47` in that message is misleading — the extension point
       # in the GNOME SDK declares `version = 24.08` and resolves correctly; the
       # extension is simply absent.
+      # The image has no /etc/machine-id, so the build's dbus refuses to start:
+      # "Cannot spawn a message bus without a machine-id". Cheap to create, and
+      # nothing downstream works without it.
+      - name: Prepare the container
+        run: dbus-uuidgen --ensure=/etc/machine-id
+
       - name: Install SDK extensions
         if: steps.sources.outputs.ready == 'true'
         run: |
@@ -142,6 +152,7 @@ jobs:
           flatpak-builder \
             --force-clean \
             --disable-download \
+            --disable-rofiles-fuse \
             --repo=repo \
             build \
             packaging/flatpak/eu.softventures.recrest.yml
@@ -155,6 +166,10 @@ jobs:
       # validation failure is a problem on every Linux channel and needs no
       # vendored sources to catch.
       - name: Validate AppStream metadata
+        # always(): the metadata is shared with the deb/rpm bundles, so this has
+        # to report even when the Flatpak build itself broke — otherwise a build
+        # failure hides an unrelated packaging problem on every Linux channel.
+        if: always()
         run: |
           set -euo pipefail
           appstreamcli validate --explain \
