@@ -1,0 +1,63 @@
+# Maintainer: Manuel Haucke <manuel.haucke12@gmail.com>
+
+pkgname=recrest-bin
+_pkgname=recrest
+pkgver=0.11.0
+pkgrel=1
+pkgdesc="Lightweight native developer dashboard for local git repos, pull requests, and CI checks (prebuilt binary)"
+# Only x86_64. `recrest` and `recrest-git` declare aarch64 because they compile
+# from source; this package repacks a release asset, and the release matrix has
+# no linux-aarch64 leg to repack.
+arch=('x86_64')
+url="https://github.com/SoftVentures/Recrest"
+license=('MIT')
+# Same runtime set as `recrest` — the binary is identical, only the way it got
+# here differs. See that PKGBUILD for why `dbus` and `desktop-file-utils` are
+# listed explicitly rather than left to the webkit2gtk chain.
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'hicolor-icon-theme'
+         'dbus' 'desktop-file-utils')
+# No toolchain: this repacks a `.deb`, it does not build anything. `tar` is in
+# base, but naming it keeps the extraction step honest about its one dependency.
+makedepends=('tar')
+provides=("$_pkgname=$pkgver")
+conflicts=("$_pkgname" "$_pkgname-git")
+options=(!strip !debug)
+# A release asset, not a generated tarball — GitHub serves these byte-for-byte
+# as uploaded, so a real checksum is meaningful here. (`recrest` uses `SKIP`
+# with a pinned git tag instead, because GitHub's auto-generated source
+# tarballs are not byte-stable; see the note in that PKGBUILD.)
+#
+# The `.deb` carries no licence file, so it is fetched separately from the tag.
+source=("$pkgname-$pkgver.deb::$url/releases/download/v$pkgver/recrest-v$pkgver-linux-x64.deb"
+        "LICENSE-$pkgver::https://raw.githubusercontent.com/SoftVentures/Recrest/v$pkgver/LICENSE")
+sha256sums=('f9ae140ee734ce8994214c33e70923ef8841c608fbc709a518c69225d23611ff'
+            'f90c0f912cc1be15c8d1f8764cccc811178e321eb739d094387dbd5667bde0fc')
+
+package() {
+  # `bsdtar` (libarchive, a base dependency) reads `ar` archives directly, so
+  # the two-step "ar x, then untar data.tar.gz" dance is unnecessary.
+  bsdtar -xf "$pkgname-$pkgver.deb" -C "$srcdir" data.tar.gz
+  bsdtar -xf "$srcdir/data.tar.gz" -C "$pkgdir"
+
+  # The upstream `.deb` installs BOTH spellings of the desktop entry and the
+  # icons — `Recrest.desktop` (rendered by the Tauri bundler from `productName`,
+  # which is not configurable) and `recrest.desktop` (the repo's own file, put
+  # there via the bundler's `files` map). Keeping both would register the app
+  # twice in the application menu, so this package keeps the lowercase spelling
+  # only, matching what `recrest` and `recrest-git` install.
+  rm -f "$pkgdir/usr/share/applications/Recrest.desktop"
+  rm -f "$pkgdir"/usr/share/icons/hicolor/*/apps/Recrest.png
+
+  # `[[bin]]` in Cargo.toml is capitalised for the macOS Dock label, so the
+  # `.deb` ships `/usr/bin/Recrest`. On Arch the command is lowercase — same
+  # rename `recrest` and `recrest-git` do. `recrest-launcher.sh` probes both
+  # spellings, so it keeps working either way.
+  mv "$pkgdir/usr/bin/Recrest" "$pkgdir/usr/bin/recrest"
+
+  # The bundler's `files` map copies `recrest-launcher` in with mode 644, which
+  # makes it unexecutable — and `recrest.desktop` has `Exec=recrest-launcher`,
+  # so the menu entry would do nothing. Fix the mode on the way in.
+  chmod 755 "$pkgdir/usr/bin/recrest" "$pkgdir/usr/bin/recrest-launcher"
+
+  install -Dm644 "LICENSE-$pkgver" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

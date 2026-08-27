@@ -8,8 +8,11 @@ copied into those clones, so changes land here first and get pushed out second.
 | -------------- | ------------- | ------------------------------------------------------------------------------ |
 | `recrest/`     | `recrest`     | a git clone pinned to the `vX.Y.Z` tag                                         |
 | `recrest-git/` | `recrest-git` | `main` at build time (`pkgver()` derives `X.Y.Z.rN.gHASH` from `git describe`) |
+| `recrest-bin/` | `recrest-bin` | the `recrest-v<tag>-linux-x64.deb` release asset, repacked                     |
 
-Both build from source with `yarn` + `cargo` and install the same layout:
+`recrest` and `recrest-git` build from source with `yarn` + `cargo`;
+`recrest-bin` only repacks the published `.deb`, which turns a ~20-minute Rust
+compile into a download. All three install the same layout:
 
 ```
 /usr/bin/recrest                                  # the Tauri executable
@@ -26,7 +29,7 @@ linking, so `targets: "all"` in `tauri.conf.json` (deb/rpm/AppImage) and the
 ## Building / testing locally
 
 ```sh
-cd packaging/aur/recrest      # or recrest-git
+cd packaging/aur/recrest      # or recrest-git / recrest-bin
 makepkg -si                   # -s pulls makedepends, -i installs the result
 ```
 
@@ -37,9 +40,10 @@ makepkg -f
 bsdtar -tf recrest-*.pkg.tar.zst
 ```
 
-Expect a long build: a full `yarn install`, a Vite production build, and a
-release-profile Rust compile (`lto = true`, `codegen-units = 1`) of the whole
-Tauri dependency tree.
+For the two source packages, expect a long build: a full `yarn install`, a Vite
+production build, and a release-profile Rust compile (`lto = true`,
+`codegen-units = 1`) of the whole Tauri dependency tree. `recrest-bin` finishes
+in seconds — it downloads the `.deb` and repacks it.
 
 ## Two upstream quirks the PKGBUILDs work around
 
@@ -71,11 +75,39 @@ why this is deliberately _not_ wired into release-please's `extra-files` — the
 bump lands on `main` **before** the tag exists, and a `pkgver` pointing at a
 missing tag fails every build until the tag catches up.
 
-Both PKGBUILDs carry the same `depends`; there is nothing to copy between them
-when bumping.
+`recrest-bin` needs one step more, because its sources are real files rather
+than a pinned git ref:
 
-Then push to the AUR remotes (`ssh://aur@aur.archlinux.org/<pkgname>.git`), which
-only accept `PKGBUILD` + `.SRCINFO` + any local files, not this README.
+```sh
+cd packaging/aur/recrest-bin
+sed -i "s/^pkgver=.*/pkgver=X.Y.Z/" PKGBUILD
+sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+updpkgsums                      # re-hashes the .deb and the LICENSE
+makepkg --printsrcinfo > .SRCINFO
+```
+
+Bump it only **after** the release assets are published — `updpkgsums`
+downloads them. All three PKGBUILDs carry the same `depends`; there is nothing
+else to copy between them when bumping.
+
+## Publishing to the AUR
+
+Each package is its own AUR git repository. The directories here are the source
+of truth; the AUR clones are downstream copies.
+
+```sh
+git clone ssh://aur@aur.archlinux.org/recrest-bin.git /tmp/aur-recrest-bin
+cp packaging/aur/recrest-bin/{PKGBUILD,.SRCINFO} /tmp/aur-recrest-bin/
+cd /tmp/aur-recrest-bin && git add -A && git commit -m "upgpkg: recrest-bin X.Y.Z-1" && git push
+```
+
+The AUR only accepts `PKGBUILD`, `.SRCINFO` and files the build itself needs —
+**not** this README. Pushing requires an AUR account with your SSH public key
+registered; the first push to a name that does not exist yet creates the
+package. Repeat per package (`recrest`, `recrest-git`, `recrest-bin`).
+
+A `.SRCINFO` that disagrees with its `PKGBUILD` is rejected server-side, so
+never hand-edit one — regenerate it with `makepkg --printsrcinfo`.
 
 ## The in-app updater on a pacman install
 

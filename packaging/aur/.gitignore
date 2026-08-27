@@ -5,5 +5,8 @@ pkg/
 *.pkg.tar.zst.sig
 *.tar.gz
 recrest-git/recrest-git/
-# Both packages use a git source, so makepkg clones into <pkgdir>/<pkgname>/.
+# Both source packages use a git source, so makepkg clones into <pkgdir>/<pkgname>/.
 recrest/recrest/
+# recrest-bin downloads its sources instead of cloning them.
+recrest-bin/*.deb
+recrest-bin/LICENSE-*
