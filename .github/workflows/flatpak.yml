@@ -106,6 +106,21 @@ jobs:
       # assertion: the *build* must not need the network. If a crate or an npm
       # package is missing from the generated lists, the second stage is where it
       # surfaces — here, instead of in a Flathub review.
+      # The image ships org.gnome.Platform/Sdk 47 but NOT the SDK extensions, so
+      # they have to be pulled in or the build fails on the first line with
+      # "Requested extension org.freedesktop.Sdk.Extension.node22/x86_64/47 not
+      # installed". The `/47` in that message is misleading — the extension point
+      # in the GNOME SDK declares `version = 24.08` and resolves correctly; the
+      # extension is simply absent.
+      - name: Install SDK extensions
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak install -y --noninteractive flathub \
+            org.freedesktop.Sdk.Extension.node22//24.08 \
+            org.freedesktop.Sdk.Extension.rust-stable//24.08
+          flatpak list --columns=application,branch
+
       - name: Fetch sources
         if: steps.sources.outputs.ready == 'true'
         run: |
@@ -116,11 +131,16 @@ jobs:
             build \
             packaging/flatpak/eu.softventures.recrest.yml
 
+      # `--force-clean` again: `--download-only` leaves the app dir populated, so
+      # without it this stage aborts with "App dir 'build' is not empty". It only
+      # clears the app dir — the fetched sources live in `.flatpak-builder` and
+      # survive, which is the whole point of splitting the stages.
       - name: Build with the network disabled
         if: steps.sources.outputs.ready == 'true'
         run: |
           set -euo pipefail
           flatpak-builder \
+            --force-clean \
             --disable-download \
             --repo=repo \
             build \
