@@ -1,4 +1,5 @@
-# Maintainer: Manuel Haucke <manuel.haucke12@gmail.com>
+# Maintainer: Valentin Röhle <roehlevalentin@gmail.com>
+# Contributor: Manuel Haucke <manuel.haucke12@gmail.com>
 
 pkgname=recrest-bin
 _pkgname=recrest
