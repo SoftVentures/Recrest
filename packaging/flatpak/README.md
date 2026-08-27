@@ -30,6 +30,13 @@ This is the standing maintenance cost of the Flatpak channel: **any change to
 push touching a lockfile, so a stale pair fails CI here rather than surfacing in
 a Flathub review weeks later.
 
+Until both files are committed, that workflow **skips the build with a warning**
+rather than failing — `generate-sources.sh` needs a Linux machine, and a check
+that is permanently red over a step nobody can take in CI stops being read. The
+AppStream validation runs either way. Committing exactly one of the two files
+_is_ a hard failure: that is a half-finished pair, not an un-bootstrapped
+channel.
+
 ## Building and testing locally
 
 ```sh

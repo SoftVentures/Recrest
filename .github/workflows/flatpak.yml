@@ -56,25 +56,44 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # Fails loudly when the generated sources were never committed, instead of
-      # letting flatpak-builder produce a confusing "no such file" mid-build.
-      - name: Assert the vendored source lists exist
+      # Three states, deliberately distinguished:
+      #
+      #   both present  → build (the steady state)
+      #   both absent   → warn and skip; the channel is not bootstrapped yet.
+      #                   `generate-sources.sh` needs a Linux machine, so until
+      #                   someone runs it there is nothing to build. Failing here
+      #                   would paint develop red over a step nobody can take in
+      #                   CI, and a permanently red check stops being read.
+      #   one of two    → fail. That is not "not set up", it is a half-committed
+      #                   pair, and the build would break confusingly later.
+      - name: Check for the vendored source lists
+        id: sources
         run: |
-          set -euo pipefail
-          missing=0
-          for f in packaging/flatpak/cargo-sources.json packaging/flatpak/node-sources.json; do
-            if [ ! -s "$f" ]; then
-              echo "::error::$f is missing or empty — run packaging/flatpak/generate-sources.sh and commit the result"
-              missing=1
-            fi
-          done
-          exit $missing
+          set -uo pipefail
+          cargo=packaging/flatpak/cargo-sources.json
+          node=packaging/flatpak/node-sources.json
+          have=0
+          [ -s "$cargo" ] && have=$((have + 1))
+          [ -s "$node" ] && have=$((have + 1))
+
+          case "$have" in
+            2) echo "ready=true" >> "$GITHUB_OUTPUT" ;;
+            0)
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::Flatpak channel not bootstrapped: run packaging/flatpak/generate-sources.sh on a Linux machine and commit cargo-sources.json + node-sources.json. Skipping the offline build."
+              ;;
+            *)
+              echo "::error::exactly one of $cargo / $node is present — regenerate both with packaging/flatpak/generate-sources.sh"
+              exit 1
+              ;;
+          esac
 
       # flatpak-builder is invoked directly rather than through
       # flathub-infra/flatpak-github-actions: the container already provides the
       # toolchain, so the action would only add a third-party dependency to pin
       # and audit for no capability we do not already have here.
       - name: Build offline
+        if: steps.sources.outputs.ready == 'true'
         run: |
           set -euo pipefail
           # --disable-download is the assertion: it reproduces Flathub's offline
@@ -88,10 +107,13 @@ jobs:
             packaging/flatpak/eu.softventures.recrest.yml
 
       - name: Bundle
+        if: steps.sources.outputs.ready == 'true'
         run: flatpak build-bundle repo recrest.flatpak eu.softventures.recrest
 
-      # AppStream metadata is shared with the deb/rpm bundles, so a validation
-      # failure here is a problem on every Linux channel, not just Flatpak.
+      # Runs unconditionally, including while the channel is not bootstrapped:
+      # the AppStream metadata is shared with the deb/rpm bundles, so a
+      # validation failure is a problem on every Linux channel and needs no
+      # vendored sources to catch.
       - name: Validate AppStream metadata
         run: |
           set -euo pipefail
@@ -99,6 +121,7 @@ jobs:
             app/src-tauri/resources/eu.softventures.recrest.metainfo.xml
 
       - name: Upload bundle for manual testing
+        if: steps.sources.outputs.ready == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: recrest-flatpak-x86_64
