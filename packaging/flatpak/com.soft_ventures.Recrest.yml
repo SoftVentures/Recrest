@@ -1,8 +1,8 @@
 # Source of truth for the Flathub manifest. The Flathub repository
-# (flathub/eu.softventures.recrest) is a downstream copy of this file plus the
+# (flathub/com.soft_ventures.Recrest) is a downstream copy of this file plus the
 # two generated source lists — see README.md in this directory.
 
-id: eu.softventures.recrest
+id: com.soft_ventures.Recrest
 
 # GNOME 47 rather than a newer runtime: Tauri v2 links webkit2gtk-4.1 (GTK 3),
 # and that is the newest org.gnome.Platform that still carries it. Bumping the
@@ -70,24 +70,33 @@ modules:
     # or `app/src-tauri/Cargo.lock` changes, which is what the `flatpak.yml`
     # workflow guards.
     sources:
-      # Points at a develop commit, NOT a release tag, and that is deliberate
-      # until the next release ships.
+      # A develop commit and NOT a release tag, and that is deliberate until
+      # the next version ships.
       #
-      # The build installs `eu.softventures.recrest.metainfo.xml`, which the
-      # AppStream requirement makes mandatory for Flathub — and that file did not
-      # exist until commit 49690f3, well after v0.11.0. Building the v0.11.0 tag
-      # therefore fails at the very last step with "cannot stat
-      # …/eu.softventures.recrest.metainfo.xml", after a full 8-minute Rust
-      # compile. No amount of correct vendoring fixes that.
+      # The build installs `com.soft_ventures.Recrest.metainfo.xml` as its very
+      # last step — AppStream metadata is mandatory for Flathub. No existing tag
+      # carries that filename: the app id was only changed to
+      # com.soft_ventures.Recrest here (see README.md, "Two ids, on purpose"),
+      # and v0.12.0 still ships it as `eu.softventures.recrest.metainfo.xml`.
+      # Building the tag therefore dies with "cannot stat
+      # …/com.soft_ventures.Recrest.metainfo.xml" after a full 8-minute Rust
+      # compile, and no amount of correct vendoring fixes that.
       #
-      # So: this pins a commit that has the file, which keeps the offline build
-      # verifiable in CI today. **The Flathub submission needs a real release
-      # tag** — when the next version is tagged, set `tag:` and `commit:` to it
-      # and regenerate the sources (generate-sources.sh reads `commit:` from this
-      # file, so the two cannot drift apart).
+      # So this pins the commit that does have the file, which keeps the offline
+      # build verifiable in CI today. **The Flathub submission needs a real
+      # release tag** — once the rename ships, set `tag:` and `commit:` to it and
+      # regenerate the sources.
+      #
+      # Whatever this points at, it is coupled to cargo-sources.json and
+      # node-sources.json: those describe the dependency graph of THIS commit's
+      # lockfiles and nothing else. Moving the ref without regenerating them
+      # fails deep inside the offline build with "Can't make a request in offline
+      # mode (….tgz)", which reads like a missing package and is really a
+      # mismatched commit. generate-sources.sh reads `commit:` back out of this
+      # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        commit: 4b42f47f85ddc3a9cf6ac25f36f990688c14f956
+        commit: 86139609625823b37b85196e07f182f5297b89c2
       - cargo-sources.json
       - node-sources.json
 
@@ -134,12 +143,12 @@ modules:
       # so they are renamed on the way in and the AppStream `<launchable>` is
       # repointed to match — a mismatch there leaves GNOME Software with a
       # launcher it cannot find.
-      - install -Dm644 app/src-tauri/resources/recrest.desktop /app/share/applications/eu.softventures.recrest.desktop
-      - sed -i 's/^Icon=.*/Icon=eu.softventures.recrest/' /app/share/applications/eu.softventures.recrest.desktop
-      - install -Dm644 app/src-tauri/resources/eu.softventures.recrest.metainfo.xml /app/share/metainfo/eu.softventures.recrest.metainfo.xml
+      - install -Dm644 app/src-tauri/resources/recrest.desktop /app/share/applications/com.soft_ventures.Recrest.desktop
+      - sed -i 's/^Icon=.*/Icon=com.soft_ventures.Recrest/' /app/share/applications/com.soft_ventures.Recrest.desktop
+      - install -Dm644 app/src-tauri/resources/com.soft_ventures.Recrest.metainfo.xml /app/share/metainfo/com.soft_ventures.Recrest.metainfo.xml
       - >-
         sed -i 's|<launchable type="desktop-id">.*</launchable>|<launchable
-        type="desktop-id">eu.softventures.recrest.desktop</launchable>|'
-        /app/share/metainfo/eu.softventures.recrest.metainfo.xml
+        type="desktop-id">com.soft_ventures.Recrest.desktop</launchable>|'
+        /app/share/metainfo/com.soft_ventures.Recrest.metainfo.xml
 
-      - for s in 32 64 128 256 512; do install -Dm644 "app/src-tauri/icons/linux/${s}x${s}.png" "/app/share/icons/hicolor/${s}x${s}/apps/eu.softventures.recrest.png"; done
+      - for s in 32 64 128 256 512; do install -Dm644 "app/src-tauri/icons/linux/${s}x${s}.png" "/app/share/icons/hicolor/${s}x${s}/apps/com.soft_ventures.Recrest.png"; done

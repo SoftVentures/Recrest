@@ -344,4 +344,4 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and
 Attribution appreciated, liability disclaimed.
 
 Recrest is an open-source project under
-[SoftVentures](https://softventures.de).
+[SoftVentures](https://soft-ventures.com).

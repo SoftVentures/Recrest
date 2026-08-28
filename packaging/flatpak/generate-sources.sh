@@ -23,7 +23,7 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$here/../.." && pwd)"
-manifest="$here/eu.softventures.recrest.yml"
+manifest="$here/com.soft_ventures.Recrest.yml"
 
 FBT_REPO="${FBT_REPO:-https://github.com/flatpak/flatpak-builder-tools.git}"
 

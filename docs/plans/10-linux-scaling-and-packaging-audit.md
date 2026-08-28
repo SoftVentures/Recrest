@@ -37,7 +37,7 @@ Paketierungsteil direkt auf `develop`, der Skalierungsteil über den Branch
 | **12**     | **`uiScale` ist toter Code im Renderer**                          | ✅ gefixt — `uiScale` ist jetzt der einzige Skalierungspfad, mit UI-Regler       |
 | 13         | `bundle.linux.rpm` fehlt                                          | ✅ gefixt (mit Korrektur, siehe unten)                                           |
 | 14         | Updater auf keinem Distro-Kanal gegated                           | ✅ gefixt — `app/src-tauri/src/update/channel.rs`                                |
-| 15         | Keine AppStream-Metadaten                                         | ✅ gefixt — `resources/eu.softventures.recrest.metainfo.xml`, im Release gegated |
+| 15         | Keine AppStream-Metadaten                                         | ✅ gefixt — `resources/com.soft_ventures.Recrest.metainfo.xml`, im Release gegated |
 | 16         | Icon-Set unvollständig                                            | ✅ gefixt — 32–512 in `deb`/`rpm`/`AppImage`                                     |
 | P2-Liste   | Chrome-Offset, Drag-Region, nicht schrumpfbare Panes, `nowrap`    | ❌ offen                                                                         |
 | Doku-Drift | README, `docs/RELEASE.md`, Checkliste, Launcher-Kommentar         | ✅ gefixt                                                                        |
@@ -547,7 +547,7 @@ Punkt 2 sind sie zusätzlich inkonsistent auf `Recrest.png`/`recrest.png` vertei
    Gatekeeper-Hinweiszeile im Cask.
 5. **AppStream + Flatpak/Flathub** — größte Reichweite (Fedora Silverblue, Steam Deck, alle
    Immutable-Distros), aber die meiste Arbeit: Offline-Build erzwingt vendored Cargo-/Yarn-Sources,
-   die App-ID verlangt `eu.softventures.recrest.desktop`, und der FS-Zugriff
+   die App-ID verlangt `com.soft_ventures.Recrest.desktop`, und der FS-Zugriff
    (`git/scanner.rs` scannt beliebige Roots, `commands/ide.rs` startet fremde Editoren) braucht
    `--filesystem=host` + `org.freedesktop.Flatpak`-Talk, was Review-Diskussionen auslöst.
 6. **Linux aarch64** — Voraussetzung für ein sinnvolles `recrest-bin` auf `aarch64`; das PKGBUILD

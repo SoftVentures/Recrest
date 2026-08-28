@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 SoftVentures -->
 <component type="desktop-application">
-  <id>eu.softventures.recrest</id>
+  <!-- Reverses soft-ventures.com. The hyphen becomes an underscore because
+       app ids must be valid D-Bus name elements, which allow only
+       [A-Za-z0-9_]. NOT the same as Tauri's `identifier`
+       (eu.softventures.recrest), which names the user data directory and is
+       kept as-is so updates do not orphan existing installs. -->
+  <id>com.soft_ventures.Recrest</id>
 
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
@@ -9,7 +14,7 @@
   <name>Recrest</name>
   <summary>Developer dashboard for local repos, pull requests and CI</summary>
 
-  <developer id="eu.softventures">
+  <developer id="com.soft_ventures">
     <name translate="no">SoftVentures</name>
   </developer>
 

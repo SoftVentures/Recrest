@@ -161,7 +161,7 @@ jobs:
           # every Linux user — and on Flathub a missing entry for the shipped
           # version is a lint failure. Only the first (newest) entry is
           # asserted; the history below it is meant to stay as it is.
-          metainfo="app/src-tauri/resources/eu.softventures.recrest.metainfo.xml"
+          metainfo="app/src-tauri/resources/com.soft_ventures.Recrest.metainfo.xml"
           if [ ! -f "$metainfo" ]; then
             echo "::error::$metainfo is missing — the deb/rpm bundles reference it by path and would fail to build."
             rc=1
