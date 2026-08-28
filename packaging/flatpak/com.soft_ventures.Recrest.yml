@@ -70,34 +70,21 @@ modules:
     # or `app/src-tauri/Cargo.lock` changes, which is what the `flatpak.yml`
     # workflow guards.
     sources:
-      # A develop commit and NOT a release tag, and that is deliberate until
-      # the next version ships.
+      # A real release tag at last. Both fields: Flathub wants the tag for
+      # provenance, `commit:` is what flatpak-builder actually checks out, so a
+      # moved tag cannot change what was reviewed.
       #
-      # The build installs `com.soft_ventures.Recrest.metainfo.xml` as its very
-      # last step — AppStream metadata is mandatory for Flathub. No existing tag
-      # carries that filename: the app id was only changed to
-      # com.soft_ventures.Recrest here (see README.md, "Two ids, on purpose"),
-      # and v0.12.0 still ships it as `eu.softventures.recrest.metainfo.xml`.
-      # Building the tag therefore dies with "cannot stat
-      # …/com.soft_ventures.Recrest.metainfo.xml" after a full 8-minute Rust
-      # compile, and no amount of correct vendoring fixes that.
+      # v0.12.1 is the first tag carrying the com.soft_ventures.Recrest app id.
+      # Earlier tags still ship the metainfo under the old filename, and the
+      # build installs it as its very last step — pinning one of those dies with
+      # "cannot stat …/com.soft_ventures.Recrest.metainfo.xml" after a full
+      # 8-minute Rust compile.
       #
-      # So this pins the commit that does have the file, which keeps the offline
-      # build verifiable in CI today. **The Flathub submission needs a real
-      # release tag** — once the rename ships, set `tag:` and `commit:` to it and
-      # regenerate the sources.
-      #
-      # Prefer a commit that a long-lived branch or a tag keeps reachable.
-      #
-      # A PR-branch commit survives a squash merge, contrary to what it looks
-      # like: GitHub keeps `refs/pull/N/head` forever, so the object stays
-      # fetchable even after the branch is deleted and `git merge-base
-      # --is-ancestor <sha> origin/develop` says no. The offline build passed
-      # against exactly such an orphan.
-      #
-      # It is still not something to pin to. That reachability lives in a
-      # GitHub-specific ref that `git log` never shows, that a mirror or a
-      # migration does not carry, and that nothing in this file hints at.
+      # If this ever has to point at a commit again, prefer one a long-lived
+      # branch or a tag keeps reachable. A PR-branch commit does keep working
+      # after a squash merge — GitHub keeps `refs/pull/N/head` forever — but
+      # that reachability lives in a ref `git log` never shows and a mirror does
+      # not carry.
       #
       # Whatever this points at, it is coupled to cargo-sources.json and
       # node-sources.json: those describe the dependency graph of THIS commit's
@@ -108,7 +95,8 @@ modules:
       # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        commit: 1e84a5531579543556b6ed6bab4e2f23d2249087
+        tag: v0.12.1
+        commit: 992c4705c0d852d098a3466144210561a912ff8e
       - cargo-sources.json
       - node-sources.json
 
