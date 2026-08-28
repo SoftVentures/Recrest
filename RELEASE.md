@@ -46,7 +46,7 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.11.0 — Interface scaling, and a Linux packaging overhaul <!-- x-release-please-version -->
+# Recrest 0.12.0 — Interface scaling, and a Linux packaging overhaul <!-- x-release-please-version -->
 
 The interface now scales properly on every display, and Linux moves off the AppImage onto distro packages.
 

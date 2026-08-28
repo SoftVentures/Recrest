@@ -23,7 +23,7 @@ export const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`;
  *  to be hand-maintained "so a bump is conscious", but `ci.yml::version-sync`
  *  now enforces that consciously enough, and the manual step reddened every
  *  release PR at the one moment nobody wants a red gate. */
-export const EXPECTED_APP_VERSION = "0.11.0"; // x-release-please-version
+export const EXPECTED_APP_VERSION = "0.12.0"; // x-release-please-version
 
 /** Hash route of the landing page's download view (`useDownloadRoute`). The
  *  hero and nav CTAs both point at it instead of linking a release asset
