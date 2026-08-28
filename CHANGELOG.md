@@ -2,6 +2,14 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1](https://github.com/SoftVentures/Recrest/compare/v0.12.0...v0.12.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **ci:** make release-please look for the tags we actually push ([de0b118](https://github.com/SoftVentures/Recrest/commit/de0b118e46a823111471065762276a57ba6a9958))
+* **packaging:** adopt com.soft_ventures.Recrest as the public app id ([6bf8a9e](https://github.com/SoftVentures/Recrest/commit/6bf8a9ed5ea6bad20b99886cba050ed5904d6136))
+
 ## [0.12.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.11.0...recrest-v0.12.0) (2026-08-27)
 
 ### Features

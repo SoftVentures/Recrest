@@ -46,7 +46,7 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.12.0 — An application ID that names its publisher <!-- x-release-please-version -->
+# Recrest 0.12.1 — An application ID that names its publisher <!-- x-release-please-version -->
 
 A packaging release. Nothing changes in the app itself — this fixes the identity Linux software centres and Flathub use to attribute Recrest to its publisher.
 
