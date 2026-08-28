@@ -29,10 +29,16 @@ Flathub takes new apps as a pull request against
 **exactly the app id** — not `main`, not a description. The branch name is how
 their tooling identifies the app, so a wrong one gets the PR closed.
 
+The base branch is **`new-pr`**, not `master`. That is not a formality: a bot
+closes submissions targeting `master` within seconds, with a comment and no
+review. `new-pr` is an **orphan** branch with no history in common with `master`,
+so the working branch has to be built on top of it — branching off `master` makes
+the PR impossible to open at all ("no history in common").
+
 ```bash
 git clone https://github.com/flathub/flathub.git
 cd flathub
-git checkout -b com.soft_ventures.Recrest
+git checkout -b com.soft_ventures.Recrest origin/new-pr
 ```
 
 Copy in the four files, flat at the repository root — no directory:
@@ -47,8 +53,8 @@ git add -A && git commit -m "Add com.soft_ventures.Recrest"
 git push -u origin com.soft_ventures.Recrest
 ```
 
-Then open the PR against `flathub/flathub`, base `master`, with the description
-below.
+Then open the PR against `flathub/flathub`, base **`new-pr`**, with the
+description below.
 
 ## PR description (ready to paste)
 
