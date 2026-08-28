@@ -111,9 +111,23 @@ below.
    SoftVentures/Recrest as the **`FLATHUB_TOKEN`** secret. That is the only
    thing standing between `flathub-publish.yml` and doing this automatically —
    it currently skips with a warning on every release.
-3. Verify the app at https://flathub.org/apps/com.soft_ventures.Recrest —
-   ownership of `soft-ventures.com` or of the GitHub org, which is what puts the
-   verified badge on the listing.
+3. Verify the app at https://flathub.org/apps/com.soft_ventures.Recrest. That
+   is what puts the verified badge on the listing, and for a domain-based id it
+   has to be website verification — the GitHub route only exists for
+   `io.github.*` ids.
+
+   Flathub derives the domain from the app id and demangles `_` back to `-`, so
+   `com.soft_ventures.Recrest` asks for **`soft-ventures.com`**. The dashboard
+   hands out a token; serve it over HTTPS at
+
+   ```
+   https://soft-ventures.com/.well-known/org.flathub.VerifiedApps.txt
+   ```
+
+   with the token on its own line (`#` starts a comment, and further apps on the
+   domain each get their own line). Redirects are allowed, plain HTTP is not.
+   The domain does not have to host a website — a single static file is enough,
+   which matters because `soft-ventures.com` currently serves nothing.
 4. The landingpage already links to that URL and shows
    `flatpak install flathub com.soft_ventures.Recrest`. The link is live the
    moment the build publishes; no change needed.
