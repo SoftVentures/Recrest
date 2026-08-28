@@ -1,17 +1,41 @@
 # Flatpak packaging
 
 Source-of-truth copy of the Flathub manifest. Flathub hosts each app in its own
-git repository (`flathub/eu.softventures.recrest`); that repository is a
+git repository (`flathub/com.soft_ventures.Recrest`); that repository is a
 downstream copy of this directory, so changes land here first and get pushed out
 second — the same arrangement as `packaging/aur/`.
 
 | File                             | Committed | What it is                                            |
 | -------------------------------- | --------- | ----------------------------------------------------- |
-| `eu.softventures.recrest.yml`    | yes       | the manifest                                          |
+| `com.soft_ventures.Recrest.yml`    | yes       | the manifest                                          |
 | `generate-sources.sh`            | yes       | regenerates the two vendored dependency lists         |
 | `cargo-sources.json`             | generated | every crate, as an offline source                     |
 | `node-sources.json`              | generated | every npm package, as an offline source               |
 | `flathub.json`                   | yes       | app-repo config; turns Flathub's own updater off      |
+
+## Two ids, on purpose
+
+| | value | what it names |
+| --- | --- | --- |
+| public (AppStream) | `com.soft_ventures.Recrest` | metainfo, desktop file, icons, Flatpak app id, Flathub repo |
+| internal (Tauri) | `eu.softventures.recrest` | `app_config_dir()` / `app_data_dir()`, keychain service |
+
+Flathub requires the app id to reverse a domain the publisher controls, and ours
+is `soft-ventures.com`. The hyphen becomes an underscore because an app id has
+to be a valid D-Bus name and those allow only `[A-Za-z0-9_]` per element — the
+`-` → `_` mapping is Flathub's documented convention, not an invention.
+
+The Tauri `identifier` in `app/src-tauri/tauri.conf.json` deliberately keeps the
+old value. It is not a public name: it is the directory settings and tokens live
+in, on every platform. Renaming it would silently hand every existing user a
+fresh install — no settings, no registered repos, no tokens — in exchange for
+cosmetic symmetry nobody sees. Inside the sandbox this reads as
+`~/.var/app/com.soft_ventures.Recrest/config/eu.softventures.recrest/`, which is
+ugly and harmless.
+
+So: **anything a user, a store or a spec sees uses the public id; anything that
+addresses stored state uses `APP_IDENTIFIER` from `@recrest/shared`.** Do not
+"unify" them without a data migration.
 
 ## Why the generated files exist
 
@@ -50,9 +74,9 @@ stage is the actual assertion that the vendored sources are complete.
 flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47 \
   org.freedesktop.Sdk.Extension.node22//24.08 org.freedesktop.Sdk.Extension.rust-stable//24.08
 
-flatpak-builder --force-clean --download-only build packaging/flatpak/eu.softventures.recrest.yml
-flatpak-builder --force-clean --disable-download build packaging/flatpak/eu.softventures.recrest.yml
-flatpak-builder --run build packaging/flatpak/eu.softventures.recrest.yml recrest-launcher
+flatpak-builder --force-clean --download-only build packaging/flatpak/com.soft_ventures.Recrest.yml
+flatpak-builder --force-clean --disable-download build packaging/flatpak/com.soft_ventures.Recrest.yml
+flatpak-builder --run build packaging/flatpak/com.soft_ventures.Recrest.yml recrest-launcher
 ```
 
 `--force-clean` on the second call too: `--download-only` leaves the app dir
@@ -78,9 +102,9 @@ docker run --rm --privileged --device /dev/fuse \
       org.freedesktop.Sdk.Extension.node22//24.08 \
       org.freedesktop.Sdk.Extension.rust-stable//24.08
     cd /tmp/b && rm -rf flatpak && cp -r /repo/packaging/flatpak ./flatpak
-    flatpak-builder --force-clean --download-only build ./flatpak/eu.softventures.recrest.yml
+    flatpak-builder --force-clean --download-only build ./flatpak/com.soft_ventures.Recrest.yml
     flatpak-builder --force-clean --disable-download --disable-rofiles-fuse \
-      --repo=/tmp/b/repo build ./flatpak/eu.softventures.recrest.yml
+      --repo=/tmp/b/repo build ./flatpak/com.soft_ventures.Recrest.yml
   '
 ```
 
@@ -133,7 +157,7 @@ tidiness.
 **This is automated.** `.github/workflows/flathub-publish.yml` runs on
 `release: published` and does all of it: retargets the manifest at the tag,
 regenerates both source lists from that commit's lockfiles, proves the offline
-build still works, and opens a PR against `flathub/eu.softventures.recrest`.
+build still works, and opens a PR against `flathub/com.soft_ventures.Recrest`.
 
 It skips with a warning while `FLATHUB_TOKEN` is unset or the app repo does not
 exist yet, so it costs nothing before the first submission is merged.
@@ -146,7 +170,7 @@ Two things it does **not** do, on purpose:
   wherever it did, which only affects which commit `flatpak.yml` verifies. Pull
   it forward on `develop` when convenient.
 
-Still yours to check before releasing: `eu.softventures.recrest.metainfo.xml`
+Still yours to check before releasing: `com.soft_ventures.Recrest.metainfo.xml`
 needs a `<release>` entry for the new version. A missing one is a Flathub lint
 failure — and `release-tauri.yml::verify-metadata` already blocks the release
 over it, for every Linux channel.

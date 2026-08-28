@@ -186,7 +186,7 @@
       "linux": [
         "Debian / Ubuntu (.deb): `sudo dpkg -i recrest-v*.deb`",
         "Fedora / RHEL (.rpm): `sudo rpm -i recrest-v*.rpm` (oder `sudo dnf install ./recrest-v*.rpm`)",
-        "Flathub: `flatpak install flathub eu.softventures.recrest` - sobald das Paket dort freigegeben ist. Aktualisiert sich danach automatisch.",
+        "Flathub: `flatpak install flathub com.soft_ventures.Recrest` - sobald das Paket dort freigegeben ist. Aktualisiert sich danach automatisch.",
         "Arch (AUR): `paru -S recrest-bin` installiert das fertige Paket. `recrest` baut stattdessen aus dem Quellcode, `recrest-git` aus dem aktuellen Entwicklungsstand.",
         "Updates: .deb und .rpm musst du manuell neu herunterladen – es gibt kein APT- oder DNF-Repository. Über die AUR-Pakete aktualisiert pacman Recrest wie jedes andere Paket."
       ]

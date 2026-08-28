@@ -35,7 +35,7 @@ main push ──▶ release-please.yml ──▶ Release PR (bumps version, buil
 - **Single `release-please-manifest.json`** at the repo root tracks the
   current published version. Don't hand-edit it.
 - **AppStream metainfo is hand-maintained.** release-please does not know
-  `app/src-tauri/resources/eu.softventures.recrest.metainfo.xml`, so every
+  `app/src-tauri/resources/com.soft_ventures.Recrest.metainfo.xml`, so every
   release needs a new `<release version="…" date="…">` entry at the top of
   `<releases>` with the same notes as `RELEASE.md`. `verify-metadata` fails
   the release if the newest entry doesn't match the tag. This is what GNOME

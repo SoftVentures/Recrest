@@ -139,7 +139,7 @@ jobs:
             --force-clean \
             --download-only \
             build \
-            packaging/flatpak/eu.softventures.recrest.yml
+            packaging/flatpak/com.soft_ventures.Recrest.yml
 
       # `--force-clean` again: `--download-only` leaves the app dir populated, so
       # without it this stage aborts with "App dir 'build' is not empty". It only
@@ -155,11 +155,11 @@ jobs:
             --disable-rofiles-fuse \
             --repo=repo \
             build \
-            packaging/flatpak/eu.softventures.recrest.yml
+            packaging/flatpak/com.soft_ventures.Recrest.yml
 
       - name: Bundle
         if: steps.sources.outputs.ready == 'true'
-        run: flatpak build-bundle repo recrest.flatpak eu.softventures.recrest
+        run: flatpak build-bundle repo recrest.flatpak com.soft_ventures.Recrest
 
       # Runs unconditionally, including while the channel is not bootstrapped:
       # the AppStream metadata is shared with the deb/rpm bundles, so a
@@ -173,7 +173,7 @@ jobs:
         run: |
           set -euo pipefail
           appstreamcli validate --explain \
-            app/src-tauri/resources/eu.softventures.recrest.metainfo.xml
+            app/src-tauri/resources/com.soft_ventures.Recrest.metainfo.xml
 
       - name: Upload bundle for manual testing
         if: steps.sources.outputs.ready == 'true'
