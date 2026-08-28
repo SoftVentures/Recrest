@@ -229,7 +229,7 @@ Setzt C voraus.
 
 ### Manifest
 
-Eigenes Repo (`flathub/eu.softventures.recrest`), wie Flathub es verlangt.
+Eigenes Repo (`flathub/com.soft_ventures.Recrest`), wie Flathub es verlangt.
 
 - Runtime `org.gnome.Platform`, dazu `org.freedesktop.Sdk.Extension.rust-stable`
   und die Node-Extension.
@@ -260,9 +260,9 @@ Begründung gehört vorbereitet in den Submission-PR.
 `recrest.desktop` dokumentiert bereits, dass die Desktop-File-ID pro Kanal
 abweicht: `Recrest.desktop` bei deb/rpm (der Tauri-Bundler leitet den Namen aus
 `productName` ab, nicht konfigurierbar), `recrest.desktop` auf Arch. Flathub
-verlangt zwingend `eu.softventures.recrest.desktop` — ein dritter Name.
+verlangt zwingend `com.soft_ventures.Recrest.desktop` — ein dritter Name.
 
-Das `<launchable>` in `eu.softventures.recrest.metainfo.xml` muss zum jeweiligen
+Das `<launchable>` in `com.soft_ventures.Recrest.metainfo.xml` muss zum jeweiligen
 Kanal passen, sonst zeigt GNOME Software auf einen Launcher, den es nicht gibt.
 Im Flatpak-Manifest per `mv` in den `build-commands` lösen, damit die
 Repo-Variante für deb/rpm unverändert bleibt.
@@ -304,7 +304,7 @@ Container-Aufruf steht in `packaging/flatpak/README.md`.
 ### Das Manifest pinnt einen Commit, keinen Tag
 
 Bis zum nächsten Release ist das so beabsichtigt. Der Build installiert
-`eu.softventures.recrest.metainfo.xml`, die für Flathub Pflicht ist — und die
+`com.soft_ventures.Recrest.metainfo.xml`, die für Flathub Pflicht ist — und die
 existiert erst seit `49690f3`, also nach v0.11.0. Ein Build des Tags scheitert
 nach vollständiger Kompilierung am letzten `install`-Schritt.
 
@@ -315,7 +315,7 @@ Sources neu erzeugen.
 
 ### Was bereits erledigt ist
 
-- **AppStream-Metadaten** (`eu.softventures.recrest.metainfo.xml`) existieren.
+- **AppStream-Metadaten** (`com.soft_ventures.Recrest.metainfo.xml`) existieren.
   Blocker 15 aus Plan 10 ist damit vom Tisch. Vor der Submission
   `appstreamcli validate` laufen lassen und den `<releases>`-Block auf die
   aktuelle Version bringen.

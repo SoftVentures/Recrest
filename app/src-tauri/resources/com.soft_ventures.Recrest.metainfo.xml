@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 SoftVentures -->
 <component type="desktop-application">
-  <id>eu.softventures.recrest</id>
+  <!-- Reverses soft-ventures.com. The hyphen becomes an underscore because
+       app ids must be valid D-Bus name elements, which allow only
+       [A-Za-z0-9_]. NOT the same as Tauri's `identifier`
+       (eu.softventures.recrest), which names the user data directory and is
+       kept as-is so updates do not orphan existing installs. -->
+  <id>com.soft_ventures.Recrest</id>
 
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
@@ -9,7 +14,7 @@
   <name>Recrest</name>
   <summary>Developer dashboard for local repos, pull requests and CI</summary>
 
-  <developer id="eu.softventures">
+  <developer id="com.soft_ventures">
     <name translate="no">SoftVentures</name>
   </developer>
 
@@ -87,6 +92,15 @@
   </requires>
 
   <releases>
+    <release version="0.12.1" date="2026-08-28">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.12.1</url>
+      <description>
+        <ul>
+          <li>The application ID is now com.soft_ventures.Recrest, so software centres and Flathub can attribute the app to its publisher</li>
+          <li>Your settings, registered repositories and provider tokens are unaffected and stay where they are</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.12.0" date="2026-08-27">
       <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.12.0</url>
       <description>

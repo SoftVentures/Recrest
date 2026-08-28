@@ -81,7 +81,7 @@ describe("getChannelsForOs — Linux", () => {
   it("links Flathub", () => {
     const flathub = channels.find((c) => c.kind === "external");
     expect(flathub && "url" in flathub ? flathub.url : undefined).toBe(
-      "https://flathub.org/apps/eu.softventures.recrest",
+      "https://flathub.org/apps/com.soft_ventures.Recrest",
     );
   });
 

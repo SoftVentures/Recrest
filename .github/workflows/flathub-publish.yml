@@ -48,7 +48,7 @@ jobs:
       options: --privileged --device /dev/fuse
 
     env:
-      APP_ID: eu.softventures.recrest
+      APP_ID: com.soft_ventures.Recrest
       # A PAT with write access to flathub/<APP_ID>. Created after the first
       # submission is merged — until then this workflow skips.
       FLATHUB_TOKEN: ${{ secrets.FLATHUB_TOKEN }}

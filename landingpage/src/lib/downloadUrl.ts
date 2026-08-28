@@ -46,7 +46,7 @@ export type DownloadChannel = FileChannel | CommandChannel | ExternalChannel;
  * Flathub merges and builds the manifest. Until then this 404s — a known,
  * accepted state, not an oversight.
  */
-export const FLATHUB_URL = "https://flathub.org/apps/eu.softventures.recrest";
+export const FLATHUB_URL = "https://flathub.org/apps/com.soft_ventures.Recrest";
 
 /**
  * Build the GitHub Releases download URL for a given filename.
