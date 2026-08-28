@@ -4,8 +4,14 @@
 # Plan 1 §C.5: pick the right GDK backend at runtime so the bundled binary
 # works on both Wayland and X11 sessions without re-building. We default to
 # Wayland when the compositor exposes WAYLAND_DISPLAY, falling back to X11
-# otherwise — Wayland gives us native fractional scaling via
-# `wp_fractional_scale_v1`, X11 keeps things working on legacy desktops.
+# otherwise.
+#
+# The reason is native rendering, NOT fractional scaling: this stack is GTK 3
+# (gtk/gdk 0.18.2), which does not implement `wp_fractional_scale_v1` — that is
+# GTK 4 only — and tao stores the scale factor as an AtomicI32, so there is no
+# representation for a fractional value either way. What Wayland buys us is
+# avoiding XWayland: no extra translation layer, no blurry upscaled surface on a
+# HiDPI output. X11 keeps things working on legacy desktops.
 
 if [ -n "$WAYLAND_DISPLAY" ]; then
     export GDK_BACKEND=wayland
@@ -13,10 +19,46 @@ else
     export GDK_BACKEND=x11
 fi
 
-# M5: the bundle installs the Tauri-built executable under its native
-# `recrest` name, NOT `recrest-bin`. This launcher is what the .desktop
-# entry invokes, so it forwards to the real binary via absolute path. The
-# wrapper exists purely to set GDK_BACKEND above; signal forwarding
-# (SIGTERM on logout, SIGINT from the terminal) flows through `exec`'s
-# process replacement.
-exec /usr/bin/recrest "$@"
+# The executable's file name is NOT the same on every channel, so probe instead
+# of hardcoding one. Cargo emits `Recrest` (capital R — see the `[[bin]]`
+# comment in Cargo.toml, the name drives the macOS Dock label) and that is what
+# the .deb / .rpm bundles install as `usr/bin/Recrest`, while the AUR packages
+# and the Flatpak deliberately install it lowercase. v0.11.0 shipped a launcher
+# that only knew the lowercase path, which on any case-sensitive filesystem is a
+# dead menu entry.
+#
+# This script's own directory is probed before the system prefixes so a
+# self-contained install resolves its own binary rather than picking up an
+# unrelated system-wide one — that is what makes the Flatpak (/app/bin) work
+# without a special case.
+#
+# The `$APPDIR` entries are legacy: plan 11 dropped the AppImage, so nothing
+# sets that variable any more. They are kept because an AppImage from an older
+# release still runs this launcher, and removing two dead candidates from a
+# probe loop buys nothing.
+self_dir=$(dirname -- "$0")
+case "$self_dir" in
+    /*) ;;
+    *) self_dir=$(cd -- "$self_dir" 2>/dev/null && pwd) ;;
+esac
+
+for candidate in \
+    "${APPDIR:+$APPDIR/usr/bin/Recrest}" \
+    "${APPDIR:+$APPDIR/usr/bin/recrest}" \
+    "${self_dir:+$self_dir/Recrest}" \
+    "${self_dir:+$self_dir/recrest}" \
+    /usr/bin/Recrest \
+    /usr/bin/recrest \
+    /usr/local/bin/Recrest \
+    /usr/local/bin/recrest
+do
+    [ -n "$candidate" ] || continue
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+        # `exec` replaces this shell, so signal forwarding (SIGTERM on logout,
+        # SIGINT from a terminal) needs no trap plumbing here.
+        exec "$candidate" "$@"
+    fi
+done
+
+echo "recrest-launcher: no Recrest executable found (searched \$APPDIR/usr/bin, $self_dir, /usr/bin, /usr/local/bin)" >&2
+exit 127

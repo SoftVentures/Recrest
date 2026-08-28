@@ -1,10 +1,9 @@
-use std::process::Command;
-
 use serde::Serialize;
 
 use super::error::CommandError;
 use super::git_info::parse_version as parse_git_version;
 use super::process::configure as no_window;
+use crate::platform::host_command::host_command;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,7 +103,8 @@ fn normalize_os_version(raw: &str) -> Option<String> {
 }
 
 fn detect_git_version() -> Option<String> {
-    let mut cmd = Command::new("git");
+    // See `git_info::detect` — `git` lives on the host, not in the sandbox.
+    let mut cmd = host_command("git");
     cmd.arg("--version");
     no_window(&mut cmd);
     let output = cmd.output().ok()?;

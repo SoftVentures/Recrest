@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 interface Props {
   streak: number;
   longest: number;
@@ -19,16 +21,16 @@ const Root = styled(Box, { shouldForwardProp: (p) => p !== "hot" })<{ hot?: bool
         : theme.palette.divider
     }`,
     borderRadius: 8,
-    padding: "12px 14px 10px",
+    padding: pxToRems(12, 14, 10),
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: pxToRem(2),
     height: "100%",
   }),
 );
 
 const Label = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -37,7 +39,7 @@ const Label = styled(Box)(({ theme }) => ({
 
 const Value = styled(Box, { shouldForwardProp: (p) => p !== "hot" })<{ hot?: boolean }>(
   ({ theme, hot }) => ({
-    fontSize: 26,
+    fontSize: fontPxToRem(26),
     fontWeight: 700,
     color: hot ? theme.palette.primary.main : theme.palette.text.primary,
     letterSpacing: "-0.4px",
@@ -45,16 +47,16 @@ const Value = styled(Box, { shouldForwardProp: (p) => p !== "hot" })<{ hot?: boo
     lineHeight: 1.1,
     display: "inline-flex",
     alignItems: "baseline",
-    gap: 6,
+    gap: pxToRem(6),
   }),
 );
 
-const Fire = styled(Typography)({ fontSize: 18 }) as typeof Typography;
+const Fire = styled(Typography)({ fontSize: fontPxToRem(18) }) as typeof Typography;
 
 const Delta = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
-  marginTop: 4,
+  marginTop: pxToRem(4),
   fontVariantNumeric: "tabular-nums",
 })) as typeof Box;
 

@@ -5,6 +5,7 @@
 //! offline CI, unsigned dev releases), we degrade to a "there's a newer
 //! tag on GitHub" notice with a platform-picked download URL.
 
+pub mod channel;
 pub mod github;
 
 use tauri::AppHandle;
@@ -29,6 +30,8 @@ pub async fn run_update_check(
     #[cfg(not(debug_assertions))]
     if !force_fallback {
         use tauri_plugin_updater::UpdaterExt;
+        let install_channel = channel::current_channel();
+        let can_auto_install = install_channel.can_self_install();
         match app.updater() {
             Ok(updater) => match updater.check().await {
                 Ok(Some(update)) => {
@@ -38,34 +41,47 @@ pub async fn run_update_check(
                             "version": update.version,
                             "currentVersion": update.current_version,
                             "body": update.body,
-                            "canAutoInstall": true,
+                            "canAutoInstall": can_auto_install,
+                            "installChannel": install_channel,
                             "downloadUrl": serde_json::Value::Null,
                         }),
                     );
+                    // A package-managed install must never be replaced behind
+                    // the user's back: the notice above is the whole point of
+                    // the check, the download is not ours to run. One `if` with
+                    // both arms rather than two mirrored conditions, so the
+                    // "install" and "explain why we didn't" paths cannot drift
+                    // apart into overlapping or uncovered cases.
                     if auto_install {
-                        let progress_app = app.clone();
-                        let download_result = update
-                            .download_and_install(
-                                move |chunk, total| {
-                                    let _ = progress_app.emit(
-                                        "updater://progress",
-                                        serde_json::json!({
-                                            "chunk": chunk,
-                                            "total": total,
-                                        }),
-                                    );
-                                },
-                                || {},
-                            )
-                            .await;
-                        match download_result {
-                            Ok(()) => {
-                                tracing::info!("updater: install complete, restarting");
-                                app.restart();
+                        if can_auto_install {
+                            let progress_app = app.clone();
+                            let download_result = update
+                                .download_and_install(
+                                    move |chunk, total| {
+                                        let _ = progress_app.emit(
+                                            "updater://progress",
+                                            serde_json::json!({
+                                                "chunk": chunk,
+                                                "total": total,
+                                            }),
+                                        );
+                                    },
+                                    || {},
+                                )
+                                .await;
+                            match download_result {
+                                Ok(()) => {
+                                    tracing::info!("updater: install complete, restarting");
+                                    app.restart();
+                                }
+                                Err(err) => {
+                                    tracing::warn!("updater: download_and_install failed: {err}");
+                                }
                             }
-                            Err(err) => {
-                                tracing::warn!("updater: download_and_install failed: {err}");
-                            }
+                        } else {
+                            tracing::info!(
+                                "updater: skipping auto-install on a {install_channel:?} install"
+                            );
                         }
                     }
                     return;

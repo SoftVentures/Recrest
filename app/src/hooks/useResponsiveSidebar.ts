@@ -1,33 +1,47 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { useDevice } from "@/hooks/useDevice";
 import { setSidebarCollapsedAuto } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { matchMediaDown } from "@/theme/scale";
 
-/** Viewport below this collapses the sidebar even on "laptop"-class
+/** Design width below which the sidebar collapses even on "laptop"-class
  *  devices — the macOS min window (1100×720) sits here, and an expanded
  *  sidebar at that width starves the main pane (RepoDetail header wraps
- *  awkwardly, action cluster drops to its own row, etc.). */
+ *  awkwardly, action cluster drops to its own row, etc.).
+ *
+ *  This is a *design* width: it is multiplied by the active UI scale before it
+ *  becomes a media query, exactly like the theme breakpoints. At scale 1.25 a
+ *  1440-px window only has 1152 design pixels of room, so it is compact — the
+ *  old `zoom` layout made `matchMedia` report the raw 1440 and this never
+ *  fired. */
 const COMPACT_LAYOUT_BREAKPOINT_PX = 1200;
 
-function subscribeToCompactLayout(callback: () => void): () => void {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return () => undefined;
-  }
-  const mql = window.matchMedia(`(max-width: ${COMPACT_LAYOUT_BREAKPOINT_PX - 1}px)`);
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
+function compactLayoutQuery(uiScale: number): string {
+  return matchMediaDown(COMPACT_LAYOUT_BREAKPOINT_PX - 1, uiScale);
 }
 
-function getCompactLayoutSnapshot(): boolean {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return false;
-  }
-  return window.matchMedia(`(max-width: ${COMPACT_LAYOUT_BREAKPOINT_PX - 1}px)`).matches;
-}
-
-function getCompactLayoutServerSnapshot(): boolean {
-  return false;
+function makeCompactLayoutStore(uiScale: number) {
+  const query = compactLayoutQuery(uiScale);
+  return {
+    subscribe(callback: () => void): () => void {
+      if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+        return () => undefined;
+      }
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", callback);
+      return () => mql.removeEventListener("change", callback);
+    },
+    getSnapshot(): boolean {
+      if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+        return false;
+      }
+      return window.matchMedia(query).matches;
+    },
+    getServerSnapshot(): boolean {
+      return false;
+    },
+  };
 }
 
 /**
@@ -52,10 +66,14 @@ function getCompactLayoutServerSnapshot(): boolean {
  */
 export function useResponsiveSidebar(): void {
   const device = useDevice();
+  const uiScale = useAppSelector((s) => s.settings.uiScale);
+  // Re-created per scale so `useSyncExternalStore` re-subscribes to the new
+  // query instead of holding on to the previous scale's threshold.
+  const compactStore = useMemo(() => makeCompactLayoutStore(uiScale), [uiScale]);
   const compact = useSyncExternalStore(
-    subscribeToCompactLayout,
-    getCompactLayoutSnapshot,
-    getCompactLayoutServerSnapshot,
+    compactStore.subscribe,
+    compactStore.getSnapshot,
+    compactStore.getServerSnapshot,
   );
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.ui.sidebarCollapsed);

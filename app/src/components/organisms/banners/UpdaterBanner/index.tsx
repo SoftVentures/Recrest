@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import { UPDATER_PROGRESS_EVENT } from "@/lib/constants/events.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import {
+  UPDATER_CHANNEL_HINT_KEYS,
+  isPackageManagedInstallChannel,
+} from "@/lib/constants/updater.constants";
 import { invoke, listen, openExternal } from "@/lib/tauri";
 import { setUpdaterBanner } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -35,6 +39,10 @@ const Message = styled(Typography)({
 
 const Progress = styled(Typography)({
   fontVariantNumeric: "tabular-nums",
+});
+
+const ChannelHint = styled(Typography)({
+  fontWeight: 600,
 });
 
 interface UpdaterProgressPayload {
@@ -113,12 +121,22 @@ function UpdaterBanner() {
 
   const progressLabel =
     percent === null ? t("updater.installing") : t("updater.installing_percent", { percent });
+  // On a Flatpak/Snap/distro-package install the update is the package
+  // manager's job: Recrest replacing its own files would desync the package
+  // database and usually fails on permissions anyway. The version notice still
+  // has value, so the banner keeps it and drops every install/download action
+  // in favour of a channel-specific hint.
+  const installChannel = banner.installChannel ?? null;
+  const channelHintKey = isPackageManagedInstallChannel(installChannel)
+    ? UPDATER_CHANNEL_HINT_KEYS[installChannel]
+    : null;
+  const packageManaged = channelHintKey !== null;
   // Local const so the string narrowing survives into the click handler.
   // `null` on the plugin path (the backend only fills it on the GitHub
   // fallback), and the fallback itself now degrades to the release page rather
   // than offering a wrong-architecture installer — so a missing URL means there
   // is genuinely nothing to link, and the button is dropped instead of dead.
-  const downloadUrl = banner.canAutoInstall ? null : banner.downloadUrl;
+  const downloadUrl = banner.canAutoInstall || packageManaged ? null : banner.downloadUrl;
 
   return (
     <Bar data-testid={TEST_IDS.updaterBanner.root}>
@@ -133,7 +151,12 @@ function UpdaterBanner() {
           {progressLabel}
         </Progress>
       ) : null}
-      {banner.canAutoInstall ? (
+      {channelHintKey ? (
+        <ChannelHint variant="body2" data-testid={TEST_IDS.updaterBanner.channelHint}>
+          {t(channelHintKey)}
+        </ChannelHint>
+      ) : null}
+      {banner.canAutoInstall && !packageManaged ? (
         <GeneralButton
           size="sm"
           variant="default"

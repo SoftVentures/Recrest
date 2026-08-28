@@ -23,6 +23,7 @@ import { PROVIDER_IDS } from "@/lib/constants/providers.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { setImportDialogOpen } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 type Tab = "providers" | "local" | "clone";
 
@@ -58,7 +59,7 @@ export default function AddRepoModal() {
       customTitle={
         <Header>
           <HeaderIcon>
-            <Plus size={20} />
+            <Plus size={pxToRem(20)} />
           </HeaderIcon>
           <HeaderText>
             <HeaderTitle>{t("import.title")}</HeaderTitle>
@@ -75,7 +76,7 @@ export default function AddRepoModal() {
               onClick={() => setTab("providers")}
               data-testid={TEST_IDS.addRepoDialog.tab.providers}
             >
-              <FolderGit2 size={13} />
+              <FolderGit2 size={pxToRem(13)} />
               {t("import.tab.providers")}
               {connectedProviders.length > 0 && (
                 <Badge active={tab === "providers"}>{connectedProviders.length}</Badge>
@@ -87,7 +88,7 @@ export default function AddRepoModal() {
               onClick={() => setTab("local")}
               data-testid={TEST_IDS.addRepoDialog.tab.local}
             >
-              <FolderGit2 size={13} />
+              <FolderGit2 size={pxToRem(13)} />
               {t("import.tab.local")}
             </TabButton>
             <TabButton
@@ -96,7 +97,7 @@ export default function AddRepoModal() {
               onClick={() => setTab("clone")}
               data-testid={TEST_IDS.addRepoDialog.tab.clone}
             >
-              <GitBranch size={13} />
+              <GitBranch size={pxToRem(13)} />
               {t("import.tab.clone")}
             </TabButton>
           </TabBar>

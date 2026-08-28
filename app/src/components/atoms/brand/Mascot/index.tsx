@@ -1,5 +1,7 @@
 import { useTheme } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 /**
  * Recrest's empty-state mascot. A rounded-square character echoing the app
  * icon, with the double-chevron logo as a head-crest and a handful of poses
@@ -38,8 +40,8 @@ function Mascot({ variant = "shrugging", size = 112, className, title }: MascotP
 
   return (
     <svg
-      width={size}
-      height={size}
+      width={pxToRem(size)}
+      height={pxToRem(size)}
       viewBox="0 0 128 128"
       role={title ? "img" : undefined}
       aria-hidden={title ? undefined : true}

@@ -31,6 +31,7 @@ import {
 import LinkPromptModal from "@/components/atoms/text/RichTextEditor/parts/LinkPromptModal";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { sanitizeHtml } from "@/lib/utils/security.utils";
+import { pxToRem } from "@/theme/scale";
 
 /** Narrow accessor for `tiptap-markdown`'s storage augmentation. The library
  *  patches `editor.storage` with a `.markdown.getMarkdown()` method but its
@@ -135,18 +136,23 @@ function RichTextEditor({
   return (
     <Root>
       <Toolbar role="toolbar" aria-label={t("editor.toolbar_aria")}>
-        <ToolBtn editor={editor} mark="bold" label={t("editor.bold")} icon={<Bold size={13} />} />
+        <ToolBtn
+          editor={editor}
+          mark="bold"
+          label={t("editor.bold")}
+          icon={<Bold size={pxToRem(13)} />}
+        />
         <ToolBtn
           editor={editor}
           mark="italic"
           label={t("editor.italic")}
-          icon={<Italic size={13} />}
+          icon={<Italic size={pxToRem(13)} />}
         />
         <ToolBtn
           editor={editor}
           mark="strike"
           label={t("editor.strike")}
-          icon={<Strikethrough size={13} />}
+          icon={<Strikethrough size={pxToRem(13)} />}
         />
         <Divider />
         <ToolButton
@@ -156,33 +162,38 @@ function RichTextEditor({
           active={editor.isActive("heading", { level: 2 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         >
-          <Type size={13} />
+          <Type size={pxToRem(13)} />
         </ToolButton>
         <ToolBtn
           editor={editor}
           mark="bulletList"
           label={t("editor.bullet_list")}
-          icon={<List size={13} />}
+          icon={<List size={pxToRem(13)} />}
         />
         <ToolBtn
           editor={editor}
           mark="orderedList"
           label={t("editor.ordered_list")}
-          icon={<ListOrdered size={13} />}
+          icon={<ListOrdered size={pxToRem(13)} />}
         />
         <Divider />
-        <ToolBtn editor={editor} mark="code" label={t("editor.code")} icon={<Code size={13} />} />
+        <ToolBtn
+          editor={editor}
+          mark="code"
+          label={t("editor.code")}
+          icon={<Code size={pxToRem(13)} />}
+        />
         <ToolBtn
           editor={editor}
           mark="codeBlock"
           label={t("editor.code_block")}
-          icon={<Code2 size={13} />}
+          icon={<Code2 size={pxToRem(13)} />}
         />
         <ToolBtn
           editor={editor}
           mark="blockquote"
           label={t("editor.quote")}
-          icon={<Quote size={13} />}
+          icon={<Quote size={pxToRem(13)} />}
         />
         <Divider />
         <ToolButton
@@ -199,7 +210,7 @@ function RichTextEditor({
             setLinkModalOpen(true);
           }}
         >
-          <LinkIcon size={13} />
+          <LinkIcon size={pxToRem(13)} />
         </ToolButton>
         {editor.isActive("link") && (
           <ToolButton
@@ -208,7 +219,7 @@ function RichTextEditor({
             title={t("editor.unlink")}
             onClick={() => editor.chain().focus().unsetLink().run()}
           >
-            <Link2Off size={13} />
+            <Link2Off size={pxToRem(13)} />
           </ToolButton>
         )}
       </Toolbar>

@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 
 import Mascot, { type MascotVariant } from "@/components/atoms/brand/Mascot";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 /**
  * Centered empty-state block used inside cards and full-page placeholders.
@@ -19,7 +20,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
  */
 export interface EmptyStateProps {
   /** Optional Lucide-style icon. Ignored when `mascot` is set. */
-  icon?: ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
+  icon?: ComponentType<{ size?: number | string; "aria-hidden"?: boolean }>;
   /** Friendly Recrest character to show above the text. Takes precedence over `icon`. */
   mascot?: MascotVariant;
   /** Pixel size of the mascot SVG. Default 112; use ~88 in compact cards. */
@@ -35,17 +36,17 @@ const Root = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  gap: 12,
+  gap: pxToRem(12),
   width: "100%",
-  minHeight: 180,
-  padding: "32px 24px",
+  minHeight: pxToRem(180),
+  padding: pxToRems(32, 24),
   textAlign: "center",
 });
 
 const IconBubble = styled(Box)(({ theme }) => ({
   display: "flex",
-  width: 48,
-  height: 48,
+  width: pxToRem(48),
+  height: pxToRem(48),
   alignItems: "center",
   justifyContent: "center",
   borderRadius: "50%",
@@ -56,11 +57,11 @@ const IconBubble = styled(Box)(({ theme }) => ({
 const TextBlock = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
 });
 
 const Title = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   margin: 0,
@@ -68,15 +69,15 @@ const Title = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const Description = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
   margin: 0,
-  maxWidth: 360,
+  maxWidth: pxToRem(360),
   lineHeight: 1.5,
 })) as typeof Typography;
 
 const ActionSlot = styled(Box)({
-  marginTop: 4,
+  marginTop: pxToRem(4),
 });
 
 const MascotInk = styled(Box)(({ theme }) => ({
@@ -102,7 +103,7 @@ function EmptyState({
       ) : (
         Icon && (
           <IconBubble>
-            <Icon size={24} aria-hidden />
+            <Icon size={pxToRem(24)} aria-hidden />
           </IconBubble>
         )
       )}

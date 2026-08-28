@@ -32,6 +32,7 @@ import {
   setFontSize,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const FONT_SIZE_IDS: FontSizeId[] = ["sm", "md", "lg", "xl"];
 
@@ -42,8 +43,8 @@ const FONT_SIZE_ICONS: Record<FontSizeId, typeof Type> = {
   xl: AArrowUp,
 };
 
-const FontSelect = styled(SelectControl)({ minWidth: 220 });
-const FontSizeSelect = styled(SelectControl)({ minWidth: 180 });
+const FontSelect = styled(SelectControl)({ minWidth: pxToRem(220) });
+const FontSizeSelect = styled(SelectControl)({ minWidth: pxToRem(180) });
 
 const MenuLabel = styled(Box)(({ theme }) => ({
   display: "inline-block",
@@ -54,7 +55,7 @@ const MenuLabel = styled(Box)(({ theme }) => ({
 const FontGroupLabel = styled("li", {
   shouldForwardProp: (p) => p !== "withDivider",
 })<{ withDivider?: boolean }>(({ theme, withDivider }) => ({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -221,7 +222,7 @@ export function FontsSection() {
             const Icon = FONT_SIZE_ICONS[value as FontSizeId];
             return (
               <>
-                <Icon size={13} />
+                <Icon size={pxToRem(13)} />
                 {fontSizeLabel(value as FontSizeId)}
               </>
             );
@@ -231,7 +232,7 @@ export function FontsSection() {
             const Icon = FONT_SIZE_ICONS[sz];
             return (
               <MenuItem key={sz} value={sz}>
-                <Icon size={13} />
+                <Icon size={pxToRem(13)} />
                 <MenuLabel>{fontSizeLabel(sz)}</MenuLabel>
               </MenuItem>
             );

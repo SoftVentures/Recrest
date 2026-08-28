@@ -13,6 +13,7 @@ import { ACTIVITY_RANGE_ALL_KEY, ACTIVITY_RANGE_PRESETS } from "@/lib/constants/
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { presetKeyFromRange, rangeFromPresetKey } from "@/lib/utils/activityRange.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface RangeSelectProps {
   value: ActivityRange;
@@ -37,9 +38,9 @@ const StyledSelect = styled(Select, { shouldForwardProp: SHOULD_FORWARD })<Style
     // Collapsed: a 38×38 chip that matches the sidebar's footer nav items
     // (same square, border, transparent surface, hover tint). Expanded: a
     // full-width labelled dropdown on the elevated surface.
-    height: collapsed ? 38 : 32,
-    width: collapsed ? 38 : "100%",
-    fontSize: 12,
+    minHeight: collapsed ? pxToRem(38) : pxToRem(32),
+    width: collapsed ? pxToRem(38) : "100%",
+    fontSize: fontPxToRem(12),
     color: theme.palette.text.primary,
     backgroundColor: collapsed ? "transparent" : theme.palette.surface.interface.backElevation,
     borderRadius: 8,
@@ -52,11 +53,11 @@ const StyledSelect = styled(Select, { shouldForwardProp: SHOULD_FORWARD })<Style
       borderColor: theme.palette.border.hover,
     },
     "& .MuiSelect-select": {
-      padding: collapsed ? "0 !important" : "4px 10px",
+      padding: collapsed ? "0 !important" : pxToRems(4, 10),
       display: "flex",
       alignItems: "center",
       justifyContent: collapsed ? "center" : "flex-start",
-      gap: 8,
+      gap: pxToRem(8),
       minHeight: "0 !important",
     },
     // Hide the dropdown caret when collapsed so the icon stays centred.
@@ -67,8 +68,8 @@ const StyledSelect = styled(Select, { shouldForwardProp: SHOULD_FORWARD })<Style
 const Trigger = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 12,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(12),
   minWidth: 0,
 }) as typeof Box;
 
@@ -104,7 +105,7 @@ function RangeSelect({ value, onChange, oldestDate, variant = "expanded" }: Rang
       }
       renderValue={() => (
         <Trigger>
-          <CalendarRange size={14} aria-hidden />
+          <CalendarRange size={pxToRem(14)} aria-hidden />
           {!collapsed && <TriggerLabel>{labelFor(selected)}</TriggerLabel>}
         </Trigger>
       )}

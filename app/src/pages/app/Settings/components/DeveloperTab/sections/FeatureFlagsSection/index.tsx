@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "@/pages/app/Settings/components/DeveloperTab/sections/_shared";
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
+import { pxToRem } from "@/theme/scale";
 
 const KNOWN_FLAGS = [
   {
@@ -89,7 +90,7 @@ export function FeatureFlagsSection() {
             placeholder={t("developer.flags.name")}
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            style={{ width: 140 }}
+            style={{ width: pxToRem(140) }}
             data-testid={TEST_IDS.settings.developer.flagCustomName}
           />
           <TextInput
@@ -97,7 +98,7 @@ export function FeatureFlagsSection() {
             placeholder={t("developer.flags.value")}
             value={customValue}
             onChange={(e) => setCustomValue(e.target.value)}
-            style={{ width: 140 }}
+            style={{ width: pxToRem(140) }}
             data-testid={TEST_IDS.settings.developer.flagCustomValue}
           />
           <GeneralButton

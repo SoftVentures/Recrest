@@ -60,6 +60,9 @@ export const setFont = createAction<FontSelection>("settings/setFont");
 export const setCodeFont = createAction<FontSelection>("settings/setCodeFont");
 export const setCodeLigatures = createAction<LigatureMode>("settings/setCodeLigatures");
 export const setFontSize = createAction<FontSizeId>("settings/setFontSize");
+/** Interface scale (0.8 … 1.5). The reducer clamps + snaps to the slider step,
+ *  so callers may pass a raw hotkey or slider value. */
+export const setUiScale = createAction<number>("settings/setUiScale");
 export const setHighContrast = createAction<boolean>("settings/setHighContrast");
 export const setReducedMotion = createAction<boolean>("settings/setReducedMotion");
 export const setUnderlineLinks = createAction<boolean>("settings/setUnderlineLinks");

@@ -4,6 +4,7 @@ import { alpha, styled } from "@mui/material/styles";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { frostedPanel } from "@/lib/utils/translucency.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export { default as Kbd } from "@/components/atoms/inputs/Kbd";
 
@@ -28,7 +29,7 @@ export const Backdrop = styled(Box)(({ theme }) => ({
 
 export const Panel = styled(Box)(({ theme }) => ({
   width: "100%",
-  maxWidth: 560,
+  maxWidth: pxToRem(560),
   // Denser than a confirm dialog (scrolling result list), so a higher tint
   // keeps the items readable against the blurred backdrop. Light mode needs a
   // touch more opacity still — the light scrim lets more of the busy page
@@ -47,8 +48,8 @@ export const Panel = styled(Box)(({ theme }) => ({
 export const Head = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "0 14px",
+  gap: pxToRem(10),
+  padding: pxToRems(0, 14),
   borderBottom: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
 })) as typeof Box;
@@ -56,25 +57,25 @@ export const Head = styled(Box)(({ theme }) => ({
 // eslint-disable-next-line no-restricted-syntax -- native <input> required for keyboard / IME / autofocus semantics
 export const Input = styled("input")(({ theme }) => ({
   flex: 1,
-  height: 46,
+  minHeight: pxToRem(46),
   background: "transparent",
   border: 0,
   outline: "none",
   color: theme.palette.text.primary,
-  fontSize: 13.5,
+  fontSize: fontPxToRem(13.5),
   fontFamily: "inherit",
   "&::placeholder": { color: theme.palette.text.information },
 }));
 
 export const Kbds = styled(Box)({
   display: "inline-flex",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 export const TabBar = styled(Box)(({ theme }) => ({
   display: "flex",
-  gap: 4,
-  padding: "0 12px",
+  gap: pxToRem(4),
+  padding: pxToRems(0, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
   flexShrink: 0,
@@ -87,15 +88,17 @@ export const TabButton = styled("button", {
   position: "relative",
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 34,
-  padding: "0 10px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(34),
+  padding: pxToRems(0, 10),
   background: "transparent",
   border: 0,
+  // -1 px, not rem: this pulls the tab over the strip's 1 px bottom border,
+  // which stays a hairline at every scale.
   marginBottom: -1,
   color: active ? theme.palette.text.primary : theme.palette.text.information,
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   cursor: "pointer",
   transition: "color 0.12s ease",
@@ -106,8 +109,9 @@ export const TabButton = styled("button", {
     position: "absolute",
     left: 0,
     right: 0,
+    // Lines up with the unscaled hairline under the tab strip.
     bottom: -1,
-    height: 2,
+    height: pxToRem(2),
     backgroundColor: active ? theme.palette.primary.main : "transparent",
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
@@ -117,7 +121,7 @@ export const TabButton = styled("button", {
 export const ResultsList = styled(Box)({
   maxHeight: "60vh",
   overflowY: "auto",
-  padding: 6,
+  padding: pxToRem(6),
   margin: 0,
   listStyle: "none",
 }) as typeof Box;
@@ -125,8 +129,8 @@ export const ResultsList = styled(Box)({
 export const ScopeRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "8px 12px",
+  gap: pxToRem(10),
+  padding: pxToRems(8, 12),
   borderBottom: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
 })) as typeof Box;
@@ -137,16 +141,16 @@ export const ScopeRow = styled(Box)(({ theme }) => ({
 export const ScopeTrigger = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 28,
-  maxWidth: 240,
-  padding: "0 8px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(28),
+  maxWidth: pxToRem(240),
+  padding: pxToRems(0, 8),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.backElevation,
   color: theme.palette.text.primary,
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   cursor: "pointer",
   "&:hover": { borderColor: theme.palette.border.hover },
   "&:focus-visible": { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 1 },
@@ -157,14 +161,14 @@ export const ScopeTriggerLabel = styled(Typography)({
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 }) as typeof Typography;
 
 /** Placeholder glyph standing in for an avatar on the "all repositories" row so
  *  its label aligns with the avatared repo rows. */
 export const ScopeAllGlyph = styled(Box)(({ theme }) => ({
-  width: 18,
-  height: 18,
+  width: pxToRem(18),
+  height: pxToRem(18),
   flexShrink: 0,
   borderRadius: 5,
   background: theme.palette.surface.interface.active,
@@ -178,9 +182,9 @@ export const ScopeMenu = styled(Menu)(({ theme }) => ({
 
 export const ScopeMenuItem = styled(MenuItem)({
   display: "flex",
-  gap: 8,
-  minHeight: 34,
-  fontSize: 12.5,
+  gap: pxToRem(8),
+  minHeight: pxToRem(34),
+  fontSize: fontPxToRem(12.5),
 }) as typeof MenuItem;
 
 export const ScopeOptionLabel = styled(Typography)({
@@ -188,22 +192,22 @@ export const ScopeOptionLabel = styled(Typography)({
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
 }) as typeof Typography;
 
 export const StatusText = styled(Typography)(({ theme }) => ({
   marginLeft: "auto",
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  fontSize: 11,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const Hint = styled(Box)(({ theme }) => ({
-  padding: "28px 12px",
+  padding: pxToRems(28, 12),
   textAlign: "center",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   listStyle: "none",
 })) as typeof Box;
@@ -214,9 +218,9 @@ export const ContentRow = styled("button", {
 })<{ active?: boolean }>(({ theme, active }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   width: "100%",
-  padding: "7px 10px",
+  padding: pxToRems(7, 10),
   backgroundColor: active
     ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
     : "transparent",
@@ -230,8 +234,8 @@ export const ContentRow = styled("button", {
 export const ContentTop = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 12.5,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.primary,
 })) as typeof Box;
 
@@ -245,17 +249,17 @@ export const ContentPath = styled(Typography)({
 
 export const ContentLineNo = styled(Typography)(({ theme }) => ({
   flexShrink: 0,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontFamily: MONO_STACK,
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const ContentSnippet = styled(Typography)(({ theme }) => ({
-  paddingLeft: 21,
+  paddingLeft: pxToRem(21),
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   fontFamily: MONO_STACK,
   color: theme.palette.text.information,
 })) as typeof Typography;
@@ -268,8 +272,8 @@ export const SnippetMark = styled("mark")(({ theme }) => ({
 }));
 
 export const GroupLabel = styled(Box)(({ theme }) => ({
-  padding: "8px 10px 4px",
-  fontSize: 10.5,
+  padding: pxToRems(8, 10, 4),
+  fontSize: fontPxToRem(10.5),
   fontWeight: 600,
   letterSpacing: "0.04em",
   textTransform: "uppercase",
@@ -277,9 +281,10 @@ export const GroupLabel = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const Divider = styled(Box)(({ theme }) => ({
+  // Hairline rule — same reasoning as border widths, it must not thin out.
   height: 1,
   backgroundColor: theme.palette.divider,
-  margin: "6px 4px",
+  margin: pxToRems(6, 4),
   listStyle: "none",
 })) as typeof Box;
 
@@ -289,9 +294,9 @@ export const Row = styled("button", {
 })<{ active?: boolean }>(({ theme, active }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   width: "100%",
-  padding: "8px 10px",
+  padding: pxToRems(8, 10),
   backgroundColor: active
     ? `color-mix(in srgb, ${theme.palette.primary.main} 14%, transparent)`
     : "transparent",
@@ -300,7 +305,7 @@ export const Row = styled("button", {
   cursor: "pointer",
   color: active ? toneText(theme, StatusTone.PRIMARY) : theme.palette.text.primary,
   fontFamily: "inherit",
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   textAlign: "left",
   "& .row-icon, & .row-hint": {
     color: active ? toneText(theme, StatusTone.PRIMARY) : theme.palette.text.information,
@@ -311,8 +316,8 @@ export const Row = styled("button", {
 }));
 
 export const RowIcon = styled(Box)({
-  width: 22,
-  height: 22,
+  width: pxToRem(22),
+  height: pxToRem(22),
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -329,7 +334,7 @@ export const RowLabel = styled(Typography)({
 }) as typeof Typography;
 
 export const RowHint = styled(Typography)({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -338,9 +343,9 @@ export const RowHint = styled(Typography)({
 }) as typeof Typography;
 
 export const Empty = styled(Box)(({ theme }) => ({
-  padding: "28px 12px",
+  padding: pxToRems(28, 12),
   textAlign: "center",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
   listStyle: "none",
 })) as typeof Box;

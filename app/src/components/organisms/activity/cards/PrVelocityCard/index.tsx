@@ -13,10 +13,11 @@ import ChartTooltip from "@/components/organisms/activity/cards/parts/ChartToolt
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { VelocityDay } from "@/lib/activityAggregates";
 import { bucketDays, bucketSizeForWindow, dayLabel } from "@/lib/charts/bucketing";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { DIFF_ADDED, hueDistance, shade } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useResolvedLocale } from "@/lib/utils/datetime.utils";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -32,19 +33,19 @@ export interface Props {
 const ChartWrap = styled(Box)({
   width: "100%",
   flex: "1 1 auto",
-  minHeight: 140,
+  minHeight: pxToRem(140),
 });
 
 const Legend = styled(Box)(({ theme }) => ({
   display: "flex",
-  gap: 12,
-  marginTop: 6,
-  fontSize: 11,
+  gap: pxToRem(12),
+  marginTop: pxToRem(6),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   "& > span": {
     display: "inline-flex",
     alignItems: "center",
-    gap: 5,
+    gap: pxToRem(5),
   },
 }));
 
@@ -52,8 +53,8 @@ const Legend = styled(Box)(({ theme }) => ({
 const LegendDot = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   color: string;
 }>(({ color }) => ({
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: "50%",
   // Mirror the bar's vertical gradient (lighter top → solid bottom).
   background: `linear-gradient(180deg, ${shade(color, 0.12)}, ${color})`,
@@ -68,6 +69,7 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
   const locale = useResolvedLocale();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 8, right: 8, bottom: 24, left: 28 });
   const { show, move, hide, portal } = useChartTooltip();
   const openedColor = theme.palette.primary.main;
   // DIFF_ADDED is the curated vivid green — the `success.main` token reads
@@ -140,7 +142,7 @@ function PrVelocityCard({ rows, windowDays = 14, loading }: Props) {
             { match: { id: openedLabel }, id: OPENED_GRADIENT },
             { match: { id: mergedLabel }, id: MERGED_GRADIENT },
           ]}
-          margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
+          margin={chartMargin}
           padding={0.3}
           innerPadding={2}
           borderRadius={2}

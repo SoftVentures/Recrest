@@ -13,6 +13,7 @@ import {
 } from "@/components/organisms/OverallSearch/OverallSearch.styles";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { type EnrichedRepo } from "@/lib/repoEnrich";
+import { pxToRem } from "@/theme/scale";
 
 const SCOPE_ALL = "all";
 
@@ -61,7 +62,7 @@ export default function RepoScopeSelect({
         <ScopeTriggerLabel component="span">
           {selected ? selected.name : allLabel}
         </ScopeTriggerLabel>
-        <ChevronDown size={13} aria-hidden />
+        <ChevronDown size={pxToRem(13)} aria-hidden />
       </ScopeTrigger>
       <ScopeMenu
         anchorEl={anchor}

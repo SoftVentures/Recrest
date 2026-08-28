@@ -1,3 +1,5 @@
+import type { InstallChannel } from "@recrest/shared";
+
 import type { SaveSeqTracked } from "@/store/reducers/saveSettingsSeq";
 
 export type ActiveView =
@@ -14,6 +16,9 @@ export interface UpdaterBannerState {
   currentVersion?: string;
   body: string | null;
   canAutoInstall: boolean;
+  /** How the running app was installed. `null` when the backend didn't say —
+   *  the banner then shows no channel hint. */
+  installChannel?: InstallChannel | null;
   downloadUrl: string | null;
 }
 

@@ -30,6 +30,7 @@ import { useThemeAttribute } from "@/hooks/useThemeAttribute";
 import { useUpdaterEvents } from "@/hooks/useUpdaterEvents";
 import { WINDOW_CHROME_HEIGHT_PX } from "@/lib/constants/platform.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { CSS_VAR_APP_CHROME_BOTTOM, CSS_VAR_APP_HEADER_HEIGHT } from "@/theme/scale";
 
 const AppFrame = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -137,11 +138,17 @@ export function AppLayout() {
   // portal-mounted overlay that wants to start "below the chrome" needs the
   // combined offset. Expose it as a CSS var on :root so MUI's portal-mounted
   // Drawer/Modal can read it without prop-drilling.
+  //
+  // The two terms carry different units on purpose. The titlebar is pinned to
+  // native OS geometry and stays in px; the app header is `4rem` and therefore
+  // grows with `--ui-scale`. Adding a raw `chromeHeight + 64` px, as this did
+  // while the app was `zoom`-scaled, put the drawer 25 px too high at scale
+  // 1.25 — the header had scaled, the number had not.
   useEffect(() => {
-    const value = `${chromeHeight + 64}px`;
-    document.documentElement.style.setProperty("--recrest-app-chrome-bottom", value);
+    const value = `calc(${chromeHeight}px + var(${CSS_VAR_APP_HEADER_HEIGHT}))`;
+    document.documentElement.style.setProperty(CSS_VAR_APP_CHROME_BOTTOM, value);
     return () => {
-      document.documentElement.style.removeProperty("--recrest-app-chrome-bottom");
+      document.documentElement.style.removeProperty(CSS_VAR_APP_CHROME_BOTTOM);
     };
   }, [chromeHeight]);
 

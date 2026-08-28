@@ -1,5 +1,5 @@
 import { expect, test } from "../../fixtures/landing.fixture.js";
-import { REPO_URL } from "../../helpers/constants.js";
+import { DOWNLOAD_ROUTE_HASH, REPO_URL } from "../../helpers/constants.js";
 import { LANDING_COPY } from "../../helpers/selectors.js";
 
 test.describe("landing / nav", () => {
@@ -26,8 +26,9 @@ test.describe("landing / nav", () => {
     }
 
     // Primary download link stays visible on every viewport.
-    const downloadAnchor = nav.locator('.nav-right a[href="#download"]');
+    const downloadAnchor = nav.locator(`.nav-right a[href="${DOWNLOAD_ROUTE_HASH}"]`);
     await expect(downloadAnchor).toBeVisible();
+    await expect(downloadAnchor).toHaveText(LANDING_COPY.en.nav.download);
   });
 
   test("scroll past 8px toggles the .scrolled class", async ({ page }) => {

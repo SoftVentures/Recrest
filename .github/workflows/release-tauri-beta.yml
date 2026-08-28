@@ -30,10 +30,10 @@ jobs:
     name: Generate installer assets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: yarn
@@ -107,11 +107,11 @@ jobs:
     # region; every other leg must be able to fail the run.
     continue-on-error: ${{ matrix.platform == 'windows-11-arm' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: yarn
@@ -208,7 +208,7 @@ jobs:
           forward TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -246,7 +246,7 @@ jobs:
             fi
           done < <(find app/src-tauri/target -type f -path '*/release/bundle/*' \
             \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' \
-               -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) 2>/dev/null)
+               -o -name '*.deb' -o -name '*.rpm' \) 2>/dev/null)
           if [ "$found" -eq 0 ]; then
             echo "::error::no installers found under app/src-tauri/target for $OS — the bundle step produced nothing"
             exit 1
@@ -411,7 +411,7 @@ jobs:
           expect_one "macOS x64 DMG"      macos   '*x64*.dmg'          required
           expect_one "Windows x64 NSIS"   windows '*x64*-setup.exe'    required
           expect_one "Windows x64 MSI"    windows '*x64*.msi'          required
-          expect_one "Linux AppImage"     linux   '*.AppImage'         required
+          # No AppImage: plan 11 removed it from `bundle.targets`.
           expect_one "Linux .deb"         linux   '*.deb'              required
           expect_one "Linux .rpm"         linux   '*.rpm'              required
           # The documented `windows-11-arm` exception — same one

@@ -21,6 +21,7 @@ import { daysAgo, relativeWhen } from "@/lib/activityStats";
 import { FeedEventKind } from "@/lib/constants/feedEventKinds.constants";
 import { KEYBOARD_KEYS } from "@/lib/constants/keyboard.constants";
 import { openExternal } from "@/lib/tauri";
+import { pxToRem } from "@/theme/scale";
 
 export interface FeedEventRowProps {
   event: FeedEvent;
@@ -53,7 +54,7 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
         }}
       >
         <FeedIcon tone="commit">
-          <GitCommit size={13} aria-hidden />
+          <GitCommit size={pxToRem(13)} aria-hidden />
         </FeedIcon>
         <AuthorAvatar
           name={event.data.author}
@@ -97,7 +98,7 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
         }}
       >
         <FeedIcon tone={tone}>
-          <Icon size={13} aria-hidden />
+          <Icon size={pxToRem(13)} aria-hidden />
         </FeedIcon>
         <AuthorAvatar name={e.author} size={20} />
         <FeedMsg component="span" variant="caption">
@@ -119,7 +120,7 @@ export function FeedEventRow({ event, today }: FeedEventRowProps) {
   return (
     <FeedItem>
       <FeedIcon tone={failingTone}>
-        <Icon size={13} aria-hidden />
+        <Icon size={pxToRem(13)} aria-hidden />
       </FeedIcon>
       <Box />
       <FeedMsg component="span" variant="caption">

@@ -1,6 +1,8 @@
 import { CircularProgress, type CircularProgressProps } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { pxToRem } from "@/theme/scale";
+
 /**
  * Indeterminate spinner — drop into a button, inline next to label, or center
  * inside a card to signal "busy, no ETA". Defaults to `SM` (16px) so it sits
@@ -33,8 +35,8 @@ interface RootProps {
 const Root = styled(CircularProgress, {
   shouldForwardProp: (p) => p !== "$size",
 })<RootProps>(({ $size }) => ({
-  width: `${CIRCULAR_LOADER_SIZES[$size]}px !important`,
-  height: `${CIRCULAR_LOADER_SIZES[$size]}px !important`,
+  width: `${pxToRem(CIRCULAR_LOADER_SIZES[$size])} !important`,
+  height: `${pxToRem(CIRCULAR_LOADER_SIZES[$size])} !important`,
   flexShrink: 0,
 }));
 

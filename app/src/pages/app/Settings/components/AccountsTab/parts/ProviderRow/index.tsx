@@ -58,11 +58,12 @@ import {
   verifyProviderCredentials,
 } from "@/store/actions/providers.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 const PROVIDER_BRANDS: Record<ProviderId, ReactNode> = {
-  github: <GithubGlyph size={16} />,
-  gitlab: <GitlabGlyph size={16} />,
-  bitbucket: <BitbucketGlyph size={16} />,
+  github: <GithubGlyph size={pxToRem(16)} />,
+  gitlab: <GitlabGlyph size={pxToRem(16)} />,
+  bitbucket: <BitbucketGlyph size={pxToRem(16)} />,
 };
 
 function errorMessage(err: ProviderVerifyError, t: TFunction): string {
@@ -326,7 +327,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
             <GeneralButton
               variant="default"
               size="sm"
-              startIcon={<LinkIcon size={11} />}
+              startIcon={<LinkIcon size={pxToRem(11)} />}
               onClick={() => setOpen(true)}
               data-testid={TEST_IDS.settings.accounts.connectButton}
             >
@@ -380,7 +381,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               />
               <GeneralButton
                 variant="outline"
-                startIcon={<PlugZap size={14} />}
+                startIcon={<PlugZap size={pxToRem(14)} />}
                 onClick={() => void onTestConnection()}
                 disabled={pingFeedback.state === "loading"}
                 feedbackState={pingFeedback.state}
@@ -392,7 +393,7 @@ export function ProviderRow({ providerId }: ProviderRowProps) {
               {baseUrlDraft.trim().length > 0 && baseUrlDraft !== defaultBaseUrl && (
                 <GeneralButton
                   variant="outline"
-                  startIcon={<RotateCcw size={14} />}
+                  startIcon={<RotateCcw size={pxToRem(14)} />}
                   onClick={onResetBaseUrl}
                   data-testid={TEST_IDS.settings.accounts.baseUrlReset}
                 >

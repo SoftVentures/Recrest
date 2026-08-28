@@ -2,10 +2,11 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { barGradient } from "@/lib/charts/palette";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 export const ChartWrap = styled(Box)({
   width: "100%",
-  height: 140,
+  height: pxToRem(140),
 }) as typeof Box;
 
 export const Headline = styled(Box)(({ theme }) => ({
@@ -13,7 +14,7 @@ export const Headline = styled(Box)(({ theme }) => ({
   flexDirection: "column",
   alignItems: "flex-end",
   "& > strong": {
-    fontSize: 22,
+    fontSize: fontPxToRem(22),
     fontWeight: 700,
     color: theme.palette.primary.main,
     letterSpacing: "-0.4px",
@@ -21,28 +22,28 @@ export const Headline = styled(Box)(({ theme }) => ({
     lineHeight: 1,
   },
   "& > span": {
-    fontSize: 10,
+    fontSize: fontPxToRem(10),
     color: theme.palette.text.information,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     fontWeight: 600,
-    marginTop: 2,
+    marginTop: pxToRem(2),
   },
 })) as typeof Box;
 
 export const Breakdown = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 5,
-  marginTop: 6,
+  gap: pxToRem(5),
+  marginTop: pxToRem(6),
 }) as typeof Box;
 
 export const RepoRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(60px, 100px) 32px 36px",
+  gridTemplateColumns: `minmax(0, 1fr) minmax(${pxToRem(60)}, ${pxToRem(100)}) ${pxToRem(32)} ${pxToRem(36)}`,
   alignItems: "center",
-  gap: 8,
-  fontSize: 11,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Box;
 
@@ -55,7 +56,7 @@ export const RepoName = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const RepoBar = styled(Box)(({ theme }) => ({
-  height: 5,
+  height: pxToRem(5),
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.backElevation,
   overflow: "hidden",

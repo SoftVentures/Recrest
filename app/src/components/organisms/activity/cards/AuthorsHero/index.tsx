@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 
 import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import type { WeekPair } from "@/lib/activityStats";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   authors: WeekPair;
@@ -18,15 +19,15 @@ const Root = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  padding: "12px 14px 10px",
+  padding: pxToRems(12, 14, 10),
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   height: "100%",
 }));
 
 const Label = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -34,7 +35,7 @@ const Label = styled(Box)(({ theme }) => ({
 }));
 
 const Value = styled(Box)(({ theme }) => ({
-  fontSize: 26,
+  fontSize: fontPxToRem(26),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.4px",
@@ -46,15 +47,15 @@ const Foot = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
-  marginTop: 6,
+  gap: pxToRem(8),
+  marginTop: pxToRem(6),
 });
 
 const AvStack = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   "& > *": {
-    marginLeft: -6,
+    marginLeft: pxToRem(-6),
     border: `2px solid ${theme.palette.surface.interface.base}`,
     borderRadius: "50%",
   },
@@ -66,10 +67,10 @@ const AvStack = styled(Box)(({ theme }) => ({
 const Delta = styled(Box, { shouldForwardProp: (p) => p !== "tone" })<{
   tone: "up" | "down" | "flat";
 }>(({ theme, tone }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   fontVariantNumeric: "tabular-nums",
   marginLeft: "auto",
   color:
@@ -101,8 +102,8 @@ function AuthorsHero({ authors, topAuthors }: Props) {
           ))}
         </AvStack>
         <Delta tone={dir}>
-          {dir === "up" && <ArrowUp size={11} aria-hidden />}
-          {dir === "down" && <ArrowDown size={11} aria-hidden />}
+          {dir === "up" && <ArrowUp size={pxToRem(11)} aria-hidden />}
+          {dir === "down" && <ArrowDown size={pxToRem(11)} aria-hidden />}
           <Box component="span">{deltaLabel}</Box>
         </Delta>
       </Foot>

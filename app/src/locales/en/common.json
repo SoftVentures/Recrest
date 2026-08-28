@@ -30,7 +30,10 @@
     "installing": "Installing…",
     "installing_percent": "Installing… {{percent}}%",
     "install_failed": "Update couldn't be installed. Download it manually from the release page.",
-    "download_failed": "The download page couldn't be opened."
+    "download_failed": "The download page couldn't be opened.",
+    "channel_hint_system_package": "Update available through your package manager.",
+    "channel_hint_flatpak": "Update available through Flatpak.",
+    "channel_hint_snap": "Update available through Snap."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -831,6 +834,9 @@
       "go_settings": "Open settings",
       "search": "Search",
       "toggle_sidebar": "Toggle sidebar",
+      "zoom_in": "Increase interface scale",
+      "zoom_out": "Decrease interface scale",
+      "zoom_reset": "Reset interface scale",
       "edit": "Change shortcut",
       "reset": "Reset to default",
       "reset_all": "Reset all to defaults",
@@ -911,7 +917,9 @@
       "custom_fonts_remove": "Remove font",
       "font": "Font",
       "font_size": "Font size",
-      "font_size_sub": "Scale text everywhere from compact to spacious.",
+      "font_size_sub": "Size of the text only — the surrounding interface keeps its proportions.",
+      "ui_scale": "Interface scale",
+      "ui_scale_sub": "Scales the whole interface — text, spacing and controls together.",
       "font_sub": "Typeface used across the interface. OpenDyslexic is a dyslexia-friendly font.",
       "language": "Language",
       "language_sub": "Interface language.",

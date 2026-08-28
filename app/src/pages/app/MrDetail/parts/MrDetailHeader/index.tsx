@@ -39,6 +39,7 @@ import {
   TitleRow,
 } from "@/pages/app/MrDetail/parts/MrDetailHeader/MrDetailHeader.styles";
 import { PrimaryBtn, SecondaryBtn } from "@/pages/app/RepoDetail/RepoDetail.styles";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   pr: PullRequest;
@@ -75,7 +76,7 @@ export default function MrDetailHeader({
   return (
     <Header>
       <PrIcon data-draft={pr.draft ? "true" : undefined}>
-        <GitMerge size={22} />
+        <GitMerge size={pxToRem(22)} />
       </PrIcon>
       <HeaderBody>
         <TitleRow>
@@ -108,7 +109,7 @@ export default function MrDetailHeader({
         </AuthorRow>
         <MetaRow>
           <Chip tone="branch">
-            <GitBranch size={11} aria-hidden />
+            <GitBranch size={pxToRem(11)} aria-hidden />
             <Box component="span">{pr.sourceBranch}</Box>
           </Chip>
           <BranchArrow component="span" variant="caption">
@@ -121,7 +122,7 @@ export default function MrDetailHeader({
             title={tPrs("detail.target_change")}
             data-testid={TEST_IDS.mr.targetChip}
           >
-            <GitBranch size={11} aria-hidden />
+            <GitBranch size={pxToRem(11)} aria-hidden />
             <Box component="span">{effectiveTarget}</Box>
           </TargetChipBtn>
           {hasChangeStats ? (
@@ -149,15 +150,23 @@ export default function MrDetailHeader({
           disabled={busy || pr.draft}
           data-testid={TEST_IDS.mr.mergeBtn}
         >
-          <ActionFeedbackIcon state={mergeState} fallback={<GitMerge size={13} />} size={13} />
+          <ActionFeedbackIcon
+            state={mergeState}
+            fallback={<GitMerge size={pxToRem(13)} />}
+            size={13}
+          />
           <Box component="span">{tPrs("actions.merge")}</Box>
         </PrimaryBtn>
         <SecondaryBtn type="button" onClick={onCheckout} disabled={busy}>
-          <ActionFeedbackIcon state={checkoutState} fallback={<Code size={13} />} size={13} />
+          <ActionFeedbackIcon
+            state={checkoutState}
+            fallback={<Code size={pxToRem(13)} />}
+            size={13}
+          />
           <Box component="span">{tPrs("actions.checkout")}</Box>
         </SecondaryBtn>
         <SecondaryBtn type="button" onClick={onOpenExternal}>
-          {brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={13} />}
+          {brand ? <BrandIcon slug={brand} size={13} /> : <ExternalLink size={pxToRem(13)} />}
           <Box component="span">
             {brand
               ? tPrs("actions.open_on_provider", { provider: PROVIDER_NAMES[brand] })

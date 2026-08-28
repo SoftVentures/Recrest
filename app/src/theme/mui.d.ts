@@ -60,9 +60,19 @@ declare module "@mui/material/styles" {
 
   interface Theme {
     effects: ThemeEffects;
+    /** Active interface scale (`settings.uiScale`), mirroring `--ui-scale`.
+     *  `styled()` blocks need it to build scale-aware raw media queries —
+     *  a media query cannot read a CSS custom property. */
+    uiScale: number;
   }
   interface ThemeOptions {
     effects?: Partial<ThemeEffects>;
+    uiScale?: number;
+  }
+
+  /** Widest step above `xl`, so large displays become addressable at all. */
+  interface BreakpointOverrides {
+    xxl: true;
   }
 }
 

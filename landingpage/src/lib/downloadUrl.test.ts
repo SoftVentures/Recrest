@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDownloadUrl, getAssetsForOs } from "./downloadUrl";
+import type { DownloadChannel, FileChannel } from "./downloadUrl";
+import { buildDownloadUrl, getChannelsForOs } from "./downloadUrl";
 
 const REPO = "https://github.com/SoftVentures/Recrest";
 const VERSION = "0.4.2";
+
+const files = (channels: DownloadChannel[]): FileChannel[] =>
+  channels.filter((c): c is FileChannel => c.kind === "file");
 
 describe("buildDownloadUrl", () => {
   it("constructs the releases/latest/download URL", () => {
@@ -13,56 +17,77 @@ describe("buildDownloadUrl", () => {
   });
 });
 
-describe("getAssetsForOs — macOS", () => {
-  const assets = getAssetsForOs("macos", VERSION);
+describe("getChannelsForOs — macOS", () => {
+  const channels = getChannelsForOs("macos", VERSION);
 
-  it("returns two assets", () => {
-    expect(assets).toHaveLength(2);
+  it("returns two file channels", () => {
+    expect(channels).toHaveLength(2);
+    expect(files(channels)).toHaveLength(2);
   });
 
   it("arm64 asset has the correct filename", () => {
-    const arm = assets.find((a) => a.arch === "arm64");
+    const arm = files(channels).find((c) => c.arch === "arm64");
     expect(arm?.filename).toBe(`recrest-v${VERSION}-mac-arm64.dmg`);
   });
 
   it("x64 asset has the correct filename", () => {
-    const x64 = assets.find((a) => a.arch === "x64");
+    const x64 = files(channels).find((c) => c.arch === "x64");
     expect(x64?.filename).toBe(`recrest-v${VERSION}-mac-x64.dmg`);
   });
 });
 
-describe("getAssetsForOs — Windows", () => {
-  const assets = getAssetsForOs("windows", VERSION);
+describe("getChannelsForOs — Windows", () => {
+  const channels = getChannelsForOs("windows", VERSION);
 
-  it("returns two assets", () => {
-    expect(assets).toHaveLength(2);
+  it("returns two file channels", () => {
+    expect(channels).toHaveLength(2);
+    expect(files(channels)).toHaveLength(2);
   });
 
   it("x64 exe has the correct filename", () => {
-    expect(assets[0]?.filename).toBe(`recrest-v${VERSION}-windows-x64.exe`);
+    expect(files(channels)[0]?.filename).toBe(`recrest-v${VERSION}-windows-x64.exe`);
   });
 
   it("arm64 exe has the correct filename", () => {
-    expect(assets[1]?.filename).toBe(`recrest-v${VERSION}-windows-arm64.exe`);
+    expect(files(channels)[1]?.filename).toBe(`recrest-v${VERSION}-windows-arm64.exe`);
   });
 });
 
-describe("getAssetsForOs — Linux", () => {
-  const assets = getAssetsForOs("linux", VERSION);
+describe("getChannelsForOs — Linux", () => {
+  const channels = getChannelsForOs("linux", VERSION);
 
-  it("returns three assets", () => {
-    expect(assets).toHaveLength(3);
-  });
-
-  it("AppImage has the correct filename", () => {
-    expect(assets[0]?.filename).toBe(`recrest-v${VERSION}-linux-x64.AppImage`);
+  it("returns two downloadable files plus Flathub and the AUR command", () => {
+    expect(channels).toHaveLength(4);
+    expect(files(channels)).toHaveLength(2);
   });
 
   it("deb has the correct filename", () => {
-    expect(assets[1]?.filename).toBe(`recrest-v${VERSION}-linux-x64.deb`);
+    expect(files(channels)[0]?.filename).toBe(`recrest-v${VERSION}-linux-x64.deb`);
   });
 
   it("rpm has the correct filename", () => {
-    expect(assets[2]?.filename).toBe(`recrest-v${VERSION}-linux-x64.rpm`);
+    expect(files(channels)[1]?.filename).toBe(`recrest-v${VERSION}-linux-x64.rpm`);
+  });
+
+  // Plan 11 dropped the AppImage. The release workflow no longer builds one, so
+  // a link to it would 404 — this asserts the page cannot regrow that link.
+  it("offers no AppImage", () => {
+    expect(files(channels).some((c) => c.filename.endsWith(".AppImage"))).toBe(false);
+  });
+
+  // Linked before the Flathub submission is accepted, so the channel is
+  // announced from the start. Dead until Flathub merges and builds — a known,
+  // accepted state.
+  it("links Flathub", () => {
+    const flathub = channels.find((c) => c.kind === "external");
+    expect(flathub && "url" in flathub ? flathub.url : undefined).toBe(
+      "https://flathub.org/apps/eu.softventures.recrest",
+    );
+  });
+
+  it("offers the AUR package as a command, not a download", () => {
+    const aur = channels.find((c) => c.kind === "command");
+    expect(aur?.kind).toBe("command");
+    expect(aur && "command" in aur ? aur.command : undefined).toBe("paru -S recrest-bin");
   });
 });

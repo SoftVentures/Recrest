@@ -22,6 +22,7 @@ import {
   ReviewerForm,
   TextInput,
 } from "@/pages/app/MrDetail/parts/MrReviewersCard/MrReviewersCard.styles";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   reviewers: Reviewer[];
@@ -54,7 +55,7 @@ export default function MrReviewersCard({
             size={IconButtonSize.SM}
             aria-label={tPrs("detail.add_reviewer")}
             onClick={onBeginAdd}
-            icon={<Plus size={12} />}
+            icon={<Plus size={pxToRem(12)} />}
             data-testid={TEST_IDS.mr.addReviewer}
           />
         )

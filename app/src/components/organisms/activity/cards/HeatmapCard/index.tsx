@@ -12,12 +12,13 @@ import { ResponsiveHeatMap } from "@nivo/heatmap";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { HeatmapMatrix } from "@/lib/activityAggregates";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { fade } from "@/lib/charts/palette";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { useLocalePrefs, useResolvedLocale } from "@/lib/utils/datetime.utils";
 import { weekdayLabel } from "@/lib/utils/locale.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -38,6 +39,7 @@ function HeatmapCard({ matrix, loading }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 4, right: 6, bottom: 26, left: 40 });
   const { show, hide, portal } = useChartTooltip();
   const { weekStart } = useLocalePrefs();
   const locale = useResolvedLocale();
@@ -83,7 +85,7 @@ function HeatmapCard({ matrix, loading }: Props) {
         <ResponsiveHeatMap
           data={data}
           theme={nivoTheme}
-          margin={{ top: 4, right: 6, bottom: 26, left: 40 }}
+          margin={chartMargin}
           xInnerPadding={0.18}
           yInnerPadding={0.18}
           colors={{
@@ -141,7 +143,7 @@ export default memo(HeatmapCard);
 // equal-height rows); `minHeight` keeps a sensible floor on content-sized rows.
 const Grid = styled(Box)({
   flex: "1 1 auto",
-  minHeight: 180,
+  minHeight: pxToRem(180),
   minWidth: 0,
   position: "relative",
 });
@@ -151,8 +153,8 @@ const Tooltip = styled(Box)(({ theme }) => ({
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  fontSize: 12,
-  padding: "6px 10px",
+  fontSize: fontPxToRem(12),
+  padding: pxToRems(6, 10),
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
 }));

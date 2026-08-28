@@ -3,6 +3,8 @@ import { type ComponentProps } from "react";
 import { Tooltip, tooltipClasses } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 /**
  * App-wide tooltip styled to match the `bg-popover` surface from `src-old`:
  * theme-bound background (light / dark), border + small
@@ -23,8 +25,8 @@ const Styled = styled(({ className, ...rest }: Props) => (
     color: theme.palette.text.primary,
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: 8,
-    padding: "6px 10px",
-    fontSize: 11.5,
+    padding: pxToRems(6, 10),
+    fontSize: fontPxToRem(11.5),
     fontWeight: 500,
     lineHeight: 1.4,
     boxShadow:
@@ -33,7 +35,7 @@ const Styled = styled(({ className, ...rest }: Props) => (
         : "0 8px 24px -12px rgba(20,22,28,0.22), 0 2px 6px -2px rgba(20,22,28,0.10)",
     // Tabular nums for any numerals that fall inside (commit counts, dates).
     fontVariantNumeric: "tabular-nums",
-    maxWidth: 280,
+    maxWidth: pxToRem(280),
   },
 }));
 

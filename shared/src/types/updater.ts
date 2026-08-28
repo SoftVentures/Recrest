@@ -10,6 +10,24 @@
 
 export type { AutoUpdateMode } from "./settings.js";
 
+/**
+ * How this copy of Recrest was installed. Mirrors the Rust `InstallChannel`
+ * enum in `app/src-tauri/src/update/channel.rs` (serde `rename_all =
+ * "camelCase"`), which decides whether the in-app updater is allowed to replace
+ * the binary at all.
+ *
+ * - `appImage` / `bundle` — self-updating (AppImage, macOS `.app`, Windows installer).
+ * - `flatpak` / `snap` / `systemPackage` — an external package manager owns updates.
+ * - `unknown` — unclassifiable; treated as not self-updating.
+ */
+export type InstallChannel =
+  | "appImage"
+  | "flatpak"
+  | "snap"
+  | "systemPackage"
+  | "bundle"
+  | "unknown";
+
 export interface UpdaterAvailableEvent {
   /** The version the backend considers "latest". */
   version: string;
@@ -22,6 +40,12 @@ export interface UpdaterAvailableEvent {
    * in-place. `false` means fallback — the UI should surface `downloadUrl`.
    */
   canAutoInstall: boolean;
+  /**
+   * The detected install channel. `null` when the backend didn't report one
+   * (older builds, simulated events) — the UI then falls back to whatever
+   * `canAutoInstall` says without a channel-specific hint.
+   */
+  installChannel: InstallChannel | null;
   /**
    * Direct platform-asset URL for the GitHub Releases fallback. `null` on
    * the plugin path (the installer is downloaded by the plugin itself).

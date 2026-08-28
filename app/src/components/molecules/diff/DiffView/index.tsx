@@ -33,6 +33,7 @@ import DiffRow, { type SelectionEnd } from "@/components/molecules/diff/DiffView
 import { DIFF_ATTR } from "@/lib/constants/diff.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 export interface DiffViewProps {
   files: FileDiff[];
@@ -408,7 +409,11 @@ export default function DiffView({ files, comments, onComment }: DiffViewProps) 
               onClick={() => toggle(file.path)}
               data-testid={TEST_IDS.mr.diff.fileToggle}
             >
-              {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+              {isCollapsed ? (
+                <ChevronRight size={pxToRem(14)} />
+              ) : (
+                <ChevronDown size={pxToRem(14)} />
+              )}
               <FilePath>{file.path}</FilePath>
               {file.status === FileChangeStatus.RENAMED && file.oldPath && (
                 <RenamedFrom component="span" variant="caption">

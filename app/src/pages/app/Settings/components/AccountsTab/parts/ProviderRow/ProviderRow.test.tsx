@@ -142,3 +142,38 @@ describe("ProviderRow connection status", () => {
     expect(getByTestId(TEST_IDS.settings.accounts.disconnectButton)).toBeInTheDocument();
   });
 });
+
+describe("ProviderRow base URL editing", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each(["github", "gitlab", "bitbucket"] as const)(
+    "renders an editable base URL input for %s",
+    (providerId) => {
+      const { getByTestId } = renderProviderRow(providerId);
+      const input = getByTestId(TEST_IDS.settings.accounts.baseUrlInput);
+      expect(input).toBeInTheDocument();
+      expect((input as HTMLInputElement).readOnly).toBe(false);
+    },
+  );
+
+  it.each(["github", "gitlab", "bitbucket"] as const)(
+    "invokes ping_provider with the provider id when Test connection is clicked for %s",
+    async (providerId) => {
+      const invokeSpy = vi.spyOn(tauri, "invoke").mockResolvedValue({
+        reachable: true,
+        looksLikeProvider: true,
+        version: null,
+        error: null,
+      });
+      const { getByTestId } = renderProviderRow(providerId);
+      fireEvent.click(getByTestId(TEST_IDS.settings.accounts.testConnection));
+      await waitFor(() => expect(invokeSpy).toHaveBeenCalled());
+      const [cmd, args] = invokeSpy.mock.calls[0]!;
+      expect(cmd).toBe("ping_provider");
+      expect((args as { provider: string }).provider).toBe(providerId);
+      expect(typeof (args as { baseUrl: string }).baseUrl).toBe("string");
+    },
+  );
+});

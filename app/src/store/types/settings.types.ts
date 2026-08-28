@@ -80,6 +80,15 @@ export interface SettingsState extends SaveSeqTracked {
   /** Ligature rendering mode for code surfaces; separate from `codeFont`. */
   codeLigatures: LigatureMode;
   fontSize: FontSizeId;
+  /** Interface scale (0.8 … 1.5, default 1). Drives `--ui-scale`, i.e. the
+   *  root font size, i.e. every `rem` length in the app. Orthogonal to
+   *  `fontSize`, which only moves the typography scale. */
+  uiScale: number;
+  /** True once the one-shot legacy `fontSize` → `uiScale` migration has run,
+   *  or once the user picked a scale themselves. Renderer-only bookkeeping
+   *  (persisted in `localStorage`, not `settings.json`) — see
+   *  `store/uiScaleMigration.ts` for why the backend cannot hold it. */
+  uiScaleMigrated: boolean;
   /** Accessibility — reinforce borders + dim text for better legibility. */
   highContrast: boolean;
   /** Disable non-essential animations and CSS transitions. */

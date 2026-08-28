@@ -29,6 +29,7 @@ import {
 } from "@/components/molecules/modals/MergeMrModal/MergeMrModal.styles";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 export { MergeStrategy } from "@recrest/shared";
 
@@ -232,7 +233,7 @@ function MergeMrModal({
             disabled={busy || !title.trim()}
             data-testid={TEST_IDS.mr.mergeModal.confirm}
           >
-            <GitMerge size={13} />
+            <GitMerge size={pxToRem(13)} />
             <Box component="span">
               {busy ? t("detail.merge_modal.merging") : t("detail.merge_modal.confirm")}
             </Box>

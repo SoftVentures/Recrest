@@ -9,10 +9,11 @@ import { openExternal } from "@/lib/tauri";
 import ContributorRow from "@/pages/app/Settings/components/AboutTab/parts/ContributorsSection/parts/ContributorRow";
 import { useContributors } from "@/pages/app/Settings/components/AboutTab/parts/ContributorsSection/useContributors";
 import { SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
+import { fontPxToRem, pxToRems } from "@/theme/scale";
 
 const StateRow = styled(Box)(({ theme }) => ({
-  padding: "14px 16px",
-  fontSize: 12.5,
+  padding: pxToRems(14, 16),
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
 })) as typeof Box;
 

@@ -70,13 +70,40 @@ Pre-built installers for every tagged release live on the
 [Releases page](https://github.com/SoftVentures/Recrest/releases/latest).
 Pick the file for your platform:
 
-| Platform                                | File                               |
-| --------------------------------------- | ---------------------------------- |
-| macOS (Apple Silicon + Intel universal) | `Recrest_<version>_universal.dmg`  |
-| Windows 10 / 11 (x64)                   | `Recrest_<version>_x64-setup.msi`  |
-| Linux (most distros)                    | `Recrest_<version>_amd64.AppImage` |
-| Debian / Ubuntu                         | `Recrest_<version>_amd64.deb`      |
-| Fedora / RHEL                           | `Recrest_<version>-1.x86_64.rpm`   |
+| Platform                        | File                                    |
+| ------------------------------- | --------------------------------------- |
+| macOS 10.15+ (Apple Silicon)    | `recrest-v<version>-mac-arm64.dmg`      |
+| macOS 10.15+ (Intel)            | `recrest-v<version>-mac-x64.dmg`        |
+| Windows 10 / 11 (x64)           | `recrest-v<version>-windows-x64.exe`    |
+| Windows 11 (ARM64, best-effort) | `recrest-v<version>-windows-arm64.exe`  |
+| Debian / Ubuntu                 | `recrest-v<version>-linux-x64.deb`      |
+| Fedora / RHEL                   | `recrest-v<version>-linux-x64.rpm`      |
+| Arch Linux / derivatives        | AUR: `recrest-bin`, `recrest`, `recrest-git` |
+
+`<version>` is the tag without its leading `v` — for `v0.11.0` the macOS Apple
+Silicon file is `recrest-v0.11.0-mac-arm64.dmg`. There is no universal macOS
+disk image any more: Apple Silicon and Intel are separate builds. The Windows
+download is the NSIS `.exe` installer, not an MSI. Linux is x86_64 only —
+there are no `aarch64` builds yet.
+
+> **No AppImage.** It was dropped in favour of `.deb`, `.rpm` and the AUR
+> packages; a Flatpak on Flathub is in preparation
+> ([`packaging/flatpak/`](./packaging/flatpak/)). One consequence is worth
+> knowing: **Linux has no in-app auto-update.** The AppImage was the only Linux
+> format the updater could replace in place. Recrest still tells you when a new
+> version exists — through your package manager on Arch, and as a notice with a
+> link everywhere else.
+
+> **ARM64 Windows** is built on a GitHub-hosted `windows-11-arm` runner whose
+> availability varies by plan and region. The release pipeline treats that leg
+> as optional (a missing asset is only a warning), so a given release may not
+> carry `recrest-v<version>-windows-arm64.exe`. If it isn't there, take the x64
+> installer — it runs under emulation.
+
+> Releases also carry assets named `Recrest_<version>_*` plus `.sig` files and
+> `latest.json`. Those are the auto-updater payloads, referenced by
+> `latest.json` under those exact names; they are not the files to download by
+> hand.
 
 > **Heads up:** Recrest is **not code-signed yet.**
 > Apple Developer IDs cost USD 99/year and a Windows EV certificate starts at
@@ -88,7 +115,7 @@ Pick the file for your platform:
 
 ### Installing on Windows
 
-1. Download the `.msi` from the Releases page.
+1. Download `recrest-v<version>-windows-x64.exe` from the Releases page.
 2. Double-click to launch the installer.
 3. Windows SmartScreen will say "**Windows protected your PC — Unknown
    publisher**." That's the unsigned-installer warning, not malware.
@@ -113,24 +140,44 @@ reputation system catches up — or once we can afford a signing cert.
 
 ### Installing on Linux
 
-- **AppImage:**
-
-  ```bash
-  chmod +x Recrest_*.AppImage
-  ./Recrest_*.AppImage
-  ```
-
 - **deb:**
 
   ```bash
-  sudo apt install ./Recrest_*_amd64.deb
+  sudo apt install ./recrest-v*-linux-x64.deb
   ```
 
 - **rpm:**
 
   ```bash
-  sudo dnf install ./Recrest_*-1.x86_64.rpm
+  sudo dnf install ./recrest-v*-linux-x64.rpm
   ```
+
+- **Arch Linux (AUR):** three packages. `recrest-bin` repacks the published
+  `.deb` and installs in seconds; `recrest` builds the tagged release from
+  source; `recrest-git` builds `main`.
+
+  > Not published to the AUR yet. The PKGBUILDs live in this repo (see below);
+  > the commands underneath start working once the packages are pushed to
+  > `aur.archlinux.org`. Until then, build from `packaging/aur/recrest-bin/`
+  > directly with `makepkg -si`.
+
+  ```bash
+  # with an AUR helper
+  paru -S recrest-bin    # or: recrest / recrest-git
+
+  # or by hand
+  git clone https://aur.archlinux.org/recrest-bin.git
+  cd recrest-bin && makepkg -si
+  ```
+
+  `recrest` and `recrest-git` compile the Rust backend in release profile, so
+  the first build takes a while — `recrest-bin` exists to avoid exactly that.
+  The PKGBUILD sources live in [`packaging/aur/`](./packaging/aur/) — send
+  packaging fixes there, not to the AUR clone.
+
+  This is the only Linux channel where updates arrive on their own: `pacman`
+  upgrades Recrest with everything else. The `.deb` and `.rpm` have to be
+  re-downloaded by hand — there is no APT or DNF repository.
 
 No signature prompts — Linux simply trusts the repo you installed from.
 
@@ -143,7 +190,7 @@ Every release ships a `SHA256SUMS.txt` next to the installers. Verify it:
 shasum -a 256 -c SHA256SUMS.txt
 
 # Windows PowerShell
-Get-FileHash Recrest_*.msi -Algorithm SHA256
+Get-FileHash recrest-v*-windows-x64.exe -Algorithm SHA256
 ```
 
 If a line comes back as _FAILED_, stop and re-download. Don't run anything

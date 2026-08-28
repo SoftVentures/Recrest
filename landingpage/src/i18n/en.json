@@ -161,10 +161,13 @@
     },
     "detectedOs": "Your platform",
     "downloadLabel": "Download ({{arch}})",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyCommand": "Copy the install command to the clipboard",
     "osSub": {
       "macos": "macOS 11 Big Sur or later · Apple Silicon and Intel",
       "windows": "Windows 10/11 · x64 and ARM64",
-      "linux": "AppImage, .deb and .rpm · x64"
+      "linux": ".deb, .rpm, Flathub and AUR · x64"
     },
     "install": {
       "heading": "First-run instructions",
@@ -181,9 +184,11 @@
         "Follow the setup wizard and launch Recrest from the Start menu."
       ],
       "linux": [
-        "AppImage: `chmod +x recrest-v*.AppImage`, then run it directly — no installation needed.",
         "Debian / Ubuntu (.deb): `sudo dpkg -i recrest-v*.deb`",
-        "Fedora / RHEL (.rpm): `sudo rpm -i recrest-v*.rpm` (or `sudo dnf install ./recrest-v*.rpm`)"
+        "Fedora / RHEL (.rpm): `sudo rpm -i recrest-v*.rpm` (or `sudo dnf install ./recrest-v*.rpm`)",
+        "Flathub: `flatpak install flathub eu.softventures.recrest` — once the package is approved there. Updates itself automatically afterwards.",
+        "Arch (AUR): `paru -S recrest-bin` installs the prebuilt package. `recrest` builds from source instead, `recrest-git` from the current development branch.",
+        "Updates: .deb and .rpm have to be re-downloaded by hand — there is no APT or DNF repository. Through the AUR packages, pacman updates Recrest like any other package."
       ]
     }
   },

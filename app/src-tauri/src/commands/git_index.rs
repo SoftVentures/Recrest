@@ -14,6 +14,7 @@ use super::error::CommandError;
 use super::git_ops::resolve_repo_path;
 use super::repos::read_status_off_thread;
 use crate::git::status::RepoStatusDto;
+use crate::platform::host_command::host_command_async;
 use crate::AppState;
 
 /// Stage the given repo-relative paths. Honors gitignore (silently skips
@@ -413,7 +414,9 @@ pub async fn commit_via_git(
     message: &str,
     fallback: Option<(&str, &str)>,
 ) -> Result<(), CommandError> {
-    let mut cmd = tokio::process::Command::new("git");
+    // `host_command_async`: the whole point of this path is running the user's
+    // own hooks with their own git, which only exists on the host.
+    let mut cmd = host_command_async("git");
     // CREATE_NO_WINDOW — without it the hook-aware commit flashes a console
     // window on the packaged Windows build. `process::configure` only takes a
     // std Command, so set the flag inline on the tokio builder.
@@ -421,6 +424,29 @@ pub async fn commit_via_git(
     {
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    // Neither `current_dir` nor the `-c user.*` flags below survive an inherited
+    // git environment, so both guarantees this function makes are only real once
+    // those variables are cleared: GIT_DIR / GIT_INDEX_FILE / GIT_WORK_TREE
+    // override `current_dir` (committing into a *different* repository), and
+    // GIT_AUTHOR_* / GIT_COMMITTER_* take precedence over config, silently
+    // discarding the caller's `fallback` signature. Anything that runs Recrest
+    // from inside a git hook exports the whole set.
+    for var in [
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_AUTHOR_NAME",
+        "GIT_AUTHOR_EMAIL",
+        "GIT_AUTHOR_DATE",
+        "GIT_COMMITTER_NAME",
+        "GIT_COMMITTER_EMAIL",
+        "GIT_COMMITTER_DATE",
+    ] {
+        cmd.env_remove(var);
     }
     if let Some((name, email)) = fallback {
         if !name.is_empty() && !email.is_empty() {

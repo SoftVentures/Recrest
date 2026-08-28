@@ -8,13 +8,15 @@ import {
   staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const Row = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(220px, 1.6fr) minmax(130px, 0.9fr) 110px 120px minmax(140px, auto)",
+  gridTemplateColumns: `minmax(${pxToRem(220)}, 1.6fr) minmax(${pxToRem(130)}, 0.9fr) ${pxToRem(110)} ${pxToRem(120)} minmax(${pxToRem(140)}, auto)`,
   alignItems: "center",
-  gap: 12,
-  padding: "10px 16px",
+  gap: pxToRem(12),
+  padding: pxToRems(10, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   cursor: "pointer",
   backgroundColor: "transparent",
@@ -48,7 +50,7 @@ export const Row = styled(Box)(({ theme }) => ({
 export const NameCell = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   minWidth: 0,
 }) as typeof Box;
 
@@ -65,7 +67,7 @@ export const PinSlot = styled(Box)({
 export const TextCol = styled(Box)({ minWidth: 0 }) as typeof Box;
 
 export const Name = styled(Box)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -74,7 +76,7 @@ export const Name = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const Path = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
@@ -85,21 +87,21 @@ export const Path = styled(Box)(({ theme }) => ({
 export const BranchCell = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   minWidth: 0,
 }) as typeof Box;
 
 export const BranchChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  padding: "3px 8px",
+  gap: pxToRem(5),
+  padding: pxToRems(3, 8),
   backgroundColor: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.primary,
-  maxWidth: 130,
+  maxWidth: pxToRem(130),
   minWidth: 0,
   fontVariantNumeric: "tabular-nums",
 })) as typeof Box;
@@ -118,24 +120,27 @@ export const StatusCell = styled(Box)({
 }) as typeof Box;
 
 export const StatusText = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const Diff = styled(Box)(({ theme }) => ({
   display: "inline-flex",
-  gap: 4,
-  fontSize: 11,
+  gap: pxToRem(4),
+  fontSize: fontPxToRem(11),
   fontVariantNumeric: "tabular-nums",
   fontWeight: 600,
-  "& .add": { color: theme.palette.success.main },
-  "& .rem": { color: theme.palette.error.main },
+  // `success.main`/`error.main` are mode-independent light-mode hues, so on the
+  // dark surfaces they landed at 3.18:1 / 2.57:1. `toneText` is the existing
+  // mode-aware rule for exactly these diff counters.
+  "& .add": { color: toneText(theme, StatusTone.SUCCESS) },
+  "& .rem": { color: toneText(theme, StatusTone.ERROR) },
 })) as typeof Box;
 
 export const FilesMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.informationLight,
-  marginTop: 2,
+  marginTop: pxToRem(2),
 })) as typeof Typography;
 
 export const ActivityCell = styled(Box)({
@@ -147,7 +152,7 @@ export const Actions = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 export const DangerMenuItem = styled(MenuItem)(({ theme }) => ({

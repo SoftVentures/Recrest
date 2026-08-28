@@ -58,6 +58,7 @@ import {
   setTimeZone,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
+  setUiScale,
   setUnderlineLinks,
   setUpdateMode,
   setWeekStart,
@@ -66,6 +67,8 @@ import {
 } from "@/store/actions/settings.actions";
 import { INITIAL_SAVE_SEQ, acceptSaveSnapshot } from "@/store/reducers/saveSettingsSeq";
 import type { SettingsState } from "@/store/types/settings.types";
+import { loadUiScaleMigrated, resolveHydratedUiScale } from "@/store/uiScaleMigration";
+import { DEFAULT_UI_SCALE, clampUiScale } from "@/theme/scale";
 
 const POLLING_MIN_MIN = POLLING_INTERVAL_MIN_MS / 60_000;
 const POLLING_MAX_MIN = POLLING_INTERVAL_MAX_MS / 60_000;
@@ -137,6 +140,10 @@ function clampIntensity(raw: number): number {
 }
 
 const BOOT_THEME = resolveBootTheme();
+/** Read once at module scope, like {@link BOOT_THEME}: the marker has to be
+ *  part of the very first state the store is built with, because the migration
+ *  runs on the first `loadSettings.fulfilled` that follows. */
+const BOOT_UI_SCALE_MIGRATED = loadUiScaleMigrated();
 
 const initialState: SettingsState = {
   themeId: BOOT_THEME.themeId,
@@ -151,6 +158,8 @@ const initialState: SettingsState = {
   codeFont: DEFAULT_CODE_FONT,
   codeLigatures: DEFAULT_LIGATURE_MODE,
   fontSize: DEFAULT_FONT_SIZE,
+  uiScale: DEFAULT_UI_SCALE,
+  uiScaleMigrated: BOOT_UI_SCALE_MIGRATED,
   highContrast: false,
   reducedMotion: false,
   underlineLinks: false,
@@ -290,6 +299,19 @@ function applyBackend(state: SettingsState, payload: AppSettings | undefined) {
   }
 
   if (payload.locale) state.locale = payload.locale;
+  // `uiScale` lives at the top level of AppSettings, not under `appearance`.
+  // Settings files predating the interface-scale control simply omit it, and
+  // the Rust side then fills the default — so "never set" is indistinguishable
+  // from "set to 1.0" in the payload. The one-shot migration below therefore
+  // leans on the renderer-side marker: until it is set, a default-valued scale
+  // is re-derived from the zoom the legacy `fontSize` used to apply. `fontSize`
+  // is already hydrated at this point.
+  state.uiScale = resolveHydratedUiScale({
+    storedUiScale: payload.uiScale,
+    fontSize: state.fontSize,
+    alreadyMigrated: state.uiScaleMigrated,
+  });
+  state.uiScaleMigrated = true;
   state.pollingIntervalMinutes = clampPolling(payload.pollingIntervalMs / 60_000);
   state.desktop.autoStart = payload.autoStart;
   state.desktop.startMinimized = payload.startMinimized;
@@ -365,6 +387,12 @@ export const settingsReducer = createReducer(initialState, (builder) => {
     })
     .addCase(setFontSize, (state, action) => {
       state.fontSize = action.payload;
+    })
+    .addCase(setUiScale, (state, action) => {
+      state.uiScale = clampUiScale(action.payload);
+      // An explicit choice — including choosing exactly the default — outranks
+      // anything the legacy `fontSize` migration would derive, forever.
+      state.uiScaleMigrated = true;
     })
     .addCase(setHighContrast, (state, action) => {
       state.highContrast = action.payload;
@@ -512,6 +540,7 @@ export {
   setTimeFormat,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
+  setUiScale,
   setUnderlineLinks,
   setUpdateMode,
   setWeekStart,

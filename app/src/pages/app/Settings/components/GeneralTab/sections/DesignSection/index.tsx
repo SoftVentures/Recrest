@@ -23,8 +23,10 @@ import {
   setThemeId,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
+  setUiScale,
 } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP, fontPxToRem, pxToRem } from "@/theme/scale";
 
 const ACCENT_SCHEME_MAP: Record<AccentId, PrimaryColorScheme> = {
   coral: "default",
@@ -54,7 +56,7 @@ const THEME_CHOICE_ICONS: Record<ThemeChoice, typeof Type> = {
 const Swatches = styled(Box)({
   display: "inline-flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
 }) as typeof Box;
 
 interface SwatchProps {
@@ -66,8 +68,8 @@ interface SwatchProps {
 const Swatch = styled("button", {
   shouldForwardProp: (p) => p !== "color" && p !== "active",
 })<SwatchProps>(({ theme, color, active }) => ({
-  width: 22,
-  height: 22,
+  width: pxToRem(22),
+  height: pxToRem(22),
   borderRadius: "50%",
   background: color,
   border: 0,
@@ -80,11 +82,11 @@ const Swatch = styled("button", {
 }));
 
 const TranslucencyHint = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 }));
 
-const ThemeSelect = styled(SelectControl)({ minWidth: 200 });
+const ThemeSelect = styled(SelectControl)({ minWidth: pxToRem(200) });
 
 const MenuLabel = styled(Box)(({ theme }) => ({
   display: "inline-block",
@@ -100,6 +102,7 @@ export function DesignSection() {
   const themeChoice: ThemeChoice = followsSystem ? "system" : themeId;
   const translucencyEnabled = useAppSelector((s) => s.settings.translucency.enabled);
   const translucencyIntensity = useAppSelector((s) => s.settings.translucency.intensity);
+  const uiScale = useAppSelector((s) => s.settings.uiScale);
   const supportsTranslucency = useTranslucencySupport();
 
   const onThemeChoice = (choice: ThemeChoice) => {
@@ -126,7 +129,7 @@ export function DesignSection() {
             const Icon = THEME_CHOICE_ICONS[c];
             return (
               <>
-                <Icon size={13} />
+                <Icon size={pxToRem(13)} />
                 {themeChoiceLabel(c, t)}
               </>
             );
@@ -136,12 +139,27 @@ export function DesignSection() {
             const Icon = THEME_CHOICE_ICONS[c];
             return (
               <MenuItem key={c} value={c}>
-                <Icon size={13} />
+                <Icon size={pxToRem(13)} />
                 <MenuLabel>{themeChoiceLabel(c, t)}</MenuLabel>
               </MenuItem>
             );
           })}
         </ThemeSelect>
+      </SettingsRow>
+
+      <SettingsRow label={t("settings.fields.ui_scale")} sub={t("settings.fields.ui_scale_sub")}>
+        {/* Percent at the UI boundary only — the store keeps the raw
+            multiplier that `--ui-scale` consumes verbatim. */}
+        <IntensitySlider
+          value={Math.round(uiScale * 100)}
+          onChange={(v) => dispatch(setUiScale(v / 100))}
+          min={UI_SCALE_MIN * 100}
+          max={UI_SCALE_MAX * 100}
+          step={UI_SCALE_STEP * 100}
+          ariaLabel={t("settings.fields.ui_scale")}
+          dataTestId={TEST_IDS.settings.general.uiScaleSlider}
+          formatValue={(n) => `${n}%`}
+        />
       </SettingsRow>
 
       <SettingsRow
@@ -152,6 +170,7 @@ export function DesignSection() {
           <GeneralSwitchInput
             checked={translucencyEnabled}
             onCheckedChange={(v) => dispatch(setTranslucencyEnabled(v))}
+            aria-label={t("settings.fields.translucency")}
             data-testid={TEST_IDS.settings.general.translucencyToggle}
           />
         ) : (

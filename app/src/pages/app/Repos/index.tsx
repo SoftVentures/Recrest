@@ -53,6 +53,7 @@ import { RepoList } from "@/pages/app/Repos/components/RepoList";
 import { ChipItem } from "@/pages/app/Repos/parts/ChipItem";
 import { saveSettings } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export interface ReposPageProps {
   dirtyOnly?: boolean;
@@ -180,11 +181,11 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             aria-label={tAria("repo.view_toggle")}
           >
             <GeneralButtonGroupItem value="list" data-testid={TEST_IDS.repos.viewToggle.grouped}>
-              <ListIcon size={14} aria-hidden style={{ marginRight: 6 }} />
+              <ListIcon size={pxToRem(14)} aria-hidden style={{ marginRight: pxToRem(6) }} />
               {t("toolbar.view_default")}
             </GeneralButtonGroupItem>
             <GeneralButtonGroupItem value="card" data-testid={TEST_IDS.repos.viewToggle.card}>
-              <LayoutGrid size={14} aria-hidden style={{ marginRight: 6 }} />
+              <LayoutGrid size={pxToRem(14)} aria-hidden style={{ marginRight: pxToRem(6) }} />
               {t("toolbar.view_cards")}
             </GeneralButtonGroupItem>
           </GeneralButtonGroup>
@@ -195,14 +196,14 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
             onClick={(e) => setFilterAnchor(e.currentTarget)}
             data-active={activeFilterCount > 0 ? "true" : undefined}
           >
-            <Filter size={13} />
+            <Filter size={pxToRem(13)} />
             <Box component="span">{t("toolbar.filter")}</Box>
             {activeFilterCount > 0 && (
               <FilterBadge component="span" variant="caption">
                 {activeFilterCount}
               </FilterBadge>
             )}
-            <ChevronDown size={13} style={{ marginLeft: 2 }} />
+            <ChevronDown size={pxToRem(13)} style={{ marginLeft: pxToRem(2) }} />
           </FilterButton>
 
           <FilterMenu
@@ -214,25 +215,25 @@ export default function ReposPage({ dirtyOnly }: ReposPageProps = {}) {
           >
             <SectionLabel>{t("toolbar.status")}</SectionLabel>
             <ChipItem
-              icon={<CircleDashed size={13} />}
+              icon={<CircleDashed size={pxToRem(13)} />}
               label={t("toolbar.filter_dirty")}
               active={statusChips.has("dirty")}
               onSelect={() => toggleChip("dirty")}
             />
             <ChipItem
-              icon={<CheckCircle2 size={13} />}
+              icon={<CheckCircle2 size={pxToRem(13)} />}
               label={t("toolbar.filter_clean")}
               active={statusChips.has("clean")}
               onSelect={() => toggleChip("clean")}
             />
             <ChipItem
-              icon={<ArrowUpFromLine size={13} />}
+              icon={<ArrowUpFromLine size={pxToRem(13)} />}
               label={t("toolbar.filter_ahead")}
               active={statusChips.has("ahead")}
               onSelect={() => toggleChip("ahead")}
             />
             <ChipItem
-              icon={<ArrowDownFromLine size={13} />}
+              icon={<ArrowDownFromLine size={pxToRem(13)} />}
               label={t("toolbar.filter_behind")}
               active={statusChips.has("behind")}
               onSelect={() => toggleChip("behind")}

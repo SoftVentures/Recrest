@@ -2,26 +2,48 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.10.2...recrest-v0.11.0) (2026-08-11)
-
+## [0.12.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.11.0...recrest-v0.12.0) (2026-08-27)
 
 ### Features
 
-* **landing:** Enhanced live demonstration & landing page overhaul ([a4c03c7](https://github.com/SoftVentures/Recrest/commit/a4c03c79ef362676094b29992d74a68d40d8db80))
-* **landing:** privacy, accessibility & imprint legal compliance ([848d855](https://github.com/SoftVentures/Recrest/commit/848d85501d8cf280a004cb2361ee162ef6bbb3b5))
-
+- migrate ui scaling from css zoom to rem ([fa5c179](https://github.com/SoftVentures/Recrest/commit/fa5c179396eef3b8c1b5ac34267b01f70a64d863))
+- **packaging:** drop the AppImage bundle and strip Linux from the updater manifest ([94fbeda](https://github.com/SoftVentures/Recrest/commit/94fbeda1f29950027cec48094e4ef45106dd541f))
+- **packaging:** add AUR PKGBUILDs for stable and git builds ([766e2f4](https://github.com/SoftVentures/Recrest/commit/766e2f431567437cbb82d81e53b7940aa9d4b9e9))
+- **packaging:** add the recrest-bin AUR package ([08e96c9](https://github.com/SoftVentures/Recrest/commit/08e96c901769200888576df1dd8f660cfeb30cc9))
+- **packaging:** add the Flathub manifest and an offline build check ([78a9729](https://github.com/SoftVentures/Recrest/commit/78a97298449d70a449268ed4777c2b2ba81992fa))
+- **packaging:** bootstrap the Flatpak channel with its vendored sources ([d5cf458](https://github.com/SoftVentures/Recrest/commit/d5cf458bad48fb22fb71f8de1c7cb04ff2e51734))
+- **app:** run git, IDEs and terminals on the host when sandboxed ([4297faf](https://github.com/SoftVentures/Recrest/commit/4297faf0186f4fbfce021fddb6e783273dbc55bf))
+- **landingpage:** offer deb, rpm and the AUR command on the Linux card ([1c3d911](https://github.com/SoftVentures/Recrest/commit/1c3d91127d2f122e5d36d354a8dbd8be71b97dfa))
+- **landingpage:** announce the Flathub channel on the download page ([0797741](https://github.com/SoftVentures/Recrest/commit/07977414d27758fa7137058690bb8bb541eb3742))
+- **ci:** publish releases to Flathub automatically ([e499925](https://github.com/SoftVentures/Recrest/commit/e49992547afec0f391dea5e39003b90085625ce6))
 
 ### Bug Fixes
 
-* **linux:** adapt discovery to freedesktop-desktop-entry 0.7.19 Iter::new ([fd37e35](https://github.com/SoftVentures/Recrest/commit/fd37e3553f7a45c6ad7b443d2e526beeb99f6dc0))
-* live repo refresh and openable Apple Silicon builds ([391f39c](https://github.com/SoftVentures/Recrest/commit/391f39ce143d7983a3be0905aa0681ae57a52a65))
-* **tauri:** exempt style-src from CSP nonce injection so packaged MUI/Emotion styles apply ([ba9a98a](https://github.com/SoftVentures/Recrest/commit/ba9a98a454f926ba3fe6670a17339d9952f1b1aa))
-* use workspace wildcards for @recrest/shared in tests and landingpage ([1c9e7a1](https://github.com/SoftVentures/Recrest/commit/1c9e7a1401cdf1d4f1046d269e2da9510f8d723a))
+- linux scaling & packaging audit findings, window geometry clamping, macos titlebar chrome ([49690f3](https://github.com/SoftVentures/Recrest/commit/49690f3a0cea12ccb3adb280dd5faafc5905707e))
+- drop the debouncer file-id cache that walked every watched working tree ([c21a5c7](https://github.com/SoftVentures/Recrest/commit/c21a5c7aeaab55f356b793fe8c3d8ebda0edb1ab))
+- **packaging:** correct AUR keyring/dbus claims, pin stable source to the tag, add missing deps ([e085c1a](https://github.com/SoftVentures/Recrest/commit/e085c1a2078a116988ec024d9a4e473c23bd6e63))
+- **packaging:** declare dbus + Secret Service optdepends for recrest-git ([8db7565](https://github.com/SoftVentures/Recrest/commit/8db75653fcf4f3781091f58e3943065e4cba0854))
+- **packaging:** correct the Flatpak manifest against a real offline build ([4c6d139](https://github.com/SoftVentures/Recrest/commit/4c6d139d2c7c61f5d310842c4f4208533aa04a22))
+- **ci:** skip the Flatpak build until the vendored sources are committed ([4b42f47](https://github.com/SoftVentures/Recrest/commit/4b42f47f85ddc3a9cf6ac25f36f990688c14f956))
+- **ci:** install the SDK extensions and force-clean the offline stage ([2dfaf63](https://github.com/SoftVentures/Recrest/commit/2dfaf63b49aa2cb30bcbd7520a2261b33701215a))
+- **ci:** give the Flatpak container fuse and a machine-id ([30c8595](https://github.com/SoftVentures/Recrest/commit/30c8595ab2926d309aa3d91a3653edad722bd9de))
+## [0.11.0](https://github.com/SoftVentures/Recrest/compare/recrest-v0.10.2...recrest-v0.11.0) (2026-08-11)
 
+### Features
+
+- **landing:** Enhanced live demonstration & landing page overhaul ([a4c03c7](https://github.com/SoftVentures/Recrest/commit/a4c03c79ef362676094b29992d74a68d40d8db80))
+- **landing:** privacy, accessibility & imprint legal compliance ([848d855](https://github.com/SoftVentures/Recrest/commit/848d85501d8cf280a004cb2361ee162ef6bbb3b5))
+
+### Bug Fixes
+
+- **linux:** adapt discovery to freedesktop-desktop-entry 0.7.19 Iter::new ([fd37e35](https://github.com/SoftVentures/Recrest/commit/fd37e3553f7a45c6ad7b443d2e526beeb99f6dc0))
+- live repo refresh and openable Apple Silicon builds ([391f39c](https://github.com/SoftVentures/Recrest/commit/391f39ce143d7983a3be0905aa0681ae57a52a65))
+- **tauri:** exempt style-src from CSP nonce injection so packaged MUI/Emotion styles apply ([ba9a98a](https://github.com/SoftVentures/Recrest/commit/ba9a98a454f926ba3fe6670a17339d9952f1b1aa))
+- use workspace wildcards for @recrest/shared in tests and landingpage ([1c9e7a1](https://github.com/SoftVentures/Recrest/commit/1c9e7a1401cdf1d4f1046d269e2da9510f8d723a))
 
 ### Maintenance
 
-* suppress Windows console flashes and brand the MSI installer (v0.9.1) ([bcb58c9](https://github.com/SoftVentures/Recrest/commit/bcb58c9e069c1e32b4f3ac73991d4ec486be8ae2))
+- suppress Windows console flashes and brand the MSI installer (v0.9.1) ([bcb58c9](https://github.com/SoftVentures/Recrest/commit/bcb58c9e069c1e32b4f3ac73991d4ec486be8ae2))
 
 ## [0.10.2] — 2026-06-26
 

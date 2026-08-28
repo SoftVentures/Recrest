@@ -7,11 +7,18 @@ import {
   pgFall,
   prefersReducedMotionGuard,
 } from "@/lib/animations/pageAnimations";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
+// `containerType` lets DetailPane's width ladder query the *layout* width:
+// the pane sits beside the sidebar, so the viewport a `@media` threshold reports
+// is not the width that decides its layout. The thresholds are in rem so they
+// track `--ui-scale` — at a larger scale a step has to fire at a *wider*
+// container width, because the content's own floor grew with it.
 export const PageRoot = styled(Box)({
   display: "flex",
   height: "100%",
   minHeight: 0,
+  containerType: "inline-size",
 }) as typeof Box;
 
 export const MainColumn = styled(Box)({
@@ -26,11 +33,15 @@ export const ToolbarRow = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: pxToRem(12),
+  // The view toggle and the filter button drop onto a second line rather than
+  // overflowing the page when the layout width (or the UI scale) squeezes them.
+  flexWrap: "wrap",
+  rowGap: pxToRem(8),
   // Right padding compensates for the page-scroll gutter so the toolbar's
   // right edge lines up with the table inside the scroll surface.
-  padding: "12px 24px",
-  paddingRight: "calc(24px + var(--recrest-scrollbar-width, 0px))",
+  padding: pxToRems(12, 24),
+  paddingRight: `calc(${pxToRem(24)} + var(--recrest-scrollbar-width, 0px))`,
   animation: `${pgFall} ${PAGE_DUR_SM}ms ${PAGE_EASE} both`,
   ...prefersReducedMotionGuard,
 }) as typeof Box;
@@ -39,14 +50,14 @@ export const ToolbarRow = styled(Box)({
 export const FilterButton = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 30,
-  padding: "0 10px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(30),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
   color: theme.palette.text.primary,
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   fontFamily: "inherit",
   cursor: "pointer",
@@ -65,15 +76,15 @@ export const FilterBadge = styled(Typography)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 16,
-  height: 16,
-  padding: "0 5px",
+  minWidth: pxToRem(16),
+  minHeight: pxToRem(16),
+  padding: pxToRems(0, 5),
   borderRadius: 100,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.background.default,
-  marginLeft: 2,
+  marginLeft: pxToRem(2),
 })) as typeof Typography;
 
 export const ListScroll = styled(Box)({
@@ -85,21 +96,21 @@ export const ListScroll = styled(Box)({
   scrollbarGutter: "stable",
   // Breathing room below the table/cards so the last row doesn't butt against
   // the viewport edge when scrolled to the bottom.
-  paddingBottom: 24,
+  paddingBottom: pxToRem(24),
 }) as typeof Box;
 
 export const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
   color: theme.palette.text.information,
-  padding: "6px 12px 4px",
+  padding: pxToRems(6, 12, 4),
 })) as typeof Typography;
 
 export const FilterMenu = styled(Menu)(({ theme }) => ({
   "& .MuiPaper-root": {
-    width: 240,
+    width: pxToRem(240),
     marginTop: theme.spacing(0.5),
   },
 }));

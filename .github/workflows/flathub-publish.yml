@@ -1,0 +1,203 @@
+# Pushes a released version to the Flathub app repository.
+#
+# WHY THIS EXISTS INSTEAD OF FLATHUB'S OWN AUTOMATION
+#
+# Flathub runs the Flatpak External Data Checker over every repo under
+# github.com/flathub, and with `x-checker-data` it would notice a new tag and
+# open a PR bumping the git source on its own. That does not work for us: the
+# checker updates URLs and checksums of *existing* sources, it does not
+# regenerate vendored dependency lists. It would move `commit:` forward and
+# leave cargo-sources.json / node-sources.json describing the previous release —
+# and the offline build then dies with "Can't make a request in offline mode
+# (…/some-package.tgz)", which reads like a missing package and is really a
+# mismatched commit.
+#
+# So the checker is switched off in the app repo's flathub.json, and this
+# workflow does the whole job: retarget the manifest, regenerate both source
+# lists from the tag's lockfiles, PROVE the offline build still works, and only
+# then open a PR against the Flathub repo.
+#
+# Step 3 is the point. Without it this automation would push broken sources to
+# Flathub and the failure would surface over there, days later, with no obvious
+# link back to the release that caused it.
+name: 📦 Flathub (publish release)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.12.0)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flathub-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Update the Flathub manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
+      options: --privileged --device /dev/fuse
+
+    env:
+      APP_ID: eu.softventures.recrest
+      # A PAT with write access to flathub/<APP_ID>. Created after the first
+      # submission is merged — until then this workflow skips.
+      FLATHUB_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+    steps:
+      # Skips rather than fails while the channel is not live yet: the app repo
+      # only exists once Flathub merges the first submission, and a permanently
+      # red workflow on every release stops being read.
+      - name: Check preconditions
+        id: pre
+        run: |
+          set -uo pipefail
+          if [ -z "${FLATHUB_TOKEN:-}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::FLATHUB_TOKEN is not set — the app is presumably not on Flathub yet. Skipping. See packaging/flatpak/README.md."
+            exit 0
+          fi
+          if ! git ls-remote "https://github.com/flathub/${APP_ID}.git" >/dev/null 2>&1; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::flathub/${APP_ID} does not exist or is unreachable — the submission has not been merged yet. Skipping."
+            exit 0
+          fi
+          [ -n "${TAG:-}" ] || { echo "::error::no tag resolved"; exit 1; }
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "publishing $TAG to flathub/${APP_ID}"
+
+      - name: Check out the released tag
+        if: steps.pre.outputs.ready == 'true'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.TAG }}
+          # generate-sources.sh reads the lockfiles out of the commit the
+          # manifest names, via `git show` — it needs real history, not a
+          # depth-1 checkout.
+          fetch-depth: 0
+
+      # Both `tag:` and `commit:`: Flathub wants the tag for provenance and the
+      # commit as the thing actually checked out, so a moved tag cannot change
+      # what was reviewed.
+      - name: Point the manifest at the released tag
+        if: steps.pre.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          manifest="packaging/flatpak/${APP_ID}.yml"
+          sha="$(git rev-list -n1 "$TAG")"
+
+          python3 - "$manifest" "$TAG" "$sha" <<'PY'
+          import re, sys
+          path, tag, sha = sys.argv[1], sys.argv[2], sys.argv[3]
+          with open(path, encoding="utf-8") as fh:
+              text = fh.read()
+
+          # The git source is the only block carrying `commit:`; replace that one
+          # and make sure a `tag:` sits next to it.
+          new, n = re.subn(r"^(\s*)commit: .*$", rf"\g<1>tag: {tag}\n\g<1>commit: {sha}", text, count=1, flags=re.M)
+          if n != 1:
+              sys.exit(f"expected exactly one 'commit:' line in {path}, replaced {n}")
+          new = re.sub(r"^\s*tag: .*\n(?=\s*tag: )", "", new, count=1, flags=re.M)
+          with open(path, "w", encoding="utf-8", newline="\n") as fh:
+              fh.write(new)
+          print(f"manifest -> tag {tag} / commit {sha}")
+          PY
+
+          grep -E "^\s+(tag|commit):" "$manifest"
+
+      - name: Regenerate the vendored sources
+        if: steps.pre.outputs.ready == 'true'
+        env:
+          # No docker inside this container — use the native path. The script's
+          # own dependencies are installed right here.
+          GENERATE_SOURCES_NATIVE: "1"
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          bash packaging/flatpak/generate-sources.sh
+
+      - name: Prepare the container
+        if: steps.pre.outputs.ready == 'true'
+        run: dbus-uuidgen --ensure=/etc/machine-id
+
+      - name: Install SDK extensions
+        if: steps.pre.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak install -y --noninteractive flathub \
+            org.freedesktop.Sdk.Extension.node22//24.08 \
+            org.freedesktop.Sdk.Extension.rust-stable//24.08
+
+      # The gate. Nothing reaches Flathub unless the exact manifest and sources
+      # about to be pushed build with the network disabled.
+      - name: Prove the offline build still works
+        if: steps.pre.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak-builder --force-clean --download-only \
+            build "packaging/flatpak/${APP_ID}.yml"
+          flatpak-builder --force-clean --disable-download --disable-rofiles-fuse \
+            build "packaging/flatpak/${APP_ID}.yml"
+
+      - name: Open a pull request against the Flathub repo
+        if: steps.pre.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          branch="update-${version}"
+
+          git clone "https://x-access-token:${FLATHUB_TOKEN}@github.com/flathub/${APP_ID}.git" /tmp/flathub
+          cd /tmp/flathub
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+
+          cp "$GITHUB_WORKSPACE/packaging/flatpak/${APP_ID}.yml" .
+          cp "$GITHUB_WORKSPACE/packaging/flatpak/cargo-sources.json" .
+          cp "$GITHUB_WORKSPACE/packaging/flatpak/node-sources.json" .
+          cp "$GITHUB_WORKSPACE/packaging/flatpak/flathub.json" .
+
+          # `git status --porcelain`, not `git diff --quiet`: the latter ignores
+          # untracked files, so a newly added flathub.json would read as "no
+          # changes" and the update would silently not happen.
+          git add -A
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "::notice::flathub/${APP_ID} already matches $TAG — nothing to push."
+            exit 0
+          fi
+          git commit -m "Update to ${version}"
+          git push -u origin "$branch"
+
+          gh pr create \
+            --repo "flathub/${APP_ID}" \
+            --head "$branch" \
+            --title "Update to ${version}" \
+            --body "Automated from [SoftVentures/Recrest@${TAG}](https://github.com/SoftVentures/Recrest/releases/tag/${TAG}).
+
+          The manifest points at the \`${TAG}\` tag and both vendored source lists were regenerated from that commit's lockfiles. The offline build (\`--download-only\` then \`--disable-download\`) was verified in CI before this PR was opened."
+
+      - name: Note what still needs doing by hand
+        if: steps.pre.outputs.ready == 'true'
+        run: |
+          {
+            echo "### Flathub"
+            echo
+            echo "A PR was opened against \`flathub/${APP_ID}\` for \`${TAG}\`."
+            echo
+            echo "The manifest in **this** repository still points at whatever commit it"
+            echo "did before — it is retargeted only inside this workflow run. Update"
+            echo "\`packaging/flatpak/${APP_ID}.yml\` on \`develop\` when convenient so the"
+            echo "\`flatpak.yml\` check builds the released version too."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -3,6 +3,7 @@ import { styled } from "@mui/material/styles";
 
 import { CODE_LIGATURES, MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const MONO = MONO_STACK;
 
@@ -10,8 +11,8 @@ export const Header = styled(Box)(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "flex-start",
-  gap: 16,
-  padding: 20,
+  gap: pxToRem(16),
+  padding: pxToRem(20),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.paper,
@@ -21,8 +22,8 @@ export const PrIcon = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 48,
-  height: 48,
+  width: pxToRem(48),
+  height: pxToRem(48),
   borderRadius: 12,
   backgroundColor: theme.palette.success.main,
   color: theme.palette.success.contrastText ?? "#fff",
@@ -42,42 +43,42 @@ export const TitleRow = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
 }) as typeof Box;
 
 export const Title = styled(Typography)(({ theme }) => ({
-  fontSize: 20,
+  fontSize: fontPxToRem(20),
   fontWeight: 700,
-  lineHeight: "28px",
+  lineHeight: 28 / 20,
   color: theme.palette.text.primary,
   letterSpacing: "-0.02em",
 })) as typeof Typography;
 
 export const Subtitle = styled(Box)(({ theme }) => ({
-  marginTop: 6,
+  marginTop: pxToRem(6),
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Box;
 
 export const AuthorRow = styled(Box)(({ theme }) => ({
-  marginTop: 10,
+  marginTop: pxToRem(10),
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 12.5,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
 })) as typeof Box;
 
 export const AuthorName = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   color: theme.palette.text.primary,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
 })) as typeof Typography;
 
 export const Sep = styled(Typography)(({ theme }) => ({
@@ -85,12 +86,12 @@ export const Sep = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 export const MetaRow = styled(Box)({
-  marginTop: 12,
+  marginTop: pxToRem(12),
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 8,
-  fontSize: 11,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(11),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed tone prop
@@ -101,11 +102,11 @@ export const Chip = styled("span", {
 }>(({ theme, tone }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   fontFamily: tone === "branch" ? MONO : "inherit",
   fontFeatureSettings: tone === "branch" ? CODE_LIGATURES : undefined,
-  fontSize: tone === "branch" ? 11.5 : 11,
-  padding: "2px 8px",
+  fontSize: tone === "branch" ? fontPxToRem(11.5) : fontPxToRem(11),
+  padding: pxToRems(2, 8),
   borderRadius: 8,
   fontWeight: 500,
   color:
@@ -130,18 +131,18 @@ export const Chip = styled("span", {
 
 export const BranchArrow = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.informationLight,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 })) as typeof Typography;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required: clickable branch chip that opens the retarget popover, must stay keyboard-focusable inside the meta row
 export const TargetChipBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   fontFamily: MONO,
   fontFeatureSettings: CODE_LIGATURES,
-  fontSize: 11.5,
-  padding: "2px 8px",
+  fontSize: fontPxToRem(11.5),
+  padding: pxToRems(2, 8),
   borderRadius: 8,
   fontWeight: 500,
   background: theme.palette.surface.interface.backElevation,
@@ -162,7 +163,7 @@ export const HeaderActions = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   flexShrink: 0,
   marginLeft: "auto",
 }) as typeof Box;

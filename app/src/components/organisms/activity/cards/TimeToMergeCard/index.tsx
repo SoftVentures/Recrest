@@ -7,6 +7,7 @@ import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { MergeBucket } from "@/lib/activityAggregates";
 import { barGradient } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 interface Props {
   buckets: MergeBucket[];
@@ -24,15 +25,15 @@ const LABELS: Record<MergeBucket["bucket"], string> = {
 const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const Row = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "36px 1fr 28px",
+  gridTemplateColumns: `${pxToRem(36)} 1fr ${pxToRem(28)}`,
   alignItems: "center",
-  gap: 8,
-  fontSize: 11,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Box;
 
@@ -42,7 +43,7 @@ const RowLabel = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const Bar = styled(Box)(({ theme }) => ({
-  height: 6,
+  height: pxToRem(6),
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.backElevation,
   overflow: "hidden",

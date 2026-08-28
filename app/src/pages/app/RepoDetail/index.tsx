@@ -94,6 +94,7 @@ import { detailKey, fetchPullRequests, loadPrDiff } from "@/store/actions/prs.ac
 import { loadRepos } from "@/store/actions/repos.actions";
 import { bumpRefreshNonce, setSelectedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 // Shared spring for the card grid: cells animate to their new size/slot when
 // the grid reflows (window resize) or the card set changes (provider connects).
@@ -430,7 +431,7 @@ export default function RepoDetailPage() {
     <Root data-testid={TEST_IDS.repoDetail.page}>
       <BackBar>
         <BackButton type="button" onClick={goBack} data-testid={TEST_IDS.repoDetail.back}>
-          <ArrowLeft size={14} />
+          <ArrowLeft size={pxToRem(14)} />
           <Box component="span">{t("detail.back_to_repos", { ns: I18nNamespace.REPOS })}</Box>
         </BackButton>
       </BackBar>
@@ -483,7 +484,7 @@ export default function RepoDetailPage() {
                 disabled={missing}
                 onClick={() => void runCmd(TauriCommand.OPEN_TERMINAL, "Terminal")}
               >
-                <TerminalIcon size={14} />
+                <TerminalIcon size={pxToRem(14)} />
               </IconOnlyBtn>
             </DisabledReasonTooltip>
             <DisabledReasonTooltip reason={missingReason} title={tAria("repo.open_folder")}>
@@ -493,7 +494,7 @@ export default function RepoDetailPage() {
                 disabled={missing}
                 onClick={() => void revealPathInSystem(repo.path)}
               >
-                <Folder size={14} />
+                <Folder size={pxToRem(14)} />
               </IconOnlyBtn>
             </DisabledReasonTooltip>
             <GeneralTooltip
@@ -509,7 +510,11 @@ export default function RepoDetailPage() {
                   disabled={!openHost.canOpen}
                   onClick={openHost.open}
                 >
-                  {brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
+                  {brand ? (
+                    <BrandIcon slug={brand} size={14} />
+                  ) : (
+                    <ExternalLink size={pxToRem(14)} />
+                  )}
                 </IconOnlyBtn>
               </Box>
             </GeneralTooltip>
@@ -520,14 +525,14 @@ export default function RepoDetailPage() {
                 data-testid={TEST_IDS.repoDetail.ssh.trigger}
                 onClick={() => setSshOpen(true)}
               >
-                <KeyRound size={14} />
+                <KeyRound size={pxToRem(14)} />
               </IconOnlyBtn>
             </GeneralTooltip>
             <DisabledReasonTooltip reason={missingReason}>
               <SecondaryBtn type="button" disabled={busy || missing} onClick={() => void doPull()}>
                 <ActionFeedbackIcon
                   state={pull.state}
-                  fallback={<ArrowDown size={13} />}
+                  fallback={<ArrowDown size={pxToRem(13)} />}
                   size={13}
                 />
                 {t("detail.pull", { ns: I18nNamespace.REPOS })}
@@ -535,7 +540,11 @@ export default function RepoDetailPage() {
             </DisabledReasonTooltip>
             <DisabledReasonTooltip reason={missingReason}>
               <SecondaryBtn type="button" disabled={busy || missing} onClick={() => void doPush()}>
-                <ActionFeedbackIcon state={push.state} fallback={<ArrowUp size={13} />} size={13} />
+                <ActionFeedbackIcon
+                  state={push.state}
+                  fallback={<ArrowUp size={pxToRem(13)} />}
+                  size={13}
+                />
                 {t("detail.push", { ns: I18nNamespace.REPOS })}
               </SecondaryBtn>
             </DisabledReasonTooltip>
@@ -543,7 +552,7 @@ export default function RepoDetailPage() {
               <SecondaryBtn type="button" disabled={busy || missing} onClick={() => void doFetch()}>
                 <ActionFeedbackIcon
                   state={fetch.state}
-                  fallback={<RefreshCw size={13} />}
+                  fallback={<RefreshCw size={pxToRem(13)} />}
                   size={13}
                 />
                 {t("detail.fetch", { ns: I18nNamespace.REPOS })}
@@ -555,7 +564,7 @@ export default function RepoDetailPage() {
                 disabled={missing}
                 onClick={() => setBranchDialogOpen(true)}
               >
-                <Plus size={13} />
+                <Plus size={pxToRem(13)} />
                 {t("detail.branch", { ns: I18nNamespace.REPOS })}
               </SecondaryBtn>
             </DisabledReasonTooltip>

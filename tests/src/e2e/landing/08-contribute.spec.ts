@@ -9,9 +9,10 @@ test.describe("landing / contribute section", () => {
 
     const ctas = section.locator(".hero-cta a");
     await expect(ctas).toHaveCount(2);
-    // Primary CTA → repo root, secondary CTA → #roadmap fragment.
+    // Primary CTA → repo root, secondary CTA → ROADMAP.md on the default branch
+    // (there is no #roadmap section on the landing page to link to).
     await expect(ctas.nth(0)).toHaveAttribute("href", REPO_URL);
-    await expect(ctas.nth(1)).toHaveAttribute("href", `${REPO_URL}#roadmap`);
+    await expect(ctas.nth(1)).toHaveAttribute("href", `${REPO_URL}/blob/main/ROADMAP.md`);
 
     const ways = section.locator(".contrib-way");
     await expect(ways).toHaveCount(3);

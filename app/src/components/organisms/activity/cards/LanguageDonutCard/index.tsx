@@ -10,8 +10,9 @@ import { ResponsivePie } from "@nivo/pie";
 import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import { useChartTooltip } from "@/components/organisms/activity/cards/parts/ChartTooltip/useChartTooltip";
 import type { LangContributor, LanguageSlice } from "@/lib/activityAggregates";
-import { useNivoTheme } from "@/lib/charts/nivoTheme";
+import { useChartMargin, useNivoTheme } from "@/lib/charts/nivoTheme";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 // Exported so Storybook's `satisfies Meta<typeof Component>` can name the props
 // type through the memo() wrapper (TS4023 otherwise).
@@ -29,9 +30,9 @@ const Wrap = styled(Box)({
   // the legend always keeps room for its percentage column; the legend fills
   // the rest. `minmax(0, 1fr)` lets the legend track shrink instead of pushing
   // the donut wider and clipping the percentages on a narrow card.
-  gridTemplateColumns: "minmax(88px, 38%) minmax(0, 1fr)",
+  gridTemplateColumns: `minmax(${pxToRem(88)}, 38%) minmax(0, 1fr)`,
   alignItems: "center",
-  gap: 16,
+  gap: pxToRem(16),
   flex: "1 1 auto",
   minHeight: 0,
   height: "100%",
@@ -45,7 +46,7 @@ const Wrap = styled(Box)({
 const DonutArea = styled(Box)({
   position: "relative",
   width: "100%",
-  maxWidth: 200,
+  maxWidth: pxToRem(200),
   aspectRatio: "1 / 1",
   margin: "0 auto",
   flexShrink: 0,
@@ -62,7 +63,7 @@ const Centre = styled(Box)({
 });
 
 const CentreValue = styled(Box)(({ theme }) => ({
-  fontSize: 22,
+  fontSize: fontPxToRem(22),
   fontWeight: 700,
   color: theme.palette.text.primary,
   fontVariantNumeric: "tabular-nums",
@@ -70,11 +71,11 @@ const CentreValue = styled(Box)(({ theme }) => ({
 }));
 
 const CentreSub = styled(Box)(({ theme }) => ({
-  fontSize: 9,
+  fontSize: fontPxToRem(9),
   color: theme.palette.text.information,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
-  marginTop: 4,
+  marginTop: pxToRem(4),
 }));
 
 const LegendList = styled(Box)({
@@ -83,15 +84,15 @@ const LegendList = styled(Box)({
   listStyle: "none",
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
 }) as typeof Box;
 
 const LegendItem = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "10px 1fr auto",
-  gap: 8,
+  gridTemplateColumns: `${pxToRem(10)} 1fr auto`,
+  gap: pxToRem(8),
   alignItems: "center",
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.primary,
   "& > span:last-of-type": {
     color: theme.palette.text.information,
@@ -103,8 +104,8 @@ const LegendItem = styled(Box)(({ theme }) => ({
 const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
   color: string;
 }>(({ color }) => ({
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: 8,
   backgroundColor: color,
   flexShrink: 0,
@@ -114,30 +115,38 @@ const Swatch = styled("span", { shouldForwardProp: (p) => p !== "color" })<{
 const Tooltip = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  fontSize: 12,
-  padding: "8px 10px",
+  fontSize: fontPxToRem(12),
+  padding: pxToRems(8, 10),
   color: theme.palette.text.primary,
-  minWidth: 150,
-  maxWidth: 240,
+  minWidth: pxToRem(150),
+  maxWidth: pxToRem(240),
 }));
 
+// The tooltip is capped at 240px, so an unusually long language label has to
+// truncate rather than spill past the frame.
 const TooltipHead = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   fontWeight: 600,
-  whiteSpace: "nowrap",
+  minWidth: 0,
+  "& > span:last-of-type": {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
 });
 
 const TooltipRepos = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 3,
-  paddingTop: 6,
+  gap: pxToRem(3),
+  paddingTop: pxToRem(6),
   borderTop: `1px solid ${theme.palette.divider}`,
 }));
 
@@ -145,8 +154,8 @@ const RepoRow = styled(Box)({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 12,
-  fontSize: 11,
+  gap: pxToRem(12),
+  fontSize: fontPxToRem(11),
 });
 
 const RepoName = styled(Box)(({ theme }) => ({
@@ -163,7 +172,7 @@ const RepoPct = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 const MoreRow = styled(Box)(({ theme }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
 }));
 
@@ -189,6 +198,7 @@ function mergeContributors(slices: readonly LanguageSlice[]): LangContributor[] 
 function LanguageDonutCard({ mix, loading }: Props) {
   const { t } = useTranslation();
   const nivoTheme = useNivoTheme();
+  const chartMargin = useChartMargin({ top: 8, right: 8, bottom: 8, left: 8 });
   const { show, hide, portal } = useChartTooltip();
   // Anything under 3% is noise in the donut — fold it into a single "Other"
   // slice. The accumulated share keeps the wheel summing to 100%.
@@ -244,7 +254,7 @@ function LanguageDonutCard({ mix, loading }: Props) {
             // defaults to role="img" with no accessible name → axe svg-img-alt.
             role="presentation"
             colors={{ datum: "data.color" }}
-            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            margin={chartMargin}
             innerRadius={0.7}
             padAngle={1.5}
             cornerRadius={3}

@@ -31,7 +31,11 @@ export const LIGHT_THEME_COLORS = {
   INK_1: "#22222a",
   INK_2: "#52525b",
   INK_3: "#64646d",
-  INK_4: "#747480",
+  // Darkened from #747480: at 4.31:1 against SURFACE_2 (#f7f7f8) the muted-text
+  // slot missed WCAG AA for normal text (the 10.5px bold MR "draft" badge).
+  // #6d6d78 keeps the same hue and stays visibly lighter than INK_3 while
+  // clearing 4.5:1 (4.77:1 on SURFACE_2, 5.03:1 on white).
+  INK_4: "#6d6d78",
   ACCENT: "#f46a3d",
   ACCENT_WEAK: "#ffe6db",
   ACCENT_INK: "#b13b15",
@@ -76,7 +80,13 @@ export const DARK_THEME_COLORS = {
   INK_1: "#ecedf2",
   INK_2: "#a0a2b2",
   INK_3: "#a3a6b8",
-  INK_4: "#8b8ea2",
+  // Lightened from #8b8ea2, the dark-mode twin of the LIGHT.INK_4 fix above:
+  // at 4.47:1 against SURFACE_2 (#262935) it missed AA for the 10.5px bold MR
+  // "draft" badge, which paints INK_4 on `surface.interface.backElevation`.
+  // #9295a8 keeps the hue (hsl 232) and stays clearly dimmer than INK_3
+  // (L 61.6 vs 68.0) while clearing 4.5:1 (4.88:1 on SURFACE_2, 5.15:1 on
+  // SURFACE, 6.56:1 on APP_BG).
+  INK_4: "#9295a8",
   ACCENT: "#ff7f4f",
   ACCENT_WEAK: "rgba(255, 127, 79, 0.18)",
   ACCENT_INK: "#ffa888",

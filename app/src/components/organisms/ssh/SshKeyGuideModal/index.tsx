@@ -11,6 +11,7 @@ import { Platform, usePlatform } from "@/hooks/usePlatform";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const KEYGEN_CMD = 'ssh-keygen -t ed25519 -C "you@example.com"';
 
@@ -24,23 +25,23 @@ function printPubCmd(platform: Platform): string {
 const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: pxToRem(14),
 }) as typeof Box;
 
 const Step = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 const StepTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 const StepText = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.information,
   lineHeight: 1.5,
 })) as typeof Typography;
@@ -48,8 +49,8 @@ const StepText = styled(Typography)(({ theme }) => ({
 const CmdRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "8px 10px",
+  gap: pxToRem(8),
+  padding: pxToRems(8, 10),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.backElevation,
@@ -60,7 +61,7 @@ const Cmd = styled(Box)(({ theme }) => ({
   minWidth: 0,
   overflowX: "auto",
   fontFamily: MONO_STACK,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
 })) as typeof Box;
@@ -68,20 +69,20 @@ const Cmd = styled(Box)(({ theme }) => ({
 const SecurityNote = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
-  gap: 8,
-  padding: "10px 12px",
+  gap: pxToRem(8),
+  padding: pxToRems(10, 12),
   borderRadius: 8,
   border: `1px solid ${theme.palette.warning.main}`,
   backgroundColor: `color-mix(in srgb, ${theme.palette.warning.main} 10%, transparent)`,
   color: theme.palette.text.primary,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   lineHeight: 1.5,
 })) as typeof Box;
 
 const SecurityIcon = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   flexShrink: 0,
-  marginTop: 1,
+  marginTop: pxToRem(1),
   color: theme.palette.warning.main,
 })) as typeof Box;
 
@@ -105,7 +106,7 @@ function CopyableCommand({ value, testId }: { value: string; testId?: string }) 
       <GeneralButton
         variant="ghost"
         size="sm"
-        startIcon={<Copy size={13} />}
+        startIcon={<Copy size={pxToRem(13)} />}
         feedbackState={state}
         onClick={() => {
           void copy().catch(() => {
@@ -160,7 +161,7 @@ export function SshKeyGuideModal({ open, onClose }: SshKeyGuideModalProps) {
 
           <SecurityNote>
             <SecurityIcon>
-              <ShieldAlert size={15} />
+              <ShieldAlert size={pxToRem(15)} />
             </SecurityIcon>
             <Box component="span">{t("ssh.guide.security")}</Box>
           </SecurityNote>

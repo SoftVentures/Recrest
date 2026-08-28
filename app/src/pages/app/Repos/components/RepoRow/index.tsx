@@ -44,6 +44,7 @@ import {
 } from "@/pages/app/Repos/components/RepoRow/RepoRow.styles";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export interface RepoRowProps {
   repo: EnrichedRepo;
@@ -98,7 +99,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
             aria-label={repo.pinned ? tAria("repo.unpin") : tAria("repo.pin")}
             data-testid={TEST_IDS.repos.rowPinToggle}
             onClick={onInlinePin}
-            icon={<Pin size={13} />}
+            icon={<Pin size={pxToRem(13)} />}
           />
         </PinSlot>
         <RepoAvatar repo={repo} size={28} radius={6} />
@@ -112,7 +113,7 @@ export function RepoRow({ repo, selected, onClick }: RepoRowProps) {
         {repo.status.branch && (
           <BranchChip>
             <IconSlot>
-              <GitBranch size={11} />
+              <GitBranch size={pxToRem(11)} />
             </IconSlot>
             <BranchText component="span">{repo.status.branch}</BranchText>
           </BranchChip>

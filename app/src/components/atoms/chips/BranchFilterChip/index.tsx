@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { styled } from "@mui/material/styles";
 
 import { StatusTone, toneChip } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRems } from "@/theme/scale";
 
 export type BranchFilterChipTone = "current" | "dirty" | "clean" | "remote";
 
@@ -20,11 +21,11 @@ const Root = styled("span", { shouldForwardProp: FORWARD })<{ tone: BranchFilter
   ({ theme, tone }) => ({
     display: "inline-flex",
     alignItems: "center",
-    fontSize: 9.5,
+    fontSize: fontPxToRem(9.5),
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.05em",
-    padding: "2px 7px",
+    padding: pxToRems(2, 7),
     borderRadius: 100,
     ...(tone === "current" && toneChip(theme, StatusTone.PRIMARY, 14)),
     ...(tone === "dirty" && toneChip(theme, StatusTone.WARNING)),

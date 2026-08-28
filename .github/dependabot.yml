@@ -19,6 +19,33 @@ updates:
     commit-message:
       prefix: "dependabot"
       prefix-development: "dependabot(dev)"
+    # Zwei Major-Sprünge, die das Lint-Toolchain zerlegen und die kein Update
+    # unserer Seite reparieren kann. Ohne diese Einträge öffnet Dependabot den
+    # PR nach jedem Schließen neu (die Kette 107 → 110 → 112 → 117 belegt das).
+    ignore:
+      # typescript 7 ist der native Compiler-Port: `enum Extension` ist aus der
+      # öffentlichen API verschwunden, und `@typescript-eslint/typescript-estree`
+      # greift in `create-program/shared.js` direkt auf `ts.Extension.Cjs` zu —
+      # ESLint stirbt dadurch beim Laden, in jedem Workspace. Betrifft jede
+      # veröffentlichte Version einschließlich Canary (8.67.1-alpha.4), die
+      # weiterhin `typescript >=4.8.4 <6.1.0` als Peer deklariert. Erst
+      # entfernen, wenn typescript-eslint TS 7 unterstützt.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # eslint 10 hat die Rule-Context-API geändert; eslint-plugin-react 7.37.5
+      # ruft weiter `context.getFilename()` und stirbt an der ersten Datei
+      # ("contextOrFilename.getFilename is not a function"). 7.37.5 ist die
+      # letzte Version — der `next`-Tag zeigt auf das ältere 7.8.0-rc.0.
+      # Anders als bei typescript ist der Weg hier offen, aber es ist KEINE
+      # Versionsanhebung: eslint-plugin-react müsste durch
+      # @eslint-react/eslint-plugin ersetzt werden (andere Regelnamen, eigene
+      # Migration). eslint-plugin-react-hooks 7.1.1 kann ESLint 10 bereits.
+      # Beide Einträge zusammen entfernen, sobald diese Migration passiert ist —
+      # @eslint/js muss immer denselben Major wie eslint haben.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-all:
         patterns: ["*"]

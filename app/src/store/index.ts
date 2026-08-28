@@ -16,6 +16,7 @@ import { shortcutsReducer } from "@/store/reducers/shortcutsReducer";
 import { uiReducer } from "@/store/reducers/uiReducer";
 import type { RootState } from "@/store/rootState";
 import { shortcutsPersistMiddleware } from "@/store/shortcutsPersistence";
+import { uiScaleMigrationMiddleware } from "@/store/uiScaleMigration";
 
 /**
  * Phase 2: Redux is the only renderer-side source of truth for app state.
@@ -55,6 +56,7 @@ export const store = configureStore({
       settingsBackendSync,
       activityRangePersistMiddleware,
       shortcutsPersistMiddleware,
+      uiScaleMigrationMiddleware,
     ),
 });
 

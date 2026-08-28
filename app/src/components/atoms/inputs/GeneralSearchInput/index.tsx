@@ -8,6 +8,7 @@ import GeneralIconButton, {
   IconButtonShape,
   IconButtonSize,
 } from "@/components/atoms/buttons/GeneralIconButton";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface WrapperProps {
   width?: number | string;
@@ -20,15 +21,15 @@ const Wrapper = styled("label", {
 })<WrapperProps>(({ theme, width, height = 30 }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 7,
+  gap: pxToRem(7),
   height,
   width,
-  padding: "0 10px",
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
   color: theme.palette.text.information,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   "&:focus-within": {
     borderColor: theme.palette.border.hover,
   },
@@ -41,7 +42,7 @@ const NativeInput = styled("input")(({ theme }) => ({
   background: "transparent",
   border: 0,
   outline: "none",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
   fontFamily: "inherit",
   "&::placeholder": { color: theme.palette.text.information },
@@ -81,7 +82,7 @@ const GeneralSearchInput = forwardRef(function GeneralSearchInput(
 ) {
   return (
     <Wrapper width={width} height={height}>
-      {!hideIcon && <SearchIcon size={13} aria-hidden />}
+      {!hideIcon && <SearchIcon size={pxToRem(13)} aria-hidden />}
       <NativeInput
         ref={ref}
         type="text"
@@ -98,7 +99,7 @@ const GeneralSearchInput = forwardRef(function GeneralSearchInput(
           aria-label={clearLabel}
           onClick={() => onChange("")}
           data-testid={clearTestId}
-          icon={<ClearIcon size={11} aria-hidden />}
+          icon={<ClearIcon size={pxToRem(11)} aria-hidden />}
         />
       )}
     </Wrapper>

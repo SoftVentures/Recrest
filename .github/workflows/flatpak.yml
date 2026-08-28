@@ -1,0 +1,185 @@
+# Guards the Flathub manifest against silent rot.
+#
+# Flathub builds with no network access, so `packaging/flatpak/cargo-sources.json`
+# and `node-sources.json` list every crate and npm package explicitly. Any change
+# to a lockfile invalidates them — and nothing else in this repository would
+# notice. Without this workflow the first sign of a stale manifest is a failed
+# Flathub build, days or weeks after the dependency bump that caused it.
+#
+# The check is the real thing: the sources are fetched, and then the build runs
+# with the network disabled. If it links, the vendored lists are complete.
+#
+# This does NOT publish anything. Flathub builds from its own repository; here we
+# only prove the manifest still works. See packaging/flatpak/README.md.
+name: 📦 Flatpak (manifest check)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "packaging/flatpak/**"
+      - "app/**"
+      - "shared/**"
+      - "yarn.lock"
+      - "app/src-tauri/Cargo.lock"
+      - ".github/workflows/flatpak.yml"
+  pull_request:
+    paths:
+      - "packaging/flatpak/**"
+      - "app/**"
+      - "shared/**"
+      - "yarn.lock"
+      - "app/src-tauri/Cargo.lock"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Offline build
+    runs-on: ubuntu-latest
+    # Runtime download, then ~3100 sources fetched, then a full release-profile
+    # Rust build of the Tauri tree. 120 minutes is a ceiling against a hang, not
+    # an estimate — if this starts timing out rather than failing, the fix is to
+    # cache the flatpak-builder download directory, not to raise the number
+    # again.
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
+      # --device /dev/fuse: flatpak-builder wants FUSE for its rofiles overlay.
+      # The build step also passes --disable-rofiles-fuse as a fallback, because
+      # a container without working FUSE fails with the opaque
+      # "Failure spawning rofiles-fuse, exit_status: 256".
+      options: --privileged --device /dev/fuse
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # Three states, deliberately distinguished:
+      #
+      #   both present  → build (the steady state)
+      #   both absent   → warn and skip; the channel is not bootstrapped yet.
+      #                   `generate-sources.sh` needs a Linux machine, so until
+      #                   someone runs it there is nothing to build. Failing here
+      #                   would paint develop red over a step nobody can take in
+      #                   CI, and a permanently red check stops being read.
+      #   one of two    → fail. That is not "not set up", it is a half-committed
+      #                   pair, and the build would break confusingly later.
+      - name: Check for the vendored source lists
+        id: sources
+        run: |
+          set -uo pipefail
+          cargo=packaging/flatpak/cargo-sources.json
+          node=packaging/flatpak/node-sources.json
+          have=0
+          [ -s "$cargo" ] && have=$((have + 1))
+          [ -s "$node" ] && have=$((have + 1))
+
+          case "$have" in
+            2) echo "ready=true" >> "$GITHUB_OUTPUT" ;;
+            0)
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::Flatpak channel not bootstrapped: run packaging/flatpak/generate-sources.sh on a Linux machine and commit cargo-sources.json + node-sources.json. Skipping the offline build."
+              ;;
+            *)
+              echo "::error::exactly one of $cargo / $node is present — regenerate both with packaging/flatpak/generate-sources.sh"
+              exit 1
+              ;;
+          esac
+
+      # flatpak-builder is invoked directly rather than through
+      # flathub-infra/flatpak-github-actions: the container already provides the
+      # toolchain, so the action would only add a third-party dependency to pin
+      # and audit for no capability we do not already have here.
+      #
+      # Two stages, because that is what Flathub actually does — and what makes
+      # the check mean anything.
+      #
+      # `--disable-download` on its own does NOT reproduce Flathub. It blocks
+      # every download including the app's own git checkout, so the build dies
+      # with "cannot stat .flatpak-builder/git/…" before compiling a line. That
+      # failure says nothing about whether the vendored sources are complete.
+      #
+      # Fetching first and then building with the network disabled is the real
+      # assertion: the *build* must not need the network. If a crate or an npm
+      # package is missing from the generated lists, the second stage is where it
+      # surfaces — here, instead of in a Flathub review.
+      # The image ships org.gnome.Platform/Sdk 47 but NOT the SDK extensions, so
+      # they have to be pulled in or the build fails on the first line with
+      # "Requested extension org.freedesktop.Sdk.Extension.node22/x86_64/47 not
+      # installed". The `/47` in that message is misleading — the extension point
+      # in the GNOME SDK declares `version = 24.08` and resolves correctly; the
+      # extension is simply absent.
+      # The image has no /etc/machine-id, so the build's dbus refuses to start:
+      # "Cannot spawn a message bus without a machine-id". Cheap to create, and
+      # nothing downstream works without it.
+      - name: Prepare the container
+        run: dbus-uuidgen --ensure=/etc/machine-id
+
+      - name: Install SDK extensions
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak install -y --noninteractive flathub \
+            org.freedesktop.Sdk.Extension.node22//24.08 \
+            org.freedesktop.Sdk.Extension.rust-stable//24.08
+          flatpak list --columns=application,branch
+
+      - name: Fetch sources
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak-builder \
+            --force-clean \
+            --download-only \
+            build \
+            packaging/flatpak/eu.softventures.recrest.yml
+
+      # `--force-clean` again: `--download-only` leaves the app dir populated, so
+      # without it this stage aborts with "App dir 'build' is not empty". It only
+      # clears the app dir — the fetched sources live in `.flatpak-builder` and
+      # survive, which is the whole point of splitting the stages.
+      - name: Build with the network disabled
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          flatpak-builder \
+            --force-clean \
+            --disable-download \
+            --disable-rofiles-fuse \
+            --repo=repo \
+            build \
+            packaging/flatpak/eu.softventures.recrest.yml
+
+      - name: Bundle
+        if: steps.sources.outputs.ready == 'true'
+        run: flatpak build-bundle repo recrest.flatpak eu.softventures.recrest
+
+      # Runs unconditionally, including while the channel is not bootstrapped:
+      # the AppStream metadata is shared with the deb/rpm bundles, so a
+      # validation failure is a problem on every Linux channel and needs no
+      # vendored sources to catch.
+      - name: Validate AppStream metadata
+        # always(): the metadata is shared with the deb/rpm bundles, so this has
+        # to report even when the Flatpak build itself broke — otherwise a build
+        # failure hides an unrelated packaging problem on every Linux channel.
+        if: always()
+        run: |
+          set -euo pipefail
+          appstreamcli validate --explain \
+            app/src-tauri/resources/eu.softventures.recrest.metainfo.xml
+
+      - name: Upload bundle for manual testing
+        if: steps.sources.outputs.ready == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: recrest-flatpak-x86_64
+          path: recrest.flatpak
+          retention-days: 7
+          if-no-files-found: error

@@ -28,6 +28,7 @@ import {
 import type { GitConfigFieldSpec } from "@/lib/constants/gitConfigSchema";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 export interface LayeredFieldProps {
   field: GitConfigFieldSpec;
@@ -196,7 +197,7 @@ export default function LayeredField({ field, origin, writableLayers, onSave }: 
           data-testid={TEST_IDS.gitConfigSettings.layeredFieldSourceBadge(field.key)}
           title={origin?.sourcePath ?? ""}
         >
-          <Lock size={11} aria-hidden />
+          <Lock size={pxToRem(11)} aria-hidden />
           {sourceName}
         </SourceBadge>
       );
@@ -213,7 +214,7 @@ export default function LayeredField({ field, origin, writableLayers, onSave }: 
           data-testid={TEST_IDS.gitConfigSettings.layeredFieldSourceBadge(field.key)}
           title={only.path}
         >
-          <FileText size={12} aria-hidden />
+          <FileText size={pxToRem(12)} aria-hidden />
           <LayerChipText>{fileName}</LayerChipText>
         </LayerChip>
       );
@@ -264,7 +265,7 @@ export default function LayeredField({ field, origin, writableLayers, onSave }: 
         {renderTarget()}
         {readOnly && (
           <ReadOnlyChip>
-            <Lock size={11} aria-hidden />
+            <Lock size={pxToRem(11)} aria-hidden />
             {t("settings.git.read_only")}
           </ReadOnlyChip>
         )}

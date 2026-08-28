@@ -131,6 +131,13 @@ export const DownloadIcon: Icon = (props) => (
   </svg>
 );
 
+export const CopyIcon: Icon = (props) => (
+  <svg width={14} height={14} viewBox="0 0 24 24" {...defaults} strokeWidth={2.2} {...props}>
+    <rect x={9} y={9} width={12} height={12} rx={2} />
+    <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+  </svg>
+);
+
 export const LaptopIcon: Icon = (props) => (
   <svg width={12} height={12} viewBox="0 0 24 24" {...defaults} strokeWidth={2.2} {...props}>
     <rect x={2} y={4} width={20} height={16} rx={2} />

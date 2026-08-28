@@ -40,6 +40,7 @@ import {
 import { deleteRepo, removeRepo } from "@/store/actions/repos.actions";
 import { togglePinnedRepo } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export interface RepoActionsProps {
   repo: EnrichedRepo;
@@ -210,13 +211,13 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
       >
         <MenuItem onClick={onTogglePin}>
           <ListItemIcon>
-            <Pin size={13} />
+            <Pin size={pxToRem(13)} />
           </ListItemIcon>
           <ListItemText>{repo.pinned ? t("row_actions.unpin") : t("row_actions.pin")}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => void onCopyPath()}>
           <ListItemIcon>
-            <Copy size={13} />
+            <Copy size={pxToRem(13)} />
           </ListItemIcon>
           <ListItemText>{t("row_actions.copy_path")}</ListItemText>
         </MenuItem>
@@ -227,7 +228,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
           }}
         >
           <DangerMenuIcon>
-            <X size={13} />
+            <X size={pxToRem(13)} />
           </DangerMenuIcon>
           <ListItemText>{t("row_actions.forget")}</ListItemText>
         </DangerMenuItem>
@@ -239,7 +240,7 @@ export function RepoActions({ repo, iconSize = IconButtonSize.MD }: RepoActionsP
           data-testid={TEST_IDS.repos.rowDelete}
         >
           <DangerMenuIcon>
-            <Trash2 size={13} />
+            <Trash2 size={pxToRem(13)} />
           </DangerMenuIcon>
           <ListItemText>{t("row_actions.delete_from_disk")}</ListItemText>
         </DangerMenuItem>

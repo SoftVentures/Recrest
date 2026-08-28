@@ -4,6 +4,7 @@ import { styled } from "@mui/material/styles";
 import { motion } from "motion/react";
 
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const Root = styled(Box)({
   height: "100%",
@@ -19,23 +20,23 @@ export const Root = styled(Box)({
 export const BackBar = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "12px 24px 0",
+  gap: pxToRem(6),
+  padding: pxToRems(12, 24, 0),
   color: theme.palette.text.information,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 })) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 export const BackButton = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   background: "transparent",
   border: 0,
-  padding: 4,
+  padding: pxToRem(4),
   color: "inherit",
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   cursor: "pointer",
   borderRadius: 8,
   "&:hover": { color: theme.palette.text.primary },
@@ -61,8 +62,8 @@ export const Header = styled(Box)(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "flex-start",
-  gap: 16,
-  padding: 20,
+  gap: pxToRem(16),
+  padding: pxToRem(20),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.paper,
@@ -77,13 +78,13 @@ export const TitleRow = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 export const RepoName = styled(Typography)(({ theme }) => ({
-  fontSize: 24,
+  fontSize: fontPxToRem(24),
   fontWeight: 700,
-  lineHeight: "30px",
+  lineHeight: 30 / 24,
   color: theme.palette.text.primary,
   letterSpacing: "-0.02em",
 })) as typeof Typography;
@@ -91,37 +92,37 @@ export const RepoName = styled(Typography)(({ theme }) => ({
 export const LangPill = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  padding: "2px 8px",
+  gap: pxToRem(6),
+  padding: pxToRems(2, 8),
   borderRadius: 100,
   border: `1px solid ${theme.palette.divider}`,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 500,
   color: theme.palette.primary.main,
 })) as typeof Box;
 
 export const LangDot = styled(Box)(({ theme }) => ({
   display: "inline-block",
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: "50%",
   background: theme.palette.primary.main,
 })) as typeof Box;
 
 export const PathText = styled(Typography)(({ theme }) => ({
-  marginTop: 4,
+  marginTop: pxToRem(4),
   fontFamily: MONO_STACK,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const MetaRow = styled(Box)({
-  marginTop: 10,
+  marginTop: pxToRem(10),
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 8,
-  fontSize: 11,
+  gap: pxToRem(8),
+  fontSize: fontPxToRem(11),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- generic styled element required for typed props
@@ -130,10 +131,10 @@ export const Chip = styled("span", {
 })<{ tone: "branch" | "clean" | "dirty" | "ahead" | "behind" | "remote" }>(({ theme, tone }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: pxToRem(4),
   fontFamily: tone === "branch" ? MONO_STACK : "inherit",
-  fontSize: tone === "branch" ? 11.5 : 11,
-  padding: "2px 8px",
+  fontSize: tone === "branch" ? fontPxToRem(11.5) : fontPxToRem(11),
+  padding: pxToRems(2, 8),
   borderRadius: 8,
   fontWeight: 500,
   textTransform: "none",
@@ -162,7 +163,7 @@ export const HeaderActions = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   // Don't shrink — at narrow widths (e.g. macOS min 1100) we'd rather have
   // the whole cluster wrap to its own row under the title than squeeze the
   // title text. Header has `flexWrap: wrap` so this wraps cleanly.
@@ -176,15 +177,15 @@ export const HeaderActions = styled(Box)({
 export const PrimaryBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 32,
-  padding: "0 12px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 12),
   borderRadius: 8,
   border: `1px solid ${theme.palette.text.primary}`,
   background: theme.palette.text.primary,
   color: theme.palette.background.paper,
   fontFamily: "inherit",
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   cursor: "pointer",
   "&:hover": { opacity: 0.92 },
@@ -199,15 +200,15 @@ export const PrimaryBtn = styled("button")(({ theme }) => ({
 export const SecondaryBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 32,
-  padding: "0 10px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 10),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   background: theme.palette.background.paper,
   color: theme.palette.text.primary,
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   cursor: "pointer",
   "&:hover": { backgroundColor: theme.palette.surface.interface.active },
@@ -219,7 +220,7 @@ export const SecondaryBtn = styled("button")(({ theme }) => ({
 }));
 
 export const IconOnlyBtn = styled(SecondaryBtn)({
-  width: 32,
+  width: pxToRem(32),
   padding: 0,
   justifyContent: "center",
 });
@@ -233,7 +234,7 @@ export const IconOnlyBtn = styled(SecondaryBtn)({
 export const CardGrid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 // One grid cell. It's a `motion.div` so reflow/resize (column reordering, the
@@ -259,45 +260,45 @@ export const Card = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.paper,
-  padding: 16,
+  padding: pxToRem(16),
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 })) as typeof Box;
 
 export const CardHead = styled(Box)({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const CardTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 700,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 export const CardMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const CommitsList = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: pxToRem(10),
   // Fill the stretched card height (equal-height rows) and scroll internally.
   flex: 1,
   minHeight: 0,
-  maxHeight: 320,
+  maxHeight: pxToRem(320),
   overflowY: "auto",
 }) as typeof Box;
 
 export const CommitRow = styled(Box)({
   display: "flex",
   alignItems: "flex-start",
-  gap: 10,
+  gap: pxToRem(10),
 }) as typeof Box;
 
 export const CommitMain = styled(Box)({
@@ -306,13 +307,13 @@ export const CommitMain = styled(Box)({
 }) as typeof Box;
 
 export const CommitMessage = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 500,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 export const CommitMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -325,7 +326,7 @@ export const WorkingCopyScroll = styled(Box)({
   // blow the page height to thousands of pixels without an internal cap.
   flex: 1,
   minHeight: 0,
-  maxHeight: 480,
+  maxHeight: pxToRem(480),
   overflowY: "auto",
   // Sub-sections inside WorkingCopyPanel use `overflow: hidden`, so the
   // scroll lives here at the panel boundary.
@@ -339,19 +340,19 @@ export const CleanState = styled(Box)({
   // Fill the stretched card so the celebrating mascot centres instead of
   // hugging the top with a void beneath.
   flex: 1,
-  gap: 4,
-  padding: "16px 0 8px",
+  gap: pxToRem(4),
+  padding: pxToRems(16, 0, 8),
 }) as typeof Box;
 
 export const CleanStateText = styled(Typography)(({ theme }) => ({
-  marginTop: 8,
-  fontSize: 14,
+  marginTop: pxToRem(8),
+  fontSize: fontPxToRem(14),
   fontWeight: 600,
   color: theme.palette.text.primary,
 })) as typeof Typography;
 
 export const CleanStateSub = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -361,7 +362,7 @@ export const MissingRoot = styled(Box)(({ theme }) => ({
 
 export const RemoteUrlText = styled(Box)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.secondary,
 })) as typeof Box;
 
@@ -370,7 +371,7 @@ export const PrScroller = styled(Box)({
   // the maxHeight is the hard ceiling so a long PR list can't bloat the page.
   flex: 1,
   minHeight: 0,
-  maxHeight: 480,
+  maxHeight: pxToRem(480),
   overflowY: "auto",
 }) as typeof Box;
 

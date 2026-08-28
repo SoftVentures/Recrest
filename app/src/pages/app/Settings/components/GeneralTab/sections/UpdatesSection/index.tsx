@@ -18,6 +18,7 @@ import { SelectControl } from "@/pages/app/Settings/components/GeneralTab/sectio
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setUpdateMode } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem } from "@/theme/scale";
 
 const UPDATE_MODES: { value: AutoUpdateMode; labelKey: string; icon: typeof DownloadCloud }[] = [
   { value: AutoUpdateMode.AUTO, labelKey: "settings.updates.mode_auto", icon: DownloadCloud },
@@ -27,11 +28,11 @@ const UPDATE_MODES: { value: AutoUpdateMode; labelKey: string; icon: typeof Down
 
 const VersionText = styled(Typography)(({ theme }) => ({
   fontFamily: MONO_STACK,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
-const UpdateModeSelect = styled(SelectControl)({ minWidth: 200 });
+const UpdateModeSelect = styled(SelectControl)({ minWidth: pxToRem(200) });
 
 const MenuLabel = styled(Box)(({ theme }) => ({
   display: "inline-block",
@@ -65,7 +66,7 @@ export function UpdatesSection() {
             const I = m.icon;
             return (
               <MenuItem key={m.value} value={m.value}>
-                <I size={13} />
+                <I size={pxToRem(13)} />
                 <MenuLabel>{t(m.labelKey)}</MenuLabel>
               </MenuItem>
             );

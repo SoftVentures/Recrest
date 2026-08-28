@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use super::error::CommandError;
 use crate::config::settings::TerminalSettings;
+use crate::platform::host_command::{host_command, host_command_async};
 
 /// Per-OS ordered candidate list for `id = auto` (none selected). Only ids the
 /// planner understands are listed.
@@ -40,7 +40,9 @@ fn binary_on_path(bin: &str) -> bool {
 
 #[cfg(unix)]
 fn which_like(bin: &str) -> bool {
-    let mut cmd = Command::new("which");
+    // `host_command`: terminal emulators are installed on the host, so probing
+    // the sandbox PATH would report that the user has none.
+    let mut cmd = host_command("which");
     cmd.arg(bin);
     super::process::configure(&mut cmd);
     cmd.output().map(|o| o.status.success()).unwrap_or(false)
@@ -52,7 +54,7 @@ fn which_like(bin: &str) -> bool {
     // with `where`; without this every probe flashes a console window on the
     // packaged (GUI-subsystem) build — and since detect_* run synchronously,
     // the burst froze the UI. Dev never showed it (inherited terminal).
-    let mut cmd = Command::new("where");
+    let mut cmd = host_command("where");
     cmd.arg(bin);
     super::process::configure(&mut cmd);
     cmd.output().map(|o| o.status.success()).unwrap_or(false)
@@ -295,7 +297,7 @@ pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandEr
         .filter(|s| !s.trim().is_empty())
     {
         let parsed = parse_custom_command(cmd)?;
-        let mut c = Command::new(&parsed.program);
+        let mut c = host_command(&parsed.program);
         c.args(&parsed.args).current_dir(path);
         return c
             .spawn()
@@ -312,7 +314,7 @@ pub fn open_at(path: &Path, settings: &TerminalSettings) -> Result<(), CommandEr
     };
 
     let plan = terminal_spawn_plan(&id, settings.profile.as_deref(), path)?;
-    let mut c = Command::new(&plan.program);
+    let mut c = host_command(&plan.program);
     c.args(&plan.args);
     if let Some(cwd) = &plan.cwd {
         c.current_dir(cwd);
@@ -667,7 +669,7 @@ pub async fn test_custom_terminal(command: String, cwd: String) -> Result<(), Co
     // to open — this command exists to verify the custom command actually
     // launches one. Spawning is treated as success because terminal emulators
     // detach into a long-running GUI process; waiting on the child would hang.
-    let mut cmd = tokio::process::Command::new(&parsed.program);
+    let mut cmd = host_command_async(&parsed.program);
     cmd.args(&parsed.args).current_dir(&cwd_path);
     cmd.spawn()
         .map(|_| ())

@@ -2,6 +2,8 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const KbdSize = {
   /** Compact 18px tall — used inside chrome (header search hint, search panel). */
   SM: "sm",
@@ -22,14 +24,14 @@ const Root = styled("kbd", { shouldForwardProp: (p) => p !== "size" })<{ size: K
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 22,
-    height: size === KbdSize.MD ? 22 : 18,
-    padding: size === KbdSize.MD ? "0 6px" : "0 5px",
+    minWidth: pxToRem(22),
+    height: size === KbdSize.MD ? pxToRem(22) : pxToRem(18),
+    padding: size === KbdSize.MD ? pxToRems(0, 6) : pxToRems(0, 5),
     borderRadius: 8,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
     color: size === KbdSize.MD ? theme.palette.text.primary : theme.palette.text.secondary,
-    fontSize: size === KbdSize.MD ? 10.5 : 10,
+    fontSize: size === KbdSize.MD ? fontPxToRem(10.5) : fontPxToRem(10),
     fontFamily: "inherit",
     fontWeight: 600,
   }),

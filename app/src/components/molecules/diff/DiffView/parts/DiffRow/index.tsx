@@ -26,6 +26,7 @@ import InlineComposer from "@/components/molecules/diff/DiffView/parts/InlineCom
 import { DIFF_ATTR } from "@/lib/constants/diff.constants";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 /** One end of a selection: the line's own side, its resolved line numbers, and
  *  its render-order index (`seq`) — so a cross-side range is ordered by diff
@@ -111,7 +112,7 @@ function DiffRow({
           data-testid={TEST_IDS.mr.diff.commentBtn}
           onMouseDown={(e) => onStartDrag(e, path, { side, ref: lineRef, seq })}
         >
-          <MessageSquarePlus size={11} aria-hidden />
+          <MessageSquarePlus size={pxToRem(11)} aria-hidden />
         </CommentAffordance>
       )}
 

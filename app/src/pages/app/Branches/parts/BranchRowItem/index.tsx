@@ -23,6 +23,7 @@ import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import type { ActionFeedbackState } from "@/lib/utils/useActionFeedback";
 import DeleteBranchDialog from "@/pages/app/Branches/parts/DeleteBranchDialog";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface BranchRowItemProps {
   repo: EnrichedRepo;
@@ -55,7 +56,7 @@ export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowIt
       <Dot tone={dotTone} />
       <NameCell>
         <IconSlot size={16} tone="information">
-          <BranchIcon size={13} aria-hidden />
+          <BranchIcon size={pxToRem(13)} aria-hidden />
         </IconSlot>
         <Box component="span">{b.isRemote ? `${b.remote}/${b.name}` : b.name}</Box>
         {b.isCurrent && (
@@ -99,7 +100,7 @@ export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowIt
             >
               <ActionFeedbackIcon
                 state={pullState}
-                fallback={<ArrowDown size={11} aria-hidden />}
+                fallback={<ArrowDown size={pxToRem(11)} aria-hidden />}
                 size={11}
               />
               {t("branches.actions.pull")}
@@ -121,7 +122,7 @@ export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowIt
             >
               <ActionFeedbackIcon
                 state={pushState}
-                fallback={<ArrowUp size={11} aria-hidden />}
+                fallback={<ArrowUp size={pxToRem(11)} aria-hidden />}
                 size={11}
               />
               {t("branches.actions.push")}
@@ -144,7 +145,7 @@ export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowIt
             >
               <ActionFeedbackIcon
                 state={checkoutState}
-                fallback={<BranchIcon size={10} aria-hidden />}
+                fallback={<BranchIcon size={pxToRem(10)} aria-hidden />}
                 size={10}
               />
               {t("branches.actions.checkout")}
@@ -156,7 +157,7 @@ export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowIt
               tone={IconButtonTone.DANGER}
               aria-label={t("branches.actions.delete")}
               data-testid={TEST_IDS.branches.delete}
-              icon={<Trash2 size={13} aria-hidden />}
+              icon={<Trash2 size={pxToRem(13)} aria-hidden />}
               onClick={() => setDeleteOpen(true)}
             />
           )}
@@ -177,7 +178,7 @@ export function BranchRowItem({ repo, branch: b, stateFor, run, t }: BranchRowIt
             >
               <ActionFeedbackIcon
                 state={checkoutState}
-                fallback={<BranchIcon size={10} aria-hidden />}
+                fallback={<BranchIcon size={pxToRem(10)} aria-hidden />}
                 size={10}
               />
               {t("branches.actions.checkout_remote")}
@@ -212,10 +213,13 @@ export default BranchRowItem;
 
 const Row = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "8px minmax(0, 1fr) minmax(0, 1.2fr) 280px",
+  // The action column concedes down to 220px — the width its widest
+  // combination (three short row buttons + the kebab) still needs — instead of
+  // pinning 280px and starving the name/meta columns on a narrow window.
+  gridTemplateColumns: `${pxToRem(8)} minmax(0, 1fr) minmax(0, 1.2fr) minmax(${pxToRem(220)}, ${pxToRem(280)})`,
   alignItems: "center",
-  columnGap: 12,
-  padding: "10px 16px",
+  columnGap: pxToRem(12),
+  padding: pxToRems(10, 16),
   borderBottom: `1px solid ${theme.palette.divider}`,
   "&:last-of-type": { borderBottom: 0 },
   "&:hover": {
@@ -236,8 +240,8 @@ const Row = styled(Box)(({ theme }) => ({
 const Dot = styled("span", {
   shouldForwardProp: (p) => p !== "tone",
 })<{ tone: "neutral" | "current" | "clean" | "remote" }>(({ theme, tone }) => ({
-  width: 8,
-  height: 8,
+  width: pxToRem(8),
+  height: pxToRem(8),
   borderRadius: "50%",
   flexShrink: 0,
   ...(tone === "neutral" && {
@@ -260,10 +264,10 @@ const Dot = styled("span", {
 const NameCell = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   minWidth: 0,
   fontFamily: MONO_STACK,
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   color: theme.palette.text.primary,
   "& > span:first-of-type": {
     whiteSpace: "nowrap",
@@ -275,8 +279,8 @@ const NameCell = styled(Box)(({ theme }) => ({
 const Meta = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
-  fontSize: 11,
+  gap: pxToRem(2),
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   minWidth: 0,
 })) as typeof Box;
@@ -285,19 +289,19 @@ const MetaLine = styled(Box)({
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  minHeight: 14,
+  minHeight: pxToRem(14),
 }) as typeof Box;
 
 const Tail = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   justifyContent: "flex-end",
 }) as typeof Box;
 
 const Acts = styled(Box)({
   display: "flex",
-  gap: 4,
+  gap: pxToRem(4),
   visibility: "hidden",
 }) as typeof Box;
 
@@ -311,13 +315,13 @@ const RowBtn = styled(Button, {
   return {
     display: "inline-flex",
     alignItems: "center",
-    gap: 5,
+    gap: pxToRem(5),
     minWidth: 0,
-    height: 24,
-    padding: "0 8px",
+    minHeight: pxToRem(24),
+    padding: pxToRems(0, 8),
     border: "1px solid transparent",
     borderRadius: 8,
-    fontSize: 11,
+    fontSize: fontPxToRem(11),
     fontWeight: 600,
     fontFamily: "inherit",
     textTransform: "none",
@@ -346,8 +350,8 @@ const RowBtn = styled(Button, {
 const Track = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  fontSize: 11.5,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(11.5),
   fontVariantNumeric: "tabular-nums",
 }) as typeof Box;
 

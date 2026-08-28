@@ -15,6 +15,7 @@ import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { gitBranchCreate } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem } from "@/theme/scale";
 
 export interface CreateBranchDialogProps {
   open: boolean;
@@ -33,7 +34,7 @@ const Form = styled("form")(({ theme }) => ({
 }));
 
 const Description = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
 })) as typeof Box;
 

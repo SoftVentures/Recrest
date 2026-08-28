@@ -14,17 +14,18 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { isTauri } from "@/lib/tauri";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
 import { pickFile } from "@/lib/utils/pickFolder.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Wrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const OptionList = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> required for keyboard/focus on a selectable row
@@ -33,10 +34,10 @@ const Option = styled("button", { shouldForwardProp: (p) => p !== "selected" })<
 }>(({ theme, selected }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: pxToRem(10),
   width: "100%",
   textAlign: "left",
-  padding: "8px 10px",
+  padding: pxToRems(8, 10),
   borderRadius: 8,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -62,13 +63,13 @@ const OptionIcon = styled(Box)(({ theme }) => ({
 const OptionBody = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
 
 const OptionName = styled(Typography)({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   fontFamily: MONO_STACK,
 }) as typeof Typography;
 
 const OptionSub = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -83,11 +84,11 @@ const Tick = styled(Box)(({ theme }) => ({
 
 const DefaultBadge = styled(Box)(({ theme }) => ({
   flexShrink: 0,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
-  padding: "1px 6px",
+  padding: pxToRems(1, 6),
   borderRadius: 6,
   color: theme.palette.text.information,
   border: `1px solid ${theme.palette.divider}`,
@@ -96,7 +97,7 @@ const DefaultBadge = styled(Box)(({ theme }) => ({
 const Actions = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   flexWrap: "wrap",
 }) as typeof Box;
 
@@ -134,7 +135,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
               onClick={() => onChange(key.path)}
             >
               <OptionIcon>
-                <KeyRound size={15} />
+                <KeyRound size={pxToRem(15)} />
               </OptionIcon>
               <OptionBody>
                 <OptionName>{key.name}</OptionName>
@@ -143,7 +144,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
               {index === 0 && !selected && <DefaultBadge>{t("ssh.default_badge")}</DefaultBadge>}
               {selected && (
                 <Tick>
-                  <Check size={15} />
+                  <Check size={pxToRem(15)} />
                 </Tick>
               )}
             </Option>
@@ -158,14 +159,14 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
             onClick={() => void browse()}
           >
             <OptionIcon>
-              <KeyRound size={15} />
+              <KeyRound size={pxToRem(15)} />
             </OptionIcon>
             <OptionBody>
               <OptionName>{t("ssh.custom_key")}</OptionName>
               <OptionSub variant="caption">{value}</OptionSub>
             </OptionBody>
             <Tick>
-              <Check size={15} />
+              <Check size={pxToRem(15)} />
             </Tick>
           </Option>
         )}
@@ -177,7 +178,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
           onClick={() => onChange(null)}
         >
           <OptionIcon>
-            <Wand2 size={15} />
+            <Wand2 size={pxToRem(15)} />
           </OptionIcon>
           <OptionBody>
             <OptionName>{t("ssh.auto_option")}</OptionName>
@@ -185,7 +186,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
           </OptionBody>
           {value === null && (
             <Tick>
-              <Check size={15} />
+              <Check size={pxToRem(15)} />
             </Tick>
           )}
         </Option>
@@ -195,7 +196,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
         <GeneralButton
           variant="outline"
           size="sm"
-          startIcon={<FolderOpen size={13} />}
+          startIcon={<FolderOpen size={pxToRem(13)} />}
           disabled={!isTauri()}
           data-testid={TEST_IDS.ssh.browse}
           onClick={() => void browse()}
@@ -206,7 +207,7 @@ export function SshKeyField({ value, onChange }: SshKeyFieldProps) {
         <GeneralButton
           variant="ghost"
           size="sm"
-          startIcon={<Sparkles size={13} />}
+          startIcon={<Sparkles size={pxToRem(13)} />}
           data-testid={TEST_IDS.ssh.guideOpen}
           onClick={() => setGuideOpen(true)}
         >

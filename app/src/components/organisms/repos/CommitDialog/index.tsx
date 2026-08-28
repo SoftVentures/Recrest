@@ -45,6 +45,7 @@ import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import { invoke, isTauri } from "@/lib/tauri";
 import { gitCommit } from "@/store/actions/repos.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export interface CommitDialogProps {
   open: boolean;
@@ -204,7 +205,7 @@ function CommitDialog({ open, repoId, onClose }: CommitDialogProps) {
                 <>
                   <Box component="span">·</Box>
                   <BranchChip component="span">
-                    <GitBranch size={11} aria-hidden />
+                    <GitBranch size={pxToRem(11)} aria-hidden />
                     {branch}
                   </BranchChip>
                 </>
@@ -213,7 +214,7 @@ function CommitDialog({ open, repoId, onClose }: CommitDialogProps) {
                 <>
                   <Box component="span">·</Box>
                   <AuthorLine component="span">
-                    <User size={11} aria-hidden />
+                    <User size={pxToRem(11)} aria-hidden />
                     {t("commit_dialog.context_as_author", { author: authorLabel })}
                   </AuthorLine>
                 </>
@@ -221,7 +222,7 @@ function CommitDialog({ open, repoId, onClose }: CommitDialogProps) {
                 <>
                   <Box component="span">·</Box>
                   <NoAuthorWarn component="span">
-                    <User size={11} aria-hidden />
+                    <User size={pxToRem(11)} aria-hidden />
                     {t("commit_dialog.context_no_author")}
                   </NoAuthorWarn>
                 </>
@@ -244,8 +245,12 @@ function CommitDialog({ open, repoId, onClose }: CommitDialogProps) {
                 aria-expanded={filesExpanded}
                 data-testid={TEST_IDS.commitDialog.filesToggle}
               >
-                {filesExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                <FileText size={13} />
+                {filesExpanded ? (
+                  <ChevronDown size={pxToRem(13)} />
+                ) : (
+                  <ChevronRight size={pxToRem(13)} />
+                )}
+                <FileText size={pxToRem(13)} />
                 <FilesHeaderLabel component="span">{filesLabel}</FilesHeaderLabel>
               </FilesHeader>
               {filesExpanded && (

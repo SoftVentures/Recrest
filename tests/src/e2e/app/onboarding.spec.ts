@@ -89,8 +89,9 @@ test.describe("app / onboarding wizard", () => {
 
     await expect(page.getByTestId(TEST_IDS.onboarding.step("provider"))).toBeVisible();
 
-    // The token-help link is always available for the active provider.
-    await expect(page.getByTestId(TEST_IDS.onboarding.providerTokenHelp)).toBeVisible();
+    // The token-help affordance is always available for the active provider —
+    // `PatHelpPanel` renders the required scopes plus the "create token" link.
+    await expect(page.getByTestId(TEST_IDS.onboarding.patHelpCreate)).toBeVisible();
 
     // Self-hosted: revealing and saving a base URL flips the provider onto the
     // custom server (round-trips through `set_provider_base_url`).

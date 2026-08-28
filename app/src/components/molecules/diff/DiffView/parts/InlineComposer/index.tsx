@@ -9,6 +9,7 @@ import GeneralButton from "@/components/atoms/buttons/GeneralButton";
 import RichTextEditor from "@/components/atoms/text/RichTextEditor";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { pxToRem } from "@/theme/scale";
 
 interface Props {
   onSubmit: (body: string) => Promise<void> | void;
@@ -74,11 +75,11 @@ export default function InlineComposer({ onSubmit, onCancel }: Props) {
 const Wrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const Actions = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;

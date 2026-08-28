@@ -291,6 +291,10 @@ pub async fn open_in_explorer(
 
     #[cfg(all(unix, not(target_os = "macos")))]
     {
+        // Deliberately NOT routed through `platform::host_command`: inside a
+        // Flatpak sandbox `xdg-open` is answered by the OpenURI portal, which
+        // hands the path to the user's real file manager on the host. That is
+        // the intended path and needs no `flatpak-spawn` escape.
         std::process::Command::new("xdg-open")
             .arg(path_str)
             .spawn()

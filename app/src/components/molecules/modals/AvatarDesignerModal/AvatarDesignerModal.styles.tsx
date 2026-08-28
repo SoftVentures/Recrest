@@ -1,9 +1,11 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Layout = styled(Box)({
   display: "flex",
-  gap: 20,
+  gap: pxToRem(20),
   alignItems: "flex-start",
   minWidth: 0,
 }) as typeof Box;
@@ -12,12 +14,12 @@ export const PreviewCol = styled(Box)({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
   flexShrink: 0,
 }) as typeof Box;
 
 export const PreviewLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -27,7 +29,7 @@ export const PreviewLabel = styled(Typography)(({ theme }) => ({
 export const Pickers = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: pxToRem(16),
   flex: 1,
   minWidth: 0,
 }) as typeof Box;
@@ -35,11 +37,11 @@ export const Pickers = styled(Box)({
 export const Section = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -49,11 +51,11 @@ export const SectionLabel = styled(Typography)(({ theme }) => ({
 export const SwatchGrid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(8, 1fr)",
-  gap: 8,
+  gap: pxToRem(8),
   // The selected swatch's outline (and hover scale) extend beyond the cell;
   // the modal content clips overflow, so pad the grid to keep the ring of the
   // edge swatches (esp. the rightmost column) from being cut off.
-  padding: 4,
+  padding: pxToRem(4),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button>: selectable swatch must be keyboard-focusable without nested-interactive issues
@@ -80,12 +82,12 @@ export const Swatch = styled("button", {
 }));
 
 export const IconScroll = styled(Box)(({ theme }) => ({
-  maxHeight: 168,
+  maxHeight: pxToRem(168),
   overflowY: "auto",
-  paddingRight: 4,
+  paddingRight: pxToRem(4),
   // Keep the scrollbar subtle so the dense grid stays the focus.
   scrollbarWidth: "thin",
-  "&::-webkit-scrollbar": { width: 8 },
+  "&::-webkit-scrollbar": { width: pxToRem(8) },
   "&::-webkit-scrollbar-thumb": {
     background: theme.palette.divider,
     borderRadius: 8,
@@ -95,20 +97,20 @@ export const IconScroll = styled(Box)(({ theme }) => ({
 export const IconGrid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(10, 1fr)",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const NoMatches = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "12px 0",
+  padding: pxToRems(12, 0),
 })) as typeof Box;
 
 export const IconHeader = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: pxToRem(12),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button>: selectable icon tile, same rationale as Swatch

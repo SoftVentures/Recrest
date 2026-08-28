@@ -25,11 +25,26 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: yarn
+      # Before anything is built, let alone uploaded: the download buttons are
+      # baked with the package.json version but resolve through
+      # `/releases/latest`, so a build made between release-please's version bump
+      # and a human publishing the draft release ships seven 404s — and the E2E
+      # spec cannot see it, because it asserts against the same version. Failing
+      # here leaves the previously deployed page (which still links the release
+      # that IS latest) in place. See the header of the script for the full
+      # reasoning and for why this is not a `ci.yml` gate.
+      - name: Guard — download links resolve on the published release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Plain `node`, not `yarn guard:downloads`: this runs before
+        # `install-deps` on purpose (it needs no node_modules, and a dead-link
+        # deploy should fail in seconds rather than after a full install+build).
+        run: node scripts/check-download-links.mjs
       - uses: ./.github/actions/install-deps
       - name: Build landingpage
         run: yarn build:landingpage

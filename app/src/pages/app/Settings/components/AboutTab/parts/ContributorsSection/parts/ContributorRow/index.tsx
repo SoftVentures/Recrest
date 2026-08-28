@@ -9,6 +9,7 @@ import AuthorAvatar from "@/components/atoms/avatars/AuthorAvatar";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
 import type { Contributor } from "@/lib/contributors";
 import { useNumberFormat } from "@/lib/utils/format.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 type Medal = "gold" | "silver" | "bronze" | null;
 
@@ -30,9 +31,9 @@ const Row = styled("button", { shouldForwardProp: (p) => p !== "leader" })<{ lea
   ({ theme, leader }) => ({
     display: "flex",
     alignItems: "center",
-    gap: 13,
+    gap: pxToRem(13),
     width: "100%",
-    padding: "12px 16px",
+    padding: pxToRems(12, 16),
     border: "none",
     borderBottom: `1px solid ${theme.palette.divider}`,
     backgroundColor: leader
@@ -58,13 +59,14 @@ const Row = styled("button", { shouldForwardProp: (p) => p !== "leader" })<{ lea
 const Rank = styled(Box, { shouldForwardProp: (p) => p !== "medal" })<{ medal: Medal }>(
   ({ theme, medal }) => ({
     flexShrink: 0,
-    width: 26,
-    height: 26,
+    width: pxToRem(26),
+    height: pxToRem(26),
     borderRadius: "50%",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 12,
+    // Chrome glyph in a fixed circle — see the containment policy in theme/scale.
+    fontSize: pxToRem(12),
     fontWeight: 700,
     ...(medal
       ? {
@@ -85,11 +87,11 @@ const Identity = styled(Box)({
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
-  gap: 5,
+  gap: pxToRem(5),
 });
 
 const Login = styled(Box)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -98,7 +100,7 @@ const Login = styled(Box)(({ theme }) => ({
 }));
 
 const ShareTrack = styled(Box)(({ theme }) => ({
-  height: 4,
+  height: pxToRem(4),
   width: "100%",
   borderRadius: 2,
   backgroundColor: theme.palette.surface.interface.base,
@@ -122,22 +124,22 @@ const Commits = styled(Box)(({ theme }) => ({
   flexShrink: 0,
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 4,
-  padding: "3px 9px",
+  gap: pxToRem(4),
+  padding: pxToRems(3, 9),
   borderRadius: 999,
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
 }));
 
 const CommitsCount = styled(Box)(({ theme }) => ({
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 700,
   color: theme.palette.text.primary,
   fontVariantNumeric: "tabular-nums",
 }));
 
 const CommitsLabel = styled(Box)(({ theme }) => ({
-  fontSize: 10.5,
+  fontSize: fontPxToRem(10.5),
   color: theme.palette.text.information,
   textTransform: "lowercase",
 }));
@@ -193,7 +195,7 @@ function ContributorRow({ rank, contributor, topContributions, onOpen }: Contrib
         </CommitsLabel>
       </Commits>
       <OpenHint className="contributor-open">
-        <ExternalLink size={13} />
+        <ExternalLink size={pxToRem(13)} />
       </OpenHint>
     </Row>
   );

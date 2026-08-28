@@ -7,6 +7,7 @@ import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { FlakyRepo } from "@/lib/activityAggregates";
 import { barGradient } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   rows: FlakyRepo[];
@@ -17,16 +18,16 @@ interface Props {
 const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const Row = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
-  columnGap: 8,
-  rowGap: 4,
+  columnGap: pxToRem(8),
+  rowGap: pxToRem(4),
   alignItems: "baseline",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.primary,
 })) as typeof Box;
 
@@ -44,7 +45,7 @@ const Rate = styled(Typography)(({ theme }) => ({
 
 const Bar = styled(Box)(({ theme }) => ({
   gridColumn: "1 / -1",
-  height: 5,
+  height: pxToRem(5),
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.backElevation,
   overflow: "hidden",
@@ -59,9 +60,9 @@ const Fill = styled(Box, { shouldForwardProp: (p) => p !== "width" })<{ width: n
 );
 
 const Empty = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "10px 0",
+  padding: pxToRems(10, 0),
 })) as typeof Box;
 
 function FlakyReposCard({ rows, windowDays = 14, loading }: Props) {

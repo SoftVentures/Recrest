@@ -1,6 +1,7 @@
 import { type SVGProps } from "react";
 
 import { PROVIDER_BRAND_ICONS, type ProviderId } from "@/lib/constants/providers.constants";
+import { pxToRem } from "@/theme/scale";
 
 interface BrandIconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
   slug: ProviderId;
@@ -15,8 +16,8 @@ function BrandIcon({ slug, size = 16, color = "currentColor", title, ...rest }: 
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
+      width={pxToRem(size)}
+      height={pxToRem(size)}
       viewBox="0 0 24 24"
       fill={fill}
       role="img"

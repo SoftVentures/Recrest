@@ -23,15 +23,52 @@ export const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`;
  *  to be hand-maintained "so a bump is conscious", but `ci.yml::version-sync`
  *  now enforces that consciously enough, and the manual step reddened every
  *  release PR at the one moment nobody wants a red gate. */
-export const EXPECTED_APP_VERSION = "0.11.0"; // x-release-please-version
+export const EXPECTED_APP_VERSION = "0.12.0"; // x-release-please-version
 
-/** Mirrors `landingpage/src/components/DownloadButton.tsx::directDownloadUrl`.
- *  For a known OS the button links directly to the asset zip; only the
- *  `unknown`-UA case falls back to `RELEASES_LATEST_URL`. Kept here so specs
- *  assert against the real production contract instead of a stale alias. */
-export function expectedDownloadUrl(os: "macos" | "windows" | "linux" | "unknown"): string {
-  if (os === "unknown") return RELEASES_LATEST_URL;
-  return `${RELEASES_LATEST_URL}/download/recrest-v${EXPECTED_APP_VERSION}-${os}.zip`;
+/** Hash route of the landing page's download view (`useDownloadRoute`). The
+ *  hero and nav CTAs both point at it instead of linking a release asset
+ *  directly, so the OS/arch choice happens on a page that can explain the
+ *  unsigned-build caveat. */
+export const DOWNLOAD_ROUTE_HASH = "#/download";
+
+/** The human-facing release assets, per OS, in the order the download cards
+ *  render them. **Deliberately hard-coded rather than imported from
+ *  `landingpage/src/lib/downloadUrl.ts`** — importing it would compare the
+ *  landing page against itself and happily green-light a typo'd filename. These
+ *  names are verified against a real GitHub release (`gh release view v0.11.0`);
+ *  a mismatch means a visitor's Download button 404s.
+ *
+ *  Not to be confused with the `Recrest_<version>_*` assets on the same
+ *  release: those are Tauri's updater payloads (consumed by `latest.json`), not
+ *  something a human should click. */
+export const EXPECTED_DOWNLOAD_ASSETS = {
+  macos: [
+    `recrest-v${EXPECTED_APP_VERSION}-mac-arm64.dmg`,
+    `recrest-v${EXPECTED_APP_VERSION}-mac-x64.dmg`,
+  ],
+  windows: [
+    `recrest-v${EXPECTED_APP_VERSION}-windows-x64.exe`,
+    `recrest-v${EXPECTED_APP_VERSION}-windows-arm64.exe`,
+  ],
+  // No AppImage since plan 11 dropped it, and no AUR entry either: the Arch
+  // channel is a command the page shows, not a file it links, so there is no
+  // release asset to verify.
+  linux: [
+    `recrest-v${EXPECTED_APP_VERSION}-linux-x64.deb`,
+    `recrest-v${EXPECTED_APP_VERSION}-linux-x64.rpm`,
+  ],
+} as const;
+
+/** The install command the Linux card shows for the Arch channel. Hard-coded
+ *  for the same reason as `EXPECTED_DOWNLOAD_ASSETS`: importing it from the page
+ *  would compare the page against itself. Unlike the file assets there is no
+ *  release asset to verify it against — the check is that the page renders a
+ *  copyable command rather than a download link. */
+export const EXPECTED_AUR_COMMAND = "paru -S recrest-bin";
+
+/** Mirrors `landingpage/src/lib/downloadUrl.ts::buildDownloadUrl`. */
+export function expectedAssetUrl(filename: string): string {
+  return `${RELEASES_LATEST_URL}/download/${filename}`;
 }
 
 export const LANDING_LOCALE_STORAGE_KEY = "recrest-landing-locale";

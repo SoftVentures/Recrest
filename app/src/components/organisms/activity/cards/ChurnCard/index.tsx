@@ -7,6 +7,7 @@ import GeneralCard from "@/components/atoms/cards/GeneralCard";
 import type { ChurnRow } from "@/lib/activityAggregates";
 import { DIFF_ADDED, DIFF_REMOVED } from "@/lib/charts/palette";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 interface Props {
   rows: ChurnRow[];
@@ -16,19 +17,19 @@ interface Props {
 const List = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 const Row = styled(Box)({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
-  rowGap: 4,
-  columnGap: 8,
+  rowGap: pxToRem(4),
+  columnGap: pxToRem(8),
   alignItems: "baseline",
 }) as typeof Box;
 
 const Name = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
@@ -37,7 +38,7 @@ const Name = styled(Typography)(({ theme }) => ({
 })) as typeof Typography;
 
 const Nums = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography;
@@ -45,7 +46,7 @@ const Nums = styled(Typography)(({ theme }) => ({
 const Bar = styled(Box)(({ theme }) => ({
   gridColumn: "1 / -1",
   display: "flex",
-  height: 5,
+  height: pxToRem(5),
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.backElevation,
   overflow: "hidden",
@@ -70,9 +71,9 @@ const Removed = styled("span", { shouldForwardProp: (p) => p !== "width" })<{ wi
 );
 
 const Empty = styled(Box)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  padding: "10px 0",
+  padding: pxToRems(10, 0),
 })) as typeof Box;
 
 function ChurnCard({ rows, loading }: Props) {

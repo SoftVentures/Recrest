@@ -11,6 +11,7 @@ import GeneralSwitchInput from "@/components/atoms/inputs/GeneralSwitchInput";
 import { I18nNamespace } from "@/lib/constants/i18n.constants";
 import { StorageKey } from "@/lib/constants/storage.constants";
 import { TEST_IDS } from "@/lib/constants/testIds.constants";
+import { INSTALL_CHANNEL } from "@/lib/constants/updater.constants";
 import { safeInvoke } from "@/lib/tauri";
 import {
   ButtonRow,
@@ -20,6 +21,7 @@ import {
 import { SettingsRow, SettingsSection } from "@/pages/app/Settings/components/SettingsPrimitives";
 import { setUpdaterBanner } from "@/store/actions/ui.actions";
 import { useAppDispatch } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 export function UpdaterPlaygroundSection() {
   const { t } = useTranslation(I18nNamespace.SETTINGS);
@@ -27,6 +29,7 @@ export function UpdaterPlaygroundSection() {
   const [forceFallback, setForceFallback] = useState(false);
   const [simVersion, setSimVersion] = useState("99.99.99"); // audit:ignore-fact — dev-only simulated remote version placeholder
   const [simCanAutoInstall, setSimCanAutoInstall] = useState(true);
+  const [simPackageManaged, setSimPackageManaged] = useState(false);
   const [endpointOverride, setEndpointOverride] = useState("");
 
   const forceCheck = async () => {
@@ -49,6 +52,9 @@ export function UpdaterPlaygroundSection() {
         currentVersion: "dev",
         body: t("developer.updater.simulated_body"),
         canAutoInstall: simCanAutoInstall,
+        // Stands in for a real distro install so the package-manager hint can be
+        // exercised on any dev machine, not just on Arch or Fedora.
+        installChannel: simPackageManaged ? INSTALL_CHANNEL.SYSTEM_PACKAGE : null,
         downloadUrl: simCanAutoInstall ? null : "https://example.com/download",
       }),
     );
@@ -95,7 +101,7 @@ export function UpdaterPlaygroundSection() {
           placeholder={t("developer.updater.endpoint_override_input_placeholder")}
           value={endpointOverride}
           onChange={(e) => setEndpointOverride(e.target.value)}
-          style={{ minWidth: 260 }}
+          style={{ minWidth: pxToRem(260) }}
           data-testid={TEST_IDS.settings.developer.updater.endpointOverride}
         />
       </SettingsRow>
@@ -109,7 +115,7 @@ export function UpdaterPlaygroundSection() {
               // audit:ignore-fact — dev-only simulated remote version placeholder
               "99.99.99"
             }
-            style={{ width: 120 }}
+            style={{ width: pxToRem(120) }}
             data-testid={TEST_IDS.settings.developer.updater.simVersion}
           />
           <InlineLabel component="span" variant="caption">
@@ -119,6 +125,14 @@ export function UpdaterPlaygroundSection() {
               data-testid={TEST_IDS.settings.developer.updater.simCanAutoInstall}
             />
             {t("developer.updater.can_auto_install")}
+          </InlineLabel>
+          <InlineLabel component="span" variant="caption">
+            <GeneralSwitchInput
+              checked={simPackageManaged}
+              onCheckedChange={setSimPackageManaged}
+              data-testid={TEST_IDS.settings.developer.updater.simPackageManaged}
+            />
+            {t("developer.updater.package_managed")}
           </InlineLabel>
           <GeneralButton
             size="sm"

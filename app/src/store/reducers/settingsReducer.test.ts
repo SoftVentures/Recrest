@@ -2,6 +2,7 @@ import type {
   AppSettings,
   CustomFont,
   DateFormat,
+  FontSizeId,
   ShellDetection,
   TerminalDetection,
 } from "@recrest/shared";
@@ -42,6 +43,7 @@ import {
   setTimeZone,
   setTranslucencyEnabled,
   setTranslucencyIntensity,
+  setUiScale,
   setUnderlineLinks,
   setUpdateMode,
   setWeekStart,
@@ -642,5 +644,97 @@ describe("settingsReducer — locale preferences", () => {
     expect(on.localePrefs.timeZone).toBe("Europe/Berlin");
     const off = settingsReducer(on, setTimeZone(null));
     expect(off.localePrefs.timeZone).toBeNull();
+  });
+});
+
+describe("settingsReducer — legacy fontSize → uiScale migration", () => {
+  function load(state: SettingsState, payload: AppSettings): SettingsState {
+    return settingsReducer(state, loadSettings.fulfilled(payload, "id", undefined));
+  }
+
+  function stored(fontSize: FontSizeId, uiScale: number): AppSettings {
+    const base = appSettings();
+    return { ...base, uiScale, appearance: { ...base.appearance, fontSize } };
+  }
+
+  /** A boot where the marker was already persisted by an earlier session. */
+  function migratedState(): SettingsState {
+    return { ...initial(), uiScaleMigrated: true };
+  }
+
+  it.each<[FontSizeId, number]>([
+    ["sm", 0.95],
+    ["md", 1],
+    ["lg", 1.1],
+    ["xl", 1.25],
+  ])("seeds uiScale from the legacy %s zoom on the first load", (fontSize, expected) => {
+    const next = load(initial(), stored(fontSize, 1));
+    expect(next.uiScale).toBe(expected);
+    expect(next.uiScaleMigrated).toBe(true);
+  });
+
+  it("leaves a default install exactly where it was", () => {
+    const next = load(initial(), stored("md", 1));
+    expect(next.uiScale).toBe(1);
+  });
+
+  it("does not run a second time, even if the migrated value was never persisted", () => {
+    const once = load(initial(), stored("lg", 1));
+    expect(once.uiScale).toBe(1.1);
+    // Same payload again (backend write lost): the marker, not the payload,
+    // decides — so the scale is taken at face value instead of re-derived.
+    const twice = load(once, stored("lg", 1));
+    expect(twice.uiScale).toBe(1);
+  });
+
+  it("keeps the migrated value across a reload once it reached the backend", () => {
+    const once = load(initial(), stored("lg", 1));
+    const reloaded = load(once, stored("lg", once.uiScale));
+    expect(reloaded.uiScale).toBe(1.1);
+  });
+
+  it("never overwrites a deliberate choice of the default scale", () => {
+    const migrated = load(initial(), stored("xl", 1));
+    expect(migrated.uiScale).toBe(1.25);
+
+    const chosen = settingsReducer(migrated, setUiScale(1));
+    expect(chosen.uiScale).toBe(1);
+    expect(chosen.uiScaleMigrated).toBe(true);
+
+    // Next launch: the backend now stores 1, the marker is persisted, and the
+    // font size is still "xl" — the pre-migration bug would bounce back to 1.25.
+    const restarted = load(migratedState(), stored("xl", 1));
+    expect(restarted.uiScale).toBe(1);
+  });
+
+  it("marks an explicit scale as migrated even before any load", () => {
+    const next = settingsReducer(initial(), setUiScale(1.2));
+    expect(next.uiScaleMigrated).toBe(true);
+    expect(load(next, stored("lg", 1.2)).uiScale).toBe(1.2);
+  });
+
+  it("leaves a non-default stored scale alone even without the marker", () => {
+    // Belt-and-braces for a lost marker: only a still-default scale can be
+    // the untouched backend default, so only that one may be migrated.
+    expect(load(initial(), stored("lg", 1.3)).uiScale).toBe(1.3);
+  });
+
+  it("survives missing and out-of-range values", () => {
+    const missing = stored("lg", 1);
+    delete (missing as Partial<AppSettings>).uiScale;
+    expect(load(initial(), missing).uiScale).toBe(1.1);
+
+    const broken = { ...stored("lg", 1), uiScale: Number.NaN };
+    expect(load(initial(), broken).uiScale).toBe(1.1);
+    expect(load(migratedState(), broken).uiScale).toBe(1);
+
+    expect(load(migratedState(), stored("md", 9)).uiScale).toBe(1.5);
+    expect(load(migratedState(), stored("md", 0.1)).uiScale).toBe(0.8);
+  });
+
+  it("falls back to no change for an unknown font-size token", () => {
+    const bogus = stored("md", 1);
+    bogus.appearance.fontSize = "gigantic" as FontSizeId;
+    expect(load(initial(), bogus).uiScale).toBe(1);
   });
 });

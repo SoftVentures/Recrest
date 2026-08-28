@@ -78,6 +78,7 @@ import {
 import Section from "@/pages/app/MergeRequests/components/MrDetailPanel/parts/Section";
 import { detailKey, loadPrDetail, loadPrDiff, mergePr, setPrs } from "@/store/actions/prs.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 // Stable empty-array reference so the `repoPrs` selector keeps the same value
 // when a repo has no cached PRs — an inline `[]` makes react-redux warn about
@@ -235,7 +236,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
       <Header>
         <HeaderTopRow>
           <PrIcon data-draft={pr.draft ? "true" : undefined}>
-            <GitMerge size={16} />
+            <GitMerge size={pxToRem(16)} />
           </PrIcon>
           <HeaderTitleStack>
             <Title>{pr.title}</Title>
@@ -275,7 +276,9 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
                   : tPrs("actions.open_on_host")
               }
               onClick={() => void openExternal(pr.url)}
-              icon={brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={14} />}
+              icon={
+                brand ? <BrandIcon slug={brand} size={14} /> : <ExternalLink size={pxToRem(14)} />
+              }
             />
             {onClose && (
               <GeneralIconButton
@@ -283,7 +286,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
                 aria-label={tAria("drawer.close")}
                 tooltip={tPrs("actions.close")}
                 onClick={onClose}
-                icon={<X size={14} />}
+                icon={<X size={pxToRem(14)} />}
               />
             )}
           </HeaderCtrls>
@@ -291,11 +294,19 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
 
         <ActionRow>
           <PrimaryAction type="button" onClick={openMergeModal} disabled={busy || pr.draft}>
-            <ActionFeedbackIcon state={merge.state} fallback={<GitMerge size={13} />} size={13} />
+            <ActionFeedbackIcon
+              state={merge.state}
+              fallback={<GitMerge size={pxToRem(13)} />}
+              size={13}
+            />
             <Box component="span">{tPrs("actions.merge")}</Box>
           </PrimaryAction>
           <GhostBtn type="button" onClick={() => void onCheckout()} disabled={busy}>
-            <ActionFeedbackIcon state={checkout.state} fallback={<Code size={13} />} size={13} />
+            <ActionFeedbackIcon
+              state={checkout.state}
+              fallback={<Code size={pxToRem(13)} />}
+              size={13}
+            />
             <Box component="span">{tPrs("actions.checkout")}</Box>
           </GhostBtn>
         </ActionRow>
@@ -307,7 +318,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
           <InfoValue>
             <BranchChip component="span">
               <BranchGlyph component="span" variant="caption">
-                <GitBranch size={10} aria-hidden />
+                <GitBranch size={pxToRem(10)} aria-hidden />
               </BranchGlyph>
               <BranchName component="span" variant="caption">
                 {pr.sourceBranch}
@@ -318,7 +329,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
             </Arrow>
             <BranchChipFixed component="span">
               <BranchGlyph component="span" variant="caption">
-                <GitBranch size={10} aria-hidden />
+                <GitBranch size={pxToRem(10)} aria-hidden />
               </BranchGlyph>
               <BranchName component="span" variant="caption">
                 {pr.targetBranch}
@@ -502,7 +513,7 @@ export function MrDetailPanel({ pr, repoId, repoName, onClose }: MrDetailPanelPr
 
       <Footer>
         <FullCta type="button" onClick={onOpenFull} data-testid={TEST_IDS.mr.openFullView}>
-          <Maximize2 size={13} />
+          <Maximize2 size={pxToRem(13)} />
           <Box component="span">{tPrs("detail.open_full")}</Box>
         </FullCta>
       </Footer>

@@ -20,6 +20,7 @@ import { fetchPullRequests } from "@/store/actions/prs.actions";
 import { loadRepos, scanForRepos } from "@/store/actions/repos.actions";
 import { setOnboardingOverride } from "@/store/actions/ui.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { pxToRem } from "@/theme/scale";
 
 const Progress = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -34,8 +35,8 @@ interface DotProps {
 
 const Dot = styled(Box, { shouldForwardProp: (p) => p !== "active" })<DotProps>(
   ({ theme, active }) => ({
-    width: active ? 18 : 8,
-    height: 6,
+    width: active ? pxToRem(18) : pxToRem(8),
+    height: pxToRem(6),
     borderRadius: 3,
     background: active ? theme.palette.primary.main : theme.palette.divider,
     transition: "width 0.2s ease, background 0.2s ease",

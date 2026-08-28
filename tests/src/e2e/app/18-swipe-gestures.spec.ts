@@ -1,6 +1,7 @@
 import { AppRoute } from "@recrest/shared";
 
 import { expect, test } from "../../fixtures/app.fixture.js";
+import { TEST_IDS } from "../../helpers/test-ids";
 
 /**
  * D.5: swipe gestures.
@@ -90,9 +91,17 @@ test.describe("app / swipe gestures (D.5)", () => {
     await page.goto(AppRoute.ACTIVITY);
     // Escape so a route path containing regex metacharacters (e.g. ".") can't
     // accidentally over-match. Current routes are plain `/segment` strings but
-    // the guard is cheap.
-    const re = (path: string) => new RegExp(`${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+    // the guard is cheap. The trailing group tolerates a query string: Activity
+    // mirrors its selected range into `?since=&until=` on mount.
+    const re = (path: string) =>
+      new RegExp(`${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\?.*)?$`);
     await expect(page).toHaveURL(re(AppRoute.ACTIVITY));
+    await expect(page.getByTestId(TEST_IDS.activity.page)).toBeVisible();
+    // `usePageSwipe` attaches its listeners in an effect that also flips
+    // `document.body`'s touch-action to `pan-y`. Waiting for that flag is the
+    // only observable "gesture handler is live" signal — dispatching before it
+    // lands makes the swipe land on a body nobody is listening to.
+    await page.waitForFunction(() => document.body.style.touchAction === "pan-y");
 
     await dispatchSwipe(page, "body", { dx: -240, dy: 0 });
 

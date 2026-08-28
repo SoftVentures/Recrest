@@ -24,6 +24,7 @@ import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { useAppDispatch } from "@/store/hooks";
 import { loadRepos } from "@/store/reducers/reposReducer";
 import { bumpRefreshNonce, setImportDialogOpen } from "@/store/reducers/uiReducer";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 /**
  * Quick-actions grid shown on the dashboard. Each action either fires a Tauri
@@ -128,7 +129,11 @@ function QuickActionsCard() {
           disabled={fetchAll.state === "loading"}
           data-testid={TEST_IDS.dashboard.qa.fetchAll}
         >
-          <ActionFeedbackIcon state={fetchAll.state} fallback={<RefreshCw size={14} />} size={14} />
+          <ActionFeedbackIcon
+            state={fetchAll.state}
+            fallback={<RefreshCw size={pxToRem(14)} />}
+            size={14}
+          />
           <Box component="span">{t("dash.quick.fetch_all")}</Box>
         </QBtn>
         <QBtn
@@ -139,14 +144,14 @@ function QuickActionsCard() {
         >
           <ActionFeedbackIcon
             state={pullAll.state}
-            fallback={<ArrowDownToLine size={14} />}
+            fallback={<ArrowDownToLine size={pxToRem(14)} />}
             size={14}
           />
           <Box component="span">{t("dash.quick.pull_all")}</Box>
         </QBtn>
         <GeneralTooltip title={t("dash.quick.clone_tooltip")} placement="top">
           <QBtn type="button" onClick={onOpenImport} data-testid={TEST_IDS.dashboard.qa.clone}>
-            <Plus size={14} />
+            <Plus size={pxToRem(14)} />
             <Box component="span">{t("dash.quick.clone")}</Box>
           </QBtn>
         </GeneralTooltip>
@@ -156,7 +161,7 @@ function QuickActionsCard() {
             onClick={() => void onOpenWorkspace()}
             data-testid={TEST_IDS.dashboard.qa.workspace}
           >
-            <Terminal size={14} />
+            <Terminal size={pxToRem(14)} />
             <Box component="span">{t("dash.quick.workspace")}</Box>
           </QBtn>
         </GeneralTooltip>
@@ -167,7 +172,7 @@ function QuickActionsCard() {
             disabled={!mostRecentRepoId}
             data-testid={TEST_IDS.dashboard.qa.openIde}
           >
-            <Code2 size={14} />
+            <Code2 size={pxToRem(14)} />
             <Box component="span">{t("dash.quick.open_ide")}</Box>
           </QBtn>
         </GeneralTooltip>
@@ -176,7 +181,7 @@ function QuickActionsCard() {
           onClick={onRecentCommits}
           data-testid={TEST_IDS.dashboard.qa.recentCommits}
         >
-          <Activity size={14} />
+          <Activity size={pxToRem(14)} />
           <Box component="span">{t("dash.quick.recent_commits")}</Box>
         </QBtn>
       </Grid>
@@ -203,23 +208,23 @@ const Grid = styled(Box)({
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
   gridAutoRows: "1fr",
-  gap: 6,
+  gap: pxToRem(6),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native <button> element required for accessibility
 const QBtn = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  minHeight: 38,
-  padding: "8px 10px",
+  gap: pxToRem(8),
+  minHeight: pxToRem(38),
+  padding: pxToRems(8, 10),
   borderRadius: 8,
   cursor: "pointer",
   background: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   color: theme.palette.text.primary,
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   textAlign: "left",
   transition: "background 0.12s ease, border-color 0.12s ease, transform 0.12s ease",

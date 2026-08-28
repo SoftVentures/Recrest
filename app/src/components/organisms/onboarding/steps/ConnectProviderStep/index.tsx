@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +32,7 @@ import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
 import { useActionFeedback } from "@/lib/utils/useActionFeedback";
 import { setProviderBaseUrl, setProviderToken } from "@/store/actions/providers.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export interface ConnectProviderStepProps {
   onBack: () => void;
@@ -54,7 +55,7 @@ const Note = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing(1.25),
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   lineHeight: 1.55,
   color: theme.palette.text.primary,
   background: theme.palette.surface.interface.backElevation,
@@ -67,11 +68,11 @@ const NoteIcon = styled(Box)(({ theme }) => ({
   color: theme.palette.icon.information,
   flexShrink: 0,
   display: "inline-flex",
-  paddingTop: 2,
+  paddingTop: pxToRem(2),
 })) as typeof Box;
 
 const SkipHint = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   textAlign: "center",
 })) as typeof Typography;
@@ -92,14 +93,14 @@ const ProviderPicker = styled("button", {
 })<PickerProps>(({ theme, active }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
-  padding: "8px 12px",
+  gap: pxToRem(8),
+  padding: pxToRems(8, 12),
   borderRadius: 8,
   border: `1px solid ${active ? theme.palette.primary.main : theme.palette.divider}`,
   background: active ? theme.palette.surface.interface.active : theme.palette.background.paper,
   color: theme.palette.text.primary,
   fontFamily: "inherit",
-  fontSize: 13,
+  fontSize: fontPxToRem(13),
   fontWeight: 600,
   cursor: "pointer",
   flex: "0 0 auto",
@@ -134,21 +135,21 @@ const LinkRow = styled(Box)({
 }) as typeof Box;
 
 const Hint = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
   lineHeight: 1.5,
 })) as typeof Typography;
 
 const ErrorText = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: toneText(theme, StatusTone.ERROR),
 })) as typeof Typography;
 
 const ConnectedBadge = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  fontSize: 12,
+  gap: pxToRem(6),
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   color: toneText(theme, StatusTone.SUCCESS),
 })) as typeof Box;
@@ -164,6 +165,10 @@ function ConnectProviderStep({
   const connections = useAppSelector((s) => s.providers.connections);
 
   const [providerId, setProviderId] = useState<ProviderId>(initialProviderId ?? Provider.GITHUB);
+  // Mirrors `providerId` for async completions: a connect resolves ~400ms after
+  // the IPC call (minimum spinner time), by which point the user may already
+  // have switched tabs and typed credentials for another provider.
+  const activeProviderRef = useRef(initialProviderId ?? Provider.GITHUB);
   const [token, setToken] = useState("");
   const [username, setUsername] = useState("");
   const [baseUrlExpanded, setBaseUrlExpanded] = useState(false);
@@ -187,6 +192,7 @@ function ConnectProviderStep({
   // Reset the per-provider form when the user switches the active tab so a
   // GitHub token can't accidentally be submitted against GitLab.
   const selectProvider = (id: ProviderId) => {
+    activeProviderRef.current = id;
     setProviderId(id);
     setToken("");
     setUsername("");
@@ -220,22 +226,31 @@ function ConnectProviderStep({
   const onConnect = async () => {
     if (!token.trim()) return;
     if (requiresUsername && !username.trim()) return;
+    const submittedProviderId = providerId;
     setSubmitting(true);
     setError(null);
     try {
       await connectFeedback.run(async () => {
         await dispatch(
           setProviderToken({
-            providerId,
+            providerId: submittedProviderId,
             token: token.trim(),
             username: requiresUsername ? username.trim() : null,
           }),
         ).unwrap();
       });
-      setToken("");
-      setUsername("");
+      // Only touch the form if it still belongs to the provider we submitted —
+      // otherwise a late completion wipes the credentials the user has since
+      // typed for a different provider, and they have to type them again with
+      // no visible reason why the fields emptied themselves.
+      if (activeProviderRef.current === submittedProviderId) {
+        setToken("");
+        setUsername("");
+      }
     } catch (err) {
-      setError((err as { message?: string })?.message ?? t("connectProvider.failed"));
+      if (activeProviderRef.current === submittedProviderId) {
+        setError((err as { message?: string })?.message ?? t("connectProvider.failed"));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -250,7 +265,7 @@ function ConnectProviderStep({
       <StepContent>
         <Note>
           <NoteIcon component="span">
-            <Info size={14} />
+            <Info size={pxToRem(14)} />
           </NoteIcon>
           <Typography component="span">{t("connectProvider.local_note")}</Typography>
         </Note>
@@ -278,7 +293,7 @@ function ConnectProviderStep({
 
         {connected ? (
           <ConnectedBadge data-testid={TEST_IDS.onboarding.providerConnected}>
-            <Check size={14} />
+            <Check size={pxToRem(14)} />
             {t("connectProvider.connected", { name: providerName })}
           </ConnectedBadge>
         ) : (
@@ -319,7 +334,7 @@ function ConnectProviderStep({
                 <GeneralButton
                   variant="link"
                   size="sm"
-                  startIcon={<Server size={12} />}
+                  startIcon={<Server size={pxToRem(12)} />}
                   onClick={() => {
                     setBaseUrlDraft(isSelfHosted ? effectiveBaseUrl : "");
                     setBaseUrlExpanded(true);
@@ -371,7 +386,7 @@ function ConnectProviderStep({
               />
               <GeneralButton
                 variant="default"
-                startIcon={<PlugZap size={14} />}
+                startIcon={<PlugZap size={pxToRem(14)} />}
                 onClick={() => void onConnect()}
                 loading={submitting}
                 feedbackState={connectFeedback.state}

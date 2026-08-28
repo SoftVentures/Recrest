@@ -19,43 +19,44 @@ import { pickFolder } from "@/lib/utils/pickFolder.utils";
 import { forgetReposUnderPath, scanForRepos, setScanPaths } from "@/store/actions/repos.actions";
 import { saveSettings } from "@/store/actions/settings.actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 const Section = styled(Box)({
-  marginBottom: 22,
+  marginBottom: pxToRem(22),
 }) as typeof Box;
 
 const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
-  margin: "0 0 6px",
+  margin: pxToRems(0, 0, 6),
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   fontWeight: 600,
 })) as typeof Typography;
 
 const SectionDesc = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  margin: "0 0 10px 2px",
+  margin: pxToRems(0, 0, 10, 2),
 })) as typeof Typography;
 
 const InputRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 // eslint-disable-next-line no-restricted-syntax -- native form control required for accessibility / autofocus / IME
 const TextInput = styled("input")(({ theme }) => ({
   flex: 1,
   minWidth: 0,
-  height: 32,
-  padding: "0 10px",
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 10),
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   backgroundColor: theme.palette.background.default,
   color: theme.palette.text.primary,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontFamily: MONO_STACK,
   outline: "none",
   "&::placeholder": { color: theme.palette.text.informationLight },
@@ -66,14 +67,14 @@ const TextInput = styled("input")(({ theme }) => ({
 const BrowseBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 32,
-  padding: "0 12px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 12),
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
   color: theme.palette.text.primary,
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 500,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -87,14 +88,14 @@ const BrowseBtn = styled("button")(({ theme }) => ({
 const AddBtn = styled("button")(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 32,
-  padding: "0 14px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(32),
+  padding: pxToRems(0, 14),
   border: `1px solid ${theme.palette.surface.button.cta}`,
   backgroundColor: theme.palette.surface.button.cta,
   color: theme.palette.surface.button.ctaContrast,
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -107,15 +108,15 @@ const AddBtn = styled("button")(({ theme }) => ({
 const PathRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "10px 14px",
-  marginBottom: 6,
+  gap: pxToRem(10),
+  padding: pxToRems(10, 14),
+  marginBottom: pxToRem(6),
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
   color: theme.palette.text.primary,
   fontFamily: MONO_STACK,
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
 })) as typeof Box;
 
 const PathText = styled(Box)({ flex: 1, minWidth: 0 }) as typeof Box;
@@ -222,7 +223,7 @@ export function IntegrationsSection() {
       <AddRepoCard
         title={t("settings.integrations.add")}
         sub={t("settings.integrations.add_sub")}
-        padding="14px 16px"
+        padding={pxToRems(14, 16)}
         flushHeight
       >
         <InputRow>
@@ -241,7 +242,7 @@ export function IntegrationsSection() {
             disabled={!isTauri()}
             data-testid={TEST_IDS.settings.integrations.scanBrowse}
           >
-            <FolderOpen size={13} />
+            <FolderOpen size={pxToRem(13)} />
             {t("integrations.browse", { ns: I18nNamespace.SETTINGS })}
           </BrowseBtn>
           <AddBtn
@@ -249,7 +250,7 @@ export function IntegrationsSection() {
             onClick={onAdd}
             data-testid={TEST_IDS.settings.integrations.scanAdd}
           >
-            <Plus size={13} />
+            <Plus size={pxToRem(13)} />
             {t("integrations.add_button", { ns: I18nNamespace.SETTINGS })}
           </AddBtn>
         </InputRow>
@@ -257,14 +258,14 @@ export function IntegrationsSection() {
 
       {paths.map((p) => (
         <PathRow key={p}>
-          <Folder size={13} />
+          <Folder size={pxToRem(13)} />
           <PathText component="span">{p}</PathText>
           <GeneralIconButton
             size={IconButtonSize.SM}
             aria-label={t("settings.remove_path", { ns: I18nNamespace.ARIA, path: p })}
             onClick={() => void onRemove(p)}
             data-testid={TEST_IDS.settings.integrations.scanRemove(p)}
-            icon={<X size={13} />}
+            icon={<X size={pxToRem(13)} />}
           />
         </PathRow>
       ))}

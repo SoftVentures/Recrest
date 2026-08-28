@@ -9,13 +9,15 @@ import {
   staggerNthOfType,
 } from "@/lib/animations/pageAnimations";
 import { MONO_STACK } from "@/lib/utils/appearance.utils";
+import { StatusTone, toneText } from "@/lib/utils/toneColor.utils";
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
 
 export const Card = styled(Box)(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  gap: 12,
-  padding: 14,
+  gap: pxToRem(12),
+  padding: pxToRem(14),
   borderRadius: 8,
   border: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.surface.interface.base,
@@ -49,7 +51,7 @@ export const CardTop = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const Actions = styled(Box)(({ theme }) => ({
@@ -57,8 +59,8 @@ export const Actions = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
   justifyContent: "flex-end",
   alignItems: "center",
-  gap: 2,
-  padding: 3,
+  gap: pxToRem(2),
+  padding: pxToRem(3),
   borderRadius: 8,
   backgroundColor: theme.palette.surface.interface.base,
   border: `1px solid ${theme.palette.divider}`,
@@ -68,12 +70,12 @@ export const Actions = styled(Box)(({ theme }) => ({
 export const Body = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: pxToRem(4),
   minWidth: 0,
 }) as typeof Box;
 
 export const Name = styled(Box)(({ theme }) => ({
-  fontSize: 14,
+  fontSize: fontPxToRem(14),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.01em",
@@ -83,7 +85,7 @@ export const Name = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const Path = styled(Box)(({ theme }) => ({
-  fontSize: 11,
+  fontSize: fontPxToRem(11),
   color: theme.palette.text.information,
   fontFamily: MONO_STACK,
   whiteSpace: "nowrap",
@@ -94,21 +96,21 @@ export const Path = styled(Box)(({ theme }) => ({
 export const BranchRow = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  marginTop: 4,
+  gap: pxToRem(8),
+  marginTop: pxToRem(4),
 }) as typeof Box;
 
 export const BranchChip = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  padding: "3px 8px",
+  gap: pxToRem(5),
+  padding: pxToRems(3, 8),
   backgroundColor: theme.palette.surface.interface.backElevation,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: 8,
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.primary,
-  maxWidth: 170,
+  maxWidth: pxToRem(170),
   minWidth: 0,
 })) as typeof Box;
 
@@ -123,19 +125,19 @@ export const Footer = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: pxToRem(8),
 }) as typeof Box;
 
 export const StatusGroup = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: pxToRem(6),
   minWidth: 0,
 }) as typeof Box;
 
 export const StatusDot = styled(Box)(({ theme }) => ({
-  width: 6,
-  height: 6,
+  width: pxToRem(6),
+  height: pxToRem(6),
   borderRadius: "50%",
   backgroundColor: theme.palette.success.main,
   flexShrink: 0,
@@ -145,19 +147,22 @@ export const StatusDot = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const StatusText = styled(Typography)(({ theme }) => ({
-  fontSize: 11.5,
+  fontSize: fontPxToRem(11.5),
   color: theme.palette.text.information,
 })) as typeof Typography;
 
 export const Diff = styled(Box)(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  fontSize: 11,
+  gap: pxToRem(4),
+  fontSize: fontPxToRem(11),
   fontWeight: 600,
   fontVariantNumeric: "tabular-nums",
-  "& .add": { color: theme.palette.success.main },
-  "& .rem": { color: theme.palette.error.main },
+  // `success.main`/`error.main` are mode-independent light-mode hues, so on the
+  // dark surfaces they landed at 3.18:1 / 2.57:1. `toneText` is the existing
+  // mode-aware rule for exactly these diff counters.
+  "& .add": { color: toneText(theme, StatusTone.SUCCESS) },
+  "& .rem": { color: toneText(theme, StatusTone.ERROR) },
 })) as typeof Box;
 
 export const FilesMeta = styled(Typography)(({ theme }) => ({

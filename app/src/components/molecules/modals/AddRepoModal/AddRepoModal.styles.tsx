@@ -1,10 +1,12 @@
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fontPxToRem, pxToRem, pxToRems } from "@/theme/scale";
+
 export const Header = styled(Box)({
   display: "flex",
   alignItems: "flex-start",
-  gap: 14,
+  gap: pxToRem(14),
   flex: 1,
   minWidth: 0,
 }) as typeof Box;
@@ -13,8 +15,8 @@ export const HeaderIcon = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 40,
-  height: 40,
+  width: pxToRem(40),
+  height: pxToRem(40),
   borderRadius: 8,
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.primary.contrastText,
@@ -24,23 +26,23 @@ export const HeaderIcon = styled(Box)(({ theme }) => ({
 export const HeaderText = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: pxToRem(2),
   minWidth: 0,
   flex: 1,
-  paddingTop: 4,
+  paddingTop: pxToRem(4),
 }) as typeof Box;
 
 export const HeaderTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 18,
+  fontSize: fontPxToRem(18),
   fontWeight: 700,
-  lineHeight: "24px",
+  lineHeight: 24 / 18,
   color: theme.palette.text.primary,
   letterSpacing: "-0.01em",
 })) as typeof Typography;
 
 export const HeaderSubtitle = styled(Typography)(({ theme }) => ({
-  fontSize: 12.5,
-  lineHeight: "18px",
+  fontSize: fontPxToRem(12.5),
+  lineHeight: 18 / 12.5,
   color: theme.palette.text.information,
 })) as typeof Typography;
 
@@ -50,22 +52,22 @@ export const HeaderBody = styled(Box)({
 }) as typeof Box;
 
 export const TitleText = styled(Typography)(({ theme }) => ({
-  fontSize: 15,
+  fontSize: fontPxToRem(15),
   fontWeight: 700,
   color: theme.palette.text.primary,
   letterSpacing: "-0.01em",
 })) as typeof Typography;
 
 export const SubText = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
+  fontSize: fontPxToRem(12),
   color: theme.palette.text.information,
-  marginTop: 2,
+  marginTop: pxToRem(2),
 })) as typeof Typography;
 
 export const TabBar = styled(Box)(({ theme }) => ({
   display: "flex",
-  gap: 4,
-  padding: "10px 20px 0",
+  gap: pxToRem(4),
+  padding: pxToRems(10, 20, 0),
   borderBottom: `1px solid ${theme.palette.divider}`,
   flexShrink: 0,
 })) as typeof Box;
@@ -77,15 +79,15 @@ export const TabButton = styled("button", {
   position: "relative",
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  height: 36,
-  padding: "0 12px",
+  gap: pxToRem(6),
+  minHeight: pxToRem(36),
+  padding: pxToRems(0, 12),
   background: "transparent",
   border: 0,
-  marginBottom: -1,
+  marginBottom: pxToRem(-1),
   color: active ? theme.palette.text.primary : theme.palette.text.information,
   fontFamily: "inherit",
-  fontSize: 12.5,
+  fontSize: fontPxToRem(12.5),
   fontWeight: 600,
   cursor: "pointer",
   transition: "color 0.12s ease",
@@ -97,7 +99,7 @@ export const TabButton = styled("button", {
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: -1,
+    bottom: pxToRem(-1),
     height: 2,
     backgroundColor: active ? theme.palette.primary.main : "transparent",
     borderTopLeftRadius: 2,
@@ -112,11 +114,11 @@ export const Badge = styled("span", {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 16,
-  height: 16,
-  padding: "0 5px",
+  minWidth: pxToRem(16),
+  minHeight: pxToRem(16),
+  padding: pxToRems(0, 5),
   borderRadius: 100,
-  fontSize: 10,
+  fontSize: fontPxToRem(10),
   fontWeight: 700,
   backgroundColor: active
     ? theme.palette.primary.main
