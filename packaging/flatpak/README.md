@@ -12,6 +12,7 @@ second — the same arrangement as `packaging/aur/`.
 | `cargo-sources.json`             | generated | every crate, as an offline source                     |
 | `node-sources.json`              | generated | every npm package, as an offline source               |
 | `flathub.json`                   | yes       | app-repo config; turns Flathub's own updater off      |
+| `SUBMISSION.md`                  | yes       | one-time checklist for getting onto Flathub           |
 
 ## Two ids, on purpose
 
@@ -191,16 +192,5 @@ takes over the job.
 
 ## Submission notes
 
-The first submission goes through
-[flathub/flathub](https://github.com/flathub/flathub) as a PR adding the
-manifest. Two permissions will be questioned, and the answers belong in the PR
-description rather than being improvised in review:
-
-- **`--filesystem=host`** — the user chooses which filesystem roots Recrest
-  scans for git repositories, and those are routinely outside `$HOME`. Narrowing
-  to `--filesystem=home` would make the app silently find nothing on a normal
-  developer setup.
-- **`--talk-name=org.freedesktop.Flatpak`** — Recrest launches the user's own
-  `git`, IDE and terminal emulator, none of which exist inside the runtime. This
-  is the same mechanism GNOME Builder, VSCodium and Zed use, and it is the
-  established pattern for developer tools on Flathub.
+See `SUBMISSION.md` — the one-time procedure, prerequisites and a ready-to-paste
+PR description live there.
