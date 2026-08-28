@@ -604,7 +604,8 @@ jobs:
       # those must stay on the release under their tauri-default names for
       # `latest.json` to resolve. The download-page installers are handled by
       # the "Publish contract-named installers" step above. Runs always() so a
-      # failed action upload doesn't skip it; idempotent --clobber + retries.
+      # failed action upload doesn't skip it. Uploads only what is missing —
+      # see the comment inside; clobbering here breaks latest.json.
       #
       # The Linux leg still matches its `.deb.sig` / `.rpm.sig` here — the
       # bundler signs them because `createUpdaterArtifacts` is global and cannot
@@ -624,17 +625,36 @@ jobs:
           set -uo pipefail
           rc=0
           found=0
+
+          # What is already on the release. NOT `--clobber` blindly: clobbering
+          # deletes the asset and uploads a new one, which gives it a NEW asset
+          # id — and tauri-action has already baked the OLD id into latest.json
+          # by the time this runs. That is not hypothetical: it stranded the
+          # `windows-x86_64` and `windows-aarch64` (MSI) entries on v0.12.1,
+          # and latest.json cannot be repaired afterwards because its entries
+          # carry ids, not filenames.
+          #
+          # This step exists for payloads that never made it up, so upload only
+          # those and leave every existing asset — and its id — alone.
+          existing="$(gh release view "$TAG" --repo "$REPO" --json assets \
+            --jq '.assets[].name' || true)"
+
           while IFS= read -r f; do
             found=1
+            name="$(basename "$f")"
+            if printf '%s\n' "$existing" | grep -Fxq "$name"; then
+              echo "= $name (already on the release, keeping its asset id)"
+              continue
+            fi
             ok=0
             for attempt in 1 2 3 4 5; do
-              if gh release upload "$TAG" "$f" --clobber --repo "$REPO"; then
-                echo "✓ $(basename "$f")"; ok=1; break
+              if gh release upload "$TAG" "$f" --repo "$REPO"; then
+                echo "✓ $name"; ok=1; break
               fi
-              echo "  upload attempt $attempt for $(basename "$f") failed; retry in $((attempt * 10))s"
+              echo "  upload attempt $attempt for $name failed; retry in $((attempt * 10))s"
               sleep $((attempt * 10))
             done
-            [ "$ok" -eq 1 ] || { echo "::error::could not upload $(basename "$f") after retries"; rc=1; }
+            [ "$ok" -eq 1 ] || { echo "::error::could not upload $name after retries"; rc=1; }
           done < <(find app/src-tauri/target -type f -path '*/release/bundle/*' \
             \( -name '*.msi' -o -name '*.tar.gz' -o -name '*.sig' \) 2>/dev/null)
           [ "$found" -eq 1 ] || echo "No updater payloads found under app/src-tauri/target — nothing to backstop."
@@ -1238,9 +1258,26 @@ jobs:
             # malformed manifest `jq` exits non-zero, and without it the step
             # dies on the assignment with a bare jq error instead of the
             # ::error:: line right below.
-            name="$(jq -r --arg k "$key" '.platforms[$k].url // empty' assets/latest.json | sed 's#.*/##' || true)"
-            if [ -z "$name" ]; then
+            url="$(jq -r --arg k "$key" '.platforms[$k].url // empty' assets/latest.json || true)"
+            if [ -z "$url" ]; then
               echo "::error::latest.json has no $key platform entry — macOS updates would not resolve"
+              rc=1; continue
+            fi
+            # Same draft/published split as `prune`: on a draft the trailing
+            # segment is a numeric asset id, not a filename, while the file on
+            # disk carries its real name. Slicing the url blindly here looked
+            # for `assets/533923953` and reported a payload that was present as
+            # missing.
+            case "$url" in
+              */releases/assets/*)
+                name="$(gh api "repos/$REPO/releases/assets/${url##*/}" --jq '.name' 2>/dev/null || true)"
+                ;;
+              *)
+                name="${url##*/}"
+                ;;
+            esac
+            if [ -z "$name" ]; then
+              echo "::error::latest.json's $key url resolves to no asset of $TAG (${url##*/})"
               rc=1; continue
             fi
             tgz="assets/$name"

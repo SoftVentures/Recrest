@@ -46,19 +46,19 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.12.1 — An application ID that names its publisher <!-- x-release-please-version -->
+# Recrest 0.13.0 — Working updates, and an app ID that names its publisher <!-- x-release-please-version -->
 
-A packaging release. Nothing changes in the app itself — this fixes the identity Linux software centres and Flathub use to attribute Recrest to its publisher.
+Auto-updates on Windows and macOS were broken and are fixed. Nothing changes in the app itself.
+
+## Updates work again
+
+The release pipeline re-uploaded installer files after writing the update manifest, which gave them new identifiers and left the manifest pointing at files that no longer existed. Every automatic update failed to download. If you are on 0.12.0 or 0.12.1, install this one by hand — from here on updates resolve again.
 
 ## A new application ID
 
-Recrest now identifies itself as `com.soft_ventures.Recrest`. The previous ID reversed a domain that is not ours, which no store can verify and which Flathub rejects outright.
+Recrest now identifies itself as `com.soft_ventures.Recrest`. The previous ID reversed a domain that is not ours, which no store can verify and which Flathub rejects.
 
-**Your data is not affected.** Settings, registered repositories and provider tokens live under a separate internal identifier that deliberately stays unchanged — an update does not move them, and nothing needs re-entering. On Linux, a software centre may list this as a new entry the first time it refreshes.
-
-## Release tooling
-
-Fixed a check that read the asset URLs of an unpublished release as filenames and reported every asset as missing. It cost the previous release its macOS signature verification.
+**Your data is not affected.** Settings, registered repositories and provider tokens live under a separate internal identifier that deliberately stays unchanged. On Linux, a software centre may list this as a new entry the first time it refreshes.
 
 ## Install
 
