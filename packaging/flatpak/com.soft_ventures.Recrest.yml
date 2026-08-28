@@ -87,11 +87,17 @@ modules:
       # release tag** — once the rename ships, set `tag:` and `commit:` to it and
       # regenerate the sources.
       #
-      # Pin only a commit that a long-lived branch or a tag keeps reachable.
-      # A commit on a PR branch does NOT qualify: squash-merging the PR rewrites
-      # it into a new commit and deletes the branch, and flatpak-builder's
-      # `git clone` + checkout then fails because GitHub does not hand out
-      # unreachable objects. Learned by doing exactly that.
+      # Prefer a commit that a long-lived branch or a tag keeps reachable.
+      #
+      # A PR-branch commit survives a squash merge, contrary to what it looks
+      # like: GitHub keeps `refs/pull/N/head` forever, so the object stays
+      # fetchable even after the branch is deleted and `git merge-base
+      # --is-ancestor <sha> origin/develop` says no. The offline build passed
+      # against exactly such an orphan.
+      #
+      # It is still not something to pin to. That reachability lives in a
+      # GitHub-specific ref that `git log` never shows, that a mirror or a
+      # migration does not carry, and that nothing in this file hints at.
       #
       # Whatever this points at, it is coupled to cargo-sources.json and
       # node-sources.json: those describe the dependency graph of THIS commit's
