@@ -11,6 +11,7 @@ second — the same arrangement as `packaging/aur/`.
 | `generate-sources.sh`            | yes       | regenerates the two vendored dependency lists         |
 | `cargo-sources.json`             | generated | every crate, as an offline source                     |
 | `node-sources.json`              | generated | every npm package, as an offline source               |
+| `flathub.json`                   | yes       | app-repo config; turns Flathub's own updater off      |
 
 ## Why the generated files exist
 
@@ -129,15 +130,40 @@ tidiness.
 
 ## Releasing a new version
 
-1. Bump `tag` **and** `commit` in `eu.softventures.recrest.yml` — Flathub
-   requires both, and the commit is what actually gets checked out.
-2. Re-run `generate-sources.sh` if any lockfile moved.
-3. Confirm `eu.softventures.recrest.metainfo.xml` has a `<release>` entry for the
-   new version. A missing one is a Flathub lint failure, and the release-workflow
-   guard (`verify-metadata`) already enforces it for every channel.
-4. Build locally with `--disable-download`.
-5. Copy the manifest and both generated files into the Flathub repository clone,
-   commit, push, open the PR.
+**This is automated.** `.github/workflows/flathub-publish.yml` runs on
+`release: published` and does all of it: retargets the manifest at the tag,
+regenerates both source lists from that commit's lockfiles, proves the offline
+build still works, and opens a PR against `flathub/eu.softventures.recrest`.
+
+It skips with a warning while `FLATHUB_TOKEN` is unset or the app repo does not
+exist yet, so it costs nothing before the first submission is merged.
+
+Two things it does **not** do, on purpose:
+
+- It does not push to Flathub's default branch — it opens a PR, so there is a
+  place to look before the build goes out.
+- It does not update the manifest in *this* repository. That copy keeps pointing
+  wherever it did, which only affects which commit `flatpak.yml` verifies. Pull
+  it forward on `develop` when convenient.
+
+Still yours to check before releasing: `eu.softventures.recrest.metainfo.xml`
+needs a `<release>` entry for the new version. A missing one is a Flathub lint
+failure — and `release-tauri.yml::verify-metadata` already blocks the release
+over it, for every Linux channel.
+
+### Why Flathub's own updater is switched off
+
+Flathub runs the Flatpak External Data Checker over every repo it hosts, and
+with `x-checker-data` it would spot a new tag and open a PR by itself. That is
+wrong here: the checker updates URLs and checksums of *existing* sources — it
+does not regenerate vendored dependency lists. It would move `commit:` forward
+and leave `cargo-sources.json` / `node-sources.json` describing the previous
+release, and the offline build then fails with a missing package, a symptom that
+points at the generator rather than at the mismatched commit.
+
+`flathub.json` in this directory therefore ships
+`"disable-external-data-checker": true` to the app repo, and the workflow above
+takes over the job.
 
 ## Submission notes
 
