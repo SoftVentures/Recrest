@@ -87,6 +87,12 @@ modules:
       # release tag** — once the rename ships, set `tag:` and `commit:` to it and
       # regenerate the sources.
       #
+      # Pin only a commit that a long-lived branch or a tag keeps reachable.
+      # A commit on a PR branch does NOT qualify: squash-merging the PR rewrites
+      # it into a new commit and deletes the branch, and flatpak-builder's
+      # `git clone` + checkout then fails because GitHub does not hand out
+      # unreachable objects. Learned by doing exactly that.
+      #
       # Whatever this points at, it is coupled to cargo-sources.json and
       # node-sources.json: those describe the dependency graph of THIS commit's
       # lockfiles and nothing else. Moving the ref without regenerating them
@@ -96,7 +102,7 @@ modules:
       # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        commit: 86139609625823b37b85196e07f182f5297b89c2
+        commit: 1e84a5531579543556b6ed6bab4e2f23d2249087
       - cargo-sources.json
       - node-sources.json
 
