@@ -96,7 +96,7 @@ modules:
       # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        commit: PLACEHOLDER_SHA
+        commit: 86139609625823b37b85196e07f182f5297b89c2
       - cargo-sources.json
       - node-sources.json
 
