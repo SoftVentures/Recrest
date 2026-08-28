@@ -449,12 +449,18 @@ macOS und Windows bleiben unverändert.
   - `download.install.linux[]`: die AppImage-`chmod`-Zeile entfällt, Flathub- und
     AUR-Zeilen kommen dazu.
 
-### Reihenfolge innerhalb F
+### Reihenfolge innerhalb F — revidiert
 
-Der Flathub-Eintrag darf erst live gehen, wenn D durch ist — ein Link auf eine
-noch nicht existierende Flathub-Seite ist schlimmer als kein Link. F wird deshalb
-zweimal angefasst: einmal mit A (AppImage raus, AUR rein), einmal nach D
-(Flathub rein).
+Ursprünglich sollte der Flathub-Eintrag erst nach der Submission live gehen, weil
+ein Link auf eine nicht existierende Seite schlimmer sei als kein Link.
+**Entscheidung des Auftraggebers: er kommt sofort rein.** Der Kanal wird damit von
+Anfang an angekündigt, und der Link beginnt zu funktionieren, sobald Flathub das
+Manifest merged und baut — bis dahin 404, bewusst in Kauf genommen.
+
+Wichtig für die Erwartungshaltung: Der Link lebt **nicht** dadurch, dass unsere
+`flatpak.yml`-Pipeline grün wird. Die baut nur im eigenen Repo. Die Flathub-Seite
+entsteht erst mit dem Merge der Submission bei `flathub/flathub` und deren
+eigenem Build.
 
 ---
 

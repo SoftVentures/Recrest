@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Os } from "../../hooks/useOsDetect";
 import { buildDownloadUrl, getChannelsForOs } from "../../lib/downloadUrl";
 import { InstallInstructions } from "../InstallInstructions";
-import { AppleIcon, DownloadIcon, LinuxIcon, WindowsIcon } from "../icons";
+import { AppleIcon, DownloadIcon, ExternalLinkIcon, LinuxIcon, WindowsIcon } from "../icons";
 import { CommandChannelRow } from "./parts/CommandChannelRow";
 
 type Props = {
@@ -40,24 +40,46 @@ export function DownloadCard({ os, highlighted = false }: Props) {
       <p className="download-card__sub">{t(`download.osSub.${os}`)}</p>
 
       <ul className="download-card__links">
-        {channels.map((channel) =>
-          channel.kind === "file" ? (
-            <li key={channel.filename}>
-              <a
-                href={buildDownloadUrl(__REPO_URL__, channel.filename)}
-                className="btn btn-primary download-card__btn"
-                download
-              >
-                <DownloadIcon />
-                {t("download.downloadLabel", { arch: channel.label })}
-              </a>
-            </li>
-          ) : (
-            <li key={channel.command}>
-              <CommandChannelRow channel={channel} />
-            </li>
-          ),
-        )}
+        {channels.map((channel) => {
+          switch (channel.kind) {
+            case "file":
+              return (
+                <li key={channel.filename}>
+                  <a
+                    href={buildDownloadUrl(__REPO_URL__, channel.filename)}
+                    className="btn btn-primary download-card__btn"
+                    download
+                  >
+                    <DownloadIcon />
+                    {t("download.downloadLabel", { arch: channel.label })}
+                  </a>
+                </li>
+              );
+            // Ghost rather than primary, and no `download` attribute: this
+            // leaves the site instead of handing over a file, and the E2E spec
+            // counts release assets via `a[download]`.
+            case "external":
+              return (
+                <li key={channel.url}>
+                  <a
+                    href={channel.url}
+                    className="btn btn-ghost download-card__btn"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLinkIcon />
+                    {channel.label}
+                  </a>
+                </li>
+              );
+            case "command":
+              return (
+                <li key={channel.command}>
+                  <CommandChannelRow channel={channel} />
+                </li>
+              );
+          }
+        })}
       </ul>
 
       <InstallInstructions os={os} />

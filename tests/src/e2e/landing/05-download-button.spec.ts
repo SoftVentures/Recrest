@@ -98,7 +98,9 @@ test.describe("landing / download — release assets", () => {
   for (const os of CARD_ORDER) {
     test(`the ${os} card links the assets that actually exist on the release`, async ({ page }) => {
       await page.goto(`/${DOWNLOAD_ROUTE_HASH}`);
-      const links = cardFor(page, os).locator(".download-card__links a");
+      // `a[download]` and not every anchor: the Linux card also carries an
+      // external Flathub link, which is not a release asset.
+      const links = cardFor(page, os).locator(".download-card__links a[download]");
       const expected = EXPECTED_DOWNLOAD_ASSETS[os];
 
       await expect(links).toHaveCount(expected.length);
@@ -118,6 +120,13 @@ test.describe("landing / download — package-manager channels", () => {
 
     await expect(card.locator(".download-card__cmd-text")).toHaveText(EXPECTED_AUR_COMMAND);
     await expect(card.locator(".download-card__cmd-copy")).toHaveCount(1);
+  });
+
+  test("the Linux card links Flathub", async ({ page }) => {
+    await page.goto(`/${DOWNLOAD_ROUTE_HASH}`);
+    const flathub = cardFor(page, "linux").locator('a[href*="flathub.org"]');
+    await expect(flathub).toHaveCount(1);
+    await expect(flathub).toHaveAttribute("target", "_blank");
   });
 
   test("no card links an AppImage", async ({ page }) => {

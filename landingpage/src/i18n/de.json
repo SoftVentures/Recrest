@@ -167,7 +167,7 @@
     "osSub": {
       "macos": "macOS 11 Big Sur oder neuer - Apple Silicon und Intel",
       "windows": "Windows 10/11 - x64 und ARM64",
-      "linux": ".deb, .rpm und AUR - x64"
+      "linux": ".deb, .rpm, Flathub und AUR - x64"
     },
     "install": {
       "heading": "Erststart-Hinweise",
@@ -186,6 +186,7 @@
       "linux": [
         "Debian / Ubuntu (.deb): `sudo dpkg -i recrest-v*.deb`",
         "Fedora / RHEL (.rpm): `sudo rpm -i recrest-v*.rpm` (oder `sudo dnf install ./recrest-v*.rpm`)",
+        "Flathub: `flatpak install flathub eu.softventures.recrest` - sobald das Paket dort freigegeben ist. Aktualisiert sich danach automatisch.",
         "Arch (AUR): `paru -S recrest-bin` installiert das fertige Paket. `recrest` baut stattdessen aus dem Quellcode, `recrest-git` aus dem aktuellen Entwicklungsstand.",
         "Updates: .deb und .rpm musst du manuell neu herunterladen – es gibt kein APT- oder DNF-Repository. Über die AUR-Pakete aktualisiert pacman Recrest wie jedes andere Paket."
       ]

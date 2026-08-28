@@ -56,8 +56,8 @@ describe("getChannelsForOs — Windows", () => {
 describe("getChannelsForOs — Linux", () => {
   const channels = getChannelsForOs("linux", VERSION);
 
-  it("returns two downloadable files plus the AUR command", () => {
-    expect(channels).toHaveLength(3);
+  it("returns two downloadable files plus Flathub and the AUR command", () => {
+    expect(channels).toHaveLength(4);
     expect(files(channels)).toHaveLength(2);
   });
 
@@ -73,6 +73,16 @@ describe("getChannelsForOs — Linux", () => {
   // a link to it would 404 — this asserts the page cannot regrow that link.
   it("offers no AppImage", () => {
     expect(files(channels).some((c) => c.filename.endsWith(".AppImage"))).toBe(false);
+  });
+
+  // Linked before the Flathub submission is accepted, so the channel is
+  // announced from the start. Dead until Flathub merges and builds — a known,
+  // accepted state.
+  it("links Flathub", () => {
+    const flathub = channels.find((c) => c.kind === "external");
+    expect(flathub && "url" in flathub ? flathub.url : undefined).toBe(
+      "https://flathub.org/apps/eu.softventures.recrest",
+    );
   });
 
   it("offers the AUR package as a command, not a download", () => {

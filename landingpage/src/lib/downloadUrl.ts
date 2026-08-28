@@ -24,16 +24,29 @@ export type CommandChannel = {
 };
 
 /**
- * Not every install channel is a file on our release page. Linux ships through
- * distro package managers too, and those need a command rather than a download
- * button, so the list the download card renders is a union rather than a flat
- * asset list.
- *
- * A third `"external"` variant (a link to Flathub) joins this union once the
- * Flathub submission is live — see plan 11, work item F². Linking a Flathub
- * page that does not exist yet would be worse than not linking one at all.
+ * A channel hosted somewhere else entirely — the page links out rather than
+ * serving a file or printing a command.
  */
-export type DownloadChannel = FileChannel | CommandChannel;
+export type ExternalChannel = {
+  kind: "external";
+  label: string;
+  url: string;
+};
+
+/**
+ * Not every install channel is a file on our release page. Linux ships through
+ * distro package managers and app stores too, so the list the download card
+ * renders is a union rather than a flat asset list.
+ */
+export type DownloadChannel = FileChannel | CommandChannel | ExternalChannel;
+
+/**
+ * Flathub app page. Deliberately linked before the submission is accepted: the
+ * channel is announced from the start, and the page starts working the moment
+ * Flathub merges and builds the manifest. Until then this 404s — a known,
+ * accepted state, not an oversight.
+ */
+export const FLATHUB_URL = "https://flathub.org/apps/eu.softventures.recrest";
 
 /**
  * Build the GitHub Releases download URL for a given filename.
@@ -95,6 +108,11 @@ export function getChannelsForOs(os: Exclude<Os, "unknown">, version: string): D
           label: ".rpm",
           arch: "x64",
           filename: `recrest-v${version}-linux-x64.rpm`,
+        },
+        {
+          kind: "external",
+          label: "Flathub",
+          url: FLATHUB_URL,
         },
         {
           kind: "command",
