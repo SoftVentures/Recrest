@@ -74,7 +74,7 @@ modules:
       # provenance, `commit:` is what flatpak-builder actually checks out, so a
       # moved tag cannot change what was reviewed.
       #
-      # v0.12.1 is the first tag carrying the com.soft_ventures.Recrest app id.
+      # v0.12.1 was the first tag carrying the com.soft_ventures.Recrest app id.
       # Earlier tags still ship the metainfo under the old filename, and the
       # build installs it as its very last step — pinning one of those dies with
       # "cannot stat …/com.soft_ventures.Recrest.metainfo.xml" after a full
@@ -95,8 +95,8 @@ modules:
       # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        tag: v0.12.1
-        commit: 992c4705c0d852d098a3466144210561a912ff8e
+        tag: v0.13.0
+        commit: 79b2536ac4a1c0660dd118ed9f17ab82440b97bf
       - cargo-sources.json
       - node-sources.json
 
