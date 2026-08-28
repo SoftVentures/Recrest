@@ -763,9 +763,42 @@ jobs:
           # referenced-set empty and delete every updater payload on the release.
           # `|| true` so an unreadable manifest reaches the guard below instead
           # of dying on the assignment under `set -e` with no explanation.
-          referenced="$(gh release download "$TAG" --repo "$REPO" \
+          # `sed 's#.*/##'` was wrong here and it cost a release. On a DRAFT,
+          # tauri-action writes asset-API urls into latest.json
+          # (…/releases/assets/<id>), so the trailing segment is a numeric id,
+          # not a filename. Every name then failed to match, `keeps()` returned
+          # false, and this step deleted the very updater payloads latest.json
+          # points at — leaving a published release whose updater 404s on every
+          # platform. v0.12.0 shipped exactly that way.
+          #
+          # So resolve ids to names first, via the releases LISTING — the
+          # `releases/tags/$TAG` endpoint 404s while the release is a draft.
+          asset_map="$(gh api "repos/$REPO/releases" --paginate \
+            --jq ".[] | select(.tag_name==\"$TAG\") | .assets[] | \"\(.id) \(.name)\"" || true)"
+
+          raw_urls="$(gh release download "$TAG" --repo "$REPO" \
             --pattern 'latest.json' --output - 2>/dev/null \
-            | jq -r '.platforms[].url' | sed 's#.*/##' | sort -u || true)"
+            | jq -r '.platforms[].url' | sort -u || true)"
+
+          referenced=""
+          while IFS= read -r url; do
+            [ -n "$url" ] || continue
+            segment="${url##*/}"
+            case "$url" in
+              */releases/assets/*)
+                name="$(printf '%s\n' "$asset_map" | awk -v id="$segment" '$1 == id { print $2 }')"
+                ;;
+              *)
+                name="$segment"
+                ;;
+            esac
+            if [ -z "$name" ]; then
+              echo "::error::latest.json references $segment, which resolves to no asset of $TAG — refusing to prune"
+              exit 1
+            fi
+            referenced="${referenced}${name}"$'\n'
+          done <<< "$raw_urls"
+          referenced="$(printf '%s' "$referenced" | sort -u)"
           if [ -z "$referenced" ]; then
             echo "::error::could not read latest.json from $TAG — refusing to prune"
             exit 1
@@ -1112,7 +1145,11 @@ jobs:
             exit 1
           fi
           # Asset ids, for resolving the draft url shape.
-          present_ids="$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[].id' || true)"
+          # The releases LISTING, not `releases/tags/$TAG`: that endpoint 404s
+          # while the release is still a draft, which is exactly when this job
+          # runs. It did, `present_ids` came back empty, and every asset was
+          # reported missing.
+          present_ids="$(gh api "repos/$REPO/releases" --paginate             --jq ".[] | select(.tag_name==\"$TAG\") | .assets[].id" || true)"
           if [ -z "$present_ids" ]; then
             echo "::error::could not read the asset ids of $TAG"
             exit 1
