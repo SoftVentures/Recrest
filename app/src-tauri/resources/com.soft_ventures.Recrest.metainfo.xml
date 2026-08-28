@@ -92,8 +92,8 @@
   </requires>
 
   <releases>
-    <release version="0.12.2" date="2026-08-28">
-      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.12.2</url>
+    <release version="0.13.0" date="2026-08-28">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.13.0</url>
       <description>
         <ul>
           <li>Fixed automatic updates on Windows and macOS, which could not download the new version</li>
