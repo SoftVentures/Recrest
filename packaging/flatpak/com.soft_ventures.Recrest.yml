@@ -87,6 +87,18 @@ modules:
       # release tag** — once the rename ships, set `tag:` and `commit:` to it and
       # regenerate the sources.
       #
+      # Prefer a commit that a long-lived branch or a tag keeps reachable.
+      #
+      # A PR-branch commit survives a squash merge, contrary to what it looks
+      # like: GitHub keeps `refs/pull/N/head` forever, so the object stays
+      # fetchable even after the branch is deleted and `git merge-base
+      # --is-ancestor <sha> origin/develop` says no. The offline build passed
+      # against exactly such an orphan.
+      #
+      # It is still not something to pin to. That reachability lives in a
+      # GitHub-specific ref that `git log` never shows, that a mirror or a
+      # migration does not carry, and that nothing in this file hints at.
+      #
       # Whatever this points at, it is coupled to cargo-sources.json and
       # node-sources.json: those describe the dependency graph of THIS commit's
       # lockfiles and nothing else. Moving the ref without regenerating them
@@ -96,7 +108,7 @@ modules:
       # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        commit: 86139609625823b37b85196e07f182f5297b89c2
+        commit: 1e84a5531579543556b6ed6bab4e2f23d2249087
       - cargo-sources.json
       - node-sources.json
 

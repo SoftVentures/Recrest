@@ -46,32 +46,19 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.12.0 — Interface scaling, and a Linux packaging overhaul <!-- x-release-please-version -->
+# Recrest 0.12.0 — An application ID that names its publisher <!-- x-release-please-version -->
 
-The interface now scales properly on every display, and Linux moves off the AppImage onto distro packages.
+A packaging release. Nothing changes in the app itself — this fixes the identity Linux software centres and Flathub use to attribute Recrest to its publisher.
 
-## Interface scaling
+## A new application ID
 
-The whole UI was driven by a CSS `zoom` on the root element. That is not a real scaling mechanism: media queries never saw it, so responsive breakpoints fired at the wrong widths, and anything MUI rendered into a portal — menus, dialogs, tooltips — ignored it entirely and stayed at 100%.
+Recrest now identifies itself as `com.soft_ventures.Recrest`. The previous ID reversed a domain that is not ours, which no store can verify and which Flathub rejects outright.
 
-Scaling is now built on the root font size instead, which every layer respects.
+**Your data is not affected.** Settings, registered repositories and provider tokens live under a separate internal identifier that deliberately stays unchanged — an update does not move them, and nothing needs re-entering. On Linux, a software centre may list this as a new entry the first time it refreshes.
 
-- **Zoom shortcuts** — `Ctrl`/`Cmd` + `+` / `-` / `0`.
-- **An "interface size" slider** in Settings, 0.8× to 1.5×, in step with the shortcuts and persisted across restarts.
-- **Font size stays separate** from interface size, so text can grow without stretching the boxes around it.
-- **HiDPI Wayland sessions render at native size.** The previous stack could not represent fractional scaling at all.
+## Release tooling
 
-## Linux packaging
-
-- **The AppImage is gone.** Linux ships `.deb` and `.rpm`, plus three AUR packages: `recrest-bin` (prebuilt, installs in seconds), `recrest` (builds the release from source) and `recrest-git` (builds the development branch). A Flatpak for Flathub is prepared and will follow.
-- **Linux has no in-app auto-update any more.** The AppImage was the only Linux format the updater could replace in place. Recrest still tells you when a new version exists — through `pacman` on Arch, and as a notice with a link everywhere else. `.deb` and `.rpm` have to be re-downloaded by hand; there is no APT or DNF repository.
-- **The updater knows how it was installed.** On a package-managed install it no longer offers an Install button that would fight `dpkg` or `pacman` over the same files, and it will not hand you an installer your machine cannot use.
-- **Recrest appears properly in GNOME Software and KDE Discover**, with a name, description, screenshots and release notes.
-
-## Window behaviour
-
-- **Window size and position are restored inside the visible screen area.** A window saved on a monitor that is no longer attached, or larger than the current screen, came back off-screen or oversized.
-- **macOS** title bar chrome renders correctly again.
+Fixed a check that read the asset URLs of an unpublished release as filenames and reported every asset as missing. It cost the previous release its macOS signature verification.
 
 ## Install
 
