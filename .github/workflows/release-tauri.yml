@@ -1089,19 +1089,54 @@ jobs:
           #     (The run still died later, on an unguarded `jq` in the macOS
           #     step, but with a raw jq error and none of these annotations.)
           #     So: capture, assert non-empty, and only then feed the loop.
-          referenced="$(jq -r '.platforms[].url' assets/latest.json | sed 's#.*/##' | sort -u || true)"
+          # latest.json carries TWO url shapes and the difference is the draft
+          # state, not a bug:
+          #
+          #   published  https://github.com/O/R/releases/download/<tag>/<filename>
+          #   draft      https://api.github.com/repos/O/R/releases/assets/<id>
+          #
+          # A draft's assets have no public download URL, so tauri-action emits
+          # the asset API endpoint instead. This job runs BEFORE publishing, so
+          # the draft shape is the normal case here — matching only on trailing
+          # filenames reported every entry as missing, because the trailing
+          # segment is a numeric id. (It passed on v0.11.0 only because that
+          # release was re-run through workflow_dispatch after publishing.)
+          #
+          # The API form is fine for the updater: `download_and_install` sends
+          # `Accept: application/octet-stream` (updater.rs), which is exactly what
+          # makes that endpoint return the file rather than JSON metadata.
+          referenced="$(jq -r '.platforms[].url' assets/latest.json | sort -u || true)"
           if [ -z "$referenced" ]; then
             echo "::error::latest.json carries no .platforms[].url entries — it is malformed, empty, or lost its platform map, so the updater has nothing to resolve. First 2 kB follow:"
             head -c 2000 assets/latest.json | sed 's/^/  /' || true
             exit 1
           fi
-          while IFS= read -r name; do
-            [ -n "$name" ] || continue
-            if echo "$present" | grep -Fxq "$name"; then
-              echo "✓ latest.json → $name"
-            else
-              echo "::error::latest.json references $name, which is not an asset of $TAG"; rc=1
-            fi
+          # Asset ids, for resolving the draft url shape.
+          present_ids="$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[].id' || true)"
+          if [ -z "$present_ids" ]; then
+            echo "::error::could not read the asset ids of $TAG"
+            exit 1
+          fi
+          while IFS= read -r url; do
+            [ -n "$url" ] || continue
+            tail_segment="${url##*/}"
+            case "$url" in
+              */releases/assets/*)
+                if echo "$present_ids" | grep -Fxq "$tail_segment"; then
+                  name="$(gh api "repos/$REPO/releases/assets/$tail_segment" --jq '.name' 2>/dev/null || echo "id $tail_segment")"
+                  echo "✓ latest.json → $name (asset id $tail_segment)"
+                else
+                  echo "::error::latest.json references asset id $tail_segment, which is not an asset of $TAG"; rc=1
+                fi
+                ;;
+              *)
+                if echo "$present" | grep -Fxq "$tail_segment"; then
+                  echo "✓ latest.json → $tail_segment"
+                else
+                  echo "::error::latest.json references $tail_segment, which is not an asset of $TAG"; rc=1
+                fi
+                ;;
+            esac
           done <<< "$referenced"
           exit $rc
 
