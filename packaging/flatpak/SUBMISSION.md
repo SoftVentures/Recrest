@@ -18,6 +18,12 @@ vendored source lists and the two-id split. This file is only the procedure.
       and `cargo-sources.json` / `node-sources.json` regenerated from it
       (`./generate-sources.sh` reads `commit:` back out of the manifest, so they
       cannot drift). The green `Offline build` job on that commit is the proof.
+- [ ] **A screen recording of Recrest running as a Flatpak on Linux.** Flathub's
+      PR checklist demands one, a bot enforces it hourly, and there is no way
+      around it — a submission whose checklist is not fully ticked is closed
+      automatically, unreviewed. Two minutes of the app doing its job is enough.
+      Record it while walking the sandbox checks in `README.md` ("What has to be
+      verified inside the sandbox"); that covers both obligations at once.
 - [ ] **A GitHub account.** Nothing else — Flathub has no separate registration.
       Maintainer rights on `flathub/com.soft_ventures.Recrest` are granted
       automatically when the submission is merged.
@@ -29,10 +35,16 @@ Flathub takes new apps as a pull request against
 **exactly the app id** — not `main`, not a description. The branch name is how
 their tooling identifies the app, so a wrong one gets the PR closed.
 
+The base branch is **`new-pr`**, not `master`. That is not a formality: a bot
+closes submissions targeting `master` within seconds, with a comment and no
+review. `new-pr` is an **orphan** branch with no history in common with `master`,
+so the working branch has to be built on top of it — branching off `master` makes
+the PR impossible to open at all ("no history in common").
+
 ```bash
 git clone https://github.com/flathub/flathub.git
 cd flathub
-git checkout -b com.soft_ventures.Recrest
+git checkout -b com.soft_ventures.Recrest origin/new-pr
 ```
 
 Copy in the four files, flat at the repository root — no directory:
@@ -47,8 +59,13 @@ git add -A && git commit -m "Add com.soft_ventures.Recrest"
 git push -u origin com.soft_ventures.Recrest
 ```
 
-Then open the PR against `flathub/flathub`, base `master`, with the description
-below.
+Then open the PR against `flathub/flathub`, base **`new-pr`**.
+
+**Keep the repository's PR template and tick every box.** A `submission-checker`
+bot runs hourly and closes any submission whose checklist is missing or
+incomplete — it does not review first. Replacing the template with a prose
+description, however thorough, is exactly what it closes. Paste the description
+below into the template's first checklist item rather than instead of it.
 
 ## PR description (ready to paste)
 

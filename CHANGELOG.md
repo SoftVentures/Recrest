@@ -2,6 +2,14 @@
 
 All notable changes to Recrest are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1](https://github.com/SoftVentures/Recrest/compare/v0.13.0...v0.13.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **auth:** store Linux tokens in the Secret Service instead of the kernel keyring ([6159aa3](https://github.com/SoftVentures/Recrest/commit/6159aa335d1f38ad9f940e46dee0221d5b730b8e))
+* **flatpak:** build libayatana-appindicator so the tray icon does not crash the app ([abfa35c](https://github.com/SoftVentures/Recrest/commit/abfa35c3de1a202e92ffad170fd4d5146c27d2f5))
+
 ## [0.13.0](https://github.com/SoftVentures/Recrest/compare/v0.12.1...v0.13.0) (2026-08-28)
 
 

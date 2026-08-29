@@ -46,19 +46,21 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.13.0 — Working updates, and an app ID that names its publisher <!-- x-release-please-version -->
+# Recrest 0.13.1 — Staying signed in on Linux <!-- x-release-please-version -->
 
-Auto-updates on Windows and macOS were broken and are fixed. Nothing changes in the app itself.
+Two Linux fixes. Windows and macOS are unaffected.
 
-## Updates work again
+## Sign-in now persists
 
-The release pipeline re-uploaded installer files after writing the update manifest, which gave them new identifiers and left the manifest pointing at files that no longer existed. Every automatic update failed to download. If you are on 0.12.0 or 0.12.1, install this one by hand — from here on updates resolve again.
+Provider tokens were being written to the Linux kernel keyring, which is not persistent — it is cleared when you log out. Signing in to GitHub, GitLab or Bitbucket therefore held only until the end of the session, and you had to sign in again the next day.
 
-## A new application ID
+They now go to the Secret Service (GNOME Keyring, KWallet), the same place every other desktop app keeps its credentials. **You will have to sign in once more after updating**; from then on it sticks.
 
-Recrest now identifies itself as `com.soft_ventures.Recrest`. The previous ID reversed a domain that is not ours, which no store can verify and which Flathub rejects.
+If your system has no keyring daemon running, sign-in will report an error instead of failing quietly. On a minimal setup, install `gnome-keyring` or `kwallet`.
 
-**Your data is not affected.** Settings, registered repositories and provider tokens live under a separate internal identifier that deliberately stays unchanged. On Linux, a software centre may list this as a new entry the first time it refreshes.
+## The Flatpak build starts
+
+The sandbox was missing a system library the tray icon loads at startup, so the app died before its window appeared. The Flatpak now ships it. This never affected the .deb, .rpm or AUR packages.
 
 ## Install
 

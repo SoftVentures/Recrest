@@ -1,6 +1,6 @@
 [package]
 name = "recrest"
-version = "0.13.0" # x-release-please-version
+version = "0.13.1" # x-release-please-version
 description = "Recrest — A lightweight developer dashboard"
 authors = ["SoftVentures"]
 edition = "2021"
@@ -59,7 +59,25 @@ git2 = { version = "0.19", default-features = false, features = ["vendored-libgi
 notify = "8.2"
 notify-debouncer-full = "0.7"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
-keyring = { version = "3.5", features = ["apple-native", "windows-native", "linux-native"] }
+# `sync-secret-service`, NOT `linux-native`. `linux-native` is the kernel
+# keyutils store, which the crate documents as "not persistent across reboots or
+# logout" — so every Linux user silently lost their provider tokens when they
+# logged out. It also does not exist inside a Flatpak sandbox, where sign-in
+# failed outright, which is how this was found.
+#
+# `sync-secret-service` talks to the D-Bus Secret Service (gnome-keyring,
+# KWallet) — the thing the Flatpak manifest already asks for with
+# `--talk-name=org.freedesktop.secrets` and the AUR packages already declare as
+# an optdepend. `crypto-rust` encrypts the secret in transit over the bus and is
+# required whenever secret-service support is enabled.
+#
+# All calls in `auth/token.rs` are blocking, hence the sync variant.
+keyring = { version = "3.5", features = [
+  "apple-native",
+  "windows-native",
+  "sync-secret-service",
+  "crypto-rust",
+] }
 url = "2.5"
 dirs = "6.0"
 zeroize = "1"

@@ -92,6 +92,15 @@
   </requires>
 
   <releases>
+    <release version="0.13.1" date="2026-08-29">
+      <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.13.1</url>
+      <description>
+        <ul>
+          <li>Signing in to GitHub, GitLab or Bitbucket now keeps you signed in on Linux — tokens were stored somewhere that did not survive logging out</li>
+          <li>Fixed a crash on startup in the Flatpak sandbox</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.13.0" date="2026-08-28">
       <url type="details">https://github.com/SoftVentures/Recrest/releases/tag/v0.13.0</url>
       <description>
