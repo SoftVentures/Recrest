@@ -210,8 +210,8 @@ modules:
       # file precisely so the two cannot drift apart.
       - type: git
         url: https://github.com/SoftVentures/Recrest.git
-        tag: v0.13.0
-        commit: 79b2536ac4a1c0660dd118ed9f17ab82440b97bf
+        tag: v0.13.1
+        commit: 216c14bc5afc27544136b8ebdf8533b4849070bc
       - cargo-sources.json
       - node-sources.json
 
