@@ -46,7 +46,7 @@
   comment-close sequence in here would end this comment early.)
 -->
 
-# Recrest 0.13.0 — Working updates, and an app ID that names its publisher <!-- x-release-please-version -->
+# Recrest 0.13.1 — Working updates, and an app ID that names its publisher <!-- x-release-please-version -->
 
 Auto-updates on Windows and macOS were broken and are fixed. Nothing changes in the app itself.
 
