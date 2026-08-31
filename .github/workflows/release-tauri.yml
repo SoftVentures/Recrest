@@ -89,7 +89,7 @@ jobs:
     needs: resolve
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -198,7 +198,7 @@ jobs:
     needs: [resolve, verify-metadata]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -224,7 +224,7 @@ jobs:
           cache: yarn
       - uses: ./.github/actions/install-deps
       - run: yarn workspace @recrest/app gen:installer-assets
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: installer-assets-build
           path: app/src-tauri/installer-assets/build/
@@ -295,7 +295,7 @@ jobs:
     # manually (gh release upload) or by re-running the failed leg once fixed.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
