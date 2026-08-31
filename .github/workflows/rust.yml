@@ -65,7 +65,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       # Exactly the list the Tauri build jobs install (release-tauri.yml /
       # release-tauri-beta.yml). Keep the three in sync — a dependency that is
