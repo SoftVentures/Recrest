@@ -41,7 +41,7 @@ jobs:
       TAG: ${{ github.event.release.tag_name || 'manual run' }}
       GH_TOKEN: ${{ secrets.BACKMERGE_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: develop
           fetch-depth: 0
